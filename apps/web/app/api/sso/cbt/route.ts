@@ -101,9 +101,11 @@ export async function GET(req: Request) {
         let cbtUrl = process.env.NEXT_PUBLIC_CBT_URL || 'https://acca-cbt.icgowa.sch.id';
         const hostHeader = req.headers.get('host') || '';
         
-        // Jika diakses dari public (bukan localhost), paksa ke URL production CBT
+        // Jika diakses dari domain publik (bukan localhost)
         if (!hostHeader.includes('localhost')) {
-            cbtUrl = 'https://acca-cbt.icgowa.sch.id';
+            cbtUrl = process.env.NEXT_PUBLIC_CBT_URL && !process.env.NEXT_PUBLIC_CBT_URL.includes('localhost')
+                ? process.env.NEXT_PUBLIC_CBT_URL
+                : 'https://acca-cbt.icgowa.sch.id';
         } else {
             cbtUrl = process.env.NEXT_PUBLIC_CBT_URL || 'http://localhost:3008';
         }
