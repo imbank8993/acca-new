@@ -28,6 +28,7 @@ services:
     environment:
       - PORT=3006
       - NODE_ENV=production
+      - NEXT_PUBLIC_NEST_API_URL=http://acca-api:3007/api
     ports:
       - "3006:3006"
     depends_on:
