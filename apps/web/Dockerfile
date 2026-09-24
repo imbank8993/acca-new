@@ -16,12 +16,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 FROM base AS builder
 WORKDIR /app
 
-# Install build tools untuk kompilasi native modules (lightningcss, dll)
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
-    python3 \
-    && rm -rf /var/lib/apt/lists/*
-
 # Disable Next.js telemetry & skip puppeteer browser download during build
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV PUPPETEER_SKIP_DOWNLOAD=true
@@ -34,12 +28,15 @@ COPY packages/shared/package.json ./packages/shared/
 COPY apps/web/package.json ./apps/web/
 COPY apps/api/package.json ./apps/api/
 
-# Install ALL dependencies (termasuk devDependencies + native binaries)
-RUN npm ci --legacy-peer-deps || true
-# Pastikan lightningcss native binary terpasang
-RUN npm rebuild lightningcss 2>/dev/null || true
+# Install dependencies (--ignore-scripts agar canvas tidak gagal compile)
+RUN npm ci --legacy-peer-deps --ignore-scripts
 
-# Copy Prisma schema and generate client explicitly for Next.js server actions / API
+# Install lightningcss native binary untuk Linux x64 (dibutuhkan oleh Tailwind CSS 4)
+RUN npm install lightningcss-linux-x64-gnu@1.30.2 --no-save 2>/dev/null; \
+    ls -la node_modules/lightningcss-linux-x64-gnu/ 2>/dev/null || echo "Trying alternative install..." && \
+    cd node_modules/lightningcss && npm install 2>/dev/null || true
+
+# Copy Prisma schema and generate client for Next.js server actions / API
 COPY apps/api/prisma ./apps/api/prisma
 RUN npx prisma generate --schema=./apps/api/prisma/schema.prisma
 
