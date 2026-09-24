@@ -105,7 +105,7 @@ export async function GET(req: Request) {
         if (!hostHeader.includes('localhost')) {
             cbtUrl = 'https://acca-cbt.icgowa.sch.id';
         } else {
-            cbtUrl = process.env.NEXT_PUBLIC_CBT_URL || 'http://localhost:3003';
+            cbtUrl = process.env.NEXT_PUBLIC_CBT_URL || 'http://localhost:3008';
         }
 
         const redirectUrl = `${cbtUrl}/api/auth/sso?token=${token}`;

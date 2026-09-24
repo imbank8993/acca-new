@@ -124,7 +124,7 @@ const nextConfig: NextConfig = {
         // HTML pages: vary by cookie so proxies don't serve one user's page to another
         source: '/:path*',
         headers: [
-          { key: 'Content-Security-Policy', value: "frame-ancestors 'self' https://icgowa.sch.id/acca-v2/ http://localhost:3000 http://localhost:3001 http://localhost:3006 http://localhost:3007 https://*.icgowa.sch.id" },
+          { key: 'Content-Security-Policy', value: "frame-ancestors 'self' https://icgowa.sch.id/acca-v2/ http://localhost:3000 http://localhost:3001 http://localhost:3006 http://localhost:3007 http://localhost:3008 https://*.icgowa.sch.id" },
           { key: 'Vary', value: 'Cookie' },
         ]
       }
