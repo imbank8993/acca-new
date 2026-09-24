@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  # ── 1. Verifikasi Build & Typecheck ─────────────────────────────────────────
+  # ── 1. Verifikasi Build & Typecheck di GitHub Runner ────────────────────────
   verify:
     name: Verify Build & Tests
     runs-on: ubuntu-latest
@@ -25,43 +25,60 @@ jobs:
         run: npm ci
 
       - name: Generate Prisma Client
+        env:
+          DATABASE_URL: "postgresql://dummy:dummy@localhost:5432/dummy?schema=public"
         run: npx prisma generate --schema=apps/api/prisma/schema.prisma
 
-      - name: Typecheck Frontend
+      - name: Typecheck Frontend (Next.js)
         run: npm run typecheck
 
       - name: Build Backend (NestJS)
+        env:
+          DATABASE_URL: "postgresql://dummy:dummy@localhost:5432/dummy?schema=public"
         run: npm run build:backend
 
-  # ── 2. Otomatis Deploy ke VPS via Docker ─────────────────────────────────────
+  # ── 2. Otomatis Deploy ke VPS via SSH ───────────────────────────────────────
   deploy:
     name: Deploy to VPS
     needs: verify
     runs-on: ubuntu-latest
-    # Hanya dijalankan jika rahasia VPS_HOST disetel di GitHub Secrets
+    # Hanya dijalankan jika VPS_HOST disetel di GitHub Repository Secrets
     if: "${{ secrets.VPS_HOST != '' }}"
     steps:
       - name: Trigger Remote Deployment via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USERNAME }}
+          username: ${{ secrets.VPS_USERNAME || 'root' }}
           key: ${{ secrets.VPS_SSH_KEY }}
+          password: ${{ secrets.VPS_PASSWORD }}
           port: ${{ secrets.VPS_PORT || 22 }}
+          script_stop: true
           script: |
+            echo "=================================================="
             echo "🚀 Menghubungkan ke VPS..."
-            TARGET_DIR="${{ secrets.VPS_APP_DIR || '~/acca-new' }}"
-            cd $TARGET_DIR || { echo "Folder $TARGET_DIR tidak ditemukan!"; exit 1; }
+            echo "=================================================="
             
-            echo "📥 Mengambil perubahan terbaru dari GitHub..."
-            git pull origin main
+            APP_DIR="${{ secrets.VPS_APP_DIR || '~/acca-new' }}"
+            cd $APP_DIR || { echo "❌ Folder $APP_DIR tidak ditemukan di VPS!"; exit 1; }
             
-            echo "🐳 Membangun dan menjalankan container Docker..."
-            docker compose down --remove-orphans || true
-            docker compose up -d --build
+            echo "📥 [1/3] Mengambil commit terbaru dari branch main..."
+            git fetch origin main
+            git reset --hard origin/main
             
-            echo "🧹 Membersihkan image lama yang tidak terpakai..."
+            echo "🐳 [2/3] Membangun dan merestart kontainer Docker..."
+            if docker compose version &> /dev/null; then
+              DC="docker compose"
+            else
+              DC="docker-compose"
+            fi
+            
+            $DC up -d --build --remove-orphans
+            
+            echo "🧹 [3/3] Membersihkan Docker image lama yang tidak terpakai..."
             docker image prune -f
             
-            echo "✅ Deployment berhasil diselesaikan!"
-            docker compose ps
+            echo "=================================================="
+            echo "✅ Deployment Sukses!"
+            echo "=================================================="
+            $DC ps
