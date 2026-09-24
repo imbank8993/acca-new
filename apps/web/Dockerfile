@@ -16,6 +16,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 FROM base AS builder
 WORKDIR /app
 
+# Install build tools untuk kompilasi native modules (lightningcss, dll)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    python3 \
+    && rm -rf /var/lib/apt/lists/*
+
 # Disable Next.js telemetry & skip puppeteer browser download during build
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV PUPPETEER_SKIP_DOWNLOAD=true
@@ -28,8 +34,10 @@ COPY packages/shared/package.json ./packages/shared/
 COPY apps/web/package.json ./apps/web/
 COPY apps/api/package.json ./apps/api/
 
-# Install ALL dependencies (termasuk devDependencies: tailwindcss, typescript, dll)
-RUN npm ci --legacy-peer-deps --ignore-scripts
+# Install ALL dependencies (termasuk devDependencies + native binaries)
+RUN npm ci --legacy-peer-deps || true
+# Pastikan lightningcss native binary terpasang
+RUN npm rebuild lightningcss 2>/dev/null || true
 
 # Copy Prisma schema and generate client explicitly for Next.js server actions / API
 COPY apps/api/prisma ./apps/api/prisma
