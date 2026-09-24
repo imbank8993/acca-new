@@ -19,15 +19,16 @@ WORKDIR /app
 # Disable Next.js telemetry during build
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
+ENV DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy?schema=public"
 
-# Copy root monorepo metadata and workspace definitions
+# Copy root monorepo metadata and ALL workspace definitions
 COPY package.json package-lock.json ./
 COPY packages/shared/package.json ./packages/shared/
 COPY apps/web/package.json ./apps/web/
 COPY apps/api/package.json ./apps/api/
 
 # Install dependencies
-RUN npm ci
+RUN npm ci --legacy-peer-deps
 
 # Copy Prisma schema and generate client for Next.js server actions / API
 COPY apps/api/prisma ./apps/api/prisma
