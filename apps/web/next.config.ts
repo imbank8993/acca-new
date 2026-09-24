@@ -20,9 +20,6 @@ const nextConfig: NextConfig = {
       canvas: './empty-module.ts',
     },
   },
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
   typescript: {
     ignoreBuildErrors: true,
   },
@@ -86,7 +83,11 @@ const nextConfig: NextConfig = {
       config.devtool = 'cheap-module-source-map';
     }
     // react-pdf requires this to prevent canvas missing errors in browser
-    config.resolve.alias.canvas = false;
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      '@': path.resolve(__dirname),
+      canvas: false,
+    };
     
     // Stop Webpack from enforcing strict ESM on pdf.mjs so that `this` is not undefined
     config.module.rules.push({

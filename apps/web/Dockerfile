@@ -41,7 +41,9 @@ COPY packages/shared ./packages/shared
 COPY apps/web ./apps/web
 
 # Build Next.js
-RUN npm run build --workspace=apps/web
+WORKDIR /app/apps/web
+RUN npm run build
+WORKDIR /app
 
 # ── 3. Production Runner Stage ────────────────────────────────────────────────
 FROM base AS runner
