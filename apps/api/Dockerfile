@@ -39,6 +39,7 @@ COPY apps/api ./apps/api
 
 # Build NestJS API
 RUN npm run build --workspace=apps/api
+RUN if [ -f apps/api/dist/src/main.js ] && [ ! -f apps/api/dist/main.js ]; then cp -f apps/api/dist/src/main.js apps/api/dist/main.js; fi
 
 # ── 3. Production Runner Stage ────────────────────────────────────────────────
 FROM base AS runner
@@ -66,4 +67,5 @@ EXPOSE 3007
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
   CMD curl -f http://localhost:3007/api/health || exit 1
 
-CMD ["node", "apps/api/dist/main.js"]
+CMD ["sh", "-c", "if [ -f apps/api/dist/src/main.js ]; then exec node apps/api/dist/src/main.js; else exec node apps/api/dist/main.js; fi"]
+
