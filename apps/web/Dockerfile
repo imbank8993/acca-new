@@ -20,6 +20,7 @@ WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV PUPPETEER_SKIP_DOWNLOAD=true
 ENV NODE_ENV=production
+ENV NODE_OPTIONS="--max-old-space-size=2048"
 ENV DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy?schema=public"
 
 # Copy root monorepo metadata and ALL workspace definitions

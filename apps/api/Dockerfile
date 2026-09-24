@@ -17,6 +17,7 @@ FROM base AS builder
 WORKDIR /app
 
 ENV PUPPETEER_SKIP_DOWNLOAD=true
+ENV NODE_OPTIONS="--max-old-space-size=2048"
 
 # Copy root monorepo metadata and ALL workspace definitions
 COPY package.json package-lock.json ./
