@@ -777,7 +777,7 @@ export default function SuratPage() {
                 suratData: { nomor_surat: meta.nomor_surat, nomor_urut: meta.nomor_urut || parseInt(meta.nomor_surat.split('/')[0]) || 1, nomor_kode1: meta.nomor_kode1, nomor_kode2: meta.nomor_kode2, nomor_kode3: meta.nomor_kode3, perkara: meta.perkara, kepada: meta.kepada, pejabat_id: meta.penandatangan_id, pejabat_nama: meta.penandatangan_nama, pejabat_jabatan: meta.penandatangan_jabatan, pejabat_nip: meta.penandatangan_nip, tanggal_ttd: meta.tanggal_ttd, jenis_surat: meta.jenis_surat },
                 userId: currentUser?.auth_id || currentUser?.id,
                 placement: { x: placement.x, y: placement.y, width: placement.w, height: placement.h, pageNum: currentPage, pageWidth: actualW, pageHeight: actualH, pagePhysicalWidth: physW, pagePhysicalHeight: physH },
-                baseUrl: window.location.hostname === 'localhost' ? 'http://localhost:3000' : window.location.origin,
+                baseUrl: window.location.origin,
             }));
             Swal.fire({
                 title: 'Memproses...',

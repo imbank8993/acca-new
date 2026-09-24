@@ -4,7 +4,7 @@
  * Supports: Supabase Storage, Google Drive, Cloudflare R2
  */
 
-const NEST_API_URL = process.env.NEXT_PUBLIC_NEST_API_URL || 'http://localhost:3001/api';
+const NEST_API_URL = process.env.NEXT_PUBLIC_NEST_API_URL || 'http://localhost:3007/api';
 
 export type StorageType = 'supabase' | 'google_drive' | 'cloudflare';
 

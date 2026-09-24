@@ -4,7 +4,7 @@ import { extractRequestToken } from '@/lib/app-jwt';
 import { corsResponse, handleOptions } from '@/lib/cors';
 
 export const dynamic = 'force-dynamic';
-const NEST_API_URL = process.env.NEXT_PUBLIC_NEST_API_URL || 'http://localhost:3001/api';
+const NEST_API_URL = process.env.NEXT_PUBLIC_NEST_API_URL || 'http://localhost:3007/api';
 
 export async function POST(request: NextRequest) {
     try {

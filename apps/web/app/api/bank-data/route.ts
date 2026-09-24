@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
   const token = extractRequestToken(request);
   const bodyData = await request.json().catch(() => ({}));
   
-  const NEST_API_URL = process.env.NEXT_PUBLIC_NEST_API_URL || 'http://127.0.0.1:3001/api';
+  const NEST_API_URL = process.env.NEXT_PUBLIC_NEST_API_URL || 'http://127.0.0.1:3007/api';
   
   try {
     const res = await fetch(`${NEST_API_URL}/bank-data`, {

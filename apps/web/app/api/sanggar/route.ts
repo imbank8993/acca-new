@@ -4,7 +4,7 @@ import { nestFetchAsUser } from '@/lib/nest-api';
 
 export const dynamic = 'force-dynamic';
 
-const NEST_API_URL = process.env.NEXT_PUBLIC_NEST_API_URL || 'http://localhost:3001/api';
+const NEST_API_URL = process.env.NEXT_PUBLIC_NEST_API_URL || 'http://localhost:3007/api';
 
 export async function GET(request: NextRequest) {
     const token = extractRequestToken(request);

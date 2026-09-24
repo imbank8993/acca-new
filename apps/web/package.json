@@ -3,13 +3,13 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "dev:webpack": "next dev --webpack",
+    "dev": "next dev -p 3006",
+    "dev:webpack": "next dev --webpack -p 3006",
     "build": "next build --webpack",
     "build:cloudflare": "npx opennextjs-cloudflare build && node scripts/fix-middleware-manifest.js && node scripts/patch-opennext.js",
     "deploy:cloudflare": "npm run build:cloudflare && wrangler deploy",
     "cloudflare:pages": "echo 'Cloudflare Pages build'",
-    "start": "next start -p 3000",
+    "start": "next start -p 3006",
     "lint": "eslint"
   },
   "dependencies": {

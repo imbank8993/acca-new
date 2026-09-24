@@ -12,7 +12,7 @@
  *                 mengunci semua user di luar aplikasi.
  */
 
-const NEST_API_URL = process.env.NEXT_PUBLIC_NEST_API_URL || 'http://localhost:3001/api'
+const NEST_API_URL = process.env.NEXT_PUBLIC_NEST_API_URL || 'http://localhost:3007/api'
 const INTERNAL_API_KEY = process.env.INTERNAL_API_KEY || ''
 
 const FRESH_MS = 30_000
