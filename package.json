@@ -1,0 +1,26 @@
+{
+  "name": "acca-monorepo",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace=apps/web",
+    "dev:frontend": "npm run dev --workspace=apps/web",
+    "dev:backend": "npm run start:dev --workspace=apps/api",
+    "dev:all": "npx concurrently -k -p \"[{name}]\" -n \"web,api\" -c \"cyan,magenta\" \"npm run dev:frontend\" \"npm run dev:backend\"",
+    "build": "npm run build --workspace=apps/web && npm run build --workspace=apps/api",
+    "build:frontend": "npm run build --workspace=apps/web",
+    "build:backend": "npm run build --workspace=apps/api",
+    "lint": "npm run lint --workspace=apps/web && npm run lint --workspace=apps/api",
+    "typecheck": "npx tsc --noEmit -p apps/web/tsconfig.json"
+  },
+  "devDependencies": {
+    "@types/jest": "^30.0.0",
+    "@types/pg": "^8.23.1",
+    "jest": "^30.5.1",
+    "ts-jest": "^29.4.12"
+  }
+}

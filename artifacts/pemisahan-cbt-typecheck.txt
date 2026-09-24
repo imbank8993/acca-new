@@ -1,0 +1,25 @@
+apps/web/.next/dev/types/validator.ts(116,39): error TS2307: Cannot find module '../../../app/(dashboard)/cbt-bank-soal/page.js' or its corresponding type declarations.
+apps/web/.next/dev/types/validator.ts(125,39): error TS2307: Cannot find module '../../../app/(dashboard)/cbt-dashboard/page.js' or its corresponding type declarations.
+apps/web/.next/dev/types/validator.ts(134,39): error TS2307: Cannot find module '../../../app/(dashboard)/cbt-nilai/page.js' or its corresponding type declarations.
+apps/web/.next/dev/types/validator.ts(143,39): error TS2307: Cannot find module '../../../app/(dashboard)/cbt-pantau/page.js' or its corresponding type declarations.
+apps/web/.next/dev/types/validator.ts(152,39): error TS2307: Cannot find module '../../../app/(dashboard)/cbt-ujian/page.js' or its corresponding type declarations.
+apps/web/.next/types/app/(dashboard)/cbt-bank-soal/page.ts(2,24): error TS2307: Cannot find module '../../../../../app/(dashboard)/cbt-bank-soal/page.js' or its corresponding type declarations.
+apps/web/.next/types/app/(dashboard)/cbt-bank-soal/page.ts(7,29): error TS2307: Cannot find module '../../../../../app/(dashboard)/cbt-bank-soal/page.js' or its corresponding type declarations.
+apps/web/.next/types/app/(dashboard)/cbt-dashboard/page.ts(2,24): error TS2307: Cannot find module '../../../../../app/(dashboard)/cbt-dashboard/page.js' or its corresponding type declarations.
+apps/web/.next/types/app/(dashboard)/cbt-dashboard/page.ts(7,29): error TS2307: Cannot find module '../../../../../app/(dashboard)/cbt-dashboard/page.js' or its corresponding type declarations.
+apps/web/.next/types/app/(dashboard)/cbt-nilai/page.ts(2,24): error TS2307: Cannot find module '../../../../../app/(dashboard)/cbt-nilai/page.js' or its corresponding type declarations.
+apps/web/.next/types/app/(dashboard)/cbt-nilai/page.ts(7,29): error TS2307: Cannot find module '../../../../../app/(dashboard)/cbt-nilai/page.js' or its corresponding type declarations.
+apps/web/.next/types/app/(dashboard)/cbt-pantau/page.ts(2,24): error TS2307: Cannot find module '../../../../../app/(dashboard)/cbt-pantau/page.js' or its corresponding type declarations.
+apps/web/.next/types/app/(dashboard)/cbt-pantau/page.ts(7,29): error TS2307: Cannot find module '../../../../../app/(dashboard)/cbt-pantau/page.js' or its corresponding type declarations.
+apps/web/.next/types/app/(dashboard)/cbt-ujian/page.ts(2,24): error TS2307: Cannot find module '../../../../../app/(dashboard)/cbt-ujian/page.js' or its corresponding type declarations.
+apps/web/.next/types/app/(dashboard)/cbt-ujian/page.ts(7,29): error TS2307: Cannot find module '../../../../../app/(dashboard)/cbt-ujian/page.js' or its corresponding type declarations.
+apps/web/.next/types/app/api/ptsp/route.ts(14,13): error TS2344: Type 'OmitWithTag<typeof import("D:/acca-new/apps/web/app/api/ptsp/route"), "GET" | "POST" | "revalidate" | "PATCH" | "DELETE" | "PUT" | "dynamic" | "runtime" | "HEAD" | "OPTIONS" | "config" | "generateStaticParams" | ... 5 more ... | "maxDuration", "">' does not satisfy the constraint '{ [x: string]: never; }'.
+  Property 'PTSP_TABLES' is incompatible with index signature.
+    Type 'Record<string, string>' is not assignable to type 'never'.
+apps/web/app/layanan-ptsp/components/PTSPClient.tsx(112,38): error TS2304: Cannot find name 'Row'.
+apps/web/app/layanan-ptsp/components/PTSPClient.tsx(118,44): error TS2304: Cannot find name 'Row'.
+apps/web/app/layanan-ptsp/components/PTSPClient.tsx(119,44): error TS2304: Cannot find name 'Row'.
+apps/web/app/layanan-ptsp/components/PTSPClient.tsx(120,48): error TS2304: Cannot find name 'Row'.
+apps/web/app/layanan-ptsp/components/PTSPClient.tsx(121,52): error TS2304: Cannot find name 'Row'.
+apps/web/app/layanan-ptsp/components/PTSPClient.tsx(228,35): error TS2304: Cannot find name 'Row'.
+apps/web/app/layanan-ptsp/components/PTSPClient.tsx(265,28): error TS2304: Cannot find name 'Row'.

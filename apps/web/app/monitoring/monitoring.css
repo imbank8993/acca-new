@@ -1,0 +1,421 @@
+/* RESET */
+* { box-sizing: border-box; }
+
+/* WRAPPER — Consistent flex column gap */
+.mc-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    max-width: 100%;
+    margin: 0;
+    padding: 0;
+    font-family: 'Poppins', sans-serif;
+    overflow-x: hidden;
+}
+
+.mc-tabs {
+    margin: 0;
+}
+
+/* CHIP "TOTAL" — tinggi 38px mengikuti .ftb-btn/.ftb-toggle di
+   components/filter-toolbar.css supaya sebaris rapi dengan
+   tombol Online di slot FilterActions yang sama. */
+.mc-total-chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    height: 38px;
+    padding: 0 14px;
+    box-sizing: border-box;
+    background: var(--n-card);
+    border: 1.5px solid var(--n-border);
+    border-radius: 10px;
+    white-space: nowrap;
+}
+
+.mc-total-val {
+    font-size: 1rem;
+    font-weight: 800;
+    line-height: 1;
+    color: var(--n-primary);
+}
+
+.mc-total-label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--n-muted);
+}
+
+/* PULSING BLUE DOT (PENANDA ONLINE - Sharp Electric Blue) */
+.mc-pulse-dot-blue {
+    width: 10px;
+    height: 10px;
+    background: #0066ff;
+    border-radius: 50%;
+    display: inline-block;
+    flex-shrink: 0;
+    box-shadow: 0 0 10px #0066ff, 0 0 3px #ffffff;
+    animation: pulse-blue 1.8s infinite ease-in-out;
+}
+
+@keyframes pulse-blue {
+    0%   { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(0, 102, 255, 0.95), 0 0 8px #0066ff; }
+    70%  { transform: scale(1.2); box-shadow: 0 0 0 8px rgba(0, 102, 255, 0), 0 0 12px rgba(0, 102, 255, 0.4); }
+    100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(0, 102, 255, 0), 0 0 8px #0066ff; }
+}
+
+/* ONLINE FILTER BUTTON IN TOOLBAR */
+.mc-online-filter-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 14px;
+    height: 38px;
+    box-sizing: border-box;
+    border-radius: 10px;
+    border: 1.5px solid var(--n-border);
+    background: var(--n-card);
+    color: var(--n-text);
+    font-size: 0.82rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.mc-online-filter-btn:hover {
+    border-color: #0066ff;
+    background: var(--n-soft);
+}
+
+.mc-online-filter-btn.active {
+    background: rgba(0, 102, 255, 0.12);
+    border-color: #0066ff;
+    color: #0066ff;
+}
+
+/* DARK MODE STYLING FOR SHARP CONTRAST */
+.dark .mc-total-chip {
+    background: #000000;
+    border-color: rgba(37, 99, 235, 0.4);
+}
+
+.dark .mc-total-val {
+    color: #60a5fa;
+}
+
+.dark .mc-online-filter-btn {
+    background: #000000 !important;
+    border-color: rgba(0, 102, 255, 0.6) !important;
+    color: #e2e8f0 !important;
+}
+
+.dark .mc-online-filter-btn.active {
+    background: rgba(0, 102, 255, 0.3) !important;
+    border-color: #0066ff !important;
+    color: #ffffff !important;
+    box-shadow: 0 0 12px rgba(0, 102, 255, 0.45) !important;
+}
+
+/* TABLE (DESKTOP) */
+.mc-table-wrap {
+    background: var(--n-card);
+    border: 1px solid var(--n-border);
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+
+.mc-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.875rem;
+}
+
+.mc-table th {
+    text-align: left;
+    padding: 12px 18px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--n-muted);
+    background: var(--n-soft);
+    border-bottom: 1px solid var(--n-border);
+}
+
+.mc-table td {
+    padding: 13px 18px;
+    border-bottom: 1px solid var(--n-border);
+    vertical-align: middle;
+    color: var(--n-text);
+}
+
+.mc-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.mc-table tbody tr {
+    transition: background 0.15s;
+}
+
+.mc-table tbody tr:hover {
+    background: var(--n-soft);
+}
+
+.mc-table tbody tr.is-online {
+    background: rgba(56, 189, 248, 0.03);
+}
+
+.mc-table tbody tr.is-online:hover {
+    background: rgba(56, 189, 248, 0.08);
+}
+
+/* USER CELL */
+.mc-user-cell {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.mc-avatar {
+    position: relative;
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.8rem;
+    color: white;
+    flex-shrink: 0;
+    overflow: visible;
+}
+
+.mc-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 10px;
+}
+
+.mc-online-dot {
+    position: absolute;
+    bottom: -2px;
+    right: -2px;
+    width: 10px;
+    height: 10px;
+    background: #0066ff;
+    border-radius: 50%;
+    border: 2px solid var(--n-card);
+    box-shadow: 0 0 8px #0066ff;
+}
+
+.mc-user-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.mc-user-name {
+    font-weight: 600;
+    color: var(--n-text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.mc-user-sub {
+    font-size: 0.75rem;
+    color: var(--n-muted);
+}
+
+/* ROLE BADGE */
+.mc-role-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+}
+
+/* LOCATION */
+.mc-location {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.85rem;
+    color: var(--n-text);
+}
+
+.mc-location i {
+    font-size: 0.8rem;
+    color: var(--n-primary);
+}
+
+.mc-tab-badge {
+    font-size: 0.75rem;
+    color: var(--n-primary);
+    background: rgba(0, 56, 168, 0.08);
+    padding: 1px 7px;
+    border-radius: 4px;
+    font-weight: 500;
+}
+
+/* TIME */
+.mc-time {
+    font-size: 0.8rem;
+    color: var(--n-muted);
+}
+
+/* CARDS (MOBILE) */
+.mc-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.mc-card {
+    background: var(--n-card);
+    border: 1px solid var(--n-border);
+    border-radius: 12px;
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+    transition: border-color 0.15s;
+}
+
+.mc-card.is-online {
+    border-left: 3px solid #0066ff;
+}
+
+.mc-card-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.mc-avatar-lg {
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    font-size: 0.9rem;
+}
+
+.mc-avatar-lg img {
+    border-radius: 12px;
+}
+
+.mc-card-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    flex: 1;
+    min-width: 0;
+}
+
+.mc-name-lg {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: var(--n-text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.mc-kelas-sub {
+    font-size: 0.75rem;
+    color: var(--n-muted);
+}
+
+.mc-card-details {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    padding-top: 8px;
+    border-top: 1px solid var(--n-border);
+    font-size: 0.78rem;
+}
+
+.mc-role-xs {
+    font-size: 0.7rem;
+    padding: 2px 7px;
+}
+
+.mc-detail-sep {
+    width: 3px;
+    height: 3px;
+    background: var(--n-muted);
+    border-radius: 50%;
+    opacity: 0.5;
+}
+
+.mc-detail-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    color: var(--n-muted);
+}
+
+.mc-detail-item i {
+    font-size: 0.75rem;
+    color: var(--n-primary);
+}
+
+/* STATES */
+.mc-loading, .mc-error, .mc-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 48px 24px;
+    text-align: center;
+    background: var(--n-card);
+    border: 1px solid var(--n-border);
+    border-radius: 12px;
+    gap: 12px;
+}
+
+.mc-error-icon, .mc-empty-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    background: var(--n-soft);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.4rem;
+    color: var(--n-muted);
+}
+
+.mc-error-icon {
+    color: #ef4444;
+    background: rgba(239, 68, 68, 0.08);
+}
+
+.mc-error p, .mc-empty p {
+    margin: 0;
+    color: var(--n-muted);
+    font-size: 0.9rem;
+}
+
+/* VISIBILITY HELPERS & RESPONSIVE POSITIONING */
+.desktop-only { display: block; }
+.mobile-only  { display: none; }
+
+@media (max-width: 767.98px) {
+    .mc-wrapper { gap: 12px; }
+    .desktop-only { display: none !important; }
+    .mobile-only  { display: flex !important; }
+    .mc-total-chip { flex: 1 1 auto; }
+    .mc-online-filter-btn { flex: 1 1 auto; justify-content: center; }
+}

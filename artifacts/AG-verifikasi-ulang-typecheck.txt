@@ -1,0 +1,38 @@
+apps/web/.next/types/app/api/ptsp/route.ts(14,13): error TS2344: Type 'OmitWithTag<typeof import("D:/acca-new/apps/web/app/api/ptsp/route"), "GET" | "POST" | "dynamic" | "HEAD" | "PATCH" | "DELETE" | "revalidate" | "PUT" | "runtime" | "OPTIONS" | "config" | "generateStaticParams" | ... 5 more ... | "maxDuration", "">' does not satisfy the constraint '{ [x: string]: never; }'.
+  Property 'PTSP_TABLES' is incompatible with index signature.
+    Type 'Record<string, string>' is not assignable to type 'never'.
+apps/web/app/actions/cbt-proktor.ts(40,55): error TS2339: Property 'allow_token_system' does not exist on type '{ id: string; name: string; created_at: Date | null; logo_url: string | null; slug: string; is_active: boolean | null; max_students: number; hero_image_url: string | null; }'.
+apps/web/app/actions/cbt-proktor.ts(174,57): error TS2353: Object literal may only specify known properties, and 'join_code' does not exist in type 'Without<cbt_classesCreateInput, cbt_classesUncheckedCreateInput> & cbt_classesUncheckedCreateInput'.
+apps/web/app/actions/cbt-proktor.ts(353,19): error TS2339: Property 'cbt_school_years' does not exist on type 'PrismaClient<PrismaClientOptions, never, DefaultArgs>'.
+apps/web/app/actions/cbt-proktor.ts(362,37): error TS2339: Property 'cbt_school_years' does not exist on type 'PrismaClient<PrismaClientOptions, never, DefaultArgs>'.
+apps/web/app/actions/cbt-question.ts(127,21): error TS2353: Object literal may only specify known properties, and 'updated_at' does not exist in type '(Without<cbt_question_banksUpdateInput, cbt_question_banksUncheckedUpdateInput> & cbt_question_banksUncheckedUpdateInput) | (Without<...> & cbt_question_banksUpdateInput)'.
+apps/web/app/actions/cbt-question.ts(152,25): error TS2353: Object literal may only specify known properties, and 'updated_at' does not exist in type '(Without<cbt_question_banksUpdateInput, cbt_question_banksUncheckedUpdateInput> & cbt_question_banksUncheckedUpdateInput) | (Without<...> & cbt_question_banksUpdateInput)'.
+apps/web/app/actions/cbt-question.ts(287,17): error TS2561: Object literal may only specify known properties, but 'cbt_bank_folders' does not exist in type 'cbt_question_banksInclude<DefaultArgs>'. Did you mean to write 'bank_folders'?
+apps/web/app/actions/cbt-question.ts(324,19): error TS2551: Property 'cbt_bank_folders' does not exist on type 'PrismaClient<PrismaClientOptions, never, DefaultArgs>'. Did you mean 'bank_folders'?
+apps/web/app/actions/cbt-question.ts(333,35): error TS2551: Property 'cbt_bank_folders' does not exist on type 'PrismaClient<PrismaClientOptions, never, DefaultArgs>'. Did you mean 'bank_folders'?
+apps/web/app/actions/cbt-question.ts(356,25): error TS2353: Object literal may only specify known properties, and 'updated_at' does not exist in type '(Without<cbt_question_banksUpdateInput, cbt_question_banksUncheckedUpdateInput> & cbt_question_banksUncheckedUpdateInput) | (Without<...> & cbt_question_banksUpdateInput)'.
+apps/web/app/actions/cbt-question.ts(364,21): error TS2353: Object literal may only specify known properties, and 'updated_at' does not exist in type '(Without<cbt_question_banksUpdateInput, cbt_question_banksUncheckedUpdateInput> & cbt_question_banksUncheckedUpdateInput) | (Without<...> & cbt_question_banksUpdateInput)'.
+apps/web/app/actions/cbt-siswa.ts(83,35): error TS2339: Property 'cbt_unlocked_exams' does not exist on type 'PrismaClient<PrismaClientOptions, never, DefaultArgs>'.
+apps/web/app/actions/cbt-siswa.ts(249,54): error TS2345: Argument of type 'string | null' is not assignable to parameter of type 'string'.
+  Type 'null' is not assignable to type 'string'.
+apps/web/app/actions/cbt-siswa.ts(253,142): error TS2345: Argument of type 'string | null' is not assignable to parameter of type 'string'.
+  Type 'null' is not assignable to type 'string'.
+apps/web/app/actions/cbt-siswa.ts(256,153): error TS2345: Argument of type 'string | null' is not assignable to parameter of type 'string'.
+  Type 'null' is not assignable to type 'string'.
+apps/web/app/actions/cbt-siswa.ts(257,147): error TS2345: Argument of type 'string | null' is not assignable to parameter of type 'string'.
+  Type 'null' is not assignable to type 'string'.
+apps/web/app/actions/cbt-siswa.ts(364,19): error TS2353: Object literal may only specify known properties, and 'token_balance' does not exist in type 'cbt_profilesSelect<DefaultArgs>'.
+apps/web/app/actions/cbt-siswa.ts(366,21): error TS2339: Property 'token_balance' does not exist on type '{ id: string; created_at: Date | null; full_name: string; avatar_url: string | null; identity_number: string | null; }'.
+apps/web/app/actions/cbt-siswa.ts(381,23): error TS2353: Object literal may only specify known properties, and 'token_balance' does not exist in type 'cbt_profilesSelect<DefaultArgs>'.
+apps/web/app/actions/cbt-siswa.ts(383,34): error TS2339: Property 'token_balance' does not exist on type '{ id: string; created_at: Date | null; full_name: string; avatar_url: string | null; identity_number: string | null; }'.
+apps/web/app/actions/cbt-siswa.ts(389,21): error TS2353: Object literal may only specify known properties, and 'token_balance' does not exist in type '(Without<cbt_profilesUpdateInput, cbt_profilesUncheckedUpdateInput> & cbt_profilesUncheckedUpdateInput) | (Without<...> & cbt_profilesUpdateInput)'.
+apps/web/app/actions/cbt-siswa.ts(391,22): error TS2339: Property 'cbt_token_transactions' does not exist on type 'PrismaClient<PrismaClientOptions, never, DefaultArgs>'.
+apps/web/app/actions/cbt-siswa.ts(394,22): error TS2339: Property 'cbt_unlocked_exams' does not exist on type 'PrismaClient<PrismaClientOptions, never, DefaultArgs>'.
+apps/web/app/layanan-ptsp/components/PTSPClient.tsx(112,38): error TS2304: Cannot find name 'Row'.
+apps/web/app/layanan-ptsp/components/PTSPClient.tsx(118,44): error TS2304: Cannot find name 'Row'.
+apps/web/app/layanan-ptsp/components/PTSPClient.tsx(119,44): error TS2304: Cannot find name 'Row'.
+apps/web/app/layanan-ptsp/components/PTSPClient.tsx(120,48): error TS2304: Cannot find name 'Row'.
+apps/web/app/layanan-ptsp/components/PTSPClient.tsx(121,52): error TS2304: Cannot find name 'Row'.
+apps/web/app/layanan-ptsp/components/PTSPClient.tsx(228,35): error TS2304: Cannot find name 'Row'.
+apps/web/app/layanan-ptsp/components/PTSPClient.tsx(265,28): error TS2304: Cannot find name 'Row'.
+apps/web/components/cbt/CBTPlaceholders.tsx(18,68): error TS2339: Property 'fullName' does not exist on type 'User'.

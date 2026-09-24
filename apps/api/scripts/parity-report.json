@@ -1,0 +1,326 @@
+{
+  "timestamp": "2026-09-11T02:40:46.094Z",
+  "matchCount": 34,
+  "diffCount": 10,
+  "errorCount": 1,
+  "totalSupabaseRows": 46604,
+  "totalVpsRows": 45921,
+  "discrepancy": 683,
+  "tables": [
+    {
+      "table": "users",
+      "supaCount": 306,
+      "vpsCount": 305,
+      "diff": 1,
+      "status": "VPS_BEHIND (+1)"
+    },
+    {
+      "table": "master_guru",
+      "supaCount": 48,
+      "vpsCount": 48,
+      "diff": 0,
+      "status": "MATCH"
+    },
+    {
+      "table": "user_roles",
+      "supaCount": "ERR",
+      "vpsCount": "ERR",
+      "diff": 0,
+      "status": "ERROR"
+    },
+    {
+      "table": "role_permissions",
+      "supaCount": 621,
+      "vpsCount": 621,
+      "diff": 0,
+      "status": "MATCH"
+    },
+    {
+      "table": "master_tahun_ajaran",
+      "supaCount": 6,
+      "vpsCount": 6,
+      "diff": 0,
+      "status": "MATCH"
+    },
+    {
+      "table": "master_kelas",
+      "supaCount": 48,
+      "vpsCount": 48,
+      "diff": 0,
+      "status": "MATCH"
+    },
+    {
+      "table": "master_mapel",
+      "supaCount": 41,
+      "vpsCount": 41,
+      "diff": 0,
+      "status": "MATCH"
+    },
+    {
+      "table": "master_siswa",
+      "supaCount": 258,
+      "vpsCount": 256,
+      "diff": 2,
+      "status": "VPS_BEHIND (+2)"
+    },
+    {
+      "table": "master_pejabat",
+      "supaCount": 8,
+      "vpsCount": 8,
+      "diff": 0,
+      "status": "MATCH"
+    },
+    {
+      "table": "master_dropdown",
+      "supaCount": 26,
+      "vpsCount": 26,
+      "diff": 0,
+      "status": "MATCH"
+    },
+    {
+      "table": "master_jenis_surat",
+      "supaCount": 9,
+      "vpsCount": 9,
+      "diff": 0,
+      "status": "MATCH"
+    },
+    {
+      "table": "siswa_kelas",
+      "supaCount": 1589,
+      "vpsCount": 1589,
+      "diff": 0,
+      "status": "MATCH"
+    },
+    {
+      "table": "siswa_kelompok",
+      "supaCount": 0,
+      "vpsCount": 0,
+      "diff": 0,
+      "status": "MATCH"
+    },
+    {
+      "table": "jadwal_guru",
+      "supaCount": 8639,
+      "vpsCount": 8639,
+      "diff": 0,
+      "status": "MATCH"
+    },
+    {
+      "table": "jadwal_piket",
+      "supaCount": 4944,
+      "vpsCount": 4944,
+      "diff": 0,
+      "status": "MATCH"
+    },
+    {
+      "table": "jadwal_versi",
+      "supaCount": 14,
+      "vpsCount": 14,
+      "diff": 0,
+      "status": "MATCH"
+    },
+    {
+      "table": "jurnal_guru",
+      "supaCount": 3526,
+      "vpsCount": 3455,
+      "diff": 71,
+      "status": "VPS_BEHIND (+71)"
+    },
+    {
+      "table": "jurnal_banding",
+      "supaCount": 12,
+      "vpsCount": 11,
+      "diff": 1,
+      "status": "VPS_BEHIND (+1)"
+    },
+    {
+      "table": "jurnal_tugas_tambahan",
+      "supaCount": 2,
+      "vpsCount": 2,
+      "diff": 0,
+      "status": "MATCH"
+    },
+    {
+      "table": "tugas_tambahan",
+      "supaCount": 123,
+      "vpsCount": 123,
+      "diff": 0,
+      "status": "MATCH"
+    },
+    {
+      "table": "ketidakhadiran",
+      "supaCount": 1462,
+      "vpsCount": 1451,
+      "diff": 11,
+      "status": "VPS_BEHIND (+11)"
+    },
+    {
+      "table": "absensi_sesi",
+      "supaCount": 1179,
+      "vpsCount": 1146,
+      "diff": 33,
+      "status": "VPS_BEHIND (+33)"
+    },
+    {
+      "table": "absensi_detail",
+      "supaCount": 20122,
+      "vpsCount": 19563,
+      "diff": 559,
+      "status": "VPS_BEHIND (+559)"
+    },
+    {
+      "table": "absensi_rekap_lock",
+      "supaCount": 0,
+      "vpsCount": 0,
+      "diff": 0,
+      "status": "MATCH"
+    },
+    {
+      "table": "lckh_periods",
+      "supaCount": 9,
+      "vpsCount": 9,
+      "diff": 0,
+      "status": "MATCH"
+    },
+    {
+      "table": "lckh_submissions",
+      "supaCount": 9,
+      "vpsCount": 9,
+      "diff": 0,
+      "status": "MATCH"
+    },
+    {
+      "table": "lckh_approvals",
+      "supaCount": 5,
+      "vpsCount": 5,
+      "diff": 0,
+      "status": "MATCH"
+    },
+    {
+      "table": "lckh_modules",
+      "supaCount": 0,
+      "vpsCount": 0,
+      "diff": 0,
+      "status": "MATCH"
+    },
+    {
+      "table": "nilai_bobot",
+      "supaCount": 17,
+      "vpsCount": 17,
+      "diff": 0,
+      "status": "MATCH"
+    },
+    {
+      "table": "nilai_tagihan",
+      "supaCount": 195,
+      "vpsCount": 195,
+      "diff": 0,
+      "status": "MATCH"
+    },
+    {
+      "table": "nilai_data",
+      "supaCount": 2319,
+      "vpsCount": 2319,
+      "diff": 0,
+      "status": "MATCH"
+    },
+    {
+      "table": "nilai_logs",
+      "supaCount": 0,
+      "vpsCount": 0,
+      "diff": 0,
+      "status": "MATCH"
+    },
+    {
+      "table": "surat",
+      "supaCount": 12,
+      "vpsCount": 12,
+      "diff": 0,
+      "status": "MATCH"
+    },
+    {
+      "table": "surat_templates",
+      "supaCount": 7,
+      "vpsCount": 7,
+      "diff": 0,
+      "status": "MATCH"
+    },
+    {
+      "table": "pengumuman",
+      "supaCount": 5,
+      "vpsCount": 5,
+      "diff": 0,
+      "status": "MATCH"
+    },
+    {
+      "table": "informasi_akademik",
+      "supaCount": 25,
+      "vpsCount": 25,
+      "diff": 0,
+      "status": "MATCH"
+    },
+    {
+      "table": "rekam_medis_siswa",
+      "supaCount": 105,
+      "vpsCount": 103,
+      "diff": 2,
+      "status": "VPS_BEHIND (+2)"
+    },
+    {
+      "table": "guru_asuh",
+      "supaCount": 291,
+      "vpsCount": 291,
+      "diff": 0,
+      "status": "MATCH"
+    },
+    {
+      "table": "catatan_siswa",
+      "supaCount": 1,
+      "vpsCount": 1,
+      "diff": 0,
+      "status": "MATCH"
+    },
+    {
+      "table": "ekskul",
+      "supaCount": 13,
+      "vpsCount": 13,
+      "diff": 0,
+      "status": "MATCH"
+    },
+    {
+      "table": "ekskul_siswa",
+      "supaCount": 410,
+      "vpsCount": 408,
+      "diff": 2,
+      "status": "VPS_BEHIND (+2)"
+    },
+    {
+      "table": "ekskul_pembina",
+      "supaCount": 24,
+      "vpsCount": 24,
+      "diff": 0,
+      "status": "MATCH"
+    },
+    {
+      "table": "ekskul_pertemuan",
+      "supaCount": 3,
+      "vpsCount": 2,
+      "diff": 1,
+      "status": "VPS_BEHIND (+1)"
+    },
+    {
+      "table": "site_settings",
+      "supaCount": 169,
+      "vpsCount": 169,
+      "diff": 0,
+      "status": "MATCH"
+    },
+    {
+      "table": "file_storage_config",
+      "supaCount": 2,
+      "vpsCount": 2,
+      "diff": 0,
+      "status": "MATCH"
+    }
+  ]
+}

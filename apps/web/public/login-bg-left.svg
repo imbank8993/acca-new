@@ -1,0 +1,225 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1200" width="1000" height="1200" preserveAspectRatio="xMidYMid slice">
+  <!--
+    Langit malam untuk panel kiri halaman login (dark mode).
+    Digenerate oleh scripts/gen-nightsky.js - jangan diedit manual.
+    Warna dasar panel dipasang lewat CSS (.dark .lp-brand); file ini hanya
+    berisi nebula, bima sakti, bintang, dan planet jauh.
+  -->
+  <defs>
+    <radialGradient id="skNebulaA" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#1E5BD6" stop-opacity="0.10"/>
+      <stop offset="100%" stop-color="#1E5BD6" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="skNebulaB" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#2DBCFF" stop-opacity="0.06"/>
+      <stop offset="100%" stop-color="#2DBCFF" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="skHorizon" cx="50%" cy="100%" r="70%">
+      <stop offset="0%" stop-color="#176BFF" stop-opacity="0.085"/>
+      <stop offset="100%" stop-color="#176BFF" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- Gradasi melintang band (sumbu pendek) supaya tepinya luruh halus,
+         bukan memotong sebagai garis lurus. -->
+    <linearGradient id="skBand" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#8FB8FF" stop-opacity="0"/>
+      <stop offset="50%" stop-color="#8FB8FF" stop-opacity="0.05"/>
+      <stop offset="100%" stop-color="#8FB8FF" stop-opacity="0"/>
+    </linearGradient>
+    <radialGradient id="skBandFade" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="1"/>
+      <stop offset="55%" stop-color="#ffffff" stop-opacity="0.75"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+    <mask id="skBandMask">
+      <ellipse cx="500" cy="560" rx="1500" ry="420" fill="url(#skBandFade)"/>
+    </mask>
+
+    <!-- Planet: disinari dari kiri-atas, sisi kanan-bawah gelap -->
+    <radialGradient id="skPlanet" cx="34%" cy="30%" r="78%">
+      <stop offset="0%" stop-color="#5B8FE0" stop-opacity="0.55"/>
+      <stop offset="45%" stop-color="#2C5AA8" stop-opacity="0.34"/>
+      <stop offset="100%" stop-color="#0A1533" stop-opacity="0.22"/>
+    </radialGradient>
+    <radialGradient id="skPlanetHalo" cx="50%" cy="50%" r="50%">
+      <stop offset="55%" stop-color="#3E7BD6" stop-opacity="0.16"/>
+      <stop offset="100%" stop-color="#3E7BD6" stop-opacity="0"/>
+    </radialGradient>
+    <clipPath id="skPlanetClip">
+      <circle cx="792" cy="236" r="62"/>
+    </clipPath>
+
+    <filter id="skGlow" x="-400%" y="-400%" width="900%" height="900%">
+      <feGaussianBlur stdDeviation="2.2" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="skSoft" x="-100%" y="-100%" width="300%" height="300%">
+      <feGaussianBlur stdDeviation="14"/>
+    </filter>
+  </defs>
+
+  <!-- ── Nebula & cahaya langit ── -->
+  <ellipse cx="250" cy="220" rx="430" ry="360" fill="url(#skNebulaA)"/>
+  <ellipse cx="820" cy="760" rx="400" ry="380" fill="url(#skNebulaB)"/>
+  <rect x="0" y="700" width="1000" height="500" fill="url(#skHorizon)"/>
+
+  <!-- ── Pita bima sakti ── -->
+  <g transform="rotate(-52 500 560)" mask="url(#skBandMask)">
+    <ellipse cx="500" cy="560" rx="1500" ry="190" fill="url(#skBand)"/>
+    <ellipse cx="500" cy="560" rx="1500" ry="88" fill="url(#skBand)" opacity="0.75"/>
+  </g>
+
+  <!-- ── Star field ── -->
+  <g>
+    <circle cx="664.5" cy="174" r="0.9" fill="#ffffff" opacity="0.4"/>
+    <circle cx="157.1" cy="458.3" r="0.6" fill="#ffffff" opacity="0.9"/>
+    <circle cx="146.9" cy="423.6" r="0.9" fill="#ffffff" opacity="0.4"/>
+    <circle cx="488.5" cy="118" r="0.9" fill="#9dc3ff" opacity="0.5"/>
+    <circle cx="1000.5" cy="103.7" r="1" fill="#dbe9ff" opacity="0.5"/>
+    <circle cx="156.9" cy="298.4" r="0.6" fill="#ffffff" opacity="0.9"/>
+    <circle cx="873.2" cy="-32.9" r="0.6" fill="#dbe9ff" opacity="0.4"/>
+    <circle cx="630" cy="130.6" r="0.8" fill="#ffffff" opacity="0.6"/>
+    <circle cx="680.7" cy="184.4" r="0.5" fill="#dbe9ff" opacity="0.2"/>
+    <circle cx="993.2" cy="488.4" r="0.8" fill="#ffffff" opacity="0.5"/>
+    <circle cx="1014.8" cy="347" r="1.1" fill="#9dc3ff" opacity="0.5"/>
+    <circle cx="162.1" cy="268.5" r="0.8" fill="#9dc3ff" opacity="0.7"/>
+    <circle cx="768.2" cy="588" r="0.8" fill="#ffffff" opacity="0.7"/>
+    <circle cx="930.4" cy="463.9" r="0.5" fill="#ffffff" opacity="0.4"/>
+    <circle cx="367.2" cy="641.8" r="0.8" fill="#ffffff" opacity="0.4"/>
+    <circle cx="158.4" cy="215.4" r="0.7" fill="#dbe9ff" opacity="0.5"/>
+    <circle cx="610.2" cy="395" r="0.5" fill="#ffffff" opacity="0.4"/>
+    <circle cx="821.5" cy="461.3" r="0.7" fill="#9dc3ff" opacity="0.6"/>
+    <circle cx="227" cy="286.8" r="0.5" fill="#9dc3ff" opacity="0.8"/>
+    <circle cx="138.4" cy="411.6" r="0.6" fill="#ffffff" opacity="0.7"/>
+    <circle cx="651.2" cy="15.7" r="0.7" fill="#ffffff" opacity="0.6"/>
+    <circle cx="82.3" cy="181.1" r="0.8" fill="#ffffff" opacity="0.8"/>
+    <circle cx="638.1" cy="178.3" r="0.5" fill="#9dc3ff" opacity="0.4"/>
+    <circle cx="931.9" cy="372.1" r="0.7" fill="#ffffff" opacity="0.5"/>
+    <circle cx="647.4" cy="266.1" r="0.9" fill="#ffffff" opacity="0.8"/>
+    <circle cx="880.9" cy="614.9" r="0.6" fill="#ffffff" opacity="0.6"/>
+    <circle cx="98.9" cy="347.3" r="0.8" fill="#ffffff" opacity="0.9"/>
+    <circle cx="847.3" cy="348.1" r="0.5" fill="#ffffff" opacity="0.6"/>
+    <circle cx="7.4" cy="98.3" r="1.3" fill="#ffffff" opacity="0.6"/>
+    <circle cx="169.9" cy="69" r="1.1" fill="#dbe9ff" opacity="0.4"/>
+    <circle cx="885.7" cy="250.5" r="0.6" fill="#ffffff" opacity="0.8"/>
+    <circle cx="44.4" cy="232" r="0.9" fill="#9dc3ff" opacity="0.7"/>
+    <circle cx="902.9" cy="345" r="0.6" fill="#dbe9ff" opacity="0.4"/>
+    <circle cx="150.3" cy="58.7" r="0.8" fill="#ffffff" opacity="0.4"/>
+    <circle cx="149.6" cy="310.9" r="0.6" fill="#ffffff" opacity="0.8"/>
+    <circle cx="117.8" cy="162" r="0.7" fill="#dbe9ff" opacity="0.9"/>
+    <circle cx="49.4" cy="360.7" r="0.9" fill="#dbe9ff" opacity="0.6"/>
+    <circle cx="657.4" cy="60.3" r="1.1" fill="#ffffff" opacity="0.5"/>
+    <circle cx="107.5" cy="134.8" r="1.2" fill="#ffffff" opacity="0.8"/>
+    <circle cx="231.7" cy="596.6" r="0.9" fill="#9dc3ff" opacity="0.5"/>
+    <circle cx="275.8" cy="551.4" r="0.6" fill="#9dc3ff" opacity="0.6"/>
+    <circle cx="804.6" cy="412.3" r="1.8" fill="#ffffff" opacity="0.7"/>
+    <circle cx="138.8" cy="473.5" r="0.8" fill="#ffffff" opacity="0.5"/>
+    <circle cx="15.1" cy="182.8" r="0.8" fill="#ffffff" opacity="0.9"/>
+    <circle cx="635.3" cy="49.4" r="1.3" fill="#ffffff" opacity="0.4"/>
+    <circle cx="83.8" cy="141.4" r="0.8" fill="#ffffff" opacity="0.7"/>
+    <circle cx="270.1" cy="192.9" r="0.9" fill="#ffffff" opacity="0.4"/>
+    <circle cx="796.1" cy="60.2" r="0.5" fill="#ffffff" opacity="0.6"/>
+    <circle cx="578.8" cy="309.3" r="0.9" fill="#ffffff" opacity="0.7"/>
+    <circle cx="465.2" cy="401.3" r="1" fill="#ffffff" opacity="0.2"/>
+    <circle cx="1009.8" cy="42.6" r="0.9" fill="#ffffff" opacity="0.5"/>
+    <circle cx="349.2" cy="74.1" r="0.5" fill="#ffffff" opacity="0.6"/>
+    <circle cx="731" cy="36.1" r="0.7" fill="#dbe9ff" opacity="0.4"/>
+    <circle cx="172.8" cy="75.2" r="0.7" fill="#9dc3ff" opacity="0.7"/>
+    <circle cx="915.8" cy="55.9" r="0.5" fill="#ffffff" opacity="0.3"/>
+    <circle cx="173.5" cy="-16.8" r="0.9" fill="#dbe9ff" opacity="0.8"/>
+    <circle cx="599.7" cy="507.2" r="0.7" fill="#9dc3ff" opacity="0.3"/>
+    <circle cx="179.6" cy="116.9" r="0.6" fill="#ffffff" opacity="0.6"/>
+    <circle cx="665.4" cy="634" r="0.6" fill="#ffffff" opacity="0.5"/>
+    <circle cx="927.1" cy="373" r="0.9" fill="#9dc3ff" opacity="0.7"/>
+    <circle cx="992.3" cy="585.5" r="0.6" fill="#ffffff" opacity="0.7"/>
+    <circle cx="666.8" cy="92.9" r="0.6" fill="#ffffff" opacity="0.5"/>
+    <circle cx="-36.1" cy="635.7" r="1" fill="#ffffff" opacity="0.3"/>
+    <circle cx="935.1" cy="241.6" r="0.9" fill="#dbe9ff" opacity="0.6"/>
+    <circle cx="498.4" cy="377.1" r="0.8" fill="#ffffff" opacity="0.4"/>
+    <circle cx="244.3" cy="198.9" r="0.5" fill="#ffffff" opacity="0.7"/>
+    <circle cx="26.6" cy="336.6" r="0.9" fill="#dbe9ff" opacity="0.8"/>
+    <circle cx="536.7" cy="9.7" r="0.6" fill="#ffffff" opacity="0.8"/>
+    <circle cx="412.9" cy="706.7" r="0.6" fill="#9dc3ff" opacity="0.9"/>
+    <circle cx="125.1" cy="122.3" r="1.3" fill="#ffffff" opacity="0.7"/>
+    <circle cx="953.1" cy="220.9" r="0.9" fill="#ffffff" opacity="0.5"/>
+    <circle cx="208" cy="113.5" r="0.6" fill="#dbe9ff" opacity="0.4"/>
+    <circle cx="-1.2" cy="221.8" r="0.5" fill="#ffffff" opacity="0.6"/>
+    <circle cx="723.1" cy="156.2" r="1.2" fill="#ffffff" opacity="0.6"/>
+    <circle cx="408.9" cy="138.5" r="0.6" fill="#ffffff" opacity="0.5"/>
+    <circle cx="86" cy="26" r="0.9" fill="#ffffff" opacity="0.8"/>
+    <circle cx="284.4" cy="243.6" r="0.8" fill="#ffffff" opacity="0.6"/>
+    <circle cx="107.2" cy="707.1" r="0.6" fill="#dbe9ff" opacity="0.3"/>
+    <circle cx="63.4" cy="207.2" r="0.8" fill="#ffffff" opacity="0.9"/>
+    <circle cx="830.8" cy="430.4" r="0.8" fill="#ffffff" opacity="0.5"/>
+    <circle cx="756.4" cy="143.5" r="1.2" fill="#9dc3ff" opacity="0.7"/>
+    <circle cx="565.6" cy="48.1" r="0.6" fill="#9dc3ff" opacity="0.3"/>
+    <circle cx="-11.5" cy="66.6" r="0.7" fill="#ffffff" opacity="0.7"/>
+    <circle cx="937.3" cy="473.1" r="0.7" fill="#9dc3ff" opacity="0.5"/>
+    <circle cx="260.5" cy="235.9" r="0.8" fill="#ffffff" opacity="0.7"/>
+    <circle cx="8" cy="3.6" r="0.5" fill="#ffffff" opacity="0.6"/>
+    <circle cx="-22.2" cy="56.6" r="0.5" fill="#ffffff" opacity="0.6"/>
+    <circle cx="767.9" cy="560.6" r="0.8" fill="#ffffff" opacity="0.7"/>
+    <circle cx="432.1" cy="29.9" r="1.3" fill="#ffffff" opacity="0.5"/>
+    <circle cx="325.2" cy="645" r="0.6" fill="#ffffff" opacity="0.4"/>
+    <circle cx="195.7" cy="666.9" r="0.9" fill="#dbe9ff" opacity="0.3"/>
+    <circle cx="125.9" cy="121.3" r="0.7" fill="#ffffff" opacity="0.6"/>
+    <circle cx="52.4" cy="698.9" r="0.6" fill="#9dc3ff" opacity="0.7"/>
+    <circle cx="592.2" cy="218.1" r="1.7" fill="#ffffff" opacity="0.3"/>
+    <circle cx="208.7" cy="182.4" r="0.5" fill="#ffffff" opacity="0.5"/>
+  </g>
+
+  <!-- ── Bintang terang ── -->
+  <g>
+    <g opacity="0.85">
+      <path d="M252.6 168 H283.4 M268 152.6 V183.4" stroke="#dbe9ff" stroke-width="0.7" opacity="0.35"/>
+      <circle cx="268" cy="168" r="2.2" fill="#ffffff" filter="url(#skGlow)"/>
+    </g>
+    <g opacity="0.85">
+      <path d="M728.7 512 H755.3 M742 498.7 V525.3" stroke="#dbe9ff" stroke-width="0.7" opacity="0.35"/>
+      <circle cx="742" cy="512" r="1.9" fill="#ffffff" filter="url(#skGlow)"/>
+    </g>
+    <g opacity="0.85">
+      <path d="M134 566 H162 M148 552 V580" stroke="#dbe9ff" stroke-width="0.7" opacity="0.35"/>
+      <circle cx="148" cy="566" r="2" fill="#ffffff" filter="url(#skGlow)"/>
+    </g>
+    <g opacity="0.85">
+      <path d="M592.1 96 H615.9 M604 84.1 V107.9" stroke="#dbe9ff" stroke-width="0.7" opacity="0.35"/>
+      <circle cx="604" cy="96" r="1.7" fill="#ffffff" filter="url(#skGlow)"/>
+    </g>
+    <g opacity="0.85">
+      <path d="M893.4 344 H918.6 M906 331.4 V356.6" stroke="#dbe9ff" stroke-width="0.7" opacity="0.35"/>
+      <circle cx="906" cy="344" r="1.8" fill="#ffffff" filter="url(#skGlow)"/>
+    </g>
+    <g opacity="0.85">
+      <path d="M341.5 622 H362.5 M352 611.5 V632.5" stroke="#dbe9ff" stroke-width="0.7" opacity="0.35"/>
+      <circle cx="352" cy="622" r="1.5" fill="#ffffff" filter="url(#skGlow)"/>
+    </g>
+    <g opacity="0.85">
+      <path d="M497.5 268 H518.5 M508 257.5 V278.5" stroke="#dbe9ff" stroke-width="0.7" opacity="0.35"/>
+      <circle cx="508" cy="268" r="1.5" fill="#ffffff" filter="url(#skGlow)"/>
+    </g>
+  </g>
+
+  <!-- ── Planet jauh bercincin ── -->
+  <g>
+    <circle cx="792" cy="236" r="117.8" fill="url(#skPlanetHalo)"/>
+    <!-- cincin bagian belakang -->
+    <ellipse cx="792" cy="236" rx="106.64" ry="23.56"
+             fill="none" stroke="#7FA8E8" stroke-width="2.4" opacity="0.20"
+             transform="rotate(-19 792 236)"/>
+    <circle cx="792" cy="236" r="62" fill="url(#skPlanet)"/>
+    <!-- pita atmosfer tipis -->
+    <g clip-path="url(#skPlanetClip)" opacity="0.16">
+      <path d="M722 210 q70 -12 140 0" fill="none" stroke="#BFD8FF" stroke-width="2"/>
+      <path d="M722 242 q70 14 140 0" fill="none" stroke="#BFD8FF" stroke-width="3"/>
+      <path d="M722 270 q70 10 140 0" fill="none" stroke="#8FB8FF" stroke-width="2"/>
+    </g>
+    <!-- cincin bagian depan -->
+    <ellipse cx="792" cy="236" rx="106.64" ry="23.56"
+             fill="none" stroke="#A9C8F5" stroke-width="2.4" opacity="0.34"
+             transform="rotate(-19 792 236)"
+             stroke-dasharray="161.20000000000002 210.79999999999998" stroke-dashoffset="80.60000000000001"/>
+    <!-- bulan kecil -->
+    <circle cx="674" cy="150" r="5" fill="#9DC3FF" opacity="0.4"/>
+  </g>
+</svg>

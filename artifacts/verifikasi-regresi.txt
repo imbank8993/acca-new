@@ -1,0 +1,33 @@
+PASS A01 survei menolak siswa sebelum service
+PASS A02 secret hanya untuk internal
+PASS A02/A24 kunci internal kosong tidak melewati pemeriksaan
+PASS A02 storage write menolak siswa, menerima admin
+PASS A28 internal setting WhatsApp & authenticated timezone
+PASS A03 pengaturan/generate/delete semuanya memakai feature guard
+PASS A04 token akun nonaktif/null ditolak; akun aktif diterima
+PASS A05 alamat IPv4/IPv6 privat, loopback dan URL kredensial ditolak
+PASS A05 HTML/SVG/XML dan script ditolak, PDF diterima
+PASS A06 upload menerima konfigurasi objek aktif
+PASS A07 tanggal/BigInt/Decimal bersarang tetap valid di lima service
+PASS A08 jurnal-master dispatch ke handler statis
+PASS A09 sanggar meneruskan token pengguna
+PASS A10 sanitasi pengumuman baru dan historis
+PASS A11 siswa tidak dapat membaca NISN lain atau substring username
+PASS A11 orang tua wajib relasi anak di PostgreSQL
+PASS A11 guru tanpa penugasan kelas ditolak
+PASS A12 tugas lintas pemilik dan NIP kosong ditolak
+PASS A12 checklist BigInt pemilik boleh, siswa lain tidak
+PASS A12 pencarian tidak memperlebar kelas; checklist mengikuti sesi
+PASS A15 update LCKH orang lain tanpa nip tetap ditolak
+PASS A15 daftar/detail/print LCKH lintas NIP ditolak
+PASS A15 pemilik tidak bisa memalsukan status persetujuan
+PASS A15/A26 persetujuan WKM atomik dan tidak melompati Kamad
+PASS A15 Kamad final menyimpan approval code server
+PASS A16 Bank Data tanpa akses halaman ditolak
+PASS A16/A18 katalog tiga subjek, sensitif disembunyikan
+PASS A16 konfigurasi/dataset nonaktif/kolom tak dikenal ditolak
+PASS A18 XLSX nyata, select allowlist dan batas baris
+PASS A18 semua kolom katalog sesuai Prisma PostgreSQL
+PASS A19 pemilik file boleh hapus, pengguna lain ditolak
+PASS A26 switch storage invalid tidak menonaktifkan provider
+PASS A27 summary menghasilkan detail laporan dan filter tanggal

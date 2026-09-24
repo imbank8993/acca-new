@@ -1,0 +1,121 @@
+/* =====================================================
+   JURNAL MODULE STYLES
+   ===================================================== */
+
+.jurnal-page-wrapper {
+  padding-bottom: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.jt {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  background: transparent;
+}
+
+@media (max-width: 768px) {
+  .jt {
+    gap: 16px;
+  }
+}
+
+.modal-portal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.modal-portal-loading {
+  background: var(--n-card);
+  padding: 24px;
+  border-radius: 16px;
+  box-shadow: var(--n-shadow);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  animation: bounceIn 0.2s ease-out;
+}
+
+.modal-portal-loading-text {
+  color: var(--n-ink);
+}
+
+.dark .modal-portal-loading {
+  background: #0f172a;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.dark .modal-portal-loading-text {
+  color: #e8edf5;
+}
+
+.dark .jurnal-page-wrapper > div:first-child {
+  color: var(--n-muted) !important;
+}
+
+@keyframes bounceIn {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Dark mode react-select fixes for Jurnal */
+.dark .jt__select input {
+  caret-color: transparent !important;
+}
+
+.dark .jt__select [class*="-input"] {
+  caret-color: transparent !important;
+  color: var(--n-ink) !important;
+}
+
+.dark .jt__select [class*="-singleValue"] {
+  color: #e8edf5 !important;
+}
+
+.dark .jt__select [class*="-placeholder"] {
+  color: var(--n-muted) !important;
+}
+
+.dark .jt__select [class*="-menu"] {
+  background: #0f172a !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+.dark .jt__select [class*="-option"] {
+  background: var(--n-card) !important;
+  color: #e8edf5 !important;
+}
+
+.dark .jt__select [class*="-option"]:hover,
+.dark .jt__select [class*="-option"]:focus {
+  background: rgba(59, 130, 246, 0.15) !important;
+}
+
+.dark .jt__select [class*="-option--is-selected"] {
+  background: var(--n-primary) !important;
+  color: white !important;
+}
+
+.dark .jt__select [class*="-option--is-focused"] {
+  background: rgba(59, 130, 246, 0.1) !important;
+}
+
+.dark .jt__select [class*="-control"] {
+  background: var(--n-card) !important;
+  border-color: var(--n-line) !important;
+}

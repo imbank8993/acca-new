@@ -1,0 +1,72 @@
+/* =====================================================
+   MASTER DATA PAGE — PREMIUM TAB DESIGN
+===================================================== */
+
+/* HEADER */
+.md-header {
+  background: var(--banner-bg, var(--banner-bg, linear-gradient(135deg, var(--n-primary) 0%, #c2185b 100%)));
+  padding: 22px 32px;
+  border-radius: 16px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border: none;
+  font-family: 'Poppins', sans-serif;
+}
+
+.md-titleArea h1 {
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: white;
+  margin: 0 0 4px 0;
+  letter-spacing: -0.02em;
+}
+
+.md-titleArea p {
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 0.85rem;
+  margin: 0;
+  font-weight: 500;
+}
+
+.md-page {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Dark mode */
+.dark .md-header {
+  background: #000000 !important;
+  border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
+  border-radius: 18px !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5) !important;
+}
+.dark .md-titleArea h1 {
+  background: linear-gradient(90deg, #1d6bf3 0%, #3b82f6 30%, #60a5fa 70%, #93c5fd 100%) !important;
+  -webkit-background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  background-clip: text !important;
+  display: inline-block !important;
+}
+.dark .md-titleArea p { color: #94a3b8 !important; }
+
+.md-content {
+  padding: 0;
+  min-height: 200px;
+  background: transparent;
+}
+
+@media (max-width: 767px) {
+  .md-header { padding: 16px 16px 20px; border-radius: 16px; }
+  .md-titleArea h1 { font-size: 1.5rem; }
+  .md-titleArea p { font-size: 0.85rem; }
+  .md-content { padding: 0; }
+
+  /* Celah tipis saja: tab bar slider adalah kartu sendiri, kalau gap-nya
+     0 ia menempel ke kartu isi tab dan dua bidang putih berdempet tanpa
+     batas. PageBanner tidak dirender di mobile, jadi gap ini cuma
+     berlaku antara tab bar dan isinya. */
+  .md-page { gap: 10px; }
+}

@@ -1,0 +1,59 @@
+[
+  {
+    "test": "update_without_status_ignores_metadata",
+    "pass": true
+  },
+  {
+    "test": "update_with_status_uses_session",
+    "pass": true
+  },
+  {
+    "test": "create_rejects_forged_approval",
+    "pass": true,
+    "observed": {
+      "nisn": "test",
+      "nama_lomba": "test",
+      "kategori": "test",
+      "tingkat": "test",
+      "penyelenggara": "test",
+      "tanggal_pelaksanaan": {},
+      "prestasi_diraih": "test",
+      "bukti_sertifikat": "test",
+      "foto_kegiatan": null,
+      "status_validasi": "Menunggu",
+      "catatan_validator": null,
+      "validated_by": null,
+      "validated_at": null
+    }
+  },
+  {
+    "test": "pdf_missing_token",
+    "pass": true,
+    "status": 401,
+    "downloads": 0
+  },
+  {
+    "test": "pdf_invalid_token",
+    "pass": true,
+    "status": 401,
+    "downloads": 0
+  },
+  {
+    "test": "pdf_forbidden",
+    "pass": true,
+    "status": 403,
+    "downloads": 0
+  },
+  {
+    "test": "pdf_backend_failure",
+    "pass": true,
+    "status": 503,
+    "downloads": 0
+  },
+  {
+    "test": "pdf_backend_exception",
+    "pass": true,
+    "status": 502,
+    "downloads": 0
+  }
+]

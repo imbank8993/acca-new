@@ -1,0 +1,841 @@
+/* ============================================================
+   KLINIK PEMBELAJARAN — Styles
+   ACCA Unified Design System
+============================================================ */
+
+.klinik-container {
+    display: flex;
+    flex-direction: column;
+    gap: var(--page-gap, 12px);
+    width: 100%;
+    animation: fadeIn 0.4s ease-out;
+    padding-bottom: 32px;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes zoomInDelete {
+    from { opacity: 0; transform: scale(0.95) translateY(8px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* Grid View (Mobile / Tablet) */
+.klinik-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 20px;
+}
+
+/* Slot Card */
+.slot-card {
+    background: var(--n-card);
+    border-radius: 12px;
+    border: 1px solid var(--n-border);
+    padding: 0;
+    overflow: hidden;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+}
+
+.slot-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0,0,0,0.06);
+    border-color: var(--n-primary);
+}
+
+.slot-header {
+    padding: 16px 20px;
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    border-bottom: 1px solid var(--n-border);
+}
+
+.guru-avatar {
+    width: 42px;
+    height: 42px;
+    border-radius: 10px;
+    background: var(--banner-bg, linear-gradient(135deg, var(--n-primary) 0%, #c2185b 100%));
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 1rem;
+    flex-shrink: 0;
+}
+
+.slot-meta {
+    flex: 1;
+    min-width: 0;
+}
+
+.slot-meta h3 {
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 800;
+    color: var(--n-ink);
+}
+
+.slot-meta h4 {
+    margin: 2px 0 0;
+    font-size: 0.82rem;
+    color: var(--n-muted);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.slot-body {
+    padding: 18px 20px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.topic-box {
+    background: var(--n-surface);
+    padding: 12px 16px;
+    border-radius: 10px;
+    border: 1px dashed var(--n-border);
+}
+
+.topic-box span {
+    display: block;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    color: var(--n-muted);
+    font-weight: 700;
+    margin-bottom: 4px;
+}
+
+.topic-box p {
+    margin: 0;
+    font-size: 0.92rem;
+    font-weight: 600;
+    color: var(--n-ink);
+    line-height: 1.5;
+}
+
+.slot-info-row {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.info-chip {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.84rem;
+    color: var(--n-muted);
+    font-weight: 500;
+}
+
+.info-chip i {
+    font-size: 1rem;
+    color: var(--n-primary);
+    opacity: 0.85;
+}
+
+.slot-footer {
+    padding: 14px 20px;
+    background: var(--n-surface);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.quota-badge {
+    background: var(--n-card);
+    border: 1px solid var(--n-border);
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--n-ink);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.quota-badge.full {
+    background: #e0f2fe;
+    color: #0284c7;
+    border-color: #bae6fd;
+}
+
+/* Status Tags & Pills */
+.status-tag {
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-size: 0.6rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    flex-shrink: 0;
+}
+.status-tag.pending { background: #fef3c7; color: #d97706; }
+.status-tag.open { background: #e0f2fe; color: #0284c7; }
+.status-tag.finished { background: #f3f4f6; color: var(--n-muted); }
+.status-tag.full { background: #fee2e2; color: #dc2626; }
+.status-tag.paid { background: #dbeafe; color: #1e40af; }
+.status-tag.cancelled { background: var(--n-soft); color: var(--n-muted); }
+
+.status-stack {
+    display: inline-flex;
+    flex-direction: column;
+    gap: 5px;
+    align-items: flex-start;
+}
+
+.status-pill {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    white-space: nowrap;
+    line-height: 1.2;
+    margin: 0;
+}
+.status-pill.open { background: #e0f2fe; color: #0284c7; }
+.status-pill.full { background: #fee2e2; color: #dc2626; }
+.status-pill.pending { background: #fef3c7; color: #b45309; }
+.status-pill.finished { background: #dbeafe; color: #3083FF; }
+.status-pill.paid { background: #dbeafe; color: #1e40af; }
+.status-pill.cancelled { background: var(--n-soft); color: var(--n-muted); }
+
+/* Tahap pertama pengajuan kelompok siswa: menunggu kesediaan guru pengampu. */
+.status-pill.pending_guru,
+.status-tag.pending_guru { background: #ede9fe; color: #6d28d9; }
+
+/* Kecukupan peserta sesi yang sudah disetujui: peringatan selagi masih bisa
+   terisi, lalu penanda batal begitu jadwalnya terlewat (lihat cekPeserta). */
+.status-pill.kurang,
+.status-tag.kurang { background: #fef3c7; color: #b45309; }
+.status-pill.batal,
+.status-tag.batal { background: #fee2e2; color: #b91c1c; }
+
+.laporan-badge {
+    display: inline-block;
+    margin: 0;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    white-space: nowrap;
+    line-height: 1.2;
+}
+.laporan-badge.submitted { background: #eff6ff; color: #1d4ed8; }
+.laporan-badge.approved { background: #e0f2fe; color: #0284c7; }
+.laporan-badge.revisi { background: #fee2e2; color: #dc2626; }
+.laporan-badge.draft { background: var(--n-soft); color: var(--n-muted); }
+
+/* Table Styles (Desktop) */
+.klinik-table-container {
+    display: block;
+    background: var(--n-card);
+    border-radius: 12px;
+    border: 1px solid var(--n-border);
+    overflow-x: auto;
+    overflow-y: hidden;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.klinik-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--n-card);
+}
+
+.klinik-table th {
+    background: var(--n-card);
+    padding: 14px 20px;
+    font-size: 0.68rem;
+    font-weight: 600;
+    color: var(--n-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    border-bottom: 1px solid var(--n-border);
+}
+
+.klinik-table td {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--n-border);
+    vertical-align: middle;
+    font-size: 0.88rem;
+}
+
+.klinik-table tr:last-child td { border-bottom: none; }
+.klinik-table tr.active-row td { background: rgba(0, 0, 0, 0.02); }
+.klinik-table tr:hover:not(.active-row):not(.detail-row) td { 
+    background: rgba(0, 0, 0, 0.015);
+    transition: background 0.2s ease;
+}
+
+.table-col-guru { font-weight: 600; color: var(--n-ink); }
+.table-col-topik {
+    font-weight: 500;
+    color: var(--n-ink);
+    max-width: 320px;
+    word-break: break-word;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+.table-col-waktu { display: flex; flex-direction: column; gap: 4px; }
+.table-col-waktu .date { font-weight: 500; color: var(--n-ink); }
+.table-col-waktu .time { font-size: 0.8rem; color: var(--n-muted); }
+.table-col-kuota { display: flex; align-items: center; gap: 8px; }
+.kuota-text { font-weight: 600; color: var(--n-ink); }
+.kuota-full .kuota-text { color: #1a73e8; font-weight: 700; }
+
+.pengaju-tag {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 5px;
+    color: var(--n-muted);
+    font-size: 0.72rem;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.pengaju-tag strong { color: var(--n-ink); font-weight: 700; }
+.pengaju-tag i { font-size: 0.75rem; color: #0284c7; flex-shrink: 0; }
+
+.act-row {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 6px;
+}
+
+.act-pill {
+    height: 32px;
+    padding: 0 14px;
+    border-radius: 8px;
+    border: none;
+    background: var(--n-primary);
+    color: #fff;
+    font-size: 0.78rem;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: 0.2s;
+}
+.act-pill:hover { filter: brightness(1.1); }
+.act-note { font-size: 0.72rem; font-weight: 700; color: var(--n-muted); white-space: nowrap; }
+.act-note--ok { color: #0284c7; }
+.act-note--batal { color: #b91c1c; }
+
+/* Tab Laporan: rekap bulanan kolektif */
+.rekap-card {
+    background: var(--n-card);
+    border: 1px solid var(--n-border);
+    border-radius: 14px;
+    overflow: hidden;
+}
+
+.rekap-head {
+    display: flex;
+    gap: 14px;
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--n-border);
+    background: var(--n-elevated);
+}
+
+.rekap-head__icon {
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    color: #fff;
+    background: var(--banner-bg, linear-gradient(135deg, var(--n-primary) 0%, #c2185b 100%));
+}
+
+.rekap-head h3 { margin: 0; font-size: 0.98rem; font-weight: 800; color: var(--n-ink); }
+.rekap-head p { margin: 4px 0 0; font-size: 0.78rem; color: var(--n-muted); line-height: 1.5; max-width: 62ch; }
+
+/* Approval Laporan Section */
+.laporan-approval-section { margin-top: 24px; }
+.laporan-approval-empty { padding: 20px; text-align: center; color: var(--n-muted); font-size: 0.82rem; background: var(--n-card); border: 1px solid var(--n-border); border-radius: 12px; }
+.laporan-approval-list { display: flex; flex-direction: column; gap: 12px; }
+.laporan-approval-card { background: var(--n-card); border: 1px solid var(--n-border); border-radius: 14px; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
+.laporan-approval-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.laporan-approval-head strong { color: var(--n-ink); font-size: 0.88rem; }
+.laporan-approval-sub { font-size: 0.76rem; color: var(--n-muted); margin-top: 2px; }
+.laporan-approval-view { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 8px; border: 1px solid var(--n-border); background: var(--n-soft); color: var(--n-muted); font-size: 0.74rem; font-weight: 700; cursor: pointer; white-space: nowrap; }
+.laporan-approval-view:hover { background: var(--n-border); color: var(--n-ink); }
+.laporan-approval-note { width: 100%; min-height: 60px; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--n-border); background: var(--n-surface); color: var(--n-ink); font-size: 0.82rem; resize: vertical; }
+.laporan-approval-actions { display: flex; justify-content: flex-end; gap: 8px; }
+.laporan-approval-btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 10px; font-size: 0.8rem; font-weight: 700; cursor: pointer; border: 1px solid transparent; }
+.laporan-approval-btn.approve { background: #1a73e8; color: #fff; }
+.laporan-approval-btn.approve:hover { background: #3b82f6; }
+.laporan-approval-btn.reject { background: #fff; color: #dc2626; border-color: #fecaca; }
+.laporan-approval-btn.reject:hover { background: #fef2f2; }
+
+/* Participants Modal Styles */
+.quota-tracker { padding: 16px 20px; border-bottom: 1px solid var(--n-border); }
+.quota-label { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 8px; }
+.quota-label span:first-child { font-size: 0.75rem; font-weight: 800; color: var(--n-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+.quota-label span:last-child { font-size: 1rem; font-weight: 800; color: var(--n-text); }
+.progress-bar { height: 8px; background: var(--n-soft); border-radius: 10px; overflow: hidden; }
+.progress-fill { height: 100%; background: linear-gradient(90deg, var(--n-primary), #c2185b); transition: width 0.5s ease-out; }
+.plist-container { max-height: 380px; overflow-y: auto; padding: 12px 16px; display: flex; flex-direction: column; gap: 4px; }
+.p-card { display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; border-radius: 8px; transition: 0.2s; border: 1px solid transparent; }
+.p-card:hover { background: var(--n-soft); border-color: var(--n-border); }
+.p-avatar { width: 32px; height: 32px; border-radius: 8px; background: var(--n-soft); display: flex; align-items: center; justify-content: center; font-size: 0.9rem; font-weight: 800; color: var(--n-primary); border: 1px solid var(--n-border); }
+.p-info { flex: 1; margin-left: 12px; min-width: 0; }
+.p-name { font-size: 0.85rem; font-weight: 750; color: var(--n-text); margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.p-class { font-size: 0.65rem; font-weight: 800; color: #DB2777; background: rgba(219, 39, 119, 0.08); padding: 3px 10px; border-radius: 8px; display: inline-block; margin-top: 4px; text-transform: uppercase; letter-spacing: 0.02em; }
+.p-actions { opacity: 0.85; transition: 0.2s; }
+.p-card:hover .p-actions { opacity: 1; }
+.p-del-btn { width: 32px; height: 32px; border-radius: 8px; border: none; background: var(--n-soft); color: var(--n-muted); cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; }
+.p-del-btn:hover { background: #ef4444; color: white; transform: scale(1.05); }
+.empty-state { padding: 48px 32px; text-align: center; }
+.empty-state i { font-size: 2.5rem; color: var(--n-border); display: block; margin-bottom: 12px; }
+.empty-state p { font-size: 0.85rem; color: var(--n-muted); font-weight: 600; margin: 0; }
+
+/* Modal Forms & Sections */
+.form-section { display: flex; flex-direction: column; gap: 14px; padding: 16px 0; }
+.form-section + .form-section { border-top: 1px solid var(--n-border); }
+.form-section__title { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 0.72rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; color: var(--n-ink); }
+.form-section__title i { color: var(--n-primary); font-size: 0.85rem; }
+.form-section__count { margin-left: auto; text-transform: none; letter-spacing: 0; font-size: 0.7rem; font-weight: 700; color: var(--n-muted); background: var(--n-soft); border: 1px solid var(--n-border); padding: 2px 10px; border-radius: 999px; }
+.form-section__count--warn { color: #dc2626; background: rgba(220, 38, 38, 0.1); border-color: rgba(220, 38, 38, 0.3); }
+.form-group { display: flex; flex-direction: column; gap: 6px; }
+.form-group label { font-size: 0.78rem; font-weight: 700; color: var(--n-muted); }
+.form-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.form-row .span-2 { grid-column: 1 / -1; }
+.form-hint { margin: -2px 0 0; font-size: 0.72rem; font-weight: 600; color: var(--n-muted); line-height: 1.45; }
+.form-hint--warn { color: #d97706; }
+
+.modal-split-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    column-gap: 28px;
+    align-items: start;
+}
+.modal-split-grid .modal-col--side {
+    border-left: 1px solid var(--n-border);
+    padding-left: 28px;
+}
+
+.tingkat-picker { display: flex; gap: 8px; }
+.tingkat-chip { display: flex; align-items: center; justify-content: center; min-width: 52px; height: 38px; padding: 0 12px; border-radius: 10px; border: 1.5px solid var(--n-border); background: var(--n-surface); color: var(--n-muted); font-size: 0.8rem; font-weight: 800; cursor: pointer; transition: 0.2s; user-select: none; -webkit-user-select: none; }
+.tingkat-chip:hover { border-color: var(--n-primary); color: var(--n-ink); }
+.tingkat-chip.selected { border-color: var(--n-primary); background: rgba(59, 130, 246, 0.1); color: var(--n-primary); }
+
+.form-group input, .form-group textarea, .form-group select { padding: 0.55rem 0.75rem; border-radius: 10px; border: 1.5px solid var(--n-border); background: var(--n-surface); outline: none; transition: 0.2s; font-family: inherit; color: var(--n-ink); font-size: 0.85rem; }
+.form-group input:focus, .form-group textarea:focus, .form-group select:focus { border-color: var(--n-primary); box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15); }
+
+/* Anggota Kelompok */
+.anggota-terpilih { display: flex; align-items: baseline; gap: 10px; margin-top: 10px; }
+.anggota-terpilih__label { flex-shrink: 0; font-size: 0.68rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; color: var(--n-muted); }
+.anggota-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.anggota-chip--more { background: var(--n-soft); color: var(--n-muted); border-color: var(--n-border); cursor: pointer; padding: 4px 10px; gap: 4px; }
+.anggota-chip--more:hover { background: var(--n-border); color: var(--n-ink); }
+.anggota-chip--more i { font-size: 0.65rem; }
+.anggota-chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 6px 4px 10px; border-radius: 999px; background: rgba(219, 39, 119, 0.08); color: #DB2777; border: 1px solid rgba(219, 39, 119, 0.2); font-size: 0.72rem; font-weight: 700; }
+.anggota-chip button { border: none; background: rgba(219, 39, 119, 0.15); color: inherit; width: 18px; height: 18px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 0.7rem; }
+.anggota-chip button:hover { background: #DB2777; color: #fff; }
+.anggota-chip--plain { background: var(--n-soft); border-color: var(--n-border); color: var(--n-muted); padding: 4px 10px; }
+
+.teman-search { position: relative; display: flex; align-items: center; }
+.teman-search > i { position: absolute; left: 12px; font-size: 0.85rem; color: var(--n-muted); pointer-events: none; }
+.teman-search input { width: 100%; padding-left: 34px !important; padding-right: 34px !important; }
+.teman-search__clear { position: absolute; right: 8px; width: 22px; height: 22px; border: none; border-radius: 50%; background: var(--n-soft); color: var(--n-muted); display: flex; align-items: center; justify-content: center; cursor: pointer; }
+.teman-search__clear:hover { background: var(--n-border); color: var(--n-ink); }
+
+.teman-list { max-height: 280px; overflow-y: auto; border: 1.5px solid var(--n-border); border-radius: 10px; background: var(--n-surface); display: flex; flex-direction: column; }
+.teman-item { display: flex; align-items: center; gap: 10px; padding: 8px 12px; background: transparent; border: none; border-bottom: 1px solid var(--n-border); cursor: pointer; text-align: left; color: var(--n-ink); transition: 0.15s; }
+.teman-item:last-child { border-bottom: none; }
+.teman-item:hover { background: var(--n-soft); }
+.teman-item.selected { background: rgba(219, 39, 119, 0.06); }
+.teman-item > i { margin-left: auto; color: var(--n-muted); }
+.teman-item.selected > i { color: #DB2777; }
+.teman-avatar { width: 28px; height: 28px; border-radius: 8px; background: var(--n-card); border: 1px solid var(--n-border); display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 800; color: var(--n-primary); flex-shrink: 0; }
+.teman-meta { display: flex; flex-direction: column; min-width: 0; }
+.teman-nama { font-size: 0.82rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.teman-kelas { font-size: 0.68rem; color: var(--n-muted); font-weight: 600; text-transform: uppercase; }
+.teman-empty { margin: 0; padding: 18px; text-align: center; font-size: 0.78rem; color: var(--n-muted); font-weight: 600; line-height: 1.5; }
+
+/* Detail Info Table (Aligned layout) */
+.klinik-detail-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0 10px;
+    font-size: 0.85rem;
+}
+.klinik-detail-table tr { vertical-align: baseline; }
+.klinik-detail-table .kdt-label {
+    color: var(--n-muted);
+    font-weight: 600;
+    width: 160px;
+    white-space: nowrap;
+    padding-right: 4px;
+}
+.klinik-detail-table .kdt-colon {
+    color: var(--n-muted);
+    font-weight: 600;
+    width: 14px;
+    text-align: center;
+    padding-right: 8px;
+}
+.klinik-detail-table .kdt-value {
+    color: var(--n-ink);
+    word-break: break-word;
+}
+
+.detail-teks { margin: 0; font-size: 0.85rem; line-height: 1.6; color: var(--n-ink); white-space: pre-wrap; }
+.detail-teks--catatan { padding: 10px 14px; border-radius: 10px; background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.2); color: #dc2626; font-weight: 600; }
+.detail-fotos { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; }
+.detail-fotos button { padding: 0; border: 1px solid var(--n-border); border-radius: 10px; overflow: hidden; background: var(--n-surface); cursor: pointer; aspect-ratio: 1; transition: 0.2s; }
+.detail-fotos button:hover { border-color: var(--n-primary); transform: scale(1.02); }
+.detail-fotos img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+/* Upload Dropzone */
+.upload-drop { width: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; padding: 22px 16px; border-radius: 12px; border: 1.5px dashed var(--n-border); background: var(--n-surface); color: var(--n-ink); cursor: pointer; transition: 0.2s; }
+.upload-drop:hover:not(:disabled) { border-color: var(--n-primary); background: var(--n-soft); }
+.upload-drop:disabled { cursor: progress; }
+.upload-drop > i { font-size: 1.6rem; color: var(--n-primary); }
+.upload-drop__title { font-size: 0.85rem; font-weight: 700; }
+.upload-drop__sub { font-size: 0.72rem; color: var(--n-muted); font-weight: 500; }
+.upload-spinner { width: 26px; height: 26px; border-radius: 50%; border: 3px solid var(--n-border); border-top-color: var(--n-primary); animation: spinKlinik 0.8s linear infinite; }
+@keyframes spinKlinik { to { transform: rotate(360deg); } }
+
+.foto-thumb { position: relative; border: 1px solid var(--n-border); border-radius: 10px; overflow: hidden; aspect-ratio: 1; background: var(--n-surface); }
+.foto-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.foto-thumb button { position: absolute; top: 4px; right: 4px; width: 22px; height: 22px; border-radius: 50%; border: none; background: rgba(15, 23, 42, 0.75); color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 0.75rem; }
+.foto-thumb button:hover { background: #ef4444; }
+
+@media (max-width: 1024px) {
+    .klinik-table-container { display: none; }
+}
+@media (min-width: 1024.02px) {
+    .klinik-grid { display: none; }
+}
+@media (max-width: 900px) {
+    .modal-split-grid { grid-template-columns: minmax(0, 1fr); }
+    .modal-split-grid .modal-col--side { border-left: none; padding-left: 0; border-top: 1px solid var(--n-border); margin-top: 12px; padding-top: 12px; }
+}
+
+@media (max-width: 640px) {
+    .p-actions { opacity: 1; }
+    .rekap-head { padding: 16px; }
+}
+
+@media (max-width: 520px) {
+    .klinik-detail-table .kdt-label {
+        width: 105px;
+        white-space: normal;
+        font-size: 0.8rem;
+    }
+    .klinik-detail-table td {
+        font-size: 0.8rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .klinik-grid {
+        grid-template-columns: 1fr;
+        gap: 14px;
+    }
+    .form-row {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+    .slot-body {
+        padding: 14px 16px;
+    }
+    .slot-footer {
+        padding: 12px 16px;
+    }
+}
+
+/* ── DARK THEME ── */
+.dark .slot-card,
+.dark .klinik-table-container,
+.dark .rekap-card,
+.dark .laporan-approval-card {
+    background: #000000 !important;
+    border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
+    border-radius: 16px !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5) !important;
+}
+
+.dark .slot-header,
+.dark .slot-footer,
+.dark .rekap-head,
+.dark .klinik-table th {
+    background: #000000 !important;
+    border-color: rgba(59, 130, 246, 0.25) !important;
+}
+
+.dark .klinik-table td {
+    background: #000000 !important;
+    color: #f1f5f9 !important;
+    border-bottom: 1px solid rgba(59, 130, 246, 0.12) !important;
+}
+
+.dark .klinik-table tr:hover:not(.active-row):not(.detail-row) td {
+    background: rgba(26, 115, 232, 0.06) !important;
+}
+
+.dark .topic-box {
+    background: rgba(26, 115, 232, 0.05) !important;
+    border: 1px dashed rgba(59, 130, 246, 0.4) !important;
+}
+
+.dark .quota-badge {
+    background: #000000 !important;
+    border: 1px solid rgba(59, 130, 246, 0.4) !important;
+    color: #93c5fd !important;
+}
+
+.dark .quota-badge.full {
+    background: rgba(26, 115, 232, 0.18) !important;
+    color: #38bdf8 !important;
+    border-color: rgba(56, 189, 248, 0.4) !important;
+}
+
+.dark .status-pill.open,
+.dark .status-tag.open { background: rgba(30, 144, 255, 0.18) !important; color: #38bdf8 !important; border: 1.5px solid rgba(56, 189, 248, 0.5) !important; }
+.dark .status-pill.full,
+.dark .status-tag.full { background: rgba(220, 38, 38, 0.2) !important; color: #f87171 !important; border: 1.5px solid rgba(220, 38, 38, 0.45) !important; }
+.dark .status-pill.pending,
+.dark .status-tag.pending { background: rgba(217, 119, 6, 0.2) !important; color: #fbbf24 !important; border: 1.5px solid rgba(217, 119, 6, 0.45) !important; }
+.dark .status-pill.finished,
+.dark .status-tag.finished { background: rgba(100, 116, 139, 0.2) !important; color: #94a3b8 !important; border: 1.5px solid rgba(100, 116, 139, 0.4) !important; }
+.dark .status-pill.paid,
+.dark .status-tag.paid { background: rgba(37, 99, 235, 0.2) !important; color: #60a5fa !important; border: 1.5px solid rgba(59, 130, 246, 0.4) !important; }
+.dark .status-pill.pending_guru,
+.dark .status-tag.pending_guru { background: rgba(139, 92, 246, 0.2) !important; color: #c4b5fd !important; border: 1.5px solid rgba(139, 92, 246, 0.45) !important; }
+.dark .status-pill.kurang,
+.dark .status-tag.kurang { background: rgba(217, 119, 6, 0.2) !important; color: #fbbf24 !important; border: 1.5px solid rgba(217, 119, 6, 0.45) !important; }
+.dark .status-pill.batal,
+.dark .status-tag.batal { background: rgba(220, 38, 38, 0.2) !important; color: #f87171 !important; border: 1.5px solid rgba(220, 38, 38, 0.45) !important; }
+.dark .act-note--batal { color: #f87171; }
+
+.dark .laporan-badge.submitted { background: rgba(37, 99, 235, 0.2) !important; color: #60a5fa !important; border: 1.5px solid rgba(59, 130, 246, 0.4) !important; }
+.dark .laporan-badge.approved { background: rgba(14, 165, 233, 0.18) !important; color: #38bdf8 !important; border: 1.5px solid rgba(56, 189, 248, 0.5) !important; }
+.dark .laporan-badge.revisi { background: rgba(220, 38, 38, 0.2) !important; color: #f87171 !important; border: 1.5px solid rgba(220, 38, 38, 0.45) !important; }
+.dark .laporan-badge.draft { background: rgba(100, 116, 139, 0.2) !important; color: #94a3b8 !important; border: 1.5px solid rgba(100, 116, 139, 0.4) !important; }
+
+.dark .klinik-detail-table .kdt-label { color: #94a3b8 !important; }
+.dark .klinik-detail-table .kdt-colon { color: #94a3b8 !important; }
+.dark .klinik-detail-table .kdt-value { color: #f1f5f9 !important; }
+
+.dark .detail-teks { color: #f1f5f9 !important; }
+.dark .detail-teks--catatan { background: rgba(239, 68, 68, 0.15) !important; border-color: rgba(239, 68, 68, 0.3) !important; color: #f87171 !important; }
+.dark .detail-fotos button { background: #000000 !important; border-color: rgba(59, 130, 246, 0.3) !important; }
+
+.dark .upload-drop {
+    background: rgba(26, 115, 232, 0.05) !important;
+    border: 2px dashed rgba(59, 130, 246, 0.45) !important;
+    color: #f1f5f9 !important;
+}
+.dark .upload-drop:hover:not(:disabled) {
+    background: rgba(26, 115, 232, 0.12) !important;
+    border-color: #3b82f6 !important;
+}
+
+.dark .form-group input,
+.dark .form-group textarea,
+.dark .form-group select,
+.dark .jp__input,
+.dark .teman-search input,
+.dark .laporan-approval-note {
+    background-color: #000000 !important;
+    background: #000000 !important;
+    border: 2px solid rgba(59, 130, 246, 0.5) !important;
+    color: #f1f5f9 !important;
+    border-radius: 10px !important;
+}
+
+.dark .form-group input:focus,
+.dark .form-group textarea:focus,
+.dark .form-group select:focus,
+.dark .jp__input:focus,
+.dark .teman-search input:focus,
+.dark .laporan-approval-note:focus {
+    border-color: #3b82f6 !important;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25) !important;
+}
+
+.dark .tingkat-chip {
+    background: #000000 !important;
+    border: 1.5px solid rgba(59, 130, 246, 0.4) !important;
+    color: #94a3b8 !important;
+}
+.dark .tingkat-chip.selected {
+    border-color: #3b82f6 !important;
+    background: rgba(26, 115, 232, 0.2) !important;
+    color: #60a5fa !important;
+}
+
+.dark .p-card:hover {
+    background: rgba(26, 115, 232, 0.08) !important;
+    border-color: rgba(59, 130, 246, 0.25) !important;
+}
+.dark .p-avatar {
+    background: rgba(26, 115, 232, 0.15) !important;
+    border: 1px solid rgba(59, 130, 246, 0.3) !important;
+    color: #60a5fa !important;
+}
+.dark .p-name { color: #f1f5f9 !important; }
+.dark .p-class {
+    color: #38bdf8 !important;
+    background: rgba(56, 189, 248, 0.15) !important;
+    border: 1px solid rgba(56, 189, 248, 0.3) !important;
+}
+.dark .laporan-approval-empty,
+.dark .empty-state {
+    background: #000000 !important;
+    border: 1px solid rgba(59, 130, 246, 0.25) !important;
+    color: #94a3b8 !important;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Sesi bentukan admin (.kas-*) & absensi peserta (.abs-*)
+   Modal di-portal ke <body>, sehingga kelas generik gampang bertabrakan
+   dengan CSS global halaman lain — semua kelas di sini sengaja berprefiks.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Pemilih kelas ──────────────────────────────────────────────────────── */
+.kas-kelas-picker { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; max-height: 108px; overflow-y: auto; }
+.kas-kelas-kosong { font-size: 0.75rem; color: var(--n-muted); font-weight: 600; }
+.kas-kelas-chip { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 10px; border-radius: 999px; border: 1.5px solid var(--n-border); background: var(--n-surface); color: var(--n-muted); font-size: 0.74rem; font-weight: 800; cursor: pointer; transition: 0.15s; }
+.kas-kelas-chip:hover { border-color: var(--n-primary); color: var(--n-ink); }
+.kas-kelas-chip.selected { border-color: var(--n-primary); background: rgba(59, 130, 246, 0.1); color: var(--n-primary); }
+.kas-kelas-chip__n { font-size: 0.65rem; font-weight: 700; opacity: 0.7; }
+
+/* ── Alat bantu (acak / kosongkan) ──────────────────────────────────────── */
+.kas-alat { display: flex; align-items: center; gap: 8px; margin: 10px 0; }
+.kas-alat__acak { display: flex; align-items: center; gap: 6px; }
+.kas-alat__acak input { width: 64px; text-align: center; }
+.kas-alat__acak button,
+.kas-alat__kosong { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border-radius: 8px; border: 1.5px solid var(--n-border); background: var(--n-surface); color: var(--n-ink); font-size: 0.75rem; font-weight: 700; cursor: pointer; transition: 0.15s; }
+.kas-alat__acak button:hover:not(:disabled),
+.kas-alat__kosong:hover:not(:disabled) { border-color: var(--n-primary); color: var(--n-primary); }
+.kas-alat__acak button:disabled,
+.kas-alat__kosong:disabled { opacity: 0.45; cursor: not-allowed; }
+.kas-alat__kosong { margin-left: auto; }
+
+/* ── Daftar kandidat, dikelompokkan per kelas ───────────────────────────── */
+.kas-list { max-height: 320px; }
+.kas-grup__head { position: sticky; top: 0; z-index: 1; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 12px; background: var(--n-soft); border-bottom: 1px solid var(--n-border); font-size: 0.7rem; font-weight: 800; color: var(--n-muted); text-transform: uppercase; letter-spacing: 0.03em; }
+.kas-grup__head button { border: none; background: transparent; color: var(--n-primary); font-size: 0.7rem; font-weight: 800; cursor: pointer; text-transform: none; letter-spacing: 0; }
+.kas-grup__head button:hover { text-decoration: underline; }
+
+/* ── Absensi ────────────────────────────────────────────────────────────── */
+.abs-ringkas { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding-bottom: 12px; }
+.abs-ringkas__item { display: inline-flex; align-items: center; padding: 4px 10px; border-radius: 999px; background: var(--n-soft); border: 1px solid var(--n-border); font-size: 0.72rem; font-weight: 800; color: var(--n-muted); }
+.abs-ringkas__item--h { background: rgba(2, 132, 199, 0.1); border-color: rgba(2, 132, 199, 0.25); color: #0284c7; }
+.abs-ringkas__item--a { background: rgba(220, 38, 38, 0.08); border-color: rgba(220, 38, 38, 0.22); color: #b91c1c; }
+.abs-ringkas__item--kosong { font-style: italic; }
+.abs-semua { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 12px; border-radius: 8px; border: 1.5px solid var(--n-border); background: var(--n-surface); color: var(--n-ink); font-size: 0.73rem; font-weight: 800; cursor: pointer; }
+.abs-semua:hover:not(:disabled) { border-color: var(--n-primary); color: var(--n-primary); }
+.abs-semua:disabled { opacity: 0.45; cursor: not-allowed; }
+
+.abs-list { display: flex; flex-direction: column; gap: 4px; max-height: 380px; overflow-y: auto; }
+.abs-row { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 8px; border: 1px solid transparent; }
+.abs-row:hover { background: var(--n-soft); border-color: var(--n-border); }
+.abs-row__info { flex: 1; min-width: 0; }
+.abs-jejak { font-size: 0.65rem; font-weight: 600; opacity: 0.8; text-transform: none; }
+
+.abs-seg { display: inline-flex; gap: 3px; flex-shrink: 0; }
+.abs-seg__btn { width: 30px; height: 30px; border-radius: 7px; border: 1.5px solid var(--n-border); background: var(--n-surface); color: var(--n-muted); font-size: 0.75rem; font-weight: 800; cursor: pointer; transition: 0.12s; }
+.abs-seg__btn:hover:not(:disabled) { border-color: var(--n-primary); color: var(--n-ink); }
+.abs-seg__btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.abs-seg__btn.on-H { background: #0284c7; border-color: #0284c7; color: #fff; }
+.abs-seg__btn.on-S { background: #d97706; border-color: #d97706; color: #fff; }
+.abs-seg__btn.on-I { background: #7c3aed; border-color: #7c3aed; color: #fff; }
+.abs-seg__btn.on-A { background: #dc2626; border-color: #dc2626; color: #fff; }
+
+/* Lencana kehadiran di daftar peserta */
+.kehadiran-pill { display: inline-flex; align-items: center; justify-content: center; min-width: 24px; height: 24px; padding: 0 7px; border-radius: 999px; font-size: 0.7rem; font-weight: 800; flex-shrink: 0; }
+.kehadiran-pill.k-H { background: rgba(2, 132, 199, 0.12); color: #0284c7; }
+.kehadiran-pill.k-S { background: rgba(217, 119, 6, 0.12); color: #d97706; }
+.kehadiran-pill.k-I { background: rgba(124, 58, 237, 0.12); color: #7c3aed; }
+.kehadiran-pill.k-A { background: rgba(220, 38, 38, 0.12); color: #dc2626; }
+
+/* ── Dark mode ──────────────────────────────────────────────────────────── */
+.dark .kas-kelas-chip,
+.dark .kas-alat__acak button,
+.dark .kas-alat__kosong,
+.dark .abs-semua,
+.dark .abs-seg__btn { background: #0b1220 !important; border-color: rgba(59, 130, 246, 0.25) !important; color: #94a3b8 !important; }
+.dark .kas-kelas-chip.selected { background: rgba(59, 130, 246, 0.18) !important; border-color: #3b82f6 !important; color: #93c5fd !important; }
+.dark .kas-grup__head { background: #0b1220 !important; border-color: rgba(59, 130, 246, 0.2) !important; color: #94a3b8 !important; }
+.dark .abs-ringkas__item { background: #0b1220 !important; border-color: rgba(59, 130, 246, 0.2) !important; color: #94a3b8 !important; }
+.dark .abs-row:hover { background: rgba(59, 130, 246, 0.08) !important; border-color: rgba(59, 130, 246, 0.25) !important; }
+.dark .abs-seg__btn.on-H { background: #0284c7 !important; border-color: #0284c7 !important; color: #fff !important; }
+.dark .abs-seg__btn.on-S { background: #d97706 !important; border-color: #d97706 !important; color: #fff !important; }
+.dark .abs-seg__btn.on-I { background: #7c3aed !important; border-color: #7c3aed !important; color: #fff !important; }
+.dark .abs-seg__btn.on-A { background: #dc2626 !important; border-color: #dc2626 !important; color: #fff !important; }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Tab Approval — pemisah dua antrean (.apr-*)
+   Tab ini memuat dua daftar yang tidak berhubungan: pengajuan SESI di atas dan
+   pengesahan LAPORAN di bawah. Tanpa judul di keduanya, empty state daftar sesi
+   terbaca seolah milik blok laporan.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+.apr-seksi { display: flex; align-items: center; gap: 12px; margin: 2px 0 14px; }
+
+.apr-seksi__ikon { width: 38px; height: 38px; border-radius: 11px; display: flex; align-items: center; justify-content: center; font-size: 1rem; flex-shrink: 0; }
+.apr-seksi--sesi    .apr-seksi__ikon { background: rgba(37, 99, 235, 0.1);  color: #2563eb; }
+.apr-seksi--laporan .apr-seksi__ikon { background: rgba(124, 58, 237, 0.1); color: #7c3aed; }
+
+.apr-seksi__teks { flex: 1; min-width: 0; }
+.apr-seksi__teks h3 { margin: 0; font-size: 0.95rem; font-weight: 800; color: var(--n-ink); line-height: 1.25; }
+.apr-seksi__teks p { margin: 2px 0 0; font-size: 0.74rem; font-weight: 600; color: var(--n-muted); line-height: 1.35; }
+
+/* Angka antrean: abu-abu saat kosong, berwarna begitu ada yang perlu dikerjakan. */
+.apr-seksi__hitung { flex-shrink: 0; min-width: 30px; height: 26px; padding: 0 9px; border-radius: 999px; display: inline-flex; align-items: center; justify-content: center; font-size: 0.78rem; font-weight: 800; background: var(--n-soft); border: 1px solid var(--n-border); color: var(--n-muted); }
+.apr-seksi--sesi    .apr-seksi__hitung.ada { background: rgba(37, 99, 235, 0.12);  border-color: rgba(37, 99, 235, 0.28);  color: #2563eb; }
+.apr-seksi--laporan .apr-seksi__hitung.ada { background: rgba(124, 58, 237, 0.12); border-color: rgba(124, 58, 237, 0.28); color: #7c3aed; }
+
+/* Garis pemisah yang memudar di kedua ujung — batas tegas tanpa terasa kaku. */
+.apr-pisah { height: 1px; border: 0; margin: 26px 0 20px; background: linear-gradient(90deg, transparent, var(--n-border) 12%, var(--n-border) 88%, transparent); }
+
+/* `.laporan-approval-section` sudah memberi jarak atas; pemisah di dalamnya
+   membuat jaraknya dobel. */
+.laporan-approval-section { margin-top: 0; }
+
+@media (max-width: 640px) {
+    .apr-seksi__ikon { width: 34px; height: 34px; border-radius: 10px; font-size: 0.92rem; }
+    .apr-seksi__teks h3 { font-size: 0.88rem; }
+    .apr-seksi__teks p { font-size: 0.7rem; }
+}
+
+.dark .apr-seksi__hitung { background: #0b1220 !important; border-color: rgba(59, 130, 246, 0.22) !important; color: #94a3b8 !important; }
+.dark .apr-seksi--sesi    .apr-seksi__hitung.ada { background: rgba(59, 130, 246, 0.18) !important; border-color: rgba(59, 130, 246, 0.4) !important; color: #93c5fd !important; }
+.dark .apr-seksi--laporan .apr-seksi__hitung.ada { background: rgba(139, 92, 246, 0.18) !important; border-color: rgba(139, 92, 246, 0.4) !important; color: #c4b5fd !important; }
+.dark .apr-seksi--sesi    .apr-seksi__ikon { background: rgba(59, 130, 246, 0.16) !important; color: #93c5fd !important; }
+.dark .apr-seksi--laporan .apr-seksi__ikon { background: rgba(139, 92, 246, 0.16) !important; color: #c4b5fd !important; }
+.dark .apr-pisah { background: linear-gradient(90deg, transparent, rgba(59, 130, 246, 0.28) 12%, rgba(59, 130, 246, 0.28) 88%, transparent) !important; }

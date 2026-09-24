@@ -1,0 +1,1976 @@
+/* PREMIUM ABSENSI DESIGN - Modern & Professional (Unified) */
+
+/* WRAPPER */
+.absensi-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--page-gap);
+  padding: 0;
+  max-width: 100%;
+  margin: 0;
+}
+
+:root {
+  /* Spacing */
+  --spacing-xs: 0.5rem;
+  --spacing-sm: 0.75rem;
+  --spacing-md: 1rem;
+  --spacing-lg: 1.5rem;
+  --spacing-xl: 2rem;
+
+  /* Radius */
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --radius-full: 9999px;
+
+  /* Interactive */
+  --active-ring: 0 0 0 4px rgba(58, 166, 255, 0.14);
+}
+
+/* Optional: make all buttons feel “smooth blue active” */
+button,
+.btn,
+a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button:focus-visible,
+.btn:focus-visible,
+a:focus-visible {
+  outline: none;
+  box-shadow: var(--active-ring);
+  border-color: var(--n-primary-focus) !important;
+}
+
+/* Page Header (Matching Dashboard Hero) */
+.absensi-header {
+  background: var(--banner-bg, var(--banner-bg, linear-gradient(135deg, var(--n-primary) 0%, #c2185b 100%)));
+  padding: 22px 32px;
+  border-radius: 16px;
+  /* Tanpa border: border semi-transparan di atas gradien memunculkan
+     garis warna di lengkung sudut (magenta di dark, abu di light). */
+  border: none;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: white;
+  position: relative;
+  overflow: hidden;
+  transition: background 0.3s ease;
+  font-family: 'Poppins', sans-serif;
+}
+
+.dark .absensi-header {
+  background: var(--banner-bg, var(--banner-bg, linear-gradient(135deg, var(--n-primary) 0%, #c2185b 100%)));
+  box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.5);
+}
+
+.absensi-title-area {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  z-index: 1;
+}
+
+.absensi-header-text {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 1;
+}
+
+.absensi-icon-wrapper {
+  display: none !important;
+}
+
+.absensi-title {
+  font-size: 1.25rem !important;
+  font-weight: 800 !important;
+  margin: 0 !important;
+  letter-spacing: -0.02em !important;
+  line-height: 1.2 !important;
+}
+
+.absensi-subtitle {
+  margin: 2px 0 0 !important;
+  color: rgba(255, 255, 255, 0.75) !important;
+  font-size: 0.78rem !important;
+  font-weight: 500 !important;
+  line-height: 1.5 !important;
+}
+
+.filter-card {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  margin-bottom: 0 !important;
+  transition: all 0.3s ease;
+}
+
+.dark .filter-card {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.filter-section-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--n-muted);
+  margin-bottom: var(--spacing-md);
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.filter-section-label::before {
+  content: "";
+  width: 4px;
+  height: 16px;
+  background: var(--n-primary);
+  border-radius: var(--radius-full);
+}
+
+/* Form Elements */
+.form-group {
+  margin-bottom: 0;
+}
+
+.form-label {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 600;
+  /* lebih ringan */
+  color: var(--n-muted);
+  margin-bottom: 0.5rem;
+}
+
+.form-input,
+.form-select {
+  width: 100%;
+  padding: 0.6rem 0.9rem;
+  /* Use padding instead of fixed height to prevent text cutoff */
+  font-size: 0.875rem;
+  background: var(--n-bg);
+  border: 1.5px solid var(--n-border);
+  border-radius: var(--radius-md);
+  transition: all 0.18s ease;
+  color: var(--n-ink);
+  font-weight: 500;
+  box-sizing: border-box;
+  line-height: 1.25rem;
+}
+
+div.form-select,
+div.form-input {
+  display: flex !important;
+  align-items: center !important;
+  height: 40px;
+  /* Force height only for div containers */
+  padding: 0 0.9rem;
+}
+
+/* Ensure calendar icon is visible — Safari fix */
+input[type="date"].form-input {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  padding-right: 0.5rem;
+}
+
+.form-input:hover,
+.form-select:hover {
+  border-color: var(--n-primary);
+  opacity: 0.9;
+}
+
+.form-input:focus,
+.form-select:focus {
+  outline: none;
+  border-color: var(--n-primary);
+  background: var(--n-card);
+  box-shadow: var(--active-ring);
+}
+
+.dark .form-input,
+.dark .form-select {
+  background: rgba(255, 255, 255, 0.04);
+  /* Faded navy look on #0f172a */
+  border-color: rgba(255, 255, 255, 0.1);
+  color: var(--n-ink);
+}
+
+.dark .form-input:focus,
+.dark .form-select:focus {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: var(--n-primary);
+}
+
+/* Penghitung chip tersembunyi pada multi-select Jam Ke */
+.jp__moreCount {
+  flex: none;
+  margin-left: 4px;
+  padding: 2px 6px;
+  border-radius: 6px;
+  background: var(--n-soft);
+  color: var(--n-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.1;
+  white-space: nowrap;
+}
+
+/* DatePicker (Tanggal Mengajar) — samakan kotak & warna dengan .form-select */
+.filter-card .dpk-trigger {
+  padding: 0.6rem 0.9rem;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  border-radius: var(--radius-md);
+}
+
+.filter-card .dpk-icon {
+  color: var(--n-ink);
+}
+
+.dark .filter-card .dpk-trigger {
+  background: var(--n-surface);
+  border-color: var(--n-line);
+}
+
+.dark .filter-card .dpk-trigger.dpk-open {
+  background: var(--n-elevated);
+  border-color: var(--n-primary);
+}
+
+/* Buttons */
+.btn {
+  padding: 0 1rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  border-radius: var(--radius-md);
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  height: 40px;
+}
+
+.btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  filter: brightness(1.1);
+}
+
+.btn:active {
+  transform: translateY(0);
+}
+
+.btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none !important;
+  box-shadow: var(--shadow-sm) !important;
+}
+
+.btn-primary {
+  background: var(--n-primary);
+  color: white;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: #1e56d3;
+}
+
+.btn-success {
+  background: rgba(16, 185, 129, 0.1);
+  color: #10b981;
+  border: 1.5px solid rgba(16, 185, 129, 0.3);
+}
+
+.btn-success:hover:not(:disabled) {
+  background: rgba(16, 185, 129, 0.15);
+  border-color: #10b981;
+}
+
+.dark .btn-success {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+  border-color: rgba(16, 185, 129, 0.4);
+}
+
+.btn-dark {
+  background: var(--n-primary-dark);
+  color: white;
+}
+
+.btn-dark:hover:not(:disabled) {
+  background: #00287a;
+}
+
+.btn-outline {
+  background: var(--n-soft);
+  color: var(--n-ink);
+  border: 1.5px solid var(--n-border);
+}
+
+.btn-outline:hover:not(:disabled) {
+  background: var(--n-border);
+}
+
+/* Data Table */
+.data-table {
+  background: var(--n-card);
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  box-shadow: var(--n-shadow);
+  border: 1px solid var(--n-border);
+  transition: all 0.3s ease;
+}
+
+.dark .data-table {
+  background: #0f172a;
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.data-table table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.data-table thead {
+  background: var(--n-surface);
+}
+
+.dark .data-table thead {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.data-table th {
+  padding: 14px 16px;
+  text-align: left;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--n-muted);
+  border-bottom: 2px solid var(--tb-border);
+  background: var(--tb-th-bg);
+}
+
+.data-table th:last-child {
+  border-right: none;
+}
+
+.data-table td {
+  padding: 12px 16px;
+  font-size: 0.9rem;
+  border-bottom: 1px solid var(--tb-border);
+  color: var(--n-ink);
+  vertical-align: middle;
+  height: var(--tb-row-h);
+}
+
+.data-table tr:hover td {
+  background: var(--tb-hover);
+}
+
+.data-table .col-no {
+  width: 50px;
+  text-align: center;
+}
+
+.data-table .col-nisn {
+  width: 120px;
+  text-align: center;
+}
+
+.nisn-pill {
+  display: inline-block;
+  color: var(--n-muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.data-table td:last-child {
+  border-right: none;
+}
+
+.dark .data-table th,
+.dark .data-table td {
+  border-color: rgba(255, 255, 255, 0.18);
+  /* High visibility whitish border */
+}
+
+.dark .data-table thead {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.data-table tbody tr {
+  transition: background 0.15s ease;
+}
+
+.data-table tbody tr:hover {
+  background: var(--n-surface);
+}
+
+.data-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* Status Radios */
+.status-radio-group {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.4rem;
+  background: var(--n-bg);
+  border-radius: var(--radius-full);
+  border: 1.5px solid var(--n-border);
+}
+
+.status-radio-item {
+  flex: 1;
+}
+
+.status-radio-item input {
+  display: none;
+}
+
+.status-radio-label {
+  display: block;
+  padding: 0.52rem 0.75rem;
+  text-align: center;
+  font-size: 0.74rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: var(--n-muted);
+  background: transparent;
+}
+
+.status-radio-label:hover {
+  background: var(--n-soft);
+  color: var(--n-ink);
+  box-shadow: var(--shadow-sm);
+}
+
+.dark .status-radio-label {
+  color: #cbd5e1 !important;
+  font-weight: 700;
+}
+
+.dark .status-radio-label:hover {
+  background: rgba(255, 255, 255, 0.1) !important;
+  color: #ffffff !important;
+}
+
+.status-radio-item input:checked+.status-radio-label {
+  background: var(--n-card);
+  color: var(--n-ink);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.dark .status-radio-group {
+  background: #000000 !important;
+  border-color: rgba(255, 255, 255, 0.18) !important;
+}
+
+/* Disabled */
+.status-radio-item input:disabled+.status-radio-label {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* Status Colors (HADIR = BLUE, IZIN = GREEN) */
+.status-radio-item input:checked+.status-radio-label[data-status="HADIR"],
+.dark .status-radio-item input:checked+.status-radio-label[data-status="HADIR"] {
+  background: #1a73e8 !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  box-shadow: 0 4px 14px rgba(26, 115, 232, 0.4) !important;
+}
+
+.status-radio-item input:checked+.status-radio-label[data-status="IZIN"],
+.dark .status-radio-item input:checked+.status-radio-label[data-status="IZIN"] {
+  background: #10b981 !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.4) !important;
+}
+
+.status-radio-item input:checked+.status-radio-label[data-status="SAKIT"],
+.dark .status-radio-item input:checked+.status-radio-label[data-status="SAKIT"] {
+  background: #f59e0b !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  box-shadow: 0 4px 14px rgba(245, 158, 11, 0.4) !important;
+}
+
+.status-radio-item input:checked+.status-radio-label[data-status="ALPHA"],
+.dark .status-radio-item input:checked+.status-radio-label[data-status="ALPHA"] {
+  background: #ef4444 !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  box-shadow: 0 4px 14px rgba(239, 68, 68, 0.4) !important;
+}
+
+.dark .data-table th,
+.dark .data-table td {
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.dark .data-table thead {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.dark .data-table tbody tr td {
+  background: var(--n-card);
+  border-bottom-color: var(--n-border);
+}
+
+.dark .data-table tbody tr:hover td {
+  background: var(--n-surface);
+}
+
+.dark .data-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* Row Backgrounds - Adaptive Alpha */
+.row-hadir {
+  background: rgba(59, 130, 246, 0.04);
+}
+
+.row-izin {
+  background: rgba(245, 158, 11, 0.04);
+}
+
+.row-sakit {
+  background: rgba(251, 146, 60, 0.04);
+}
+
+.row-alpha {
+  background: rgba(239, 68, 68, 0.04);
+}
+
+.dark .row-hadir {
+  background: rgba(59, 130, 246, 0.1);
+}
+
+.dark .row-izin {
+  background: rgba(245, 158, 11, 0.1);
+}
+
+.dark .row-sakit {
+  background: rgba(251, 146, 60, 0.1);
+}
+
+.dark .row-alpha {
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.row-changed {
+  position: relative;
+}
+
+/* Badges */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.25rem 0.625rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-radius: var(--radius-full);
+  background: var(--n-soft);
+  color: var(--n-muted);
+}
+
+.badge-success {
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+}
+
+.dark .badge-success {
+  background: rgba(16, 185, 129, 0.2);
+  color: #34d399;
+}
+
+.badge-warning {
+  background: rgba(245, 158, 11, 0.15);
+  color: #f59e0b;
+}
+
+.dark .badge-warning {
+  background: rgba(245, 158, 11, 0.2);
+  color: #fbbf24;
+}
+
+/* Session Info Banner */
+.session-info {
+  padding: 0.875rem 1rem;
+  background: var(--n-surface);
+  border-radius: var(--radius-md);
+  font-size: 0.8125rem;
+  color: var(--n-muted);
+  border: 1px solid var(--n-border);
+  margin-top: var(--spacing-md);
+}
+
+.dark .session-info {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+/* ================= MOBILE OPTIMIZATION ================= */
+@media (max-width: 576px) {
+  .absensi-header {
+    padding: 16px 16px 20px;
+    border-radius: 16px;
+  }
+
+  .absensi-title {
+    font-size: 1.15rem;
+  }
+
+  .absensi-subtitle {
+    font-size: 0.8rem;
+  }
+
+  .form-label {
+    font-size: 0.825rem;
+  }
+
+  .form-input,
+  .form-select {
+    font-size: 0.95rem;
+    padding: 0.75rem 0.9rem;
+  }
+
+  .max-w-7xl {
+    padding: 0 !important;
+  }
+
+  .filter-card {
+    padding: 0;
+    margin-bottom: 0 !important;
+  }
+
+  .form-label[style*="opacity: 0"] {
+    display: none;
+  }
+
+  .filter-card .grid {
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+  }
+
+  .md\:col-span-3,
+  .md\:col-span-2,
+  .md\:col-span-1 {
+    width: 100%;
+  }
+
+  /* Table to cards */
+
+  /* Kontainer tabel dilucuti: di mobile isinya bukan tabel lagi melainkan
+     tumpukan kartu, dan tiap kartu (tr) sudah punya latar, tepi, dan
+     bayangannya sendiri. Kalau kotak putih ini dibiarkan, kartunya jadi
+     "kartu di dalam kartu" dan efek melayangnya hilang.
+     `overflow: hidden` ikut dibuang supaya bayangan kartu tidak terpotong. */
+  .data-table {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    overflow: visible !important;
+  }
+
+  .dark .data-table {
+    background: transparent !important;
+    border-color: transparent !important;
+  }
+
+  .data-table thead {
+    display: none;
+  }
+
+  .data-table table,
+  .data-table tbody,
+  .data-table tr,
+  .data-table td {
+    display: block;
+    width: 100%;
+  }
+
+  .data-table tbody tr {
+    margin-bottom: 1rem;
+    border: 1px solid var(--n-border);
+    border-radius: 16px;
+    background: var(--n-card);
+    box-shadow: var(--shadow-sm);
+    position: relative;
+    /* Context for absolute positioning of 'No' */
+  }
+
+  /* 1. Colored Number Badge (Blue) — baris pertama kartu, pojok KIRI.
+     Dulu melayang (position: absolute) di pojok kanan atas; sekarang ikut
+     alur grid supaya bisa sebaris dengan tombol catatan di pojok kanan.
+     Penempatan gridnya diatur di blok "Susunan kartu" di bawah. */
+  .data-table td:first-child {
+    position: static !important;
+    width: auto !important;
+    border-bottom: none !important;
+    padding: 0.25rem 0.75rem !important;
+    background: dodgerblue !important;
+    /* Force Blue Background */
+    color: white !important;
+    /* Force White Text */
+    font-weight: 700;
+    font-size: 0.9rem;
+    border-radius: 8px;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    min-height: auto;
+    box-shadow: 0 4px 10px rgba(30, 144, 255, 0.3) !important;
+    z-index: 5 !important;
+    opacity: 1 !important;
+  }
+
+  /* Hide the "NO" label text */
+  .data-table td:first-child::before {
+    display: none;
+  }
+
+  /* 2. Vertical Stack Layout for Cells (Fixes Cutoff) */
+  .data-table td {
+    padding: 1rem;
+    text-align: left;
+    display: flex;
+    flex-direction: column;
+    /* Stack Label and Content vertically */
+    align-items: flex-start;
+    justify-content: center;
+    border-bottom: 1px solid var(--n-border);
+    width: 100%;
+    box-sizing: border-box;
+    gap: 0.35rem;
+    font-size: 0.9rem;
+    position: relative;
+    background: transparent;
+    height: auto;
+    /* Allow growth */
+    min-height: auto;
+  }
+
+  /* Status Column specialized layout */
+  .data-table td:nth-child(4) {
+    align-items: stretch;
+    /* Status buttons take full width */
+  }
+
+  /* Action/Pencil Button - Standard */
+  .data-table td:last-child {
+    border-bottom: none;
+    justify-content: flex-end;
+    padding-top: 0.75rem;
+    padding-bottom: 0.75rem;
+    background: var(--n-soft);
+  }
+
+  .data-table td:last-child .jt__iconBtn {
+    background: transparent;
+    color: var(--n-primary);
+    border: none;
+    box-shadow: none;
+    font-size: 1.1rem;
+  }
+
+  .data-table td:last-child::before {
+    display: none;
+  }
+
+  /* Restore generic label styling for other cells */
+  .data-table td::before {
+    content: attr(data-label);
+    font-weight: 700;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    color: var(--n-muted);
+    letter-spacing: 0.05em;
+    text-align: left;
+    margin-bottom: 0;
+  }
+
+  .status-radio-group {
+    display: flex;
+    flex-wrap: wrap;
+    /* Ensure wrapping allowed */
+    gap: 0.4rem;
+    width: 100%;
+    border-radius: 14px;
+    padding: 0.4rem;
+    justify-content: space-between;
+  }
+
+  .status-radio-item {
+    flex: 1 0 45%;
+    min-width: 60px;
+  }
+
+  .status-radio-label {
+    padding: 0.5rem;
+    font-size: 0.7rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    border-radius: 10px;
+  }
+
+  /* ---- Kartu mobile: label kolom dibuang ----
+     NISN / NAMA SISWA / STATUS KEHADIRAN sudah terbaca dari isinya sendiri,
+     sementara tiga label kapital menambah tinggi kartu tanpa informasi baru.
+     Menimpa `.data-table td::before` (baris 789) yang memunculkan attr(data-label). */
+  .data-table td::before {
+    display: none !important;
+  }
+
+  /* ---- Susunan kartu ----
+     Urutan sel di DOM (No, NISN, Nama, Status, Catatan) tidak sama dengan
+     urutan yang diinginkan di kartu, jadi barisnya dijadikan grid 2 kolom
+     dan tiap sel ditempatkan eksplisit:
+
+        [ badge no ]            [ ikon catatan ]   <- baris 1
+        Nama Siswa                                 <- baris 2
+        0099927912                                 <- baris 3 (lebih kecil)
+        [ status kehadiran ]                       <- baris 4
+
+     `display: block` pada tr tidak bisa melakukan ini; grid dipilih daripada
+     flex karena baris 1 butuh dua sel bersebelahan sedangkan sisanya penuh. */
+  .data-table tbody tr {
+    display: grid !important;
+    grid-template-columns: auto 1fr;
+    align-items: center;
+  }
+
+  /* Baris 1 kiri: badge nomor */
+  .data-table td:first-child {
+    grid-row: 1;
+    grid-column: 1;
+    justify-self: start;
+    margin: 0.85rem 0 0 1rem;
+  }
+
+  /* Baris 1 kanan: dua tombol catatan, dipindah dari dasar kartu.
+     Latar `--n-soft` dibuang — dulu itu menandai baris aksi di kaki kartu,
+     sekarang tombolnya menempel di kepala kartu. */
+  .data-table td:last-child {
+    grid-row: 1;
+    grid-column: 2;
+    justify-self: end;
+    width: auto !important;
+    background: transparent !important;
+    padding: 0.85rem 1rem 0 0 !important;
+  }
+
+  /* Baris 2: Nama Siswa, tanpa garis pemisah ke NISN di bawahnya */
+  .data-table td:nth-child(3) {
+    grid-row: 2;
+    grid-column: 1 / -1;
+    padding-top: 0.5rem !important;
+    padding-bottom: 0 !important;
+    border-bottom: none !important;
+    font-size: 1rem;
+  }
+
+  /* Baris 3: NISN — menempel di bawah nama, lebih kecil dan redup.
+     `font-weight` butuh !important karena td-nya punya style inline
+     fontWeight: 700 (lihat view.tsx, kolom NISN). */
+  .data-table td:nth-child(2) {
+    grid-row: 3;
+    grid-column: 1 / -1;
+    padding-top: 0.15rem !important;
+    font-size: 0.78rem !important;
+    font-weight: 500 !important;
+    color: var(--n-muted);
+  }
+
+  /* Baris 4: status kehadiran — kini elemen terakhir, jadi garis bawahnya
+     dibuang supaya tidak ada garis menggantung di dasar kartu. */
+  .data-table td:nth-child(4) {
+    grid-row: 4;
+    grid-column: 1 / -1;
+    border-bottom: none !important;
+  }
+
+  /* ---- Baris "belum ada data" ----
+     Selnya satu-satunya, jadi ia sekaligus :first-child dan :last-child dan
+     kena SEMUA aturan kartu di atas: digayakan sebagai badge nomor biru,
+     lalu ditaruh di kolom kanan grid selebar isinya — pesannya jadi terjepit
+     dan kartunya tampak kosong. Semua itu dibatalkan di sini. */
+  .data-table tbody tr.dt-emptyRow {
+    display: block !important;
+    /* Tetap berkotak seperti di desktop: di mobile kontainer .data-table
+       sudah ditransparankan, jadi kalau barisnya juga polos, pesannya
+       melayang tanpa bidang sama sekali. */
+    background: var(--n-card);
+    border: 1px solid var(--n-border);
+    border-radius: 16px;
+    box-shadow: var(--shadow-sm);
+    margin-bottom: 0;
+  }
+
+  .data-table tr.dt-emptyRow td {
+    position: static !important;
+    display: block;
+    width: 100% !important;
+    grid-row: auto;
+    grid-column: auto;
+    margin: 0;
+    /* Dipadatkan: 2.5rem membuat kartunya setinggi ~160px hanya untuk satu
+       kalimat, dan mendorong isi di bawahnya jauh ke bawah layar. */
+    padding: 1.25rem 1rem !important;
+    background: transparent !important;
+    color: var(--n-muted) !important;
+    border: none !important;
+    border-radius: 0;
+    box-shadow: none !important;
+    font-size: 0.8rem;
+    font-weight: 400;
+    line-height: 1.45;
+    text-align: center;
+  }
+
+  /* Ikon inbox ikut dikecilkan (default 2.5rem lewat style inline di view.tsx)
+     supaya proporsinya seimbang dengan teks yang kini lebih kecil. */
+  .data-table tr.dt-emptyRow td > i {
+    font-size: 1.6rem !important;
+    margin-bottom: 0.35rem !important;
+  }
+}
+
+@media (min-width: 577px) and (max-width: 768px) {
+  .absensi-header {
+    padding: 1.5rem;
+  }
+
+  .absensi-title {
+    font-size: 1.25rem;
+  }
+}
+
+/* ================= ADMIN MODE STYLES ================= */
+
+/* Tombol beralih mode admin dulu ada di sini (.admin-toggle-btn) saat masih
+   duduk di PageBanner. Sekarang aksinya dipegang <DesktopFab>/BottomNav, jadi
+   gayanya datang dari components/ui/desktop-fab.css. */
+
+/* Admin Mode Container.
+   Dulu ini satu kartu besar yang membungkus filter DAN tabel jadi satu bidang.
+   Sekarang cuma pembungkus tak terlihat: kartunya pindah ke .admin-filters dan
+   .admin-table-container masing-masing, dipisah oleh gap di bawah ini. */
+.admin-mode-container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: var(--spacing-lg);
+}
+
+/* Admin Close Button */
+.admin-close-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  background: var(--n-surface);
+  border: 1px solid var(--n-border);
+  border-radius: 10px;
+  color: var(--n-muted);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+
+.admin-close-btn:hover {
+  background: var(--n-card);
+  color: var(--n-text);
+  border-color: var(--n-border);
+}
+
+.admin-close-btn i {
+  font-size: 16px;
+}
+
+/* Admin Filters — pembungkus polos.
+   FilterToolbar (.ftb-toolbar) sudah punya latar, tepi, dan sudut membulatnya
+   sendiri, jadi kalau di sini diberi kartu lagi hasilnya kotak di dalam kotak.
+   Satu kotak saja: biarkan toolbar-nya yang jadi kartu. */
+.admin-filters {
+  padding: 0;
+  background: none;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.admin-filters .form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.admin-filters .form-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--n-muted);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.admin-filters .form-label i {
+  font-size: 0.875rem;
+}
+
+.admin-filters .form-select,
+.admin-filters .form-input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--n-border);
+  border-radius: 8px;
+  background: var(--n-surface);
+  color: var(--n-text);
+  font-size: 0.875rem;
+  font-weight: 500;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.admin-filters .form-select:focus,
+.admin-filters .form-input:focus {
+  border-color: var(--n-primary);
+}
+
+/* Admin Actions Bar */
+/* Bilah aksi seleksi. Kini muncul-hilang di antara kartu filter dan kartu
+   tabel (bukan lagi strip di dalam satu kartu besar), jadi diberi tepi penuh
+   dan sudut membulat — `border-bottom` saja akan tampak menggantung. */
+.admin-actions {
+  padding: 0.85rem 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: var(--n-soft);
+  border: 1px solid var(--n-border);
+  border-radius: 14px;
+}
+
+/* Admin Table Container — kartu tersendiri, terpisah dari kartu filter */
+.admin-table-container {
+  padding: 1.5rem;
+  min-height: 300px;
+  background: var(--n-card);
+  border: 1px solid var(--n-border);
+  border-radius: 20px;
+  box-shadow: 0 15px 40px -10px rgba(0, 0, 0, 0.08);
+}
+
+/* ---- Panel admin di mobile ----
+   Di layar sempit kartu .admin-table-container DIBUANG: isinya sudah berupa
+   .mui-list yang punya latar, tepi, dan sudut membulatnya sendiri, jadi kartu
+   luar itu cuma menghasilkan kotak-dalam-kotak. Gap vertikal induknya juga
+   dirapatkan — 16px + padding 24px kartu luar membuat jarak dari baris filter
+   ke daftar terasa menganga. */
+@media (max-width: 767px) {
+  .admin-mode-container {
+    gap: 10px;
+  }
+
+  .admin-table-container {
+    padding: 0;
+    min-height: 0;
+    background: none;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  /* Ikon mapel berwarna SAMA di semua baris. MobileAvatar memutar 6 rona
+     (mui-avatar--t0..t5) dari hash judul, yang berguna saat tiap baris punya
+     inisial berbeda; di sini ikonnya identik, jadi warna-warni itu jadi derau.
+     Spesifisitas (0,2,0) menang atas kelas rona (0,1,0), tanpa !important. */
+  .admin-mode-container .mui-avatar {
+    background: rgba(0, 56, 168, 0.08);
+    color: #3083ff;
+  }
+
+  .dark .admin-mode-container .mui-avatar {
+    background: rgba(26, 115, 232, 0.18);
+    color: #60a5fa;
+  }
+}
+
+/* Loading State */
+.admin-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem 2rem;
+  color: var(--n-muted);
+  gap: 1rem;
+}
+
+.admin-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid var(--n-border);
+  border-top-color: #3083FF;
+  border-radius: 50%;
+  animation: admin-spin 0.8s linear infinite;
+}
+
+@keyframes admin-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Empty State */
+.admin-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem 2rem;
+  color: var(--n-muted);
+  text-align: center;
+}
+
+.admin-empty i {
+  font-size: 3rem;
+  margin-bottom: 0.75rem;
+  opacity: 0.4;
+}
+
+.admin-empty p {
+  font-weight: 600;
+  margin: 0;
+  font-size: 1rem;
+}
+
+.admin-empty span {
+  font-size: 0.85rem;
+  opacity: 0.7;
+  margin-top: 0.25rem;
+}
+
+/* Admin Table */
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.admin-table th {
+  padding: 12px 14px;
+  text-align: left;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--n-muted);
+  border-bottom: 2px solid var(--n-border);
+  background: var(--n-surface);
+}
+
+.dark .admin-table th {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.admin-table td {
+  padding: 14px 14px;
+  font-size: 0.875rem;
+  border-bottom: 1px solid var(--n-border);
+  color: var(--n-ink);
+  vertical-align: middle;
+}
+
+.admin-table tbody tr {
+  transition: all 0.15s ease;
+}
+
+.admin-table tbody tr:hover {
+  background: var(--n-surface);
+}
+
+.admin-table tbody tr.selected {
+  background: #f0f9ff;
+}
+
+.dark .admin-table tbody tr.selected {
+  background: rgba(59, 130, 246, 0.1);
+}
+
+.admin-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* Checkbox */
+.session-checkbox {
+  width: 15px;
+  height: 15px;
+  cursor: pointer;
+  accent-color: #3083FF;
+  border-radius: 4px;
+}
+
+/* Date Badge */
+/* Guru Info */
+.guru-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.guru-name {
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+
+/* ---- Teks tabel/kartu Panel Admin ----
+   Dulu tiap nilai dibungkus "badge" (latar + tepi + sudut membulat). Semuanya
+   dibuang: kotak-kotak itu membuat baris ramai tanpa menambah informasi, dan
+   warnanya (kelas biru, jam hijau) tidak menandakan apa pun. Yang disisakan
+   hanya warna teks di dua tempat yang memang berarti: guru pengganti dan
+   status sesi.
+
+   Diskop ke .admin-mode-container, tidak dibiarkan global seperti sebelumnya:
+   nama seperti .status-badge dan .jam-badge juga dipakai halaman lain
+   (surat, piket, keuangan), dan absensi.css ikut terkirim ke semua halaman. */
+.admin-mode-container .date-badge,
+.admin-mode-container .kelas-badge,
+.admin-mode-container .jam-badge,
+.admin-mode-container .pengganti-badge,
+.admin-mode-container .status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0;
+  background: none;
+  border: none;
+  border-radius: 0;
+  white-space: nowrap;
+}
+
+.admin-mode-container .date-badge {
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+/* Kelas & Jam Ke: teks biasa, tanpa warna, tanpa tebal */
+.admin-mode-container .kelas-badge,
+.admin-mode-container .jam-badge {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--n-text);
+}
+
+/* Guru pengganti tetap berwarna — ini penanda, bukan hiasan */
+.admin-mode-container .pengganti-badge {
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: #f59e0b;
+}
+
+.dark .admin-mode-container .pengganti-badge {
+  color: #fbbf24;
+}
+
+.admin-mode-container .status-badge {
+  font-size: 0.78rem;
+  font-weight: 500;
+}
+
+/* Final BIRU (dulu hijau), Draft tetap amber */
+.admin-mode-container .status-badge.final {
+  color: #2563eb;
+}
+
+.dark .admin-mode-container .status-badge.final {
+  color: #60a5fa;
+}
+
+.admin-mode-container .status-badge.draft {
+  color: #f59e0b;
+}
+
+.dark .admin-mode-container .status-badge.draft {
+  color: #fbbf24;
+}
+
+/* Action Buttons */
+.action-buttons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.action-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  font-size: 0.95rem;
+}
+
+.action-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+}
+
+.action-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.action-btn.edit {
+  background: rgba(59, 130, 246, 0.1);
+  color: #3b82f6;
+  border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+.action-btn.edit:hover {
+  background: rgba(59, 130, 246, 0.2);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.25);
+}
+
+.action-btn.delete {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.action-btn.delete:hover {
+  background: rgba(239, 68, 68, 0.2);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.25);
+}
+
+/* Danger Button */
+.btn-danger {
+  background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%);
+  color: white;
+  border: none;
+  box-shadow: 0 4px 14px rgba(220, 38, 38, 0.3);
+}
+
+.btn-danger:hover:not(:disabled) {
+  background: linear-gradient(135deg, #b91c1c 0%, #dc2626 100%);
+  box-shadow: 0 6px 20px rgba(220, 38, 38, 0.4);
+}
+
+/* Tablet breakpoint for admin filters */
+@media (min-width: 641px) and (max-width: 1024px) {
+  .admin-filters .grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.875rem;
+  }
+}
+
+/* Mobile breakpoint for admin filters */
+@media (max-width: 640px) {
+  /* .admin-filters TIDAK diberi padding lagi di sini: sejak baris filter
+     memakai FilterToolbar (yang membawa kartunya sendiri), padding di
+     pembungkus luar cuma menambah jarak menganga di atas & bawah kapsul cari. */
+  .admin-filters .grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.625rem;
+  }
+
+  .admin-filters .form-select,
+  .admin-filters .form-input {
+    padding: 12px 14px;
+    font-size: 0.875rem;
+  }
+}
+
+/* Responsive Admin Table */
+@media (max-width: 768px) {
+  /* Use CSS grid for responsive layout */
+  .admin-filters .grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+
+  .admin-filters .form-select,
+  .admin-filters .form-input {
+    padding: 12px 14px;
+  }
+
+  /* Padding sengaja 0 (lihat blok "Panel admin di mobile" di atas): isinya
+     .mui-list yang sudah punya kotaknya sendiri. `overflow-x` juga tidak perlu
+     karena tabel desktop disembunyikan di lebar ini. */
+  .admin-table-container {
+    padding: 0;
+  }
+
+  .admin-table {
+    min-width: 600px;
+  }
+
+  .admin-table th,
+  .admin-table td {
+    padding: 10px 8px;
+    font-size: 0.8rem;
+  }
+
+  .admin-actions {
+    flex-direction: column;
+    gap: 1rem;
+    align-items: stretch;
+  }
+
+  .action-buttons {
+    justify-content: center;
+  }
+
+  .admin-close-btn span {
+    display: none;
+  }
+
+  .admin-close-btn {
+    padding: 10px;
+  }
+}
+
+/* Admin Pagination */
+.admin-pagination {
+  padding: 1.25rem 1.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--n-card);
+  border-top: 1px solid var(--n-border);
+}
+
+.pagination-info {
+  font-size: 0.85rem;
+  color: var(--n-muted);
+}
+
+.pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.pag-btn {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  border: 1px solid var(--n-border);
+  background: var(--n-surface);
+  color: var(--n-text);
+  font-size: 0.85rem;
+  font-weight: 600;
+  transition: all 0.2s;
+  cursor: pointer;
+}
+
+.pag-btn:hover:not(:disabled) {
+  border-color: #3b82f6;
+  color: #3b82f6;
+  background: #eff6ff;
+}
+
+.pag-btn.active {
+  background: #3b82f6;
+  border-color: #3b82f6;
+  color: white;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.25);
+}
+
+.pag-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  background: var(--n-card);
+}
+
+@media (max-width: 640px) {
+  .admin-pagination {
+    flex-direction: column;
+    gap: 1rem;
+    align-items: center;
+    text-align: center;
+  }
+}/* CUSTOM PREMIUM SWAL LOADER - Standardized Wave Bars */
+.swal2-popup.kh-swal-popup {
+    border-radius: 32px !important;
+    padding: 3rem 2rem !important;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important;
+}
+
+.swal2-loader {
+    display: none !important;
+}
+
+.kh-swal-title {
+    font-size: 1.4rem !important;
+    font-weight: 800 !important;
+    color: #1e293b !important;
+    margin-bottom: 0.5rem !important;
+}
+
+/* ACCA Logo Trace Loader for Swal & Modals */
+.acca-loader-logo-box {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 1.5rem 0;
+}
+
+.acca-loader-trace {
+    overflow: visible;
+}
+
+.acca-trace-path {
+    fill: none;
+    stroke: var(--n-primary, #1d6bf3);
+    stroke-width: 3;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-dasharray: 100;
+    stroke-dashoffset: 100;
+    animation: accaLogoTrace 2.8s ease-in-out infinite;
+}
+
+.acca-trace-path:nth-child(2) {
+    animation-delay: 0.15s;
+}
+
+/* Stroke sengaja tidak dianimasikan: warnanya cukup dari .acca-trace-path
+   supaya loader ini satu warna saja. Fase menarik garis (52%-92%) dulu
+   di-set magenta #d946ef. Samakan dengan components/Spinner.tsx. */
+@keyframes accaLogoTrace {
+    0% {
+        stroke-dashoffset: 100;
+        opacity: 0;
+    }
+    5% {
+        opacity: 1;
+    }
+    48% {
+        stroke-dashoffset: 0;
+        opacity: 1;
+    }
+    52% {
+        stroke-dashoffset: 8;
+        opacity: 1;
+    }
+    92% {
+        stroke-dashoffset: 100;
+        opacity: 1;
+    }
+    97%, 100% {
+        stroke-dashoffset: 100;
+        opacity: 0;
+    }
+}
+
+.kh-swal-html {
+    font-size: 0.95rem !important;
+    color: #64748b !important;
+    font-weight: 500 !important;
+    margin-top: 1rem;
+}
+
+.swal2-html-container {
+    display: block !important; /* Ensure visibility */
+}
+
+
+.kh-swal-title {
+    font-size: 1.4rem !important;
+    font-weight: 800 !important;
+    color: #1e293b !important;
+    margin-bottom: 0.5rem !important;
+}
+
+.kh-swal-html {
+    font-size: 0.95rem !important;
+    color: #64748b !important;
+    font-weight: 500 !important;
+}
+
+@keyframes swal2-rotate-loading {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* PREMIUM LOADERS */
+.kh-dots-loader {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  margin: 20px 0;
+}
+
+.kh-dot {
+  width: 12px;
+  height: 12px;
+  background: #3b82f6;
+  border-radius: 50%;
+  animation: kh-pulse 1.4s ease-in-out infinite;
+  box-shadow: 0 0 10px rgba(59, 130, 246, 0.2);
+}
+
+.kh-dot:nth-child(2) {
+  animation-delay: 0.2s;
+  background: #3083FF;
+}
+
+.kh-dot:nth-child(3) {
+  animation-delay: 0.4s;
+  background: #c2185b;
+}
+
+@keyframes kh-pulse {
+  0%, 100% { transform: scale(0.8); opacity: 0.5; }
+  50% { transform: scale(1.2); opacity: 1; box-shadow: 0 0 15px rgba(59, 130, 246, 0.4); }
+}
+
+.kh-swal-popup {
+  border-radius: 28px !important;
+  padding: 2.5rem 2rem !important;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15) !important;
+  border: 1px solid rgba(0, 0, 0, 0.05) !important;
+}
+
+.kh-swal-title {
+  font-weight: 800 !important;
+  font-size: 1.5rem !important;
+  color: #1e293b !important;
+  letter-spacing: -0.02em !important;
+}
+@media (max-width: 767px) {
+  .desktop-table-container {
+    display: none !important;
+  }
+}
+
+/* ==========================================================================
+   GOOGLE ONE PITCH BLACK DARK THEME - ABSENSI
+   Pure #000000, Blue Neon Borders (1.8px), Blue Gradients & Soft Glows
+   ========================================================================== */
+
+.dark .absensi-header {
+  background: #000000 !important;
+  border: 2px solid #1a73e8 !important;
+  border-radius: 20px !important;
+  box-shadow: 
+    inset 0 1.5px 1.5px 0 rgba(255, 255, 255, 0.4),
+    inset 0 0 20px 0 rgba(26, 115, 232, 0.25),
+    0 0 35px rgba(26, 115, 232, 0.4),
+    0 20px 50px rgba(0, 0, 0, 0.9) !important;
+}
+
+.dark .absensi-title {
+  background: linear-gradient(90deg, #1d6bf3 0%, #3b82f6 30%, #60a5fa 70%, #93c5fd 100%) !important;
+  -webkit-background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  background-clip: text !important;
+  color: transparent !important;
+  display: inline-block !important;
+}
+
+.dark .absensi-subtitle {
+  color: #94a3b8 !important;
+}
+
+.dark .filter-card {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  margin-bottom: 0 !important;
+}
+
+.dark .filter-section-label {
+  color: #93c5fd !important;
+}
+
+.dark .form-label {
+  color: #94a3b8 !important;
+}
+
+.dark .form-input,
+.dark .form-select,
+.dark .filter-card .dpk-trigger {
+  background: #000000 !important;
+  border: 1px solid rgba(37, 99, 235, 0.4) !important;
+  color: #f1f5f9 !important;
+  border-radius: 12px !important;
+}
+
+.dark .jp__multiSelect [class*="-control"],
+.dark #jamKe-select [class*="-control"] {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.dark .form-input:focus,
+.dark .form-select:focus,
+.dark .filter-card .dpk-trigger.dpk-open {
+  border-color: #3b82f6 !important;
+  box-shadow: 0 0 10px rgba(26, 115, 232, 0.4) !important;
+}
+
+.dark .form-select option {
+  background: #000000 !important;
+  color: #f1f5f9 !important;
+}
+
+.dark .status-radio-group {
+  background: #000000 !important;
+  border: 1px solid rgba(59, 130, 246, 0.3) !important;
+}
+
+.dark .status-radio-label {
+  color: #94a3b8 !important;
+}
+
+.dark .data-table {
+  background: #000000 !important;
+  border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
+  border-radius: 20px !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5) !important;
+  overflow: hidden !important;
+}
+
+.dark .data-table thead,
+.dark .data-table thead th {
+  background: #000000 !important;
+  color: #93c5fd !important;
+  border-bottom: 2px solid rgba(59, 130, 246, 0.35) !important;
+}
+
+.dark .data-table tbody tr td {
+  background: transparent !important;
+  color: #f1f5f9 !important;
+  /* Alpha dinaikkan dari .15 — pada latar hitam garis .15 nyaris tak terlihat
+     sehingga batas antar baris/seksi kartu hilang. */
+  border-bottom: 1px solid rgba(59, 130, 246, 0.3) !important;
+}
+
+@media (max-width: 640px) {
+  /* Di mobile tiap <tr> adalah satu kartu, jadi kartu TERAKHIR tetap butuh
+     garis pemisah antar seksinya. globals.css mematikannya dengan
+     `border-bottom: none !important` (benar untuk tabel desktop, di mana
+     baris terakhir memang tak perlu garis penutup), sehingga di sini perlu
+     spesifisitas lebih tinggi untuk mengembalikannya. `:not(:first-child)`
+     menjaga badge nomor tetap memakai border penuhnya sendiri. */
+  .dark .data-table tbody tr:last-child td:not(:first-child):not(:last-child) {
+    border-bottom: 1px solid rgba(59, 130, 246, 0.3) !important;
+  }
+
+  /* Sel aksi = penutup kartu, jadi tanpa garis. Tanpa ini garis yang sudah
+     dipertegas muncul menggantung di dasar kartu. */
+  .dark .data-table tbody tr td:last-child {
+    border-bottom: none !important;
+  }
+
+  /* Badge nomor: latar hitam + tepi biru, seirama dengan header & tombol
+     Admin. Perlu spesifisitas ini untuk menang atas aturan
+     `.dark .data-table tbody tr td` di atas. */
+  .dark .data-table tbody tr td:first-child {
+    background: #000000 !important;
+    border: 1.5px solid rgba(26, 115, 232, 0.8) !important;
+    border-radius: 8px !important;
+    color: #ffffff !important;
+    box-shadow: 0 0 10px rgba(26, 115, 232, 0.3) !important;
+  }
+}
+
+.dark .data-table tbody tr:hover td {
+  background: rgba(26, 115, 232, 0.08) !important;
+}
+
+.dark .admin-table {
+  background: #000000 !important;
+  border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
+  border-radius: 20px !important;
+}
+
+.dark .admin-table th {
+  background: #000000 !important;
+  color: #93c5fd !important;
+  border-bottom: 2px solid rgba(59, 130, 246, 0.35) !important;
+}
+
+.dark .admin-table td {
+  color: #f1f5f9 !important;
+  border-bottom: 1px solid rgba(59, 130, 246, 0.15) !important;
+}
+
+.dark .admin-table tbody tr:hover td {
+  background: rgba(26, 115, 232, 0.08) !important;
+}
+
+.dark .btn-primary {
+  background: #1a73e8 !important;
+  border: 1.5px solid #3b82f6 !important;
+  color: #ffffff !important;
+  box-shadow: 0 0 14px rgba(26, 115, 232, 0.45) !important;
+}
+
+.dark .btn-primary:hover {
+  background: #1557b0 !important;
+  box-shadow: 0 0 20px rgba(26, 115, 232, 0.6) !important;
+}
+
+.dark .session-info {
+  background: #000000 !important;
+  border-color: rgba(59, 130, 246, 0.25) !important;
+}
+
+.dark .mobile-student-card,
+.dark .absensi-mobile-card {
+  background: #000000 !important;
+  border: 1px solid rgba(37, 99, 235, 0.4) !important;
+  border-radius: 20px !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5) !important;
+}
+
+/* Compact SweetAlert Popup (Keterangan Absensi Modal) */
+div:where(.swal2-popup).swal-compact-popup,
+.swal2-popup.swal-compact-popup {
+  padding: 1.5rem 1.5rem 1.25rem !important;
+  max-width: 420px !important;
+  width: 90% !important;
+  border-radius: 20px !important;
+  box-sizing: border-box !important;
+}
+
+div:where(.swal2-title).swal-compact-title,
+.swal2-title.swal-compact-title {
+  margin-top: 0.25rem !important;
+  margin-bottom: 0.75rem !important;
+  padding: 0 !important;
+  font-size: 1.3rem !important;
+  font-weight: 700 !important;
+}
+
+div:where(.swal2-textarea).swal-compact-input,
+.swal2-textarea.swal-compact-input,
+.swal2-input.swal-compact-input,
+textarea.swal-compact-input {
+  display: block !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  min-height: 100px !important;
+  height: 100px !important;
+  margin: 0.75rem 0 1.25rem 0 !important;
+  font-size: 0.9rem !important;
+  border-radius: 14px !important;
+  padding: 0.75rem 1rem !important;
+  box-sizing: border-box !important;
+  background: var(--n-card) !important;
+  border: 1.5px solid var(--n-border) !important;
+  color: var(--n-ink) !important;
+  resize: vertical !important;
+}
+
+.dark div:where(.swal2-textarea).swal-compact-input,
+.dark .swal2-textarea.swal-compact-input,
+.dark textarea.swal-compact-input {
+  background: #000000 !important;
+  border: 1.5px solid rgba(59, 130, 246, 0.45) !important;
+  color: #f1f5f9 !important;
+}
+
+div:where(.swal2-actions).swal-compact-actions,
+.swal2-actions.swal-compact-actions {
+  margin-top: 0.5rem !important;
+  margin-bottom: 0.25rem !important;
+  gap: 0.75rem !important;
+  width: 100% !important;
+  justify-content: center !important;
+}
+
+
+/* =========================================================
+   STRIP "SESI AKTIF"
+   Spacing ditulis di sini, bukan lewat utility Tailwind
+   (p-, m-, px-, py-), karena globals.css memuat reset
+   `* { margin: 0; padding: 0 }` tanpa @layer yang
+   mengalahkan seluruh utility spacing Tailwind v4.
+   File ini unlayered, jadi menang atas reset tersebut dan
+   sekaligus mendukung media query (yang mustahil via
+   style inline). Prefiks `absn-` agar tidak bentrok global.
+========================================================= */
+/* Tanpa kotak pembungkus: border/background dilepas, jadi padding
+   horizontal ikut nol supaya sejajar dengan kartu di atas/bawahnya. */
+.absn-sesi-bar {
+  margin: 2px 0 !important;
+  padding: 4px 2px;
+}
+
+.absn-sesi-chip {
+  padding: 0 14px;
+}
+
+@media (max-width: 640px) {
+  .absn-sesi-bar {
+    margin: 2px 0 !important;
+    padding: 3px 2px;
+  }
+
+  .absn-sesi-chip {
+    padding: 0 10px;
+  }
+}
+
+/* Tombol "Simpan" tetap biru, tapi biru tua supaya tidak tertukar dengan
+   "Buka Sesi" (ui-btn--primary, #3083FF) yang bersebelahan di toolbar.
+   Digandeng dengan .ui-btn agar spesifisitasnya menang atas .ui-btn--primary. */
+.ui-btn.absn-btn-simpan {
+  background: #1E40AF;
+  border-color: #1E40AF;
+  box-shadow: 0 2px 6px rgba(30, 64, 175, 0.25);
+}
+
+.ui-btn.absn-btn-simpan:hover:not(:disabled) {
+  background: #1E3A8A;
+  border-color: #1E3A8A;
+  box-shadow: 0 4px 10px rgba(30, 64, 175, 0.35);
+}

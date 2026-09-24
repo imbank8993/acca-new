@@ -1,0 +1,756 @@
+/* Notification Wrapper */
+.notification-wrapper {
+    position: relative;
+}
+
+/* Notification Overlay */
+.notification-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+}
+
+/* Premium Notification Dropdown */
+.notification-dropdown {
+    position: absolute;
+    top: calc(100% + 10px);
+    right: 0;
+    width: 360px;
+    max-height: 490px;
+    background: rgba(255, 255, 255, 0.97);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-radius: 16px;
+    box-shadow: 0 12px 36px rgba(0, 40, 120, 0.12), 0 2px 8px rgba(0, 0, 0, 0.04);
+    border: 1px solid rgba(0, 56, 168, 0.12);
+    z-index: 1001;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    animation: premiumSlideDown 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    transform-origin: top right;
+}
+
+.dark .notification-dropdown {
+    background: rgba(15, 23, 42, 0.96);
+    border-color: rgba(255, 255, 255, 0.1);
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
+}
+
+@keyframes premiumSlideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-8px) scale(0.97);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+/* Header */
+.notification-header {
+    padding: 12px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: transparent;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.dark .notification-header {
+    border-bottom-color: rgba(255, 255, 255, 0.05);
+}
+
+.notification-header h3 {
+    margin: 0;
+    font-size: 0.92rem;
+    font-weight: 700;
+    color: #0f172a;
+    letter-spacing: -0.2px;
+}
+
+.dark .notification-header h3 {
+    color: #f8fafc;
+}
+
+/* Sengaja di-scope ke `.notification-header`, bukan `.header-actions` polos.
+   Nama kelas itu generik dan dipakai juga oleh CSS halaman lain (mis.
+   app/surat/surat.css memberi `width: 100%; justify-content: center` di bawah
+   992px). Modal notifikasi di-portal ke <body>, jadi aturan halaman apa pun
+   yang sedang aktif ikut mengenainya dan menggeser tombol tutup ke tengah.
+   Spesifisitas 0,2,0 di sini menang tanpa bergantung pada urutan file. */
+.notification-header .header-actions {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 6px;
+    align-items: center;
+    width: auto;
+    /* Dipatok ke kanan tanpa bergantung pada `justify-content` induk, supaya
+       tombol tutup selalu rata kanan dengan kolom titik "belum dibaca" di
+       baris notifikasi (padding kanan sama-sama 16px). */
+    justify-content: flex-end;
+    margin-left: auto;
+}
+
+.icon-btn-circle {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    background: rgba(0, 0, 0, 0.02);
+    color: #64748b;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.dark .icon-btn-circle {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.1);
+    color: #94a3b8;
+}
+
+.icon-btn-circle:hover {
+    background: #3083FF;
+    color: white;
+    border-color: #3083FF;
+    transform: rotate(45deg);
+}
+
+.mark-all-btn {
+    background: rgba(0, 56, 168, 0.08);
+    color: #3083FF;
+    border: none;
+    padding: 4px 10px;
+    border-radius: 8px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    transition: all 0.2s ease;
+}
+
+.dark .mark-all-btn {
+    background: rgba(59, 130, 246, 0.15);
+    color: #60a5fa;
+}
+
+.mark-all-btn:hover {
+    background: #3083FF;
+    color: white;
+}
+
+/* ── Filter (Semua / Belum dibaca) ────────────────────────────────────── */
+.notification-filter {
+    display: flex;
+    gap: 4px;
+    padding: 8px 12px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    background: rgba(0, 0, 0, 0.015);
+}
+
+.dark .notification-filter {
+    border-bottom-color: rgba(255, 255, 255, 0.05);
+    background: rgba(0, 0, 0, 0.2);
+}
+
+.notif-filter-btn {
+    flex: 1;
+    padding: 5px 10px;
+    border: none;
+    border-radius: 8px;
+    background: transparent;
+    color: #64748b;
+    font-size: 0.74rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.18s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+}
+
+.dark .notif-filter-btn {
+    color: #94a3b8;
+}
+
+.notif-filter-btn:hover:not(.active) {
+    background: rgba(0, 0, 0, 0.04);
+}
+
+.dark .notif-filter-btn:hover:not(.active) {
+    background: rgba(255, 255, 255, 0.06);
+}
+
+.notif-filter-btn.active {
+    background: #3083FF;
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(48, 131, 255, 0.22);
+}
+
+.dark .notif-filter-btn.active {
+    background: #3083FF;
+    box-shadow: 0 2px 8px rgba(48, 131, 255, 0.3);
+}
+
+.notif-filter-count {
+    background: rgba(255, 255, 255, 0.25);
+    color: inherit;
+    font-size: 0.62rem;
+    font-weight: 700;
+    min-width: 16px;
+    height: 16px;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 4px;
+}
+
+.notif-filter-btn:not(.active) .notif-filter-count {
+    background: rgba(48, 131, 255, 0.12);
+    color: #3083FF;
+}
+
+.dark .notif-filter-btn:not(.active) .notif-filter-count {
+    background: rgba(48, 131, 255, 0.2);
+    color: #3083FF;
+}
+
+/* List */
+.notification-list {
+    flex: 1;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(0, 0, 0, 0.1) transparent;
+}
+
+.dark .notification-list {
+    scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
+}
+
+/* ── Group & Section Label ────────────────────────────────────────────── */
+.notification-group {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.03);
+}
+
+.notification-section-label {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    padding: 6px 16px 4px;
+    font-size: 0.63rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #64748b;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(8px);
+}
+
+.dark .notification-section-label {
+    color: #94a3b8;
+    background: rgba(15, 23, 42, 0.95);
+}
+
+/* Item Row */
+.notification-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 10px 16px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.03);
+    cursor: pointer;
+    transition: background 0.15s ease;
+    position: relative;
+}
+
+.dark .notification-item {
+    border-bottom-color: rgba(255, 255, 255, 0.03);
+}
+
+.notification-item:hover {
+    background: rgba(0, 56, 168, 0.03);
+}
+
+.dark .notification-item:hover {
+    background: rgba(255, 255, 255, 0.03);
+}
+
+/* Icon Wrapper */
+.notification-icon-wrapper {
+    position: relative;
+    flex-shrink: 0;
+    margin-top: 1px;
+}
+
+/* Satu bentuk & satu warna untuk semua kategori: lingkaran biru #3083FF.
+   Kelas `.notification-icon-*` dari getTypeMeta() sengaja tidak lagi diberi
+   warna sendiri — dibiarkan menempel di DOM karena masih dipakai sebagai
+   penanda kategori, tapi tidak memengaruhi tampilan. */
+.notification-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    background: #3083FF;
+    box-shadow: 0 3px 8px rgba(48, 131, 255, 0.22);
+    font-size: 0.92rem;
+    transition: transform 0.2s ease;
+}
+
+.group-count {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    background: #f59e0b;
+    color: white;
+    font-size: 0.6rem;
+    font-weight: 800;
+    min-width: 16px;
+    height: 16px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1.5px solid white;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.12);
+    padding: 0 3px;
+}
+
+.dark .group-count {
+    border-color: #0f172a;
+}
+
+/* Content */
+.notification-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.notification-title {
+    font-weight: 600;
+    color: #0f172a;
+    font-size: 0.83rem;
+    margin-bottom: 2px;
+    line-height: 1.35;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.dark .notification-title {
+    color: #f1f5f9;
+}
+
+.mass-label {
+    font-size: 0.58rem;
+    background: rgba(245, 158, 11, 0.12);
+    color: #d97706;
+    padding: 1px 5px;
+    border-radius: 4px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.notification-note {
+    font-size: 0.76rem;
+    color: #64748b;
+    line-height: 1.4;
+    margin-bottom: 4px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.dark .notification-note {
+    color: #94a3b8;
+}
+
+/* Meta */
+.notification-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.notification-cat {
+    font-size: 0.62rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: #475569;
+    background: rgba(0, 0, 0, 0.04);
+    padding: 1.5px 6px;
+    border-radius: 4px;
+}
+
+.dark .notification-cat {
+    color: #cbd5e1;
+    background: rgba(255, 255, 255, 0.07);
+}
+
+.notification-time {
+    font-size: 0.7rem;
+    color: #94a3b8;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-weight: 500;
+}
+
+.unread-dot {
+    width: 7px;
+    height: 7px;
+    background: #3083FF;
+    border-radius: 50%;
+    box-shadow: 0 0 8px rgba(48, 131, 255, 0.5);
+    margin-left: auto;
+    flex-shrink: 0;
+}
+
+/* Read States */
+.notification-read {
+    opacity: 0.7;
+}
+
+.notification-read:hover {
+    opacity: 0.95;
+}
+
+/* Belum dibaca: hanya rona latar tipis + titik di kanan. Tanpa garis
+   aksen vertikal di tepi kiri baris. */
+.notification-unread {
+    background: rgba(48, 131, 255, 0.03);
+}
+
+.dark .notification-unread {
+    background: rgba(48, 131, 255, 0.08);
+}
+
+/* Item terbaca: ikon diredupkan */
+.notification-read .notification-icon {
+    background: #94a3b8 !important;
+    box-shadow: none !important;
+}
+
+/* Empty State */
+.notification-empty {
+    padding: 40px 24px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+}
+
+.notification-empty i {
+    font-size: 2.2rem;
+    color: #cbd5e1;
+    background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 4px;
+}
+
+.dark .notification-empty i {
+    background: rgba(255,255,255,0.05);
+    color: #475569;
+}
+
+.notification-empty p {
+    margin: 0;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #94a3b8;
+}
+
+/* ── Bell pulse ──────────────────────────────────────────────────────── */
+.header-icon-btn.bell-pulse i {
+    transform-origin: top center;
+    animation: bellShake 1.1s cubic-bezier(0.36, 0.07, 0.19, 0.97);
+}
+
+@keyframes bellShake {
+    0%, 100% { transform: rotate(0); }
+    10%, 50% { transform: rotate(-12deg); }
+    20%, 60% { transform: rotate(12deg); }
+    30% { transform: rotate(-8deg); }
+    40% { transform: rotate(8deg); }
+    70% { transform: rotate(0); }
+}
+
+/* Close Button */
+.notification-close-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: #f1f5f9;
+    border: none;
+    color: #64748b;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.notification-close-btn:active {
+    transform: scale(0.9);
+    background: #e2e8f0;
+}
+
+.dark .notification-close-btn {
+    background: rgba(255, 255, 255, 0.08);
+    color: #94a3b8;
+}
+
+/* ── Mobile: True Bottom Sheet Modal (Identical to bnav__sheet & modal.css) ── */
+.notification-sheet-handle { display: none; }
+
+@media (max-width: 767.98px) {
+    .notification-sheet-backdrop {
+        position: fixed;
+        inset: 0;
+        background: rgba(17, 46, 89, 0.55);
+        -webkit-backdrop-filter: blur(8px);
+        backdrop-filter: blur(8px);
+        z-index: 1200;
+        display: flex;
+        align-items: flex-end;
+        justify-content: center;
+        animation: bnavFadeIn 0.2s ease-out;
+    }
+
+    .notification-dropdown {
+        position: relative;
+        /* WAJIB: aturan desktop di atas memasang `top: calc(100% + 10px)` untuk
+           menggantung dropdown di bawah tombol lonceng. Nilai itu ikut terbawa
+           ke mode bottom sheet — pada elemen `relative` di dalam backdrop
+           setinggi layar, `100%` = tinggi viewport, jadi panelnya digeser satu
+           layar penuh ke bawah dan yang terlihat cuma backdrop yang mem-blur
+           halaman. `top`/`right` tidak boleh diwarisi di sini. */
+        top: auto;
+        right: auto;
+        bottom: auto;
+        left: 0;
+        width: 100%;
+        max-width: 100%;
+        max-height: 80vh;
+        max-height: 80dvh;
+        background: #ffffff;
+        border-radius: 24px 24px 0 0;
+        box-shadow: 0 -12px 36px rgba(17, 46, 89, 0.2);
+        border: none;
+        border-top: 1.5px solid #E1E2E9;
+        animation: bnavSlideUp 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+        transform-origin: bottom center;
+        z-index: 1210;
+        display: flex;
+        flex-direction: column;
+        padding-bottom: calc(18px + env(safe-area-inset-bottom));
+        box-sizing: border-box;
+        overflow: hidden;
+    }
+
+    .dark .notification-dropdown {
+        background: #0f172a;
+        border-top-color: rgba(255, 255, 255, 0.12);
+        box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.6);
+    }
+
+    .notification-sheet-handle {
+        display: block;
+        width: 36px;
+        height: 4px;
+        border-radius: 999px;
+        background: #112E59 !important;
+        margin: 10px auto 4px;
+        flex-shrink: 0;
+    }
+
+    .dark .notification-sheet-handle {
+        background: #112E59 !important;
+    }
+
+    .notification-header {
+        padding: 12px 16px 14px 16px;
+        border-bottom: 1px solid #E2E8F0;
+    }
+
+    .dark .notification-header {
+        border-bottom-color: rgba(255, 255, 255, 0.08);
+    }
+
+    .notification-filter {
+        padding: 10px 16px;
+    }
+
+    .notification-list {
+        padding-bottom: 12px;
+    }
+
+    .notification-section-label { background: rgba(255, 255, 255, 0.98); }
+    .dark .notification-section-label { background: rgba(15, 23, 42, 0.98); }
+}
+
+@keyframes bnavFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes bnavSlideUp {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
+}
+
+/* ===== Announcements Modal / Dropdown ===== */
+.announcement-wrapper {
+    position: relative;
+}
+
+.announcements-dropdown-list {
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.ann-card-item {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-left: 4px solid #3083FF;
+    border-radius: 12px;
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    transition: all 0.2s ease;
+}
+
+.ann-card-item:hover {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+    border-left-color: #2563eb;
+}
+
+.ann-card-item.is-pinned {
+    background: #f0f7ff;
+    border-color: #bfdbfe;
+    border-left: 4px solid #f59e0b;
+}
+
+.dark .ann-card-item {
+    background: rgba(30, 41, 59, 0.5);
+    border-color: rgba(255, 255, 255, 0.08);
+    border-left-color: #3b82f6;
+}
+
+.dark .ann-card-item.is-pinned {
+    background: rgba(30, 58, 138, 0.25);
+    border-color: rgba(59, 130, 246, 0.3);
+    border-left-color: #f59e0b;
+}
+
+.ann-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.72rem;
+}
+
+.ann-card-tag {
+    background: rgba(48, 131, 255, 0.12);
+    color: #2563eb;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+}
+
+.dark .ann-card-tag {
+    background: rgba(37, 99, 235, 0.25);
+    color: #60a5fa;
+}
+
+.ann-card-date {
+    color: #64748b;
+    font-size: 0.72rem;
+}
+
+.dark .ann-card-date {
+    color: #94a3b8;
+}
+
+.ann-card-title {
+    margin: 0;
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: #1e293b;
+    line-height: 1.35;
+}
+
+.dark .ann-card-title {
+    color: #f1f5f9;
+}
+
+.ann-card-text {
+    margin: 0;
+    font-size: 0.8rem;
+    color: #475569;
+    line-height: 1.45;
+    white-space: pre-line;
+}
+
+.dark .ann-card-text {
+    color: #cbd5e1;
+}
+
+.ann-expand-btn {
+    background: none;
+    border: none;
+    color: #2563eb;
+    font-weight: 700;
+    padding: 0 4px;
+    cursor: pointer;
+    font-size: 0.78rem;
+}
+
+.dark .ann-expand-btn {
+    color: #60a5fa;
+}
+
+.ann-card-footer {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding-top: 4px;
+}
+
+.ann-card-author {
+    font-size: 0.72rem;
+    color: #64748b;
+    font-style: italic;
+}
+
+.dark .ann-card-author {
+    color: #94a3b8;
+}

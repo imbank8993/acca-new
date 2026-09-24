@@ -1,0 +1,50 @@
+[
+  {
+    "name": "A13 siswa ditolak dan guru hanya mapel penugasan",
+    "status": "PASS"
+  },
+  {
+    "name": "A14 penilai harus supervisor dan identitas tidak dari body",
+    "status": "PASS"
+  },
+  {
+    "name": "A14 unggahan orang lain ditolak sebelum storage",
+    "status": "PASS"
+  },
+  {
+    "name": "A17 resolver template menerima objek user",
+    "status": "PASS"
+  },
+  {
+    "name": "A20 catatan keuangan GET dipaksa NIP sesi; POST tidak dapat set TERGANTI",
+    "status": "PASS"
+  },
+  {
+    "name": "A21 PTSP siswa ditolak, OP_LAYANAN diterima",
+    "status": "PASS"
+  },
+  {
+    "name": "A22 role pengumuman diambil dari sesi",
+    "status": "PASS"
+  },
+  {
+    "name": "A25 arsip surat orang lain ditolak",
+    "status": "PASS"
+  },
+  {
+    "name": "A12 siswa biasa tidak dapat membuat tugas",
+    "status": "PASS"
+  },
+  {
+    "name": "A26 transaksi approval rollback bila log gagal",
+    "status": "PASS"
+  },
+  {
+    "name": "A05 DNS socket dipin dan redirect lanjutan tetap divalidasi",
+    "status": "PASS"
+  },
+  {
+    "name": "A27 matriks absensi berisi siswa dan kelompok bulan",
+    "status": "PASS"
+  }
+]

@@ -1,0 +1,54 @@
+[
+  {
+    "test": "prestasi_race",
+    "result": "PASS"
+  },
+  {
+    "test": "validator_without_status",
+    "observed": "FORGED",
+    "expected": "not FORGED",
+    "result": "FAIL"
+  },
+  {
+    "test": "journal_manual",
+    "result": "PASS"
+  },
+  {
+    "test": "journal_system",
+    "result": "PASS"
+  },
+  {
+    "test": "journal_edited_after_read",
+    "result": "PASS"
+  },
+  {
+    "test": "pdf_no_token",
+    "status": 401,
+    "attachmentFetches": 0,
+    "result": "PASS"
+  },
+  {
+    "test": "pdf_unauthorized",
+    "status": 401,
+    "attachmentFetches": 0,
+    "result": "PASS"
+  },
+  {
+    "test": "pdf_backend_failure",
+    "status": 503,
+    "attachmentFetches": 0,
+    "result": "PASS"
+  },
+  {
+    "test": "pdf_exception",
+    "status": 502,
+    "attachmentFetches": 0,
+    "result": "PASS"
+  },
+  {
+    "test": "pdf_attachment_no_token",
+    "status": 401,
+    "attachmentFetches": 1,
+    "result": "FAIL"
+  }
+]

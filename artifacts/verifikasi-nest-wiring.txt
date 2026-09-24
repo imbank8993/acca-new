@@ -1,0 +1,1 @@
+PASS: seluruh modul Nest dapat dirangkai dengan dependency yang terdaftar (Prisma mock; tanpa koneksi database).

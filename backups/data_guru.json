@@ -1,0 +1,21 @@
+[
+  {
+    "nama_lengkap": "Budi Santoso",
+    "nip": "123456789",
+    "tempat_lahir": "Jakarta",
+    "tanggal_lahir": "1980-01-01",
+    "golongan": "IV",
+    "pangkat": "Guru Dewasa",
+    "tmt_tugas": "2010-01-01",
+    "pendidikan_terakhir": "S2",
+    "riwayat_pendidikan": [
+      {
+        "level": "S1",
+        "nama_sekolah": "Universitas Indonesia",
+        "tahun_lulus": "2002"
+      }
+    ],
+    "alamat": "Jl. Raya Bogor",
+    "aktif": true
+  }
+]

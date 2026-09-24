@@ -1,0 +1,249 @@
+/* ==========================================================
+   HALAMAN PUBLIK LINK INFORMASI  (/info-link/<token>)
+   Berdiri sendiri di luar shell dashboard, jadi semua warna
+   memakai nilai literal — bukan token --n-* yang hanya di-set
+   di dalam layout dashboard.
+   ========================================================== */
+
+.ifl-page {
+    min-height: 100vh;
+    background: #f8fafc;
+    font-family: 'Poppins', sans-serif;
+    padding: 20px 16px 40px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    max-width: 860px;
+    margin: 0 auto;
+}
+
+/* ---------- Hero ---------- */
+.ifl-hero {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 20px;
+    border-radius: 18px;
+    background: linear-gradient(135deg, #3083ff 0%, #c2185b 100%);
+    color: #fff;
+    box-shadow: 0 6px 20px rgba(48, 131, 255, 0.25);
+}
+
+.ifl-hero__icon {
+    width: 46px;
+    height: 46px;
+    flex-shrink: 0;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.18);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.35rem;
+}
+
+.ifl-hero__text {
+    min-width: 0;
+}
+
+.ifl-hero__eyebrow {
+    display: block;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.75);
+}
+
+.ifl-hero__text h1 {
+    margin: 2px 0 0;
+    font-size: 1.15rem;
+    font-weight: 800;
+    line-height: 1.3;
+    word-break: break-word;
+}
+
+.ifl-hero__text p {
+    margin: 4px 0 0;
+    font-size: 0.78rem;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.8);
+}
+
+/* ---------- Kartu daftar ---------- */
+.ifl-card {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.ifl-card__head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 16px;
+    border-bottom: 1px solid #e2e8f0;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #0f172a;
+}
+
+.ifl-card__head i {
+    color: #3083ff;
+    font-size: 1rem;
+}
+
+.ifl-count {
+    margin-left: auto;
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: #3083ff;
+    background: #eff6ff;
+    border-radius: 99px;
+    padding: 2px 9px;
+}
+
+.ifl-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 12px;
+}
+
+.ifl-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    padding: 11px 14px;
+    border: none;
+    border-radius: 10px;
+    background: #f8fafc;
+    color: #0f172a;
+    text-align: left;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background 0.2s, transform 0.2s, box-shadow 0.2s;
+}
+
+.ifl-item:hover {
+    background: #fff;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.07);
+    transform: translateX(3px);
+}
+
+.ifl-item__icon {
+    width: 34px;
+    height: 34px;
+    flex-shrink: 0;
+    border-radius: 8px;
+    background: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.15rem;
+}
+
+.ifl-item__info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.ifl-item__title {
+    font-size: 0.83rem;
+    font-weight: 600;
+    line-height: 1.4;
+    word-break: break-word;
+}
+
+.ifl-item__meta {
+    font-size: 0.68rem;
+    color: #64748b;
+}
+
+.ifl-item__action {
+    flex-shrink: 0;
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 4px 9px;
+    border-radius: 6px;
+    border: 1px solid #e2e8f0;
+    color: #64748b;
+    background: #fff;
+}
+
+.ifl-item:hover .ifl-item__action {
+    background: #3083ff;
+    border-color: #3083ff;
+    color: #fff;
+}
+
+.ifl-note {
+    margin: 0;
+    text-align: center;
+    font-size: 0.74rem;
+    color: #64748b;
+    line-height: 1.6;
+}
+
+/* ---------- Dark mode ----------
+   Kelas .dark dipasang di <html> oleh skrip di app/layout.tsx, jadi halaman
+   publik ini ikut preferensi perangkat penerima. Semua aturan diikat ke
+   prefiks .ifl- agar tidak menyentuh halaman lain. */
+.dark .ifl-page { background: #020617; }
+
+.dark .ifl-hero {
+    background: #000;
+    border: 2px solid #1a73e8;
+    box-shadow: 0 0 30px rgba(26, 115, 232, 0.25);
+}
+
+.dark .ifl-card {
+    background: #000;
+    border-color: rgba(59, 130, 246, 0.35);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.7);
+}
+
+.dark .ifl-card__head {
+    color: #e2e8f0;
+    border-bottom-color: rgba(59, 130, 246, 0.25);
+}
+
+.dark .ifl-count {
+    background: rgba(37, 99, 235, 0.18);
+    color: #93c5fd;
+}
+
+.dark .ifl-item {
+    background: rgba(37, 99, 235, 0.08);
+    color: #cbd5e1;
+}
+
+.dark .ifl-item:hover {
+    background: rgba(37, 99, 235, 0.18);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.dark .ifl-item__icon { background: rgba(37, 99, 235, 0.2); }
+
+.dark .ifl-item__meta,
+.dark .ifl-note { color: #94a3b8; }
+
+.dark .ifl-item__action {
+    background: rgba(37, 99, 235, 0.15);
+    border-color: rgba(59, 130, 246, 0.35);
+    color: #cbd5e1;
+}
+
+@media (max-width: 640px) {
+    .ifl-page { padding: 14px 12px 32px; }
+    .ifl-hero { padding: 16px; border-radius: 16px; }
+    .ifl-hero__text h1 { font-size: 1.02rem; }
+    .ifl-item__action { display: none; }
+}

@@ -1,0 +1,81 @@
+/**
+ * Unduh berkas surat sebagai lampiran (attachment).
+ *
+ * Tombol unduh di halaman Daftar Surat dulu menunjuk langsung ke file_url,
+ * sehingga browser membuka viewer PDF bawaan di tab baru dan alamat asli
+ * penyimpanan (Supabase/R2/Drive) terlihat di address bar. Route ini mem-proxy
+ * berkasnya dan memaksa Content-Disposition: attachment supaya langsung tersimpan.
+ *
+ * Mengikuti pola /api/ketidakhadiran/pdf-preview: pemanggil hanya mengirim ?id=
+ * surat, alamat berkas diambil dari database — jangan pernah menerima URL bebas
+ * dari query, karena itu menjadikan server ini proxy terbuka.
+ */
+import { NextRequest, NextResponse } from 'next/server';
+import { extractRequestToken } from '@/lib/app-jwt';
+import { nestFetchAsUser } from '@/lib/nest-api';
+import { getApiUser } from '@/lib/api-auth';
+
+/** Ubah tautan tampilan Google Drive jadi tautan unduh langsung. */
+function toDirectUrl(url: string): string {
+    if (!url.includes('drive.google.com')) return url;
+    const match = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/) || url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+    return match ? `https://drive.google.com/uc?export=download&id=${match[1]}` : url;
+}
+
+/** Nama berkas aman untuk header Content-Disposition. */
+function safeFileName(nomorSurat: string | null, fileUrl: string): string {
+    const fromUrl = decodeURIComponent(fileUrl.split('?')[0].split('/').pop() || '');
+    const ext = /\.[a-z0-9]{2,5}$/i.exec(fromUrl)?.[0] || '.pdf';
+
+    const base = (nomorSurat || fromUrl.replace(/\.[a-z0-9]{2,5}$/i, '') || 'surat')
+        .replace(/[\\/:*?"<>|]+/g, '-')   // karakter terlarang di nama berkas
+        .replace(/\s+/g, ' ')
+        .trim()
+        .slice(0, 120);
+
+    return `${base || 'surat'}${ext}`;
+}
+
+export async function GET(request: NextRequest) {
+    try {
+        const user = await getApiUser(request);
+        if (!user) {
+            return new NextResponse('Tidak terautentikasi', { status: 401 });
+        }
+
+        const id = request.nextUrl.searchParams.get('id');
+        if (!id) {
+            return new NextResponse('Parameter id wajib diisi', { status: 400 });
+        }
+
+        const token = extractRequestToken(request);
+        const { status, body } = await nestFetchAsUser(`/surat/items/${id}`, token || '');
+        const data = body?.data;
+
+        const fileUrl = data?.file_url;
+        if (status !== 200 || !fileUrl) {
+            return new NextResponse('Berkas surat tidak ditemukan', { status: 404 });
+        }
+
+        const upstream = await fetch(toDirectUrl(fileUrl));
+        if (!upstream.ok) {
+            return new NextResponse('Gagal mengambil berkas dari penyimpanan', { status: upstream.status });
+        }
+
+        const buffer = await upstream.arrayBuffer();
+        const fileName = safeFileName(data?.nomor_surat ?? null, fileUrl);
+
+        return new NextResponse(buffer, {
+            headers: {
+                'Content-Type': upstream.headers.get('content-type') || 'application/pdf',
+                // filename* (RFC 5987) supaya nomor surat dengan karakter non-ASCII tetap utuh
+                'Content-Disposition':
+                    `attachment; filename="${fileName.replace(/"/g, '')}"; ` +
+                    `filename*=UTF-8''${encodeURIComponent(fileName)}`,
+                'Cache-Control': 'private, no-store',
+            },
+        });
+    } catch (e: any) {
+        return new NextResponse(e?.message || 'Gagal mengunduh berkas', { status: 500 });
+    }
+}

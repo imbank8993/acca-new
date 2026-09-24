@@ -1,0 +1,294 @@
+{
+  "pages": 68,
+  "controllers": 51,
+  "endpoints": 470,
+  "webApiRoutes": 308,
+  "unguardedCandidates": [
+    {
+      "file": "apps/api/src/access/access.controller.ts",
+      "line": 68,
+      "route": "Get('user/:authId')",
+      "name": "userByAuthId"
+    },
+    {
+      "file": "apps/api/src/access/access.controller.ts",
+      "line": 82,
+      "route": "Get('username/:username')",
+      "name": "userByUsername"
+    },
+    {
+      "file": "apps/api/src/agenda/agenda.controller.ts",
+      "line": 21,
+      "route": "Get('public')",
+      "name": "getPublicAgendas"
+    },
+    {
+      "file": "apps/api/src/auth/auth.controller.ts",
+      "line": 29,
+      "route": "Post('login')",
+      "name": "login"
+    },
+    {
+      "file": "apps/api/src/forms/forms.controller.ts",
+      "line": 24,
+      "route": "Get('pengembangan-diri')",
+      "name": "getPengembanganDiri"
+    },
+    {
+      "file": "apps/api/src/forms/forms.controller.ts",
+      "line": 37,
+      "route": "Delete('pengembangan-diri')",
+      "name": "deletePengembanganDiri"
+    },
+    {
+      "file": "apps/api/src/forms/forms.controller.ts",
+      "line": 42,
+      "route": "Post('pengembangan-diri/submit')",
+      "name": "submitPengembanganDiri"
+    },
+    {
+      "file": "apps/api/src/forms/forms.controller.ts",
+      "line": 47,
+      "route": "Get('public')",
+      "name": "getPublicForms"
+    },
+    {
+      "file": "apps/api/src/forms/forms.controller.ts",
+      "line": 53,
+      "route": "Get('dynamic-options')",
+      "name": "getDynamicOptions"
+    },
+    {
+      "file": "apps/api/src/guru-asuh/guru-asuh.controller.ts",
+      "line": 100,
+      "route": "Get('laporan-submission/verify')",
+      "name": "verifySubmission"
+    },
+    {
+      "file": "apps/api/src/health/health.controller.ts",
+      "line": 12,
+      "route": "Get()",
+      "name": "check"
+    },
+    {
+      "file": "apps/api/src/site-settings/site-settings.controller.ts",
+      "line": 54,
+      "route": "Get('pages')",
+      "name": "getPages"
+    },
+    {
+      "file": "apps/api/src/site-settings/site-settings.controller.ts",
+      "line": 86,
+      "route": "Get('profil-sekolah')",
+      "name": "getProfilSekolah"
+    },
+    {
+      "file": "apps/api/src/site-settings/site-settings.controller.ts",
+      "line": 115,
+      "route": "Get('fitur-akademik')",
+      "name": "getFiturAkademik"
+    },
+    {
+      "file": "apps/api/src/site-settings/site-settings.controller.ts",
+      "line": 155,
+      "route": "Get('master-dropdown')",
+      "name": "getMasterDropdown"
+    },
+    {
+      "file": "apps/api/src/site-settings/site-settings.controller.ts",
+      "line": 234,
+      "route": "Get('config')",
+      "name": "getSystemConfig"
+    },
+    {
+      "file": "apps/api/src/site-settings/site-settings.controller.ts",
+      "line": 245,
+      "route": "Get('testimonials')",
+      "name": "getTestimonials"
+    },
+    {
+      "file": "apps/api/src/site-settings/site-settings.controller.ts",
+      "line": 250,
+      "route": "Post('testimonials')",
+      "name": "createTestimonial"
+    },
+    {
+      "file": "apps/api/src/site-settings/site-settings.controller.ts",
+      "line": 255,
+      "route": "Get('storage-usage')",
+      "name": "getStorageUsage"
+    },
+    {
+      "file": "apps/api/src/site-settings/site-settings.controller.ts",
+      "line": 260,
+      "route": "Post('site-settings/file-registry/register')",
+      "name": "registerUpload"
+    },
+    {
+      "file": "apps/api/src/site-settings/site-settings.controller.ts",
+      "line": 266,
+      "route": "Post('site-settings/file-registry/unregister')",
+      "name": "unregisterUpload"
+    },
+    {
+      "file": "apps/api/src/surat/surat.controller.ts",
+      "line": 129,
+      "route": "Get('dropdown/jenis-surat')",
+      "name": "getJenisSuratDropdown"
+    },
+    {
+      "file": "apps/api/src/surat/surat.controller.ts",
+      "line": 135,
+      "route": "Get('verify')",
+      "name": "verifySurat"
+    },
+    {
+      "file": "apps/api/src/users/register.controller.ts",
+      "line": 15,
+      "route": "Post('parent')",
+      "name": "registerParent"
+    }
+  ],
+  "internalWebRoutes": [
+    {
+      "file": "apps/web/app/api/agenda-madrasah/public/route.ts",
+      "prisma": false,
+      "internal": true,
+      "auth": false,
+      "network": false
+    },
+    {
+      "file": "apps/web/app/api/config/route.ts",
+      "prisma": false,
+      "internal": true,
+      "auth": true,
+      "network": false
+    },
+    {
+      "file": "apps/web/app/api/cron/generate-jurnal/route.ts",
+      "prisma": false,
+      "internal": true,
+      "auth": false,
+      "network": false
+    },
+    {
+      "file": "apps/web/app/api/informasi-akademik/share/route.ts",
+      "prisma": false,
+      "internal": true,
+      "auth": true,
+      "network": false
+    },
+    {
+      "file": "apps/web/app/api/ketidakhadiran/acca-letter/route.ts",
+      "prisma": false,
+      "internal": true,
+      "auth": true,
+      "network": false
+    },
+    {
+      "file": "apps/web/app/api/ketidakhadiran/acca-letter/verify/route.ts",
+      "prisma": false,
+      "internal": true,
+      "auth": false,
+      "network": false
+    },
+    {
+      "file": "apps/web/app/api/ketidakhadiran/pdf-preview/route.ts",
+      "prisma": false,
+      "internal": true,
+      "auth": false,
+      "network": true
+    },
+    {
+      "file": "apps/web/app/api/laporan/jurnal-master/route.ts",
+      "prisma": false,
+      "internal": true,
+      "auth": true,
+      "network": false
+    },
+    {
+      "file": "apps/web/app/api/notifications/route.ts",
+      "prisma": false,
+      "internal": true,
+      "auth": true,
+      "network": false
+    },
+    {
+      "file": "apps/web/app/api/ptsp/notify-wa/route.ts",
+      "prisma": false,
+      "internal": true,
+      "auth": true,
+      "network": false
+    },
+    {
+      "file": "apps/web/app/api/sanggar-kurikulum/check/route.ts",
+      "prisma": false,
+      "internal": true,
+      "auth": true,
+      "network": false
+    },
+    {
+      "file": "apps/web/app/api/sanggar-kurikulum/kuota/route.ts",
+      "prisma": false,
+      "internal": true,
+      "auth": false,
+      "network": false
+    },
+    {
+      "file": "apps/web/app/api/scopes/route.ts",
+      "prisma": false,
+      "internal": true,
+      "auth": false,
+      "network": false
+    },
+    {
+      "file": "apps/web/app/api/settings/guru-mapel/check/route.ts",
+      "prisma": false,
+      "internal": true,
+      "auth": true,
+      "network": false
+    },
+    {
+      "file": "apps/web/app/api/settings/jadwal-guru/import/route.ts",
+      "prisma": false,
+      "internal": true,
+      "auth": true,
+      "network": false
+    },
+    {
+      "file": "apps/web/app/api/settings/um-lock/debug/route.ts",
+      "prisma": false,
+      "internal": true,
+      "auth": false,
+      "network": false
+    },
+    {
+      "file": "apps/web/app/api/siswa/[identifier]/route.ts",
+      "prisma": false,
+      "internal": true,
+      "auth": true,
+      "network": false
+    },
+    {
+      "file": "apps/web/app/api/testimonials/route.ts",
+      "prisma": false,
+      "internal": true,
+      "auth": true,
+      "network": false
+    },
+    {
+      "file": "apps/web/app/api/upload/route.ts",
+      "prisma": false,
+      "internal": true,
+      "auth": true,
+      "network": true
+    },
+    {
+      "file": "apps/web/app/api/whatsapp/send/route.ts",
+      "prisma": false,
+      "internal": true,
+      "auth": false,
+      "network": true
+    }
+  ]
+}

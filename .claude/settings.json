@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(node --input-type=module -e \":*)",
+      "Bash(node check_users.mjs)",
+      "Bash(mkdir -p /tmp/supatest)",
+      "Bash(cp /tmp/check_users.mjs /tmp/supatest/)",
+      "Read(//tmp/**)",
+      "Bash(npm install:*)",
+      "Bash(git -C \"c:/Users/imran/.gemini/antigravity/scratch/acca-app\" diff --stat)",
+      "Bash(python3 \"c:\\\\tmp\\\\fix_view_modal_dark.py\")",
+      "Bash(grep -rioh \"CREATE TABLE.*[^;]\" supabase/migrations/*.sql sql/*.sql *.sql)",
+      "Bash(npm run *)"
+    ]
+  }
+}

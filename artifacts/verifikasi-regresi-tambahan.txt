@@ -1,0 +1,12 @@
+PASS A13 siswa ditolak dan guru hanya mapel penugasan
+PASS A14 penilai harus supervisor dan identitas tidak dari body
+PASS A14 unggahan orang lain ditolak sebelum storage
+PASS A17 resolver template menerima objek user
+PASS A20 catatan keuangan GET dipaksa NIP sesi; POST tidak dapat set TERGANTI
+PASS A21 PTSP siswa ditolak, OP_LAYANAN diterima
+PASS A22 role pengumuman diambil dari sesi
+PASS A25 arsip surat orang lain ditolak
+PASS A12 siswa biasa tidak dapat membuat tugas
+PASS A26 transaksi approval rollback bila log gagal
+PASS A05 DNS socket dipin dan redirect lanjutan tetap divalidasi
+PASS A27 matriks absensi berisi siswa dan kelompok bulan

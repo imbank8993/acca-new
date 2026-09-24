@@ -1,0 +1,7348 @@
+/* --- Page Layout & Global Font Rule --- */
+.nl-wrapper,
+.nl-wrapper input,
+.nl-wrapper select,
+.nl-wrapper button,
+.nl-wrapper textarea,
+.nl__adminPanel,
+.nl__adminPanel input,
+.nl__adminPanel select,
+.nl__adminPanel button,
+.nl__modalContent,
+.nl__modalContent input,
+.nl__modalContent select,
+.nl__modalContent button {
+    font-family: 'Poppins', sans-serif;
+}
+
+.nl-wrapper {
+    max-width: 100%;
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden;
+}
+
+/* Jarak antar-section disamakan dengan halaman lain: satu nilai --page-gap
+   (12px) untuk semua, bukan 20/18/14/20 yang dulu dipilih satu per satu.
+   Margin atas-bawah antar-tetangga saling melebur (margin collapsing), jadi
+   hasilnya tetap 12px di tiap sela, bukan 24px.
+
+   Absensi memakai `display: flex; gap` di wrappernya untuk hasil yang sama.
+   Di sini tetap margin: .nl-wrapper punya anak yang tidak boleh jadi item flex
+   — antara lain <input type="file" hidden> untuk Import, yang di flex bisa
+   ikut memakan satu sela. */
+/* Margin tab HANYA di desktop. Di <= 991.98px, .actab-wrap--slider memasang
+   `margin: -2px / -14px` untuk MENIADAKAN padding ruang-bayangan di dalam
+   scroller-nya — komentarnya sendiri menegaskan komponen itu tidak boleh
+   menyumbang jarak. Menimpanya dengan 12px membuat dua hal terjadi sekaligus:
+   tab terdorong 12px dari header, dan 14px ruang mati di bawahnya tidak lagi
+   ditiadakan. Halaman Jadwal terlihat benar justru karena tidak menimpanya. */
+@media (min-width: 768px) {
+    .nl-wrapper .actab-wrap {
+        margin-top: var(--page-gap, 12px) !important;
+        margin-bottom: var(--page-gap, 12px) !important;
+    }
+}
+
+.nl-wrapper .ftb-toolbar {
+    margin-top: var(--page-gap, 12px) !important;
+    margin-bottom: var(--page-gap, 12px) !important;
+}
+
+@media (max-width: 767.98px) {
+    .nl-wrapper {
+        padding: 0 6px 16px;
+    }
+    .nl__adminPanel {
+        padding-top: 0;
+    }
+    .nl__adminPanel .ftb-toolbar {
+        margin-top: 2px !important;
+        margin-bottom: 6px !important;
+    }
+    .nl-wrapper .ftb-toolbar {
+        margin-top: 14px !important;
+        margin-bottom: 8px !important;
+    }
+}
+
+/* =========================================================
+   DAFTAR NILAI DI MODAL SISWA (.nl__ms*)
+
+   Baris label-nilai tanpa kotak: pembatasnya garis rambut antar-baris, bukan
+   bingkai per baris. Nama kelasnya sengaja terpisah dari .nl__scoreRow —
+   gaya kartu mobile lama yang seluruh deklarasinya `!important`, sehingga
+   menimpanya berarti adu spesifisitas alih-alih menata.
+   ========================================================= */
+.nl__msList {
+    display: flex;
+    flex-direction: column;
+}
+
+.nl__msRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 2px;
+    border-bottom: 1px solid var(--n-border);
+}
+
+.nl__msRow:last-child {
+    border-bottom: none;
+}
+
+.nl__msLabel {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    min-width: 0;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--n-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Tombol lihat topik: ikon telanjang yang menempel pada label. Tanpa latar
+   atau bingkai supaya tidak jadi elemen ketiga yang bersaing dengan nilai. */
+.nl__msTopicBtn {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    border: none;
+    background: none;
+    border-radius: 6px;
+    color: #3083ff;
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.nl__msTopicBtn:hover,
+.nl__msTopicBtn:active {
+    background: rgba(48, 131, 255, 0.1);
+}
+
+.nl__msTopicBtn i {
+    font-size: 0.9rem;
+    line-height: 1;
+}
+
+/* Nilai baca-saja (mode Rekap) */
+.nl__msValue {
+    flex: 0 0 auto;
+    /* Lebar & perataan disamakan dengan .nl__msInput supaya angka di mode
+       Rekap dan mode input jatuh di kolom yang sama. */
+    width: 64px;
+    padding-right: 4px;
+    text-align: right;
+    font-size: var(--mdl-fs-control, 0.85rem);
+    font-weight: 700;
+    color: var(--n-text);
+    font-variant-numeric: tabular-nums;
+}
+
+.nl__msRow--total {
+    border-top: 1px solid var(--n-border);
+    border-bottom: none;
+    margin-top: 4px;
+    padding-top: 12px;
+}
+
+.nl__msValue--total {
+    /* Sedikit lebih besar dari nilai biasa — ini angka akhirnya. */
+    font-size: calc(var(--mdl-fs-control, 0.85rem) + 0.1rem);
+    color: #3083ff;
+}
+
+/* Input nilai: TANPA kotak — cuma garis bawah. Bingkai penuh membuat tiap
+   baris terbaca sebagai kartu kecil, padahal yang perlu ditandai hanyalah
+   "di sini bisa diketik". Garis bawahnya menebal & membiru saat difokuskan.
+
+   Ukuran huruf lewat --mdl-fs-control (components/modal.css): 0.85rem di mana
+   pun, KECUALI WebKit iOS yang menaikkannya ke 16px karena di bawah itu ia
+   otomatis men-zoom halaman saat kontrol form difokuskan. Menulis 16px mentah
+   di sini membuat angkanya jauh lebih besar daripada labelnya di semua
+   perangkat, padahal yang butuh cuma satu. */
+.nl__msInput {
+    flex: 0 0 auto;
+    width: 64px;
+    height: 32px;
+    padding: 0 4px 2px;
+    border: none;
+    border-bottom: 1.5px solid var(--n-border);
+    border-radius: 0;
+    background: none;
+    text-align: right;
+    font-size: var(--mdl-fs-control, 0.85rem);
+    font-weight: 700;
+    color: var(--n-text);
+    font-variant-numeric: tabular-nums;
+    transition: border-color 0.15s ease;
+}
+
+.nl__msInput:focus {
+    outline: none;
+    border-bottom-color: #3083ff;
+}
+
+/* Sudah diubah tapi belum disimpan — ditandai di garis & angkanya, bukan
+   dengan latar, supaya tetap sejalan dengan baris yang tanpa kotak. */
+.nl__msInput.is-changed {
+    border-bottom-color: #f59e0b;
+    color: #b45309;
+}
+
+.nl__msInput::-webkit-outer-spin-button,
+.nl__msInput::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.nl__msEmpty {
+    padding: 18px 2px;
+    text-align: center;
+    font-size: 0.82rem;
+    font-style: italic;
+    color: var(--n-muted);
+}
+
+/* Ringkasan di ujung kanan baris daftar siswa (mobile). Nilai rapor untuk
+   mode Rekap, dan "terisi/total" untuk mode input — keduanya angka pendek,
+   jadi tanpa kotak, cukup dibedakan warna & ketebalan. */
+.nl__listRapor {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--n-primary, #3083ff);
+}
+
+.nl__listCount {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--n-muted);
+    font-variant-numeric: tabular-nums;
+}
+
+/* --- Page Header (Hero) --- */
+.nl-hero {
+    position: relative;
+    background: var(--banner-bg, var(--banner-bg, linear-gradient(135deg, var(--n-primary) 0%, #c2185b 100%)));
+    padding: 22px 32px;
+    border-radius: 16px;
+    border: none;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    color: white;
+    position: relative;
+    overflow: hidden;
+    margin-bottom: 20px;
+    font-family: 'Poppins', sans-serif;
+}
+
+.nl-hero-grid {
+    position: absolute;
+    inset: 0;
+    opacity: 0.08;
+    background-image: radial-gradient(#fff 1px, transparent 1px);
+    background-size: 20px 20px;
+    pointer-events: none;
+}
+
+.nl-hero-left {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex: 1;
+    min-width: 0;
+}
+
+.nl-hero-back-btn {
+    width: 38px;
+    height: 38px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.16);
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    border-radius: 10px;
+    color: #ffffff;
+    font-size: 1.15rem;
+    cursor: pointer;
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    backdrop-filter: blur(8px);
+    flex-shrink: 0;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.nl-hero-back-btn:hover {
+    background: rgba(255, 255, 255, 0.28);
+    border-color: rgba(255, 255, 255, 0.6);
+    transform: translateX(-3px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.18);
+}
+
+.nl-hero-back-btn i {
+    transition: transform 0.2s;
+}
+
+.nl-hero-back-btn:hover i {
+    transform: translateX(-2px);
+}
+
+.nl-hero-icon {
+    display: none !important;
+}
+
+.nl-hero-text {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.nl-hero-title {
+    font-size: 1.25rem;
+    font-weight: 800;
+    color: white;
+    margin: 0;
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+}
+
+.nl-hero-subtitle {
+    color: rgba(255, 255, 255, 0.75);
+    font-size: 0.78rem;
+    margin: 2px 0 0 0;
+    font-weight: 500;
+    line-height: 1.5;
+}
+
+.dark .nl__pageHeader {
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+}
+
+/* --- Toolbar (mirrors .filter-card structure) --- */
+.nl__toolbar {
+    background: var(--n-card);
+    border-radius: 16px;
+    padding: 1.25rem;
+    box-shadow: 0 10px 30px -5px rgba(0, 56, 168, 0.05);
+    border: 1px solid var(--n-border);
+    margin-bottom: var(--spacing-lg);
+    transition: all 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.dark .nl__toolbar {
+    background: #0f172a;
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
+.nl__toolbarRow {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    flex-wrap: wrap;
+    justify-content: space-between;
+}
+
+.nl__searchGroup {
+    position: relative;
+    min-width: 160px;
+}
+
+.nl__searchGroup i {
+    position: absolute;
+    left: 13px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--n-muted);
+    font-size: 0.85rem;
+}
+
+.nl__searchInput {
+    width: 100%;
+    padding: 9px 14px 9px 40px;
+    border-radius: 10px;
+    border: 1px solid var(--n-border);
+    outline: none;
+    font-size: 0.85rem;
+    font-weight: 500;
+    background: var(--n-card);
+    color: var(--n-ink);
+    transition: all 0.2s;
+}
+
+.nl__searchInput:focus {
+    border-color: var(--n-primary);
+    box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.08);
+}
+
+.dark .nl__searchInput:focus {
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+/* --- Mode Switcher --- */
+.nl__modeSwitcher {
+    display: inline-flex;
+    align-items: center;
+    background: rgba(241, 245, 249, 0.9);
+    padding: 4px;
+    border-radius: 12px;
+    gap: 4px;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.nl__modeBtn {
+    padding: 7px 16px;
+    border-radius: 8px;
+    font-size: 0.75rem;
+    font-weight: 800;
+    color: #64748b;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.nl__modeBtn:hover:not(.active) {
+    color: #1e293b;
+    background: rgba(0, 0, 0, 0.05);
+}
+
+.nl__modeBtn.active {
+    background: #1a73e8;
+    color: #ffffff;
+    box-shadow: 0 2px 6px rgba(26, 115, 232, 0.3);
+}
+
+/* Import & Export Buttons */
+.nl__importBtn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    height: 34px;
+    padding: 0 14px;
+    border-radius: 8px;
+    background: rgba(26, 115, 232, 0.08);
+    border: 1px solid rgba(26, 115, 232, 0.25);
+    color: #1a73e8;
+    font-size: 0.78rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.nl__importBtn:hover {
+    background: rgba(26, 115, 232, 0.16);
+    border-color: #1a73e8;
+    color: #1557b0;
+}
+
+.nl__exportBtn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    height: 34px;
+    padding: 0 14px;
+    border-radius: 8px;
+    background: #1a73e8;
+    border: 1px solid #1a73e8;
+    color: #ffffff;
+    font-size: 0.78rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 6px rgba(26, 115, 232, 0.25);
+    white-space: nowrap;
+}
+
+.nl__exportBtn:hover {
+    background: #1557b0;
+    border-color: #1557b0;
+    box-shadow: 0 4px 10px rgba(26, 115, 232, 0.35);
+}
+
+/* --- Select Controls --- */
+.nl__select {
+    padding: 8px 12px;
+    border-radius: 10px;
+    border: 1px solid var(--n-border);
+    background: var(--n-card);
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--n-ink);
+    outline: none;
+    min-width: 110px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.nl__select:hover {
+    border-color: rgba(30, 58, 138, 0.3);
+}
+
+.nl__select:focus {
+    border-color: var(--n-primary);
+    box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.08);
+}
+
+/* --- Buttons & Actions --- */
+.nl__actions {
+    display: flex;
+    gap: 10px;
+    margin-left: auto;
+}
+
+.nl__btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    height: 38px;
+    padding: 0 14px;
+    border-radius: 10px;
+    font-weight: 700;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    border: 1px solid var(--n-border);
+    background: var(--n-card);
+    color: var(--n-ink);
+    letter-spacing: 0.01em;
+}
+
+.nl__btnSecondary {
+    background: rgba(30, 58, 138, 0.06);
+    color: var(--n-primary);
+    border-color: rgba(30, 58, 138, 0.12);
+}
+
+.nl__btnPrimary {
+    background: var(--n-primary);
+    color: white;
+    border: none;
+    box-shadow: 0 4px 12px rgba(30, 58, 138, 0.2);
+}
+
+.nl__btnSecondary:hover {
+    background: rgba(30, 58, 138, 0.1);
+    transform: translateY(-1px);
+}
+
+.nl__btnPrimary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(30, 58, 138, 0.28);
+    filter: brightness(1.03);
+}
+
+/* --- Table ---
+   Sumber tunggal gaya tabel nilai. Wrapper yang menggulir horizontal
+   (overflow-x: auto) supaya kolom tagihan yang banyak tetap terjangkau —
+   sebelumnya `overflow: hidden` memotong kolom di layar sempit. */
+.nl__tableWrap {
+    background: var(--n-card);
+    border-radius: 16px;
+    border: 1px solid var(--n-border);
+    box-shadow: var(--n-shadow);
+    display: block;
+    /* HANYA gulir mendatar. `max-height` + `overflow: auto` dulu membuat kotak
+       ini punya viewport gulir vertikalnya sendiri — hasilnya dua bilah gulir
+       bersebelahan (satu untuk halaman, satu untuk tabel).
+
+       Tanpa max-height, kotaknya setinggi isinya sehingga bilah gulir vertikal
+       tidak pernah muncul; yang tersisa cuma gulir mendatar untuk kolom nilai
+       yang banyak. `overflow-y` sengaja tidak ditulis `visible`: spesifikasi CSS
+       memaksanya jadi `auto` begitu salah satu sumbu bukan `visible`, jadi
+       menulisnya hanya menyesatkan pembaca berikutnya. */
+    overflow-x: auto;
+    /* gap controlled consistently with action bar above */
+    margin-top: 16px;
+    scrollbar-width: thin;
+}
+
+.nl__tableWrap::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+.nl__tableWrap::-webkit-scrollbar-thumb {
+    background: rgba(15, 23, 42, 0.18);
+    border-radius: 999px;
+}
+
+.dark .nl__tableWrap::-webkit-scrollbar-thumb {
+    background: rgba(148, 163, 184, 0.3);
+}
+
+.nl__table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    /* `fixed` supaya lebar kolom deterministik: kolom identitas terkunci
+       (offset sticky-nya bergantung pada lebar itu) dan kolom nilai membagi
+       rata sisa lebar. `--nl-score-cols` diisi dari React = jumlah kolom nilai,
+       dipakai untuk menjaga lebar minimum sebelum tabel mulai menggulir. */
+    table-layout: fixed;
+    min-width: calc(436px + 92px * var(--nl-score-cols, 3));
+    font-family: 'Poppins', sans-serif;
+}
+
+.nl__table th {
+    background: #f1f5f9;
+    padding: 10px 12px;
+    text-align: center;
+    font-size: 0.72rem;
+    font-weight: 800;
+    color: var(--n-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    border-bottom: 2px solid var(--n-border);
+    transition: background 0.2s;
+    white-space: nowrap;
+    font-family: 'Poppins', sans-serif;
+    /* Header TIDAK lagi menempel saat menggulir vertikal: sejak kotak
+       pembungkus kehilangan viewport gulirnya sendiri (lihat .nl__tableWrap),
+       `sticky` di sini menempel pada kontainer gulir mendatar yang tingginya
+       mengikuti isi — artinya tidak pernah aktif. Dibiarkan supaya kolom
+       identitas di bawah tetap punya konteks z-index yang sama. */
+    position: sticky;
+    top: 0;
+    z-index: 3;
+}
+
+.dark .nl__table th {
+    background: #111c2e;
+    border-bottom-color: rgba(255, 255, 255, 0.08);
+}
+
+/* Kolom identitas (NO / NISN / NAMA) ikut menempel saat menggulir horizontal.
+   `--nl-col1/2` diisi lebar tetap agar offset-nya pasti. */
+.nl__table thead th:nth-child(-n + 3),
+.nl__table tbody td:nth-child(-n + 3) {
+    position: sticky;
+    z-index: 2;
+    background: var(--n-card);
+}
+
+.nl__table thead th:nth-child(-n + 3) {
+    z-index: 4;
+    background: #f1f5f9;
+}
+
+.dark .nl__table thead th:nth-child(-n + 3) {
+    background: #111c2e;
+}
+
+.nl__table th:nth-child(1),
+.nl__table td:nth-child(1) { left: 0; width: 52px; }
+
+.nl__table th:nth-child(2),
+.nl__table td:nth-child(2) { left: 52px; width: 104px; }
+
+.nl__table th:nth-child(3),
+.nl__table td:nth-child(3) { left: 156px; width: 280px; }
+
+/* Garis pemisah antara blok identitas dan blok nilai */
+.nl__table th:nth-child(3)::after,
+.nl__table td:nth-child(3)::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: -1px;
+    bottom: 0;
+    width: 1px;
+    background: var(--n-border);
+    box-shadow: 6px 0 8px -6px rgba(15, 23, 42, 0.25);
+}
+
+/* Kolom nilai: punya lebar dasar yang seragam. Sisa lebar layar dibagi
+   proporsional antara kolom NAMA dan kolom-kolom nilai, jadi tabel tetap
+   memenuhi kartu tanpa ada satu kolom yang melar sendirian (dulu kolom NAMA
+   menyerap ~900px sementara kolom nilai ikut membengkak jadi ~246px). */
+.nl__table th.nl__colScore,
+.nl__table td.nl__colScore {
+    width: auto;
+}
+
+.nl__thActions {
+    display: flex;
+    justify-content: center;
+    gap: 4px;
+    margin-top: 2px;
+    opacity: 0.35;
+    transition: opacity 0.2s;
+}
+
+.nl__table th:hover .nl__thActions {
+    opacity: 1;
+}
+
+.nl__thActions button {
+    font-size: 0.7rem;
+    padding: 2px;
+}
+
+.nl__viewBtn {
+    color: #3b82f6;
+    font-size: 0.8rem;
+}
+
+.nl__editBtn {
+    color: #6b7280;
+}
+
+.nl__deleteBtn {
+    color: #f87171;
+}
+
+.nl__table th.text-left {
+    text-align: left;
+    padding-left: 20px;
+}
+
+.nl__table td {
+    padding: 0;
+    border-bottom: 1px solid var(--n-border);
+    border-right: 1px solid transparent;
+    vertical-align: middle;
+    height: 46px;
+    position: relative;
+}
+
+/* Score input cell — subtle left & right border so each column is delineated */
+.nl__table td input.nl__scoreInput {
+    border-left: 1px solid rgba(0, 0, 0, 0.06);
+    border-right: 1px solid rgba(0, 0, 0, 0.06);
+    transition: all 0.15s;
+}
+
+/* Focus: strong visible ring */
+.nl__table td input.nl__scoreInput:focus {
+    background: rgba(59, 130, 246, 0.05);
+    box-shadow: inset 0 0 0 2px var(--n-primary);
+    border-radius: 2px;
+    border-left-color: var(--n-primary);
+    border-right-color: var(--n-primary);
+}
+
+/* Pemisah kolom halus — hanya di antara kolom nilai, bukan kolom identitas */
+.nl__table td.nl__colScore {
+    border-right: 1px solid rgba(15, 23, 42, 0.06);
+}
+
+.dark .nl__table td {
+    border-color: rgba(255, 255, 255, 0.07);
+}
+
+/* Dark mode: vertical column dividers */
+.dark .nl__table td.nl__colScore {
+    border-right-color: rgba(255, 255, 255, 0.08);
+}
+
+.dark .nl__table td input.nl__scoreInput {
+    border-left-color: rgba(255, 255, 255, 0.08);
+    border-right-color: rgba(255, 255, 255, 0.08);
+}
+
+.dark .nl__table td input.nl__scoreInput:focus {
+    border-left-color: var(--n-primary);
+    border-right-color: var(--n-primary);
+}
+
+.nl__table tr:last-child td {
+    border-bottom: none;
+}
+
+.nl__table tbody tr {
+    transition: background 0.15s;
+}
+
+/* Latar baris WAJIB opaque: kolom identitas & header bersifat sticky, jadi
+   konten yang lewat di belakangnya tidak boleh tembus pandang. */
+.nl__table tbody tr td {
+    background: var(--n-card);
+}
+
+.dark .nl__table tbody tr td {
+    background: #0b1220;
+}
+
+/* Alternating rows — subtle */
+.nl__table tbody tr:nth-child(even) td {
+    background: #f7f9fc;
+}
+
+.dark .nl__table tbody tr:nth-child(even) td {
+    background: #0e1626;
+}
+
+.nl__table tbody tr:hover td,
+.nl__table tbody tr:hover:nth-child(even) td {
+    background: #eef3fd;
+}
+
+.dark .nl__table tbody tr:hover td,
+.dark .nl__table tbody tr:hover:nth-child(even) td {
+    background: #16233b;
+}
+
+.nl__table tbody tr:hover td:first-child {
+    border-radius: 0;
+}
+
+/* Hilangkan spinner bawaan input[type=number] — memicu perubahan nilai
+   tak sengaja lewat scroll dan membuat sel terlihat berantakan */
+.nl__scoreInput::-webkit-outer-spin-button,
+.nl__scoreInput::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    appearance: none;
+    margin: 0;
+}
+
+.nl__scoreInput {
+    -moz-appearance: textfield;
+    appearance: textfield;
+}
+
+.dark .nl__table tbody tr:hover:nth-child(even) td {
+    background: rgba(255, 255, 255, 0.025);
+}
+
+/* --- Score Input --- */
+.nl__scoreInput {
+    width: 100%;
+    height: 100%;
+    border: none;
+    background: transparent;
+    text-align: center;
+    font-family: 'Poppins', sans-serif;
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--n-ink);
+    outline: none;
+    transition: all 0.2s;
+    padding: 0 4px;
+}
+
+.nl__scoreInput:focus {
+    background: rgba(59, 130, 246, 0.04);
+    box-shadow: inset 0 0 0 2px var(--n-primary);
+}
+
+.dark .nl__scoreInput:focus {
+    background: rgba(59, 130, 246, 0.08);
+}
+
+.is-changed {
+    background: rgba(59, 130, 246, 0.06) !important;
+    color: var(--n-primary);
+    border-radius: 0;
+}
+
+/* --- Badges --- */
+.nl__idBadge {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--n-muted);
+    font-family: 'Poppins', sans-serif;
+    letter-spacing: 0.01em;
+}
+
+.nl__index {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--n-muted);
+    font-family: 'Poppins', sans-serif;
+}
+
+.nl__studentName {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--n-ink);
+    padding-left: 20px !important;
+    padding-right: 20px !important;
+    text-align: left !important;
+    font-family: 'Poppins', sans-serif;
+    letter-spacing: -0.01em;
+}
+
+.nl__scoreBadge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 40px;
+    height: 28px;
+    padding: 0 8px;
+    background: rgba(241, 245, 249, 0.8);
+    border-radius: 6px;
+    font-family: 'Poppins', sans-serif;
+    font-weight: 700;
+    font-size: 0.85rem;
+    color: var(--n-ink);
+    border: 1px solid var(--n-border);
+}
+
+.dark .nl__scoreBadge {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.nl__scoreFinal {
+    font-family: inherit;
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: var(--n-primary);
+}
+
+/* --- Sub Tabs --- */
+.nl__subTabs {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+}
+
+.nl__subBtn {
+    padding: 7px 18px;
+    border-radius: 10px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--n-muted);
+    background: var(--n-card);
+    border: 1px solid var(--n-border);
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+
+.nl__subBtn:hover {
+    border-color: rgba(30, 58, 138, 0.25);
+    color: var(--n-primary);
+}
+
+.nl__subBtn.active {
+    background: var(--n-primary);
+    color: white;
+    border-color: var(--n-primary);
+    box-shadow: 0 3px 8px rgba(30, 58, 138, 0.18);
+}
+
+/* Spinner buttons */
+.nl__spinnerBtn {
+    padding: 6px 8px;
+    border-radius: 8px;
+    border: 1px solid var(--n-border);
+    background: var(--n-card);
+    color: var(--n-muted);
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 32px;
+    height: 32px;
+}
+
+.nl__spinnerBtn:hover:not(:disabled) {
+    background: rgba(30, 58, 138, 0.05);
+    color: var(--n-ink);
+}
+
+.nl__spinnerBtn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+/* --- Floating Toolbox --- */
+/* =========================================================
+   BILAH "BELUM TERSIMPAN" (.nl__saveBar)
+
+   Dipasang lewat portal ke <body>, jadi `position: fixed` di sini tidak
+   terjebak stacking context kartu/tabel halaman.
+
+   z-index 460 — DI ATAS <DesktopFab> (450) yang duduk di sudut yang sama,
+   tapi tetap di bawah dropdown notifikasi (1000+) dan modal (9999+).
+   Di mobile ia diangkat setinggi BottomNav supaya tidak tertutup bilah nav.
+   ========================================================= */
+.nl__saveBar {
+    position: fixed;
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+    z-index: 460;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    width: max-content;
+    max-width: calc(100vw - 32px);
+    padding: 10px 12px 10px 18px;
+    background: var(--n-card);
+    border: 1px solid var(--n-border);
+    border-radius: 9999px;
+    box-shadow: 0 12px 32px rgba(2, 6, 23, 0.18);
+}
+
+/* FAB (Mode Admin) diangkat saat bilah simpan muncul, supaya keduanya tidak
+   duduk di ketinggian yang sama. `body:has()` dipakai karena keduanya sama-sama
+   di-portal ke <body> dan urutan DOM-nya bergantung urutan mount — selektor
+   saudara (~) tidak bisa diandalkan.
+
+   Catatan: begitu user MENYERET FAB-nya, posisinya jadi style inline
+   (left/top) dan aturan ini tidak lagi berlaku — itu memang maunya user. */
+body:has(.nl__saveBar) .dfab-wrapper {
+    bottom: 96px;
+}
+
+.nl__saveBarText {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--n-text);
+    white-space: nowrap;
+}
+
+.nl__saveBarText i {
+    color: #f59e0b;
+    font-size: 1rem;
+}
+
+.nl__saveBarText b {
+    font-weight: 700;
+}
+
+.dark .nl__saveBar {
+    background: #000000;
+    border-color: rgba(59, 130, 246, 0.35);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6);
+}
+
+@media (max-width: 767.98px) {
+    /* Melebar dari tepi ke tepi, bukan `width: max-content` yang dipangkas
+       `max-width`: di layar 360px, kalimat + tombol lebih lebar dari layar,
+       dan dengan lebar mengikuti isi salah satu ujungnya pasti terpotong.
+       Ditambatkan lewat left/right sekaligus supaya `transform` pemusat di
+       aturan dasar tidak lagi ikut menggeser. Diangkat setinggi BottomNav
+       agar tidak tertimbun bilah nav. */
+    .nl__saveBar {
+        left: 12px;
+        right: 12px;
+        transform: none;
+        width: auto;
+        max-width: none;
+        bottom: calc(var(--app-bottomnav-h, 62px) + 12px + env(safe-area-inset-bottom, 0px));
+        justify-content: space-between;
+        gap: 10px;
+        padding: 8px 8px 8px 14px;
+        border-radius: 14px;
+    }
+
+    /* Teks yang menyusut & ber-ellipsis; tombol TIDAK ikut menyusut supaya
+       labelnya tidak pernah terpotong. */
+    .nl__saveBarText {
+        flex: 1 1 auto;
+        min-width: 0;
+        font-size: 0.8rem;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .nl__saveBar > .ui-btn {
+        flex: 0 0 auto;
+    }
+}
+
+/* --- Modals --- */
+.nl__modalOverlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    padding: 20px;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+}
+
+.nl__modalContent {
+    background: var(--n-card);
+    border-radius: 16px;
+    width: 100%;
+    max-width: 580px;
+    max-height: 90vh;
+    overflow-y: auto;
+    border: 1px solid var(--n-border);
+    box-shadow: 0 24px 48px rgba(0, 0, 0, 0.2);
+    animation: nlModalIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes nlModalIn {
+    from {
+        opacity: 0;
+        transform: scale(0.93) translateY(16px);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+.nl__modalHeader {
+    padding: 22px 26px;
+    border-bottom: 1px solid var(--n-border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.nl__modalTitle {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--n-ink);
+    margin: 0;
+    letter-spacing: -0.01em;
+}
+
+.nl__modalBody {
+    padding: 22px 26px;
+}
+
+/* Form Elements */
+.nl__formGroup {
+    margin-bottom: 14px;
+}
+
+.nl__formLabel {
+    display: block;
+    font-size: 0.7rem;
+    font-weight: 800;
+    color: var(--n-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 7px;
+    margin-left: 3px;
+}
+
+.nl__formInput {
+    width: 100%;
+    padding: 11px 16px;
+    border-radius: 12px;
+    border: 1px solid var(--n-border);
+    font-size: 0.88rem;
+    font-weight: 500;
+    background: var(--n-card);
+    color: var(--n-ink);
+    outline: none;
+    transition: all 0.2s;
+    box-sizing: border-box;
+}
+
+.nl__formInput:focus {
+    border-color: var(--n-primary);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.nl__formActions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    margin-top: 20px;
+}
+
+/* --- Topics Container --- */
+.nl__topicsContainer {
+    background: var(--n-card);
+    border-radius: 16px;
+    border: 1px solid var(--n-border);
+    box-shadow: var(--n-shadow);
+    overflow: hidden;
+    margin-top: 0;
+    transition: all 0.3s ease;
+}
+
+.nl__topicsHeader {
+    background: rgba(241, 245, 249, 0.9);
+    padding: 14px 24px;
+    border-bottom: 1px solid var(--n-border);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.dark .nl__topicsHeader {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.nl__topicsTitle {
+    font-size: 0.7rem;
+    font-weight: 800;
+    color: var(--n-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+}
+
+.nl__topicsGrid {
+    padding: 16px 24px;
+    display: grid;
+    grid-template-columns: repeat(1, 1fr);
+    gap: 10px;
+}
+
+@media (min-width: 1024px) {
+    .nl__topicsGrid {
+        grid-template-columns: repeat(2, 1fr);
+        padding: 16px 24px;
+    }
+}
+
+/* Mobile: padding lebih kecil, layout lebih compact */
+@media (max-width: 767px) {
+    .nl__topicsGrid {
+        padding: 12px 16px;
+        gap: 8px;
+    }
+
+    .nl__topicItem {
+        padding: 9px 10px;
+        gap: 10px;
+    }
+
+    .nl__topicLabel {
+        min-width: 48px;
+        font-size: 0.62rem;
+        padding: 4px 7px;
+    }
+
+    .nl__topicText {
+        font-size: 0.8rem;
+    }
+
+    /* Tambah padding bawah agar konten tidak tertutup FAB */
+    .nl {
+        padding-bottom: 100px;
+        padding-left: 0;
+        padding-right: 0;
+    }
+}
+
+.nl__topicItem {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 11px 14px;
+    background: rgba(241, 245, 249, 0.5);
+    border: 1px solid rgba(15, 23, 42, 0.04);
+    border-radius: 14px;
+    transition: all 0.2s;
+}
+
+.nl__topicItem:hover {
+    background: rgba(59, 130, 246, 0.04);
+    border-color: rgba(59, 130, 246, 0.2);
+    transform: translateX(3px);
+    box-shadow: 0 2px 8px rgba(0, 56, 168, 0.05);
+}
+
+.dark .nl__topicItem {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.dark .nl__topicItem:hover {
+    background: rgba(59, 130, 246, 0.08);
+}
+
+.nl__topicLabel {
+    flex-shrink: 0;
+    background: rgba(59, 130, 246, 0.08);
+    padding: 5px 10px;
+    border-radius: 8px;
+    font-size: 0.68rem;
+    font-weight: 800;
+    color: var(--n-primary);
+    border: 1px solid rgba(59, 130, 246, 0.12);
+    min-width: 58px;
+    text-align: center;
+    letter-spacing: 0.02em;
+}
+
+.dark .nl__topicLabel {
+    background: rgba(59, 130, 246, 0.12);
+}
+
+.nl__topicText {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--n-ink);
+    line-height: 1.4;
+    word-break: break-word;
+    overflow-wrap: break-word;
+}
+
+/* =========================================
+   ADMIN MODE STYLES
+   ========================================= */
+
+/* --- Admin Controls in Header --- */
+.nl__adminControls {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    z-index: 2;
+    position: relative;
+}
+
+/* Admin Badge */
+.nl__adminBadge {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    background: rgba(255, 255, 255, 0.18);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    color: white;
+    padding: 7px 14px;
+    border-radius: 50px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    animation: nlBadgePulse 2s ease-in-out infinite;
+}
+
+.nl__adminBadge i {
+    font-size: 0.95rem;
+    color: #86efac;
+}
+
+@keyframes nlBadgePulse {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.8;
+    }
+}
+
+/* Admin Toggle Button */
+.nl__adminToggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 18px;
+    border-radius: 50px;
+    border: 1.5px solid rgba(255, 255, 255, 0.3);
+    background: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.85);
+    font-size: 0.78rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    letter-spacing: 0.02em;
+    position: relative;
+    overflow: hidden;
+}
+
+.nl__adminToggle:hover {
+    background: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.5);
+    color: white;
+    transform: scale(1.03);
+}
+
+.nl__adminToggle.active {
+    background: linear-gradient(135deg, #1a73e8, #3b82f6);
+    border-color: #60a5fa;
+    color: white;
+    box-shadow: 0 4px 16px rgba(26, 115, 232, 0.35);
+}
+
+.nl__adminToggle i {
+    font-size: 1rem;
+    transition: transform 0.3s;
+}
+
+.nl__adminToggle.active i {
+    transform: scale(1.1);
+}
+
+/* Toggle Dot Indicator */
+.nl__adminToggleDot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.4);
+    transition: all 0.3s;
+    display: inline-block;
+}
+
+.nl__adminToggleDot.on {
+    background: #93c5fd;
+    box-shadow: 0 0 6px rgba(147, 197, 253, 0.8);
+}
+
+/* Admin Guru Selector */
+.nl__adminGuruSelector {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.nl__adminGuruSelect {
+    padding: 8px 14px;
+    border-radius: 12px;
+    border: 1.5px solid rgba(26, 115, 232, 0.3);
+    background: rgba(26, 115, 232, 0.06);
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--n-ink);
+    outline: none;
+    cursor: pointer;
+    transition: all 0.2s;
+    min-width: 180px;
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 16 16'%3E%3Cpath fill='%236b7280' d='M4.5 6l3.5 4 3.5-4H4.5z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 16px center;
+    padding-right: 44px;
+}
+
+.nl__adminGuruSelect:hover {
+    border-color: rgba(26, 115, 232, 0.6);
+    background-color: rgba(26, 115, 232, 0.1);
+}
+
+.nl__adminGuruSelect:focus {
+    border-color: #1a73e8;
+    box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.15);
+}
+
+/* Admin Guru Selector - with icon */
+.nl__adminGuruSelector .nl__searchGroup {
+    position: relative;
+    min-width: 200px;
+}
+
+.nl__adminGuruSelector .nl__searchGroup i {
+    color: #1a73e8;
+    font-size: 0.9rem;
+}
+
+.nl__adminGuruSelector .nl__searchGroup .nl__adminGuruSelect {
+    width: 100%;
+    padding-left: 36px;
+}
+
+.nl__adminEmptyHint {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.72rem;
+    color: #f59e0b;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.nl__adminEmptyHint i {
+    font-size: 0.85rem;
+}
+
+/* Ghost Button */
+.nl__btnGhost {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    border-radius: 10px;
+    border: 1.5px solid rgba(26, 115, 232, 0.25);
+    background: rgba(26, 115, 232, 0.06);
+    color: #1a73e8;
+    font-size: 0.78rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.nl__btnGhost:hover {
+    background: rgba(26, 115, 232, 0.12);
+    border-color: rgba(26, 115, 232, 0.5);
+    transform: rotate(45deg);
+}
+
+/* =========================================
+   NILAI ADMIN PANEL
+   Follows absensi admin pattern
+   ========================================= */
+
+/* Panel Container */
+.nl__adminPanel {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 12px;
+    margin-bottom: var(--spacing-lg);
+    background: transparent;
+    border: none;
+    box-shadow: none;
+}
+
+.nl__adminPanel .ftb-toolbar {
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+}
+
+.nl__adminHeaderCard,
+.nl__adminTableCard {
+    background: var(--n-card);
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 10px 30px -10px rgba(26, 115, 232, 0.08);
+    border: 1px solid var(--n-border);
+}
+
+@media (max-width: 767.98px) {
+    .nl__adminPanel .nl__adminTableCard {
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        border-radius: 0 !important;
+        overflow: visible !important;
+        margin-top: 4px;
+    }
+}
+
+/* Panel Header */
+.nl__adminPanelHeader {
+    background: transparent;
+    padding: 1rem 1.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    color: var(--n-ink);
+    border-bottom: 1px solid var(--n-border);
+    gap: 16px;
+}
+
+.nl__adminPanelHeaderLeft {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.nl__adminPanelIcon {
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    background: rgba(26, 115, 232, 0.1);
+    color: #1a73e8;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    border: none;
+}
+
+.nl__adminPanelTitle {
+    font-size: 1.1rem;
+    font-weight: 800;
+    margin: 0;
+    letter-spacing: -0.01em;
+    color: var(--n-ink);
+}
+
+.nl__adminPanelSubtitle {
+    margin: 2px 0 0;
+    font-size: 0.75rem;
+    color: var(--n-muted);
+}
+
+.nl__adminPanelHeaderRight {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.nl__adminRefreshBtn {
+    width: 32px;
+    height: 32px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(26, 115, 232, 0.08);
+    border: 1px solid rgba(26, 115, 232, 0.22);
+    border-radius: 8px;
+    color: #1a73e8;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.nl__adminRefreshBtn:hover {
+    background: rgba(26, 115, 232, 0.18);
+    transform: rotate(45deg);
+}
+
+.nl__adminHeaderDivider {
+    width: 1px;
+    height: 22px;
+    background: var(--n-border);
+    margin: 0 4px;
+}
+
+.nl__adminPanelClose {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 12px;
+    background: rgba(239, 68, 68, 0.08);
+    border: 1px solid rgba(239, 68, 68, 0.25);
+    border-radius: 8px;
+    color: #ef4444;
+    font-size: 0.75rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+
+.nl__adminPanelClose:hover {
+    background: #ef4444;
+    color: #ffffff;
+    border-color: #ef4444;
+}
+
+select.nl__select,
+.nl-wrapper select:not(.ftb-input) {
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%231a73e8' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 36px;
+    cursor: pointer;
+}
+
+/* Panel Actions Bar */
+.nl__adminActions {
+    padding: 0.875rem 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--n-bg, var(--n-surface));
+    border-bottom: 1px solid var(--n-border);
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.nl__adminSelectInfo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.nl__adminCheckboxLabel {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--n-muted);
+}
+
+.nl__adminCheckbox {
+    width: 16px;
+    height: 16px;
+    border-radius: 4px;
+    accent-color: #1a73e8;
+    cursor: pointer;
+}
+
+.nl__adminActionBtns {
+    display: flex;
+    gap: 8px;
+}
+
+.nl__adminBtn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    border-radius: 10px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: none;
+}
+
+.nl__adminBtnDanger {
+    background: #ef4444;
+    color: white;
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+}
+
+.nl__adminBtnDanger:hover {
+    background: #dc2626;
+    transform: translateY(-1px);
+}
+
+/* Panel Table Wrap */
+.nl__adminTableWrap {
+    padding: 0;
+    min-height: 250px;
+}
+
+.nl__adminMobileList {
+    display: none;
+}
+
+.nl__adminTableScroll {
+    display: block;
+    overflow-x: auto;
+    max-height: none;
+    overflow-y: visible;
+}
+
+@media (max-width: 767.98px) {
+    .nl__adminMobileList {
+        display: block;
+    }
+    .nl__adminTableScroll {
+        display: none !important;
+    }
+}
+
+/* Transfer Modal Form Fields */
+.nl__transferForm .mdl-field__label {
+    font-size: 0.72rem !important;
+    font-weight: 500 !important;
+    color: var(--n-muted, #64748b) !important;
+}
+
+/* Pagination Bar */
+.nl__adminPagination {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 18px;
+    border-top: 1px solid var(--n-border);
+    background: var(--n-card);
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.nl__adminPaginationInfo {
+    font-size: 0.78rem;
+    color: var(--n-muted);
+}
+
+.nl__adminPaginationInfo strong {
+    color: var(--n-ink);
+}
+
+.nl__adminPaginationControls {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.nl__adminPageSizeSelect {
+    display: flex;
+    align-items: center;
+}
+
+.nl__adminPageSizeSelectElem {
+    padding: 4px 8px;
+    border-radius: 6px;
+    border: 1px solid var(--n-border);
+    background: var(--n-surface);
+    color: var(--n-ink);
+    font-size: 0.75rem;
+    font-weight: 600;
+    outline: none;
+    cursor: pointer;
+}
+
+.nl__adminPageBtns {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.nl__adminPageBtn {
+    min-width: 32px;
+    height: 32px;
+    padding: 0 8px;
+    border-radius: 8px;
+    border: 1px solid var(--n-border);
+    background: var(--n-surface);
+    color: var(--n-ink);
+    font-size: 0.78rem;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.nl__adminPageBtn:hover:not(:disabled) {
+    background: rgba(26, 115, 232, 0.1);
+    color: #1a73e8;
+    border-color: rgba(26, 115, 232, 0.3);
+}
+
+.nl__adminPageBtn.active {
+    background: #1a73e8;
+    color: #ffffff;
+    border-color: #1a73e8;
+    box-shadow: 0 2px 8px rgba(26, 115, 232, 0.3);
+}
+
+.nl__adminPageBtn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.dark .nl__adminPagination {
+    background: #000000 !important;
+    border-top: 1px solid rgba(59, 130, 246, 0.25) !important;
+}
+
+.dark .nl__adminPageBtn {
+    background: #0f172a;
+    border-color: rgba(59, 130, 246, 0.3);
+    color: #cbd5e1;
+}
+
+.dark .nl__adminPageBtn:hover:not(:disabled) {
+    background: rgba(26, 115, 232, 0.25);
+    color: #ffffff;
+}
+
+.dark .nl__adminPageBtn.active {
+    background: #1a73e8;
+    color: #ffffff;
+    border-color: #3b82f6;
+}
+
+/* Loading */
+.nl__adminLoading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 3.75rem 2rem;
+    color: var(--n-muted);
+    gap: 1.15rem;
+}
+
+/* Spinner: cincin gradasi berputar + halo berdenyut + inti diam. */
+.nl__adminSpinner {
+    position: relative;
+    width: 54px;
+    height: 54px;
+    border-radius: 50%;
+}
+
+/* Halo lembut yang membesar-mengecil di belakang cincin. */
+.nl__adminSpinner::before {
+    content: '';
+    position: absolute;
+    inset: -6px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(26, 115, 232, 0.24) 0%, rgba(26, 115, 232, 0) 68%);
+    animation: nlAdminPulse 1.6s ease-in-out infinite;
+}
+
+/* Cincin conic yang memudar dari transparan ke biru. */
+.nl__adminSpinner::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: conic-gradient(from 0deg,
+            rgba(26, 115, 232, 0) 0%,
+            rgba(26, 115, 232, 0.18) 40%,
+            #1a73e8 88%,
+            #60a5fa 100%);
+    -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 3.5px));
+    mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 3.5px));
+    animation: nlAdminSpin 0.95s linear infinite;
+}
+
+/* Teks "Memuat data..." dengan sapuan kilau. */
+.nl__adminLoading p {
+    margin: 0;
+    font-size: 0.86rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    background: linear-gradient(90deg,
+            var(--n-muted) 0%,
+            var(--n-muted) 38%,
+            #1a73e8 50%,
+            var(--n-muted) 62%,
+            var(--n-muted) 100%);
+    background-size: 240% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    animation: nlAdminShimmer 1.9s linear infinite;
+}
+
+@keyframes nlAdminSpin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes nlAdminPulse {
+
+    0%,
+    100% {
+        transform: scale(0.85);
+        opacity: 0.55;
+    }
+
+    50% {
+        transform: scale(1.12);
+        opacity: 1;
+    }
+}
+
+@keyframes nlAdminShimmer {
+    from {
+        background-position: 120% 0;
+    }
+
+    to {
+        background-position: -120% 0;
+    }
+}
+
+/* Hormati preferensi kurangi-animasi: cincin tetap berputar pelan, sisanya diam. */
+@media (prefers-reduced-motion: reduce) {
+
+    .nl__adminSpinner::before,
+    .nl__adminLoading p {
+        animation: none;
+    }
+
+    .nl__adminLoading p {
+        color: var(--n-muted);
+        background: none;
+        -webkit-background-clip: border-box;
+        background-clip: border-box;
+    }
+
+    .nl__adminSpinner::after {
+        animation-duration: 2.4s;
+    }
+}
+
+/* Empty */
+.nl__adminEmpty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 5rem 2rem;
+    color: var(--n-muted);
+    text-align: center;
+}
+
+.nl__adminEmpty i {
+    font-size: 3.5rem;
+    margin-bottom: 1rem;
+    opacity: 0.3;
+}
+
+.nl__adminEmpty p {
+    font-weight: 700;
+    margin: 0;
+    font-size: 1rem;
+    color: var(--n-ink);
+}
+
+.nl__adminEmpty span {
+    font-size: 0.82rem;
+    opacity: 0.6;
+    margin-top: 4px;
+}
+
+/* Admin Table */
+.nl__adminTable {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.82rem;
+    font-family: 'Poppins', sans-serif;
+}
+
+.nl__adminTable th {
+    padding: 11px 12px;
+    text-align: left;
+    font-size: 0.68rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--n-ink, #0f172a);
+    background: var(--n-card);
+    border-bottom: 1px solid var(--n-border);
+    white-space: nowrap;
+    font-family: 'Poppins', sans-serif;
+    position: sticky;
+    top: 0;
+    z-index: 2;
+}
+
+.dark .nl__adminTable th {
+    color: var(--n-ink, #f8fafc);
+    background: var(--n-card);
+}
+
+.nl__adminTable td {
+    padding: 10px 12px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+    color: var(--n-ink, #0f172a);
+    font-family: 'Poppins', sans-serif;
+    vertical-align: middle;
+}
+
+.nl__adminTable tr:last-child td {
+    border-bottom: none;
+}
+
+.nl__adminTable tr.selected td {
+    background: rgba(16, 185, 129, 0.05);
+}
+
+.nl__adminTable tr:hover td {
+    background: rgba(0, 0, 0, 0.015);
+}
+
+.dark .nl__adminTable tr:hover td {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+/* Row Checkbox */
+.nl__adminRowCheckbox {
+    width: 16px;
+    height: 16px;
+    accent-color: #10b981;
+    cursor: pointer;
+}
+
+/* Guru Cell */
+.nl__adminGuruCell {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.nl__adminGuruName {
+    font-weight: 600;
+    font-size: 0.83rem;
+    color: var(--n-ink, #0f172a);
+}
+
+/* Baris kedua sel Guru: mata pelajaran (menggantikan NIP). */
+.nl__adminGuruMapel {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--n-ink, #0f172a);
+}
+
+.dark .nl__adminGuruMapel {
+    color: var(--n-ink, #f8fafc);
+}
+
+/* Kelas Cell: polos tanpa badge kotak, teks hitam */
+.nl__adminKelasCell,
+.nl__adminKelasBadge {
+    display: inline-block;
+    padding: 0;
+    background: transparent !important;
+    border: none !important;
+    border-radius: 0 !important;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--n-ink, #0f172a) !important;
+    white-space: nowrap;
+}
+
+.dark .nl__adminKelasCell,
+.dark .nl__adminKelasBadge {
+    background: transparent !important;
+    border: none !important;
+    color: var(--n-ink, #f8fafc) !important;
+}
+
+/* Semester: polos tanpa badge kotak, teks hitam */
+.nl__adminSemText,
+.nl__adminSemBadge {
+    display: inline-block;
+    padding: 0 !important;
+    background: transparent !important;
+    border: none !important;
+    border-radius: 0 !important;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--n-ink, #0f172a) !important;
+    white-space: nowrap;
+}
+
+.nl__adminSemBadge.ganjil,
+.nl__adminSemBadge.genap,
+.dark .nl__adminSemBadge.ganjil,
+.dark .nl__adminSemBadge.genap {
+    background: transparent !important;
+    border: none !important;
+    color: var(--n-ink, #0f172a) !important;
+}
+
+.dark .nl__adminSemText,
+.dark .nl__adminSemBadge {
+    background: transparent !important;
+    border: none !important;
+    color: var(--n-ink, #f8fafc) !important;
+}
+
+/* Cells */
+/* Kolom gabungan Semester + Tahun Ajaran (2 baris). */
+.nl__adminPeriodeCell {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+}
+
+.nl__adminTACell {
+    font-size: 0.72rem;
+    color: var(--n-ink, #0f172a) !important;
+    font-family: 'Poppins', sans-serif;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.dark .nl__adminTACell {
+    color: var(--n-ink, #f8fafc) !important;
+}
+
+.nl__adminSiswaName {
+    font-weight: 600;
+    color: var(--n-ink);
+}
+
+.nl__adminNisn {
+    font-family: 'Poppins', sans-serif;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--n-muted);
+}
+
+/* Materi/Bab: warna teks menandai jenis penilaian (pengganti kolom "Jenis"). */
+.nl__adminMateriCell {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    max-width: 150px;
+}
+
+.nl__adminMateriName,
+.nl__adminTagCell {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Materi Name (SUM 1, SUM 2, Bab 1, dll) SELALU HITAM */
+.nl__adminMateriName {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--n-ink, #0f172a) !important;
+}
+
+.dark .nl__adminMateriName {
+    color: var(--n-ink, #f8fafc) !important;
+}
+
+/* Tagihan (tugas_1, kuis_1, dll) tetap berwarna */
+.nl__adminTagCell {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: #0284c7;
+    opacity: 1;
+}
+
+.nl__tag-tugas {
+    color: #0284c7 !important;
+}
+
+.nl__tag-kuis {
+    color: #6366f1 !important;
+}
+
+.nl__tag-uh {
+    color: #0d9488 !important;
+}
+
+.dark .nl__tag-tugas {
+    color: #38bdf8 !important;
+}
+
+.dark .nl__tag-kuis {
+    color: #818cf8 !important;
+}
+
+.dark .nl__tag-uh {
+    color: #2dd4bf !important;
+}
+
+/* Distinct shades for each SUM number on tag cell only */
+.nl__jenis-sum-1 .nl__adminTagCell { color: #0284c7; }
+.nl__jenis-sum-2 .nl__adminTagCell { color: #0284c7; }
+.nl__jenis-sum-3 .nl__adminTagCell { color: #6366f1; }
+.nl__jenis-sum-4 .nl__adminTagCell { color: #2563eb; }
+.nl__jenis-sum-5 .nl__adminTagCell { color: #0369a1; }
+.nl__jenis-sum-6 .nl__adminTagCell { color: #1e40af; }
+.nl__jenis-sum-7 .nl__adminTagCell { color: #3b82f6; }
+.nl__jenis-sum-8 .nl__adminTagCell { color: #0891b2; }
+
+.nl__jenis-kuis .nl__adminTagCell { color: #6366f1; }
+.nl__jenis-tugas .nl__adminTagCell { color: #0284c7; }
+.nl__jenis-uh .nl__adminTagCell { color: #0d9488; }
+.nl__jenis-sum .nl__adminTagCell { color: #0284c7; }
+
+/* Dark Mode equivalents */
+.dark .nl__jenis-sum-1 .nl__adminTagCell { color: #38bdf8; }
+.dark .nl__jenis-sum-2 .nl__adminTagCell { color: #38bdf8; }
+.dark .nl__jenis-sum-3 .nl__adminTagCell { color: #818cf8; }
+.dark .nl__jenis-sum-4 .nl__adminTagCell { color: #93c5fd; }
+.dark .nl__jenis-sum-5 .nl__adminTagCell { color: #7dd3fc; }
+.dark .nl__jenis-sum-6 .nl__adminTagCell { color: #a5b4fc; }
+.dark .nl__jenis-sum-7 .nl__adminTagCell { color: #bfdbfe; }
+.dark .nl__jenis-sum-8 .nl__adminTagCell { color: #67e8f9; }
+
+.dark .nl__jenis-kuis .nl__adminTagCell { color: #a5b4fc; }
+.dark .nl__jenis-tugas .nl__adminTagCell { color: #7dd3fc; }
+.dark .nl__jenis-uh .nl__adminTagCell { color: #2dd4bf; }
+.dark .nl__jenis-sum .nl__adminTagCell { color: #38bdf8; }
+
+.nl__adminCatatan {
+    font-size: 0.75rem;
+    color: var(--n-ink, #0f172a);
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    display: block;
+}
+
+.nl__adminDate {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--n-ink, #0f172a) !important;
+    white-space: nowrap;
+}
+
+.dark .nl__adminCatatan,
+.dark .nl__adminDate {
+    color: var(--n-ink, #f8fafc) !important;
+}
+
+/* Nilai */
+.nl__adminNilai {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 28px;
+    border-radius: 8px;
+    font-weight: 800;
+    font-size: 0.8rem;
+}
+
+.nl__adminNilai.nl__nilai-tinggi {
+    background: rgba(26, 115, 232, 0.12);
+    color: #1a73e8;
+    border: 1px solid rgba(26, 115, 232, 0.25);
+}
+
+.nl__adminNilai.nl__nilai-sedang {
+    background: rgba(245, 158, 11, 0.1);
+    color: #d97706;
+}
+
+.nl__adminNilai.nl__nilai-rendah {
+    background: rgba(239, 68, 68, 0.1);
+    color: #dc2626;
+}
+
+.nl__adminNilai.nl__nilai-empty {
+    color: var(--n-muted);
+    font-weight: 400;
+    font-size: 0.75rem;
+}
+
+/* Edit Input */
+.nl__adminEditInput {
+    padding: 5px 8px;
+    border: 1.5px solid #1a73e8;
+    border-radius: 8px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--n-ink);
+    background: rgba(26, 115, 232, 0.05);
+    outline: none;
+    width: 100%;
+    max-width: 80px;
+    box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.1);
+}
+
+/* Aksi Buttons */
+.nl__adminAksiBtns {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+
+.nl__adminAksiBtn {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 0.85rem;
+}
+
+.nl__adminAksiBtnEdit {
+    background: rgba(59, 130, 246, 0.1);
+    color: #2563eb;
+}
+
+.nl__adminAksiBtnEdit:hover {
+    background: rgba(59, 130, 246, 0.2);
+    transform: scale(1.1);
+}
+
+.nl__adminAksiBtnDelete {
+    background: rgba(239, 68, 68, 0.08);
+    color: #ef4444;
+}
+
+.nl__adminAksiBtnDelete:hover {
+    background: rgba(239, 68, 68, 0.15);
+    transform: scale(1.1);
+}
+
+.nl__adminAksiBtnSave {
+    background: rgba(16, 185, 129, 0.1);
+    color: #10b981;
+}
+
+.nl__adminAksiBtnSave:hover {
+    background: rgba(16, 185, 129, 0.2);
+}
+
+.nl__adminAksiBtnCancel {
+    background: rgba(100, 116, 139, 0.1);
+    color: #64748b;
+}
+
+.nl__adminAksiBtnCancel:hover {
+    background: rgba(100, 116, 139, 0.2);
+}
+
+/* Admin Refresh Button */
+.nl__adminRefreshBtn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    color: white;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 0.9rem;
+}
+
+.nl__adminRefreshBtn:hover {
+    background: rgba(255, 255, 255, 0.25);
+    transform: rotate(180deg);
+}
+
+/* Admin Error Banner */
+.nl__adminErrorBanner {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 1.5rem;
+    background: rgba(239, 68, 68, 0.08);
+    border-bottom: 1px solid rgba(239, 68, 68, 0.2);
+    color: #ef4444;
+    font-size: 0.82rem;
+    font-weight: 500;
+}
+
+.nl__adminErrorBanner i {
+    font-size: 1rem;
+    flex-shrink: 0;
+}
+
+.nl__adminErrorBanner button {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 12px;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    border-radius: 8px;
+    background: transparent;
+    color: #ef4444;
+    font-size: 0.75rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.nl__adminErrorBanner button:hover {
+    background: rgba(239, 68, 68, 0.1);
+}
+
+/* Admin Retry Button */
+.nl__adminRetryBtn {
+    margin-top: 1rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 20px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #1a73e8, #3b82f6);
+    border: none;
+    color: white;
+    font-size: 0.82rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 4px 12px rgba(26, 115, 232, 0.3);
+}
+
+.nl__adminRetryBtn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(16, 185, 129, 0.4);
+}
+
+.nl__adminRetryBtn i {
+    transition: transform 0.3s;
+}
+
+.nl__adminRetryBtn:hover i {
+    transform: rotate(180deg);
+}
+
+/* Edit Input Text variant */
+.nl__adminEditInput--text {
+    max-width: 100px;
+    width: 100%;
+}
+
+/* =========================================
+   TASK DETAIL MODAL
+   ========================================= */
+/* Overlay dipindahkan ke globals.css agar z-index-nya menutup sidebar & header */
+.nl__adminModalOverlay {
+    animation: nlFadeIn 0.2s ease-out;
+}
+
+@keyframes nlFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.nl__adminModal {
+    background: var(--n-card);
+    width: 100%;
+    max-width: 800px;
+    border-radius: 16px;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    border: 1px solid var(--n-border);
+    overflow: hidden;
+    animation: nlSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes nlSlideUp {
+    from { opacity: 0; transform: translateY(20px) scale(0.95); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.nl__adminModalHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid var(--n-border);
+    background: var(--n-surface);
+}
+
+.nl__adminModalHeaderLeft h3 {
+    margin: 0;
+    font-size: 1.15rem;
+    font-weight: 800;
+    color: var(--n-ink);
+}
+
+.nl__adminModalHeaderLeft p {
+    margin: 4px 0 0;
+    font-size: 0.8rem;
+    color: var(--n-muted);
+    font-weight: 500;
+}
+
+.nl__adminModalClose {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    border: none;
+    background: var(--n-surface);
+    color: var(--n-muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 1rem;
+}
+
+.nl__adminModalClose:hover {
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+}
+
+.nl__adminModalBody {
+    padding: 0;
+    background: var(--n-bg);
+}
+
+.nl__adminModalBody .nl__adminTableScroll {
+    border-top: none;
+}
+
+
+/* Mobile Responsive */
+/* Mobile Responsive — Clean & Minimal */
+@media (max-width: 768px) {
+    /* Toolbar */
+    .nl__toolbar {
+        padding: 10px 12px;
+        border-radius: 12px;
+        gap: 10px;
+    }
+
+    .nl__toolbarRow {
+        flex-direction: column;
+        gap: 8px;
+        align-items: stretch;
+    }
+
+    .nl__searchGroup {
+        width: 100%;
+        flex: none;
+    }
+
+    .nl__searchInput {
+        padding: 8px 14px 8px 38px;
+        font-size: 0.85rem;
+        border-radius: 10px;
+    }
+
+    .nl__filters {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        width: 100%;
+    }
+
+    .nl__filters .nl__select {
+        flex: 1 1 calc(50% - 3px);
+        min-width: 0;
+        font-size: 0.78rem;
+        padding: 7px 8px;
+        border-radius: 10px;
+    }
+
+    /* Hero banner */
+    .nl-hero {
+        border-radius: 16px;
+        padding: 16px 16px 20px;
+        margin-bottom: 12px;
+    }
+
+    /* Context bar: filter chips stacked, cleaner spacing */
+    .nl__contextBar {
+        padding: 0;
+        gap: 8px;
+    }
+
+    .nl__filterGroup {
+        flex-direction: column;
+        gap: 8px;
+        width: 100%;
+    }
+
+    .nl__filterDivider {
+        display: none;
+    }
+
+    .nl__filterChip {
+        border-radius: 12px;
+        padding: 10px 14px;
+        gap: 10px;
+        box-shadow: none;
+        border: 1px solid var(--n-border);
+        background: var(--n-card);
+    }
+
+    .nl__filterChip.is-active {
+        border-color: var(--n-primary);
+        box-shadow: none;
+    }
+
+    .nl__filterChipIcon {
+        width: 30px;
+        height: 30px;
+        font-size: 12px;
+        border-radius: 8px;
+    }
+
+    .nl__filterChipLabel {
+        font-size: 0.65rem;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+    }
+
+    .nl__filterChipTrigger {
+        font-size: 0.85rem;
+        font-weight: 600;
+    }
+
+    .nl__periodeBadge {
+        padding: 7px 12px 7px 10px;
+        font-size: 0.75rem;
+    }
+
+    /* SubBar / SUM card: single column, compact */
+    .nl__subBar--grid {
+        padding: 12px;
+        gap: 10px;
+        border-radius: 14px;
+    }
+
+    .nl__segmented {
+        width: 100%;
+        height: 38px;
+        padding: 3px;
+        border-radius: 10px;
+    }
+
+    .nl__segBtn {
+        flex: 1;
+        font-size: 0.65rem;
+        font-weight: 800;
+        padding: 0;
+        border-radius: 8px;
+        letter-spacing: 0.02em;
+    }
+
+    .nl__segBtn--active {
+        border-radius: 8px;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+    }
+
+    .nl__sumPicker {
+        min-width: 100px;
+        height: 36px;
+        padding: 0 12px;
+        border-radius: 10px;
+    }
+
+    /* One-row subBar */
+    .nl__oneRowGrid {
+        flex-direction: column;
+        gap: 10px;
+        align-items: stretch;
+    }
+
+    .nl__oneCol--controls,
+    .nl__oneCol--title,
+    .nl__oneCol--nav {
+        border: none;
+        padding: 0;
+        min-width: unset;
+    }
+
+    .nl__oneCol--nav .nl__segmented {
+        width: 100%;
+    }
+
+    /* Topic card: simple and compact */
+    .nl__topicsContainer {
+        border-radius: 16px;
+        margin-top: 16px;
+    }
+
+    .nl__topicsGrid {
+        padding: 16px;
+        gap: 10px;
+    }
+
+    .nl__topicItem {
+        padding: 10px 14px;
+        border-radius: 10px;
+        background: var(--n-soft);
+    }
+
+    /* Toolbar buttons */
+    .nl__actionBtn {
+        height: 34px;
+        padding: 0 12px;
+        font-size: 0.75rem;
+        border-radius: 10px;
+    }
+
+    /* Admin panel */
+    .nl__adminPanelHeader {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+        padding: 1rem;
+    }
+
+    /* Hide table, show cards */
+    .nl__tableWrap {
+        display: none;
+    }
+
+    .nl__mobileCards {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .nl__scoreValue {
+        font-size: 0.85rem;
+        font-weight: 700;
+        color: var(--n-ink);
+        flex-shrink: 0;
+    }
+
+    .nl__scoreBadge {
+        min-width: 36px;
+        height: 24px;
+        padding: 0 8px;
+        border-radius: 8px;
+        font-size: 0.82rem;
+        font-weight: 700;
+    }
+
+    .nl__scoreFinal {
+        padding: 6px 12px;
+        border-radius: 8px;
+        font-size: 0.88rem;
+        font-weight: 700;
+    }
+
+    .nl__cardFinal {
+        margin-top: 10px;
+        padding-top: 8px;
+        border-top: 1.5px solid var(--n-border);
+        text-align: center;
+        font-size: 0.85rem;
+        font-weight: 700;
+        color: var(--n-primary);
+    }
+
+    /* Hide desktop mode switcher */
+    .nl__modeSwitcher--desktop {
+        display: none;
+    }
+}
+
+/* Admin Banner */
+.nl__adminBanner {
+    background: linear-gradient(135deg, #064e3b, #065f46, #047857);
+    color: white;
+    padding: 12px 22px;
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 0.83rem;
+    font-weight: 500;
+    border: 1px solid rgba(52, 211, 153, 0.25);
+    box-shadow: 0 4px 16px rgba(5, 150, 105, 0.2);
+    animation: nlBannerIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.nl__adminBanner i {
+    font-size: 1.3rem;
+    color: #6ee7b7;
+    flex-shrink: 0;
+}
+
+.nl__adminBanner strong {
+    font-weight: 700;
+    color: #a7f3d0;
+}
+
+@keyframes nlBannerIn {
+    from {
+        opacity: 0;
+        transform: translateY(-8px) scale(0.98);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+/* Dark mode admin styles */
+.dark .nl__adminBanner {
+    background: linear-gradient(135deg, #022c22, #064e3b, #065f46);
+    border-color: rgba(52, 211, 153, 0.15);
+}
+
+.dark .nl__adminGuruSelect {
+    background: rgba(16, 185, 129, 0.08);
+    border-color: rgba(16, 185, 129, 0.2);
+    color: #d1fae5;
+}
+
+.dark .nl__adminGuruSelect option {
+    background: #1e293b;
+    color: #f1f5f9;
+}
+
+.dark .nl__adminBadge {
+    background: rgba(16, 185, 129, 0.2);
+    border-color: rgba(52, 211, 153, 0.3);
+}
+
+.dark .nl__adminToggle {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.15);
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.dark .nl__adminToggle:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.dark .nl__btnGhost {
+    background: rgba(16, 185, 129, 0.08);
+    border-color: rgba(16, 185, 129, 0.2);
+    color: #6ee7b7;
+}
+
+.dark .nl__btnGhost:hover {
+    background: rgba(16, 185, 129, 0.15);
+    border-color: rgba(16, 185, 129, 0.4);
+}
+
+/* Sel yang hanya bisa dibaca ditandai redup + kursor default.
+   Sel yang bisa diisi dibiarkan bersih — penandanya cukup fokus/ring biru,
+   bukan latar hijau di seluruh tabel. */
+.nl__scoreInput:read-only {
+    opacity: 0.55;
+    cursor: default;
+}
+
+/* Mobile Admin Toggle */
+@media (max-width: 768px) {
+    .nl__adminControls {
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+    }
+
+    .nl__adminToggle {
+        padding: 8px 14px;
+        font-size: 0.72rem;
+    }
+
+    .nl__adminBadge {
+        font-size: 0.68rem;
+        padding: 5px 11px;
+    }
+
+    .nl__adminBanner {
+        font-size: 0.78rem;
+        padding: 10px 16px;
+        border-radius: 12px;
+    }
+
+    .nl__adminGuruSelector {
+        width: 100%;
+    }
+
+    .nl__adminGuruSelector .nl__searchGroup {
+        width: 100%;
+        min-width: unset;
+    }
+
+    .nl__adminGuruSelect {
+        width: 100%;
+        font-size: 0.8rem;
+    }
+}
+
+.nl__selectGrid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    width: 100%;
+}
+
+/* --- Loading Bars --- */
+.nl__loading-bars {
+    display: flex;
+    gap: 3px;
+    align-items: center;
+    justify-content: center;
+    height: 14px;
+}
+
+.nl__loading-bars .bar {
+    width: 3px;
+    height: 12px;
+    background: #fff;
+    border-radius: 99px;
+    animation: nlWave 1s infinite ease-in-out;
+}
+
+.nl__loading-bars .bar:nth-child(1) {
+    animation-delay: -0.2s;
+}
+
+.nl__loading-bars .bar:nth-child(2) {
+    animation-delay: -0.1s;
+}
+
+@keyframes nlWave {
+
+    0%,
+    40%,
+    100% {
+        transform: scaleY(0.6);
+        opacity: 0.6;
+    }
+
+    20% {
+        transform: scaleY(1.3);
+        opacity: 1;
+    }
+}
+
+.dark .nl__loading-bars .bar {
+    background: var(--n-primary);
+    opacity: 0.7;
+}
+
+.dark .nl__topicItem:hover {
+    background: rgba(59, 130, 246, 0.06);
+}
+
+.dark .nl__topicLabel {
+    background: rgba(59, 130, 246, 0.12);
+}
+
+.dark .nl__btnSecondary {
+    background: rgba(59, 130, 246, 0.1);
+    color: #93c5fd;
+    border-color: rgba(59, 130, 246, 0.2);
+}
+
+.dark .nl__btnSecondary:hover {
+    background: rgba(59, 130, 246, 0.15);
+}
+
+/* Rapor highlight in table */
+/* Aksen khusus kolom Rapor (mode REKAP). Sebelumnya memakai `td:last-child`,
+   sehingga kolom terakhir di mode KUIS/TUGAS/UH ikut terwarnai biru. */
+.nl__table tbody td.nl__colRapor {
+    background: rgba(59, 130, 246, 0.05);
+}
+
+.dark .nl__table tbody td.nl__colRapor {
+    background: rgba(59, 130, 246, 0.1);
+}
+
+/* Info bar in REKAP */
+.nl__rekapInfo {
+    margin: 0;
+    padding: 12px 20px;
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.06), rgba(59, 130, 246, 0.03));
+    border-top: 1px solid rgba(59, 130, 246, 0.1);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 0.82rem;
+    color: var(--n-muted);
+}
+
+.nl__rekapInfo i {
+    color: var(--n-primary);
+    font-size: 1rem;
+    flex-shrink: 0;
+}
+
+.nl__rekapInfo strong {
+    color: var(--n-ink);
+}
+
+/* --- Mobile Cards --- */
+.nl__mobileCards {
+    display: none;
+}
+
+@media (max-width: 768px) {
+    .nl__tableWrap {
+        display: none;
+    }
+
+    .nl__mobileCards {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .nl__modeSwitcher--desktop {
+        display: none;
+    }
+
+    /* Card Redesign */
+    .nl__card {
+        background: var(--n-card);
+        border-radius: 14px;
+        border: 1px solid var(--n-border);
+        box-shadow: var(--n-shadow);
+        padding: 12px;
+        transition: all 0.2s;
+        margin-bottom: 0;
+    }
+
+    .nl__card:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0, 56, 168, 0.06);
+    }
+
+    .nl__cardId {
+        font-size: 0.68rem;
+        font-weight: 600;
+        color: var(--n-muted);
+        font-family: 'Poppins', sans-serif;
+        flex-shrink: 0;
+    }
+
+    .nl__scoreValue {
+        font-size: 0.82rem;
+        font-weight: 600;
+        color: var(--n-ink);
+        flex-shrink: 0;
+    }
+
+    .nl__cardFinal {
+        margin-top: 8px;
+        padding-top: 0;
+        border-top: 2px solid var(--n-primary);
+        text-align: center;
+        font-size: 0.88rem;
+        font-weight: 700;
+        color: var(--n-primary);
+    }
+
+    .nl__toolbar {
+        padding: 12px;
+    }
+
+    .nl__toolbarRow {
+        flex-direction: column;
+        gap: 8px;
+        align-items: stretch;
+        min-width: 0;
+    }
+
+    .nl__searchGroup {
+        min-width: unset;
+        width: 100%;
+    }
+
+    .nl__searchInput {
+        width: 100%;
+        font-size: 0.82rem;
+        padding: 8px 16px 8px 40px;
+    }
+
+    .nl__filters {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        width: 100%;
+    }
+
+    .nl__filters .nl__select {
+        flex: 1 1 calc(50% - 3px);
+        min-width: 0;
+    }
+
+    .nl__select {
+        min-width: unset;
+        width: 100%;
+        font-size: 0.72rem;
+        padding: 6px 8px;
+    }
+
+    .nl__modeSwitcher {
+        justify-content: center;
+        flex-wrap: wrap;
+        gap: 2px;
+        width: 100%;
+    }
+
+    .nl__modeBtn {
+        padding: 5px 7px;
+        font-size: 0.62rem;
+        min-width: 46px;
+        flex: 1;
+    }
+
+    .nl__actions {
+        flex-wrap: wrap;
+        justify-content: center;
+        margin-left: 0;
+        gap: 6px;
+        width: 100%;
+    }
+
+    .nl__btn {
+        padding: 7px 10px;
+        font-size: 0.68rem;
+        height: 34px;
+        white-space: nowrap;
+        flex: none;
+        min-width: 72px;
+        max-width: 110px;
+    }
+
+    .nl__subTabs {
+        gap: 6px;
+        padding-bottom: 6px;
+    }
+
+    .nl__subBtn {
+        padding: 5px 10px;
+        font-size: 0.68rem;
+        min-width: 66px;
+    }
+
+    /* ── Topics Container Mobile ── */
+    .nl__topicsContainer {
+        border-radius: 14px;
+        margin-top: 12px;
+    }
+
+    .nl__topicsHeader {
+        padding: 12px 16px;
+    }
+
+    .nl__topicsTitle {
+        font-size: 0.68rem;
+    }
+
+    .nl__topicsGrid {
+        padding: 12px 14px;
+        gap: 8px;
+    }
+
+    .nl__topicItem {
+        flex-direction: row;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 10px;
+        border-radius: 10px;
+    }
+
+    .nl__topicLabel {
+        font-size: 0.65rem;
+        padding: 3px 6px 3px 0;
+        min-width: 38px;
+        flex-shrink: 0;
+        text-align: center;
+    }
+
+    .nl__topicText {
+        font-size: 0.78rem;
+        line-height: 1.4;
+        flex: 1;
+        word-break: break-word;
+        overflow-wrap: break-word;
+    }
+}
+
+@media (min-width: 769px) {
+    .nl__modeSwitcher--mobile {
+        display: none;
+    }
+}
+
+/* Utility: animate-fade */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.animate-fade {
+    animation: fadeIn 0.3s ease-out forwards;
+}
+
+/* =========================================================
+   CONTEXT BAR + NAVIGATION SYSTEM  — Premium Edition
+/* ===================== */
+
+.nl__editTopikBtn,
+.nl__addSumBtn {
+    height: 44px;
+    border-radius: 12px;
+    border: none;
+    background: rgba(0, 56, 168, 0.08);
+    color: var(--n-primary);
+    cursor: pointer;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    flex-shrink: 0;
+}
+
+.nl__editTopikBtn i,
+.nl__addSumBtn i {
+    font-size: 1.15rem;
+}
+
+/* REFINED OVERRIDES */
+/* Refined shadows */
+/* ===================== */
+
+/* ── Periode Popover (now used inside filters) ── */
+
+.nl__periodePopoverHeader {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 14px 20px;
+    background: linear-gradient(135deg, rgba(0, 56, 168, 0.06) 0%, rgba(194, 24, 91, 0.04) 100%);
+    border-bottom: 1px solid var(--n-border);
+    font-size: 0.72rem;
+    font-weight: 800;
+    color: var(--n-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.dark .nl__periodePopoverHeader {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.nl__periodePopoverHeader i {
+    font-size: 0.9rem;
+    color: var(--n-primary);
+}
+
+.nl__periodePopoverBody {
+    padding: 14px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.nl__periodeField {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.nl__periodeField label {
+    font-size: 0.65rem;
+    font-weight: 850;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-left: 12px;
+    opacity: 0.8;
+}
+
+.nl__periodeDivider {
+    height: 1px;
+    background: linear-gradient(to right, transparent, rgba(0, 0, 0, 0.05), transparent);
+    margin: 8px 12px;
+}
+
+.nl__periodeOptionList {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.nl__periodeOption {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 10px 14px;
+    border: 1px solid transparent;
+    background: transparent;
+    border-radius: 12px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #1e293b;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    text-align: left;
+}
+
+.nl__periodeOption:hover {
+    background: rgba(0, 56, 168, 0.04);
+}
+
+.dark .nl__periodeOption:hover {
+    background: rgba(79, 142, 247, 0.08);
+}
+
+.nl__periodeOption--active {
+    background: linear-gradient(135deg, rgba(30, 58, 138, 0.06), rgba(59, 130, 246, 0.06)) !important;
+    color: #1e3a8a !important;
+    font-weight: 800 !important;
+    border: 1px solid rgba(30, 58, 138, 0.1) !important;
+}
+
+.dark .nl__periodeOption--active {
+    background: rgba(79, 142, 247, 0.15);
+    color: var(--n-primary);
+}
+
+.nl__periodeOption i {
+    font-size: 1.1rem;
+    color: #1e3a8a;
+    flex-shrink: 0;
+}
+
+/* ── Filter Chips (Kelas & Mapel) — Bar tersegmentasi ── */
+.nl__filterGroup {
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+    flex-wrap: nowrap;
+    flex: 1;
+    width: 100%;
+    background: var(--n-card);
+    border: 1.5px solid var(--n-border);
+    border-radius: 14px;
+    /* JANGAN beri overflow:hidden — dropdown chip diposisikan absolut dan akan terpotong */
+    box-shadow: none;
+}
+
+.dark .nl__filterGroup,
+html.dark .nl__filterGroup {
+    background: #000000 !important;
+    border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
+    border-radius: 14px !important;
+    box-shadow: none !important;
+}
+
+.nl__filterDivider {
+    width: 1px;
+    align-self: stretch;
+    height: auto;
+    margin: 8px 0;
+    background: var(--n-border);
+    flex-shrink: 0;
+    opacity: 0.6;
+}
+
+.dark .nl__filterDivider,
+html.dark .nl__filterDivider {
+    background: rgba(59, 130, 246, 0.45) !important;
+    width: 1.5px !important;
+    opacity: 1 !important;
+}
+
+.nl__filterChip {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 14px;
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    transition: background 0.2s ease;
+    cursor: pointer;
+    box-shadow: none;
+    flex: 1;
+    min-width: 0;
+}
+
+.nl__filterChip--accent,
+.nl__filterChip--periode {
+    border: none;
+}
+
+/* Sudut luar segmen pertama/terakhir mengikuti radius kontainer */
+.nl__filterChip:first-child {
+    border-radius: 11px 0 0 11px;
+}
+
+.nl__filterChip:last-child {
+    border-radius: 0 11px 11px 0;
+}
+
+.nl__filterChip:hover {
+    background: var(--n-soft);
+    box-shadow: none;
+}
+
+.dark .nl__filterChip {
+    background: transparent;
+    border: none;
+}
+
+.dark .nl__filterChip:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+/* Filter chip icon circle */
+.nl__filterChipIcon {
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    background: rgba(0, 56, 168, 0.05);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--n-primary);
+    font-size: 14px;
+    flex-shrink: 0;
+    transition: all 0.25s;
+}
+
+.nl__filterChip:hover .nl__filterChipIcon {
+    background: linear-gradient(135deg, rgba(0, 56, 168, 0.14) 0%, rgba(0, 56, 168, 0.06) 100%);
+    transform: scale(1.05);
+}
+
+.nl__filterChipIcon--accent {
+    background: linear-gradient(135deg, rgba(0, 56, 168, 0.08) 0%, rgba(0, 56, 168, 0.04) 100%);
+    color: var(--n-primary);
+}
+
+.nl__filterChip:hover .nl__filterChipIcon--accent {
+    background: linear-gradient(135deg, rgba(0, 56, 168, 0.14) 0%, rgba(0, 56, 168, 0.06) 100%);
+}
+
+.dark .nl__filterChipIcon,
+html.dark .nl__filterChipIcon {
+    background: rgba(56, 189, 248, 0.14) !important;
+    color: #38bdf8 !important;
+    border: 1px solid rgba(56, 189, 248, 0.3) !important;
+}
+
+.dark .nl__filterChipIcon--accent,
+html.dark .nl__filterChipIcon--accent {
+    background: rgba(56, 189, 248, 0.14) !important;
+    color: #38bdf8 !important;
+    border: 1px solid rgba(56, 189, 248, 0.3) !important;
+}
+
+.nl__filterChipIcon--periode {
+    background: linear-gradient(135deg, rgba(0, 56, 168, 0.08) 0%, rgba(0, 56, 168, 0.04) 100%);
+    color: var(--n-primary);
+}
+
+.nl__filterChip:hover .nl__filterChipIcon--periode {
+    background: linear-gradient(135deg, rgba(0, 56, 168, 0.14) 0%, rgba(0, 56, 168, 0.06) 100%);
+}
+
+.dark .nl__filterChipIcon--periode,
+html.dark .nl__filterChipIcon--periode {
+    background: rgba(56, 189, 248, 0.14) !important;
+    color: #38bdf8 !important;
+    border: 1px solid rgba(56, 189, 248, 0.3) !important;
+}
+
+/* Filter chip body */
+.nl__filterChipBody {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 0;
+}
+
+.nl__filterChipLabel {
+    font-size: 0.6rem;
+    font-weight: 800;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 2px;
+    line-height: 1;
+}
+
+/* Filter chip select */
+.nl__filterChipSelect {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.nl__filterChipSelect select {
+    background: transparent;
+    appearance: none;
+    -webkit-appearance: none;
+    border: none;
+    outline: none;
+    padding: 0 18px 0 0;
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: var(--n-ink);
+    cursor: pointer;
+    letter-spacing: -0.01em;
+    transition: color 0.2s;
+    max-width: 180px;
+    text-overflow: ellipsis;
+}
+
+.nl__filterChipSelect select:hover {
+    color: var(--n-primary);
+}
+
+.nl__filterChip--accent .nl__filterChipSelect select {
+    color: var(--n-ink);
+}
+
+.nl__filterChip--accent .nl__filterChipSelect select:hover {
+    color: var(--n-primary);
+}
+
+.dark .nl__filterChipSelect select {
+    color: var(--n-ink);
+}
+
+.dark .nl__filterChip--accent .nl__filterChipSelect select {
+    color: var(--n-ink);
+}
+
+.nl__filterChipSelect i {
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 10px;
+    color: var(--n-muted);
+    pointer-events: none;
+    opacity: 0.5;
+    transition: all 0.25s;
+}
+
+.nl__filterChip:hover .nl__filterChipSelect i {
+    opacity: 1;
+}
+
+/* ── Mobile overrides for filter chips ── */
+@media (max-width: 768px) {
+    .nl-hero {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        text-align: left !important;
+        margin-bottom: 12px !important;
+        padding: 20px 16px !important;
+        gap: 14px !important;
+    }
+
+    .nl-hero-left {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        text-align: left !important;
+        width: 100% !important;
+        gap: 10px !important;
+    }
+
+    .nl-hero-text {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        text-align: left !important;
+        width: 100% !important;
+    }
+
+    .nl-hero-title {
+        text-align: left !important;
+        font-size: 1.2rem !important;
+        width: 100% !important;
+    }
+
+    .nl-hero-subtitle {
+        text-align: left !important;
+        font-size: 0.78rem !important;
+        width: 100% !important;
+    }
+
+    .nl__contextBar {
+        padding: 8px;
+        gap: 0;
+    }
+
+    .nl__filterGroup {
+        flex-direction: column;
+        gap: 5px;
+        width: 100%;
+    }
+
+    .nl__filterDivider {
+        display: none;
+    }
+
+    .nl__filterChip {
+        flex: unset;
+        width: 100%;
+        min-width: 0;
+        padding: 8px 12px;
+        gap: 10px;
+        border-radius: 10px;
+    }
+
+    .nl__filterChipIcon {
+        width: 28px;
+        height: 28px;
+        font-size: 12px;
+    }
+
+    .nl__filterChipLabel {
+        font-weight: 600;
+        font-size: 0.6rem;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+        color: var(--n-muted);
+    }
+
+    .nl__filterChipTrigger {
+        font-size: 0.82rem;
+        font-weight: 600;
+    }
+
+    .nl__filterChipBody {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .nl__filterChipSelect select {
+        max-width: 100%;
+        width: 100%;
+        font-weight: 500;
+        font-size: 0.82rem;
+    }
+
+    .nl__periodeBadge {
+        padding: 7px 14px 7px 12px;
+        font-size: 0.72rem;
+    }
+}
+
+/* ── Filter Chip Trigger (Custom Dropdown Button) ── */
+.nl__filterChipTrigger {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: transparent;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: #1e293b;
+    letter-spacing: -0.01em;
+    transition: color 0.2s;
+    white-space: nowrap;
+}
+
+.nl__filterChipTrigger:hover {
+    color: var(--n-primary);
+}
+
+.nl__filterChipTrigger i {
+    font-size: 10px;
+    color: var(--n-muted);
+    opacity: 0.5;
+    transition: all 0.25s;
+}
+
+.nl__filterChipTrigger:hover i {
+    color: var(--n-primary);
+    opacity: 1;
+}
+
+.nl__filterChipTrigger--accent {
+    color: #1e293b;
+}
+
+.nl__filterChipTrigger--accent:hover {
+    color: var(--n-primary);
+}
+
+.dark .nl__filterChipTrigger,
+html.dark .nl__filterChipTrigger {
+    color: #f8fafc !important;
+}
+
+.dark .nl__filterChipTrigger--accent,
+html.dark .nl__filterChipTrigger--accent {
+    color: #f8fafc !important;
+}
+
+.dark .nl__filterChipTrigger i,
+html.dark .nl__filterChipTrigger i,
+.dark .nl__filterChipTrigger:hover i,
+html.dark .nl__filterChipTrigger:hover i {
+    color: #38bdf8 !important;
+    opacity: 1 !important;
+    font-size: 12px !important;
+    font-weight: 800 !important;
+    filter: drop-shadow(0 0 4px rgba(56, 189, 248, 0.7)) !important;
+}
+
+/* ── Custom Filter Dropdown Panel ── */
+.nl__filterDropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    margin-top: 8px;
+    min-width: 160px;
+    background: var(--n-card);
+    border-radius: 14px;
+    border: 1px solid var(--n-border);
+    box-shadow: 0 16px 40px -8px rgba(0, 0, 0, 0.15), 0 6px 16px -6px rgba(0, 0, 0, 0.08);
+    z-index: 200;
+    overflow: hidden;
+    animation: nlDropIn 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+    padding: 5px;
+}
+
+.nl__filterDropdown--wide {
+    min-width: 240px;
+}
+
+.nl__filterDropdown--periode {
+    min-width: 220px;
+    padding: 0;
+}
+
+.nl__filterDropdown--periode .nl__periodePopoverHeader {
+    padding: 12px 16px;
+}
+
+.nl__filterDropdown--periode .nl__periodeOption {
+    padding: 8px 12px;
+}
+
+.dark .nl__filterDropdown {
+    background: var(--n-elevated);
+    box-shadow: 0 16px 40px -8px rgba(0, 0, 0, 0.5);
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
+.nl__filterDropdownScroll {
+    max-height: 240px;
+    overflow-y: auto;
+}
+
+.nl__filterDropdownItem {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 9px 14px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    text-align: left;
+    border-radius: 9px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--n-ink);
+    transition: all 0.15s;
+    margin-bottom: 2px;
+}
+
+.nl__filterDropdownItem:last-child {
+    margin-bottom: 0;
+}
+
+.nl__filterDropdownItem:hover {
+    background: rgba(0, 56, 168, 0.05);
+}
+
+.dark .nl__filterDropdownItem:hover {
+    background: rgba(79, 142, 247, 0.08);
+}
+
+.nl__filterDropdownItem--active {
+    background: rgba(0, 56, 168, 0.07);
+    color: var(--n-primary);
+    font-weight: 700;
+}
+
+.dark .nl__filterDropdownItem--active {
+    background: rgba(79, 142, 247, 0.1);
+    color: var(--n-primary);
+}
+
+.nl__filterDropdownCheck {
+    font-size: 1rem;
+    color: var(--n-primary);
+    flex-shrink: 0;
+    margin-left: 8px;
+}
+
+/* ── Sub-bar (contextual controls below tabs) ── */
+.nl__subBar {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 12px 24px !important;
+    background: rgba(241, 245, 249, 0.5);
+    border: 1px solid rgba(0, 0, 0, 0.04);
+    border-radius: 10px;
+    flex-wrap: wrap;
+    animation: nlFadeIn 0.2s ease-out;
+    position: relative;
+    z-index: 10;
+}
+
+.nl__subBar--grid {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 20px;
+    align-items: center;
+}
+
+.nl__subBarGrid {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+    position: relative;
+}
+
+.nl__subBarGrid:first-child {
+    z-index: 5;
+}
+
+.nl__subBarGrid--right {
+    justify-content: flex-end;
+}
+
+@keyframes nlFadeIn {
+    from { opacity: 0; transform: translateY(0); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.dark .nl__subBar {
+    background: rgba(255, 255, 255, 0.03);
+    border-color: rgba(255, 255, 255, 0.04);
+}
+
+@media (max-width: 768px) {
+    .nl__subBar {
+        padding: 8px 12px;
+        gap: 8px;
+        overflow-x: visible;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+        flex-wrap: wrap;
+    }
+
+    .nl__subBar--grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+
+    .nl__subBarGrid--right {
+        justify-content: flex-start;
+    }
+
+    .nl__subBar::-webkit-scrollbar {
+        display: none;
+    }
+
+    .nl__filterChipTrigger {
+        font-size: 0.82rem;
+    }
+}
+
+/* Outer container */
+.nl__controlArea {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 0;
+    margin: 0 0 16px; /* 16px gap below to Action Bar */
+}
+
+/* ── Row 1: Context Bar ── */
+.nl__contextBar {
+    display: flex;
+    align-items: center;
+    justify-content: stretch;
+    gap: 0;
+    flex-wrap: nowrap;
+    padding: 10px 16px;
+    background: var(--n-card);
+    border: 1.5px solid var(--n-border);
+    border-radius: 16px;
+    box-shadow: var(--n-shadow-soft);
+    transition: box-shadow 0.3s;
+}
+
+.nl__contextBar:hover {
+    box-shadow: var(--n-shadow);
+}
+
+.dark .nl__contextBar,
+html.dark .nl__contextBar {
+    background: #000000 !important;
+    border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
+    border-radius: 16px !important;
+    box-shadow: none !important;
+}
+
+/* Remove duplicate inner border inside contextBar */
+.nl__contextBar .nl__filterGroup {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
+/* Kelas / Mapel typographic selectors */
+.nl__contextSelectors {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-wrap: wrap;
+    font-size: 1.35rem;
+    font-weight: 800;
+    letter-spacing: -0.025em;
+    color: var(--n-ink);
+    line-height: 1.2;
+}
+
+.nl__contextLabel {
+    font-size: 1rem;
+    font-weight: 500;
+    color: var(--n-muted);
+    margin-right: 4px;
+    letter-spacing: 0.01em;
+}
+
+.nl__contextDivider {
+    margin: 0 6px;
+    font-size: 1.5rem;
+    font-weight: 200;
+    color: var(--n-border);
+    line-height: 1;
+    user-select: none;
+    opacity: 0.6;
+}
+
+@media (min-width: 1024px) {
+    .nl__contextDivider {
+        margin: 0 12px;
+    }
+}
+
+/* Inline select — transparent, borderless */
+.nl__inlineSelect {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+}
+
+.nl__inlineSelect select {
+    background: transparent;
+    appearance: none;
+    -webkit-appearance: none;
+    outline: none;
+    cursor: pointer;
+    padding: 2px 24px 2px 0;
+    font-size: inherit;
+    font-weight: inherit;
+    color: inherit;
+    border: none;
+    border-bottom: 2px solid transparent;
+    transition: color 0.25s, border-color 0.25s;
+    position: relative;
+    z-index: 1;
+}
+
+.nl__inlineSelect select:hover {
+    color: var(--n-primary);
+    border-bottom-color: rgba(0, 56, 168, 0.15);
+}
+
+.nl__inlineSelect select:focus {
+    border-bottom-color: var(--n-primary);
+}
+
+.nl__inlineSelect i {
+    position: absolute;
+    right: 2px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 11px;
+    color: var(--n-muted);
+    pointer-events: none;
+    transition: color 0.25s, transform 0.25s;
+    opacity: 0.5;
+}
+
+.nl__inlineSelect:hover i {
+    color: var(--n-primary);
+    opacity: 1;
+    transform: translateY(-50%) scale(1.1);
+}
+
+/* Accent variant for Mapel */
+.nl__inlineSelect--accent select {
+    color: var(--n-primary);
+}
+
+.nl__inlineSelect--accent select:hover {
+    color: var(--n-primary-light);
+}
+
+.nl__inlineSelect--accent i {
+    color: var(--n-primary);
+    opacity: 0.4;
+}
+
+.nl__inlineSelect--accent:hover i {
+    color: var(--n-primary);
+    opacity: 1;
+}
+
+/* Dark mode for inline selects */
+.dark .nl__inlineSelect select {
+    color: var(--n-ink);
+}
+
+.dark .nl__inlineSelect select:hover {
+    color: var(--n-primary);
+    border-bottom-color: rgba(79, 142, 247, 0.2);
+}
+
+.dark .nl__inlineSelect--accent select {
+    color: var(--n-primary);
+}
+
+/* Right side: Search + buttons */
+.nl__contextActions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+/* Search pill — premium glassmorphism */
+.nl__searchPill {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: 34px;
+    padding: 0 12px;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.nl__searchPill:hover {
+    background: rgba(241, 245, 249, 0.9);
+    border-color: rgba(0, 56, 168, 0.15);
+    box-shadow: 0 2px 12px rgba(0, 56, 168, 0.06);
+}
+
+.nl__searchPill:focus-within {
+    background: var(--n-card);
+    border-color: var(--n-primary);
+    box-shadow: 0 0 0 3px rgba(0, 56, 168, 0.08), 0 4px 16px rgba(0, 56, 168, 0.06);
+}
+
+.nl__searchPill i {
+    font-size: 12px;
+    color: var(--n-muted);
+    flex-shrink: 0;
+    transition: color 0.3s;
+}
+
+.nl__searchPill:focus-within i {
+    color: var(--n-primary);
+}
+
+.nl__searchPill input {
+    background: transparent;
+    border: none;
+    outline: none;
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--n-ink);
+    width: 120px;
+    letter-spacing: 0.01em;
+}
+
+@media (min-width: 1024px) {
+    .nl__searchPill input {
+        width: 150px;
+    }
+}
+
+.nl__searchPill input::placeholder {
+    color: var(--n-muted);
+    font-weight: 400;
+}
+
+.dark .nl__searchPill {
+    background: rgba(255, 255, 255, 0.04);
+    border-color: var(--n-border);
+    backdrop-filter: blur(6px);
+}
+
+.dark .nl__searchPill:hover {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(79, 142, 247, 0.2);
+}
+
+.dark .nl__searchPill:focus-within {
+    background: var(--n-card);
+    border-color: var(--n-primary);
+    box-shadow: 0 0 0 3px rgba(79, 142, 247, 0.12);
+}
+
+/* Action buttons — subtle, refined */
+.nl__actionBtns {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.nl__actionBtn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 38px;
+    padding: 0 14px;
+    border-radius: 10px;
+    border: 1px solid var(--n-border);
+    background: var(--n-card);
+    color: var(--n-muted);
+    font-size: 0.76rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    white-space: nowrap;
+    letter-spacing: 0.01em;
+}
+
+.nl__actionBtn i {
+    font-size: 13px;
+    transition: transform 0.25s;
+}
+
+.nl__actionBtn span {
+    display: none;
+}
+
+@media (min-width: 640px) {
+    .nl__actionBtn span {
+        display: inline;
+    }
+}
+
+.nl__actionBtn:hover {
+    color: var(--n-primary);
+    border-color: rgba(0, 56, 168, 0.25);
+    background: rgba(0, 56, 168, 0.04);
+    box-shadow: 0 2px 8px rgba(0, 56, 168, 0.08);
+    transform: translateY(-1px);
+}
+
+.nl__actionBtn:hover i {
+    transform: scale(1.12);
+}
+
+.nl__actionBtn--export:hover {
+    color: #1a73e8;
+    border-color: rgba(26, 115, 232, 0.25);
+    background: rgba(26, 115, 232, 0.04);
+    box-shadow: 0 2px 8px rgba(26, 115, 232, 0.08);
+}
+
+.nl__actionBtn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    pointer-events: none;
+    transform: none;
+}
+
+.dark .nl__actionBtn {
+    background: rgba(255, 255, 255, 0.04);
+    border-color: var(--n-border);
+    color: var(--n-muted);
+}
+
+.dark .nl__actionBtn:hover {
+    color: var(--n-primary);
+    background: rgba(79, 142, 247, 0.08);
+    border-color: rgba(79, 142, 247, 0.25);
+}
+
+/* Small action button for mobile */
+.nl__actionBtn--sm {
+    height: 34px;
+    width: 34px;
+    padding: 0;
+    justify-content: center;
+    border-radius: 9px;
+    font-size: 14px;
+}
+
+.nl__actionBtn--sm i {
+    font-size: 14px;
+    margin: 0;
+}
+
+/* ── Row 2: Navigation Bar (Tabs + Inline Controls) ── */
+.nl__navBar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    border-bottom: 1px solid var(--n-border);
+    padding: 4px 0;
+    position: relative;
+    flex-wrap: wrap;
+    width: 100%;
+    overflow: visible;
+}
+
+.dark .nl__navBar {
+    border-bottom-color: var(--n-border);
+}
+
+/* Main tabs — elegant bottom indicator */
+.nl__mainTabs {
+    display: flex;
+    gap: 2px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.nl__mainTabs::-webkit-scrollbar {
+    display: none;
+}
+
+.nl__tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 8px 14px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--n-muted);
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    letter-spacing: 0.005em;
+}
+
+.nl__tab::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 50%;
+    width: 0;
+    height: 2.5px;
+    background: var(--n-primary);
+    border-radius: 2px 2px 0 0;
+    transform: translateX(-50%);
+    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.nl__tab:hover {
+    color: var(--n-ink);
+    background: rgba(0, 56, 168, 0.02);
+    border-radius: 8px 8px 0 0;
+}
+
+.nl__tab:hover::after {
+    width: 40%;
+}
+
+.nl__tab i {
+    font-size: 14px;
+    opacity: 0.7;
+    transition: opacity 0.2s;
+}
+
+.nl__tab:hover i {
+    opacity: 1;
+}
+
+/* Active tab — bold indicator */
+.nl__tab--active {
+    color: var(--n-primary);
+    font-weight: 700;
+    border-bottom-color: transparent;
+}
+
+.nl__tab--active::after {
+    width: 100%;
+    background: var(--n-primary);
+}
+
+.nl__tab--active i {
+    opacity: 1;
+}
+
+.nl__tab--active.nl__tab--accent {
+    color: #059669;
+}
+
+.nl__tab--active.nl__tab--accent::after {
+    background: #059669;
+}
+
+.dark .nl__tab:hover {
+    background: rgba(79, 142, 247, 0.04);
+}
+
+.dark .nl__tab--active.nl__tab--accent {
+    color: #34d399;
+}
+
+.dark .nl__tab--active.nl__tab--accent::after {
+    background: #34d399;
+}
+
+/* Inline controls — right-side contextual area */
+.nl__inlineControls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0;
+    flex-shrink: 0;
+}
+
+@media (max-width: 1023px) {
+    .nl__inlineControls {
+        padding-bottom: 8px;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+    }
+
+    .nl__inlineControls::-webkit-scrollbar {
+        display: none;
+    }
+}
+
+.nl__segmented {
+    display: flex;
+    background: rgba(241, 245, 249, 0.9);
+    padding: 4px;
+    border-radius: 12px;
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05);
+    flex-shrink: 0;
+}
+
+.dark .nl__segmented,
+html.dark .nl__segmented {
+    background: #000000 !important;
+    border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
+    border-radius: 14px !important;
+    box-shadow: none !important;
+    background-clip: padding-box !important;
+}
+
+.nl__segBtn {
+    padding: 8px 22px;
+    border-radius: 9px;
+    font-size: 0.78rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--n-muted);
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    white-space: nowrap;
+    position: relative;
+}
+
+.nl__segBtn:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    top: 25%;
+    bottom: 25%;
+    width: 1.5px;
+    background: linear-gradient(180deg, transparent, rgba(0,0,0,0.08), transparent);
+    transition: opacity 0.2s;
+}
+
+.nl__segBtn:hover {
+    color: var(--n-ink);
+}
+
+.nl__segBtn--active {
+    background: #1a73e8;
+    color: #ffffff;
+    box-shadow: 0 2px 6px rgba(26, 115, 232, 0.3);
+}
+
+.nl__segBtn--active::after {
+    opacity: 0;
+}
+
+.dark .nl__segBtn:not(.nl__segBtn--active),
+html.dark .nl__segBtn:not(.nl__segBtn--active) {
+    color: #94a3b8 !important;
+    background: transparent !important;
+}
+
+.dark .nl__segBtn:hover:not(.nl__segBtn--active),
+html.dark .nl__segBtn:hover:not(.nl__segBtn--active) {
+    color: #f1f5f9 !important;
+    background: rgba(255, 255, 255, 0.08) !important;
+}
+
+.dark .nl__segBtn--active,
+html.dark .nl__segBtn--active {
+    background: #1a73e8 !important;
+    border: 1px solid #3b82f6 !important;
+    color: #ffffff !important;
+    box-shadow: 0 2px 10px rgba(26, 115, 232, 0.5) !important;
+}
+
+.dark .nl__segBtn:not(:last-child)::after {
+    background: linear-gradient(180deg, transparent, rgba(59, 130, 246, 0.3), transparent);
+}
+
+/* Vertical divider */
+.nl__vDivider {
+    width: 1px;
+    height: 20px;
+    background: linear-gradient(180deg, transparent, var(--n-border), transparent);
+    flex-shrink: 0;
+    opacity: 0.6;
+}
+
+@media (max-width: 639px) {
+    .nl__vDivider {
+        display: none;
+    }
+}
+
+/* SUM picker — compact, elegant */
+.nl__sumPicker {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+    flex: 1;
+}
+
+.nl__sumPickerText {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 0;
+}
+
+.nl__sumTrigger {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 16px;
+    padding: 8px 16px;
+    border-radius: 12px;
+    border: 1px solid transparent;
+    background: transparent;
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    min-width: 0;
+}
+
+.nl__sumTrigger:hover {
+    background: rgba(241, 245, 249, 0.8);
+    border-color: rgba(0, 0, 0, 0.04);
+}
+
+.dark .nl__sumTrigger:hover {
+    background: rgba(255, 255, 255, 0.04);
+    border-color: rgba(255, 255, 255, 0.06);
+}
+
+.nl__sumTriggerText {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+}
+
+.nl__sumName {
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--n-ink);
+    letter-spacing: -0.01em;
+}
+
+.nl__sumTriggerText i {
+    font-size: 8px;
+    color: var(--n-muted);
+    transition: all 0.25s;
+    opacity: 0.6;
+}
+
+.nl__sumTrigger:hover .nl__sumTriggerText i {
+    color: var(--n-primary);
+    opacity: 1;
+}
+
+.nl__sumTopic {
+    font-size: 0.76rem;
+    font-weight: 500;
+    line-height: 1.4;
+    color: var(--n-muted);
+    white-space: normal;
+    opacity: 0.9;
+    flex: 1;
+    min-width: 0;
+}
+
+/* Add a vertical separator between name and topic */
+.nl__sumTriggerText {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    flex-shrink: 0;
+    padding-right: 16px;
+    border-right: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.dark .nl__sumTriggerText {
+    border-right-color: rgba(255, 255, 255, 0.1);
+}
+
+/* SUM dropdown — refined popover */
+.nl__sumDropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    margin-top: 8px;
+    width: 280px;
+    background: var(--n-card);
+    border-radius: 16px;
+    border: 1px solid var(--n-border);
+    box-shadow: 0 20px 50px -10px rgba(0, 0, 0, 0.15), 0 8px 20px -8px rgba(0, 0, 0, 0.08);
+    z-index: 2010;
+    overflow: hidden;
+    animation: nlDropIn 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+    padding: 6px;
+}
+
+@keyframes nlDropIn {
+    from { opacity: 0; transform: translateY(-6px) scale(0.97); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.dark .nl__sumDropdown {
+    background: var(--n-elevated);
+    box-shadow: 0 20px 50px -10px rgba(0, 0, 0, 0.6);
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
+.nl__sumDropdownScroll {
+    max-height: 260px;
+    overflow-y: auto;
+}
+
+.nl__sumOption {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    text-align: left;
+    border-radius: 10px;
+    transition: all 0.2s;
+    margin-bottom: 2px;
+}
+
+.nl__sumOption:last-child {
+    margin-bottom: 0;
+}
+
+.nl__sumOption:hover {
+    background: rgba(0, 56, 168, 0.04);
+}
+
+.dark .nl__sumOption:hover {
+    background: rgba(79, 142, 247, 0.06);
+}
+
+.nl__sumOption--active {
+    background: rgba(0, 56, 168, 0.06);
+}
+
+.dark .nl__sumOption--active {
+    background: rgba(79, 142, 247, 0.08);
+}
+
+.nl__sumOptionText {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin-right: 8px;
+    min-width: 0;
+}
+
+.nl__sumOptionName {
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--n-ink);
+    letter-spacing: -0.01em;
+}
+
+.nl__sumOption--active .nl__sumOptionName {
+    color: var(--n-primary);
+}
+
+.nl__sumOptionTopic {
+    font-size: 0.68rem;
+    color: var(--n-muted);
+    max-width: 180px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Edit topik button */
+.nl__sumCheckIcon {
+    font-size: 1.1rem;
+    color: var(--n-primary);
+    flex-shrink: 0;
+}
+
+/* Edit topik button */
+.nl__editTopikBtn,
+.nl__addSumBtn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
+    border: none;
+    background: rgba(0, 56, 168, 0.08);
+    color: var(--n-primary);
+    cursor: pointer;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    flex-shrink: 0;
+    font-size: 14px;
+}
+
+.nl__editTopikBtn:hover,
+.nl__addSumBtn:hover {
+    background: var(--n-primary);
+    color: white;
+    transform: scale(1.1);
+    box-shadow: 0 4px 15px rgba(0, 56, 168, 0.25);
+}
+
+.dark .nl__editTopikBtn,
+.dark .nl__addSumBtn {
+    background: rgba(79, 142, 247, 0.12);
+}
+
+.dark .nl__editTopikBtn:hover,
+.dark .nl__addSumBtn:hover {
+    background: var(--n-primary);
+    box-shadow: 0 4px 15px rgba(79, 142, 247, 0.35);
+}
+
+
+
+/* Config button (Atur Bobot) — premium gradient */
+.nl__configBtn {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 8px 18px;
+    border-radius: 10px;
+    border: none;
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+    color: white;
+    font-size: 0.76rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.2);
+    white-space: nowrap;
+    letter-spacing: 0.01em;
+}
+
+.nl__configBtn i {
+    font-size: 13px;
+    transition: transform 0.25s;
+}
+
+.nl__configBtn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.3);
+}
+
+.nl__configBtn:hover i {
+    transform: rotate(15deg);
+}
+
+.nl__configBtn:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.2);
+}
+
+.nl__configBtn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    pointer-events: none;
+    transform: none;
+}
+
+.dark .nl__configBtn {
+    background: linear-gradient(135deg, var(--n-primary-dark) 0%, var(--n-primary) 100%);
+    box-shadow: 0 4px 14px rgba(79, 142, 247, 0.25);
+}
+
+.dark .nl__configBtn:hover {
+    box-shadow: 0 8px 24px rgba(79, 142, 247, 0.35);
+}
+
+/* ── Mobile overrides ── */
+@media (max-width: 768px) {
+    .nl__controlArea {
+        display: none !important;
+    }
+
+    .nl__contextBar {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0;
+        padding: 8px;
+        border-radius: 14px;
+    }
+
+    .nl__contextSelectors {
+        font-size: 1.15rem;
+    }
+
+    .nl__contextActions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .nl__searchPill {
+        width: 100%;
+    }
+
+    .nl__searchPill input {
+        width: 100%;
+        flex: 1;
+    }
+
+    .nl__actionBtns {
+        justify-content: stretch;
+    }
+
+    .nl__actionBtn {
+        flex: 1;
+        justify-content: center;
+    }
+
+    .nl__actionBtn span {
+        display: inline;
+    }
+
+    .nl__navBar {
+        gap: 10px;
+    }
+
+    .nl__mainTabs {
+        display: none !important;
+    }
+
+    .nl__tab {
+        padding: 8px 10px;
+        font-size: 0.76rem;
+        gap: 5px;
+    }
+
+    .nl__inlineControls {
+        gap: 8px;
+    }
+
+    .nl__segBtn {
+        padding: 5px 10px;
+        font-size: 0.68rem;
+    }
+
+    .nl__sumDropdown {
+        width: 260px;
+    }
+}
+
+
+/* --- Page Layout (mirrors .absensi-page structure) --- */
+.nl {
+    display: flex;
+    flex-direction: column;
+    gap: var(--page-gap);
+    padding: 0;
+    max-width: 100%;
+    margin: 0;
+    animation: nlFadeIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes nlFadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+/* --- Header --- */
+.nl__pageHeader {
+    background: var(--banner-bg, var(--banner-bg, linear-gradient(135deg, var(--n-primary) 0%, #c2185b 100%)));
+    padding: 22px 32px;
+    border-radius: 16px;
+    box-shadow: 0 15px 45px -10px rgba(0, 56, 168, 0.25);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border: none;
+    margin: 8px 0 8px;
+    position: relative;
+    overflow: hidden;
+    transition: background 0.3s ease;
+}
+
+.nl__titleArea {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    z-index: 1;
+}
+
+.nl__iconWrapper {
+    width: 52px;
+    height: 52px;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 22px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.nl__titleArea h1 {
+    font-size: 1.6rem;
+    font-weight: 800;
+    color: white;
+    margin: 0 0 4px 0;
+    letter-spacing: -0.02em;
+}
+
+.nl__titleArea p {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 0.85rem;
+    margin: 0;
+    font-weight: 500;
+}
+
+.dark .nl__pageHeader {
+    background: #0f172a;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.5);
+}
+
+.nl__pageHeader::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -10%;
+    width: 400px;
+    height: 400px;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.08) 0%, transparent 70%);
+    pointer-events: none;
+}
+
+.nl__pageTitle {
+    font-family: 'Poppins', sans-serif;
+    font-size: 1.6rem;
+    font-weight: 800;
+    color: white !important;
+    margin: 0;
+    letter-spacing: -0.01em;
+}
+
+.nl__titleArea p {
+    color: rgba(255, 255, 255, 0.85) !important;
+    margin: 4px 0 0;
+    font-size: 0.9rem;
+    font-weight: 400;
+}
+
+/* --- Toolbar (Controls) --- */
+.nl__toolbar {
+    background: var(--n-card);
+    padding: 24px;
+    border-radius: 24px;
+    border: 1px solid var(--n-border);
+    box-shadow: var(--n-shadow);
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.nl__toolbarRow {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    flex-wrap: wrap;
+    justify-content: space-between;
+}
+
+.nl__searchGroup {
+    position: relative;
+    /* flex: 1; Removed so it doesn't auto-grow, allowing fixed width from utility classes */
+    min-width: 180px;
+}
+
+.nl__searchGroup i {
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--n-muted);
+}
+
+.nl__searchInput {
+    width: 100%;
+    padding: 10px 16px 10px 42px;
+    border-radius: 12px;
+    border: 1px solid var(--n-border);
+    outline: none;
+    font-size: 0.9rem;
+    font-weight: 500;
+    background: var(--n-card);
+    transition: all 0.2s;
+}
+
+.nl__searchInput:focus {
+    border-color: var(--n-primary);
+    box-shadow: var(--n-ring);
+}
+
+/* --- Mode Switcher (Tab Style) --- */
+.nl__modeSwitcher {
+    display: flex;
+    background: var(--n-soft);
+    padding: 4px;
+    border-radius: 14px;
+    gap: 4px;
+}
+
+.nl__modeBtn {
+    padding: 8px 16px;
+    border-radius: 10px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--n-muted);
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+}
+
+.nl__modeBtn.active {
+    background: var(--n-card);
+    color: var(--n-primary);
+    box-shadow: var(--n-shadow-soft);
+}
+
+/* --- Select Controls --- */
+.nl__select {
+    padding: 9px 12px;
+    border-radius: 12px;
+    border: 1px solid var(--n-border);
+    background: var(--n-card);
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--n-ink);
+    outline: none;
+    min-width: 120px;
+}
+
+/* --- Actions & Buttons --- */
+.nl__actions {
+    display: flex;
+    gap: 12px;
+    margin-left: auto;
+}
+
+.nl__btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    height: 40px;
+    padding: 0 16px;
+    border-radius: 12px;
+    font-weight: 700;
+    font-size: 0.82rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: 1px solid var(--n-border);
+    background: var(--n-card);
+    color: var(--n-ink);
+}
+
+.nl__btnSecondary {
+    background: var(--n-soft);
+    color: var(--n-primary);
+    border: none;
+}
+
+.nl__btnPrimary {
+    background: var(--n-primary);
+    color: white;
+    border: none;
+    box-shadow: 0 4px 12px rgba(0, 56, 168, 0.2);
+}
+
+.nl__btnDanger {
+    background: #fef2f2;
+    color: #ef4444;
+    border: 1px solid #fee2e2;
+}
+
+.nl__btnDanger:hover {
+    background: #ef4444;
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2);
+}
+
+.nl__btnSecondary:hover,
+.nl__btnPrimary:hover {
+    transform: translateY(-2px);
+    filter: brightness(1.05);
+}
+
+/* --- Table Styles ---
+   NOTE: gaya tabel kanonik ada di bagian "--- Table ---" di atas (sekitar baris 365).
+   Blok duplikat generasi lama di sini sudah dihapus karena menimpa desain baru
+   (padding th 14/16, tinggi td 54px, radius 24px, dst). Sisakan hanya aturan
+   tampil/sembunyi desktop vs mobile. */
+@media (min-width: 769px) {
+    .nl__tableWrap {
+        display: block !important;
+    }
+    .nl__mobileCards {
+        display: none !important;
+    }
+}
+
+/* --- Sub Tabs (SUM 1, SUM 2...) --- */
+.nl__subTabs {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+}
+
+/* --- Mobile Cards (Hidden by default) --- */
+.nl__mobileCards {
+    display: none;
+}
+
+.nl__subBtn {
+    padding: 8px 20px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--n-muted);
+    background: var(--n-card);
+    border: 1px solid var(--n-border);
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+
+.nl__subBtn.active {
+    background: var(--n-primary);
+    color: white;
+    border-color: var(--n-primary);
+    box-shadow: 0 4px 10px rgba(0, 56, 168, 0.2);
+}
+
+/* Spinner buttons for mode switcher */
+.nl__spinnerBtn {
+    padding: 6px 8px;
+    border-radius: 8px;
+    border: 1px solid var(--n-border);
+    background: var(--n-card);
+    color: var(--n-muted);
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 32px;
+    height: 32px;
+}
+
+.nl__spinnerBtn:hover:not(:disabled) {
+    background: var(--n-soft);
+    color: var(--n-ink);
+}
+
+.nl__spinnerBtn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+/* --- Modals Premium (Match Jurnal Design) --- */
+.nl__modalOverlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1005;
+    padding: 20px;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+}
+
+.nl__modalContent {
+    background: var(--n-card);
+    border-radius: 28px;
+    width: 100%;
+    max-width: 600px;
+    max-height: 90vh;
+    overflow-y: auto;
+    border: 1px solid var(--n-border);
+    box-shadow: 0 30px 60px rgba(0, 0, 0, 0.3);
+    animation: nlModalIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes nlModalIn {
+    from {
+        opacity: 0;
+        transform: scale(0.9) translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+/* --- View Topic Modal --- */
+.nl__viewTopicModal {
+    max-width: 420px !important;
+    border-radius: 20px !important;
+}
+
+.nl__viewTopicIcon {
+    width: 42px !important;
+    height: 42px !important;
+    border-radius: 12px !important;
+    background: #eff6ff !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 1.1rem !important;
+    flex-shrink: 0 !important;
+}
+
+.nl__viewTopicClose {
+    background: none !important;
+    border: none !important;
+    cursor: pointer !important;
+    padding: 6px !important;
+    border-radius: 8px !important;
+    color: #94a3b8 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 1rem !important;
+    transition: all 0.2s ease !important;
+}
+
+.nl__viewTopicClose:hover {
+    background: #f1f5f9 !important;
+    color: #475569 !important;
+}
+
+.nl__viewTopicLabel {
+    font-size: 0.68rem !important;
+    font-weight: 800 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.08em !important;
+    color: #94a3b8 !important;
+    margin-bottom: 8px !important;
+}
+
+.nl__viewTopicContent {
+    font-size: 0.95rem !important;
+    font-weight: 600 !important;
+    color: #1e293b !important;
+    line-height: 1.6 !important;
+    padding: 16px !important;
+    background: #f8fafc !important;
+    border-radius: 14px !important;
+    border: 1px solid #e2e8f0 !important;
+    word-break: break-word !important;
+}
+
+.nl__viewTopicEmpty {
+    color: #cbd5e1 !important;
+    font-style: italic !important;
+    font-weight: 500 !important;
+}
+
+.nl__modalHeader {
+    padding: 24px 30px;
+    border-bottom: 1px solid var(--n-border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.nl__modalTitle {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--n-ink);
+    margin: 0;
+}
+
+.nl__modalBody {
+    padding: 24px 30px;
+}
+
+/* Form Elements inside Modal */
+.nl__formGroup {
+    margin-bottom: 16px;
+}
+
+.nl__formLabel {
+    display: block;
+    font-size: 0.72rem;
+    font-weight: 800;
+    color: var(--n-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 8px;
+    margin-left: 4px;
+}
+
+.nl__formInput {
+    width: 100%;
+    padding: 12px 18px;
+    border-radius: 14px;
+    border: 1px solid var(--n-border);
+    font-size: 0.9rem;
+    font-weight: 520;
+    background: var(--n-card);
+    color: var(--n-ink);
+    outline: none;
+    transition: all 0.2s;
+}
+
+.nl__formInput:focus {
+    border-color: var(--n-primary);
+    box-shadow: 0 0 0 4px rgba(58, 166, 255, 0.14);
+}
+
+.nl__formActions {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+    margin-top: 24px;
+}
+
+/* --- Mobile Improvements --- */
+@media (max-width: 768px) {
+
+    /* Hide table on mobile */
+    .nl__tableWrap {
+        display: none;
+    }
+
+    /* Show mobile cards */
+    .nl__mobileCards {
+        display: block;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+    }
+
+    /* Hide desktop mode switcher on mobile */
+    .nl__modeSwitcher--desktop {
+        display: none;
+    }
+
+    /* Mobile card styles */
+    .nl__card {
+        background: var(--n-card);
+        border-radius: 16px;
+        border: 1px solid var(--n-border);
+        box-shadow: var(--n-shadow);
+        padding: 14px;
+        transition: all 0.2s;
+        margin-bottom: 8px;
+    }
+
+    .nl__card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(0, 56, 168, 0.1);
+    }
+
+    .nl__cardId {
+        font-size: 0.8rem;
+        font-weight: 500;
+        color: var(--n-muted);
+        font-family: 'Poppins', sans-serif;
+        flex-shrink: 0;
+    }
+
+    .nl__scoreValue {
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: var(--n-ink);
+        flex-shrink: 0;
+        text-align: right;
+    }
+
+    .nl__cardFinal {
+        margin-top: 10px;
+        padding-top: 10px;
+        border-top: 2px solid var(--n-primary);
+        text-align: center;
+        font-size: 0.9rem;
+        font-weight: 700;
+        color: var(--n-primary);
+    }
+
+    /* Mobile toolbar adjustments */
+    .nl__toolbar {
+        padding: 12px;
+        overflow-x: auto;
+        /* Allow horizontal scrolling if needed */
+    }
+
+    .nl__toolbarRow {
+        flex-direction: column;
+        gap: 8px;
+        align-items: stretch;
+        min-width: 0;
+        /* Allow shrinking */
+    }
+
+    .nl__searchGroup {
+        min-width: unset;
+        width: 100%;
+        flex: none;
+        /* Full width for search */
+    }
+
+    .nl__searchInput {
+        width: 100%;
+        font-size: 0.85rem;
+        padding: 8px 16px 8px 42px;
+    }
+
+    .nl__filters {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        width: 100%;
+    }
+
+    .nl__filters .nl__select {
+        flex: 1 1 calc(50% - 3px);
+        min-width: 0;
+    }
+
+    .nl__select {
+        min-width: unset;
+        width: 100%;
+        font-size: 0.75rem;
+        padding: 6px 8px;
+        text-overflow: ellipsis;
+        overflow: hidden;
+        white-space: nowrap;
+    }
+
+    .nl__modeSwitcher {
+        justify-content: center;
+        flex-wrap: wrap;
+        gap: 2px;
+        width: 100%;
+    }
+
+    .nl__modeBtn {
+        padding: 6px 8px;
+        font-size: 0.65rem;
+        min-width: 50px;
+        flex: 1;
+    }
+
+    .nl__actions {
+        flex-wrap: wrap;
+        justify-content: center;
+        margin-left: 0;
+        gap: 6px;
+        width: 100%;
+    }
+
+    .nl__btn {
+        padding: 8px 12px;
+        font-size: 0.7rem;
+        height: 36px;
+        white-space: nowrap;
+        flex: none;
+        min-width: 80px;
+        max-width: 120px;
+    }
+
+    /* Sub tabs on mobile */
+    .nl__subTabs {
+        gap: 6px;
+        padding-bottom: 8px;
+    }
+
+    .nl__subBtn {
+        padding: 6px 12px;
+        font-size: 0.7rem;
+        min-width: 70px;
+    }
+
+    /* ── Page Header Mobile ── */
+    .nl__pageHeader {
+        flex-direction: column;
+        align-items: flex-start;
+        padding: 18px 20px;
+        gap: 14px;
+    }
+
+    .nl__titleArea {
+        width: 100%;
+    }
+
+    .nl__iconWrapper {
+        width: 46px;
+        height: 46px;
+        font-size: 20px;
+    }
+
+    .nl__titleArea h1 {
+        font-size: 1.25rem;
+    }
+
+    .nl__titleArea p {
+        font-size: 0.78rem;
+    }
+
+    .nl__adminControls {
+        width: 100%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .nl__adminBadge {
+        font-size: 0.7rem;
+    }
+
+    .nl__adminToggle {
+        padding: 8px 14px;
+        font-size: 0.72rem;
+    }
+
+    /* ── Main Container Mobile ── */
+    .nl {
+        padding: 10px 6px;
+        gap: 20px;
+    }
+
+    /* ── Toolbar Mobile ── */
+    .nl__toolbar {
+        padding: 12px 10px;
+        border-radius: 16px;
+    }
+
+    /* ── Mobile Cards Full Width ── */
+    .nl__mobileCards {
+        gap: 8px;
+        padding: 0;
+    }
+
+    .nl__card {
+        border-radius: 12px;
+        padding: 10px 12px;
+    }
+
+    /* ── Mode Switcher Mobile ── */
+    .nl__modeSwitcher {
+        gap: 4px;
+        padding: 4px;
+        border-radius: 10px;
+    }
+
+    .nl__modeBtn {
+        padding: 8px 6px;
+        font-size: 0.7rem;
+        min-width: 52px;
+        border-radius: 8px;
+    }
+
+    /* ── Topics Container Mobile ── */
+    .nl__topicsContainer {
+        border-radius: 14px;
+        margin-top: 12px;
+    }
+
+    .nl__topicsHeader {
+        padding: 12px 16px;
+    }
+
+    .nl__topicsTitle {
+        font-size: 0.68rem;
+    }
+
+    .nl__topicsGrid {
+        padding: 12px 14px;
+        gap: 8px;
+    }
+
+    .nl__topicItem {
+        flex-direction: row;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 10px;
+        border-radius: 10px;
+    }
+
+    .nl__topicLabel {
+        font-size: 0.65rem;
+        padding: 3px 6px 3px 0;
+        min-width: 38px;
+        flex-shrink: 0;
+        text-align: center;
+    }
+
+    .nl__topicText {
+        font-size: 0.78rem;
+        line-height: 1.4;
+        flex: 1;
+        word-break: break-word;
+        overflow-wrap: break-word;
+    }
+}
+
+/* Extra small screens */
+@media (max-width: 400px) {
+    .nl__pageHeader {
+        padding: 14px 16px;
+    }
+
+    .nl__titleArea h1 {
+        font-size: 1.1rem;
+    }
+
+    .nl__filters {
+        grid-template-columns: 1fr;
+    }
+
+    .nl__select {
+        font-size: 0.7rem;
+    }
+
+    .nl__modeBtn {
+        min-width: 46px;
+        font-size: 0.65rem;
+    }
+
+    .nl__card {
+        padding: 10px;
+    }
+}
+
+/* Hide mobile mode switcher on desktop */
+@media (min-width: 769px) {
+    .nl__modeSwitcher--mobile {
+        display: none;
+    }
+}
+
+/* --- Topic Description (Elegant Redesign) --- */
+.nl__topicsContainer {
+    background: var(--n-card);
+    border-radius: 28px;
+    border: 1px solid var(--n-border);
+    box-shadow: var(--n-shadow);
+    overflow: hidden;
+    margin-top: 24px;
+    transition: all 0.3s ease;
+}
+
+.nl__topicsHeader {
+    background: linear-gradient(to right, var(--n-soft), transparent);
+    padding: 18px 30px;
+    border-bottom: 1px solid var(--n-border);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.nl__topicsTitle {
+    font-size: 0.72rem;
+    font-weight: 800;
+    color: var(--n-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+}
+
+.nl__topicsGrid {
+    padding: 24px 30px;
+    display: grid;
+    grid-template-columns: repeat(1, 1fr);
+    gap: 16px;
+}
+
+@media (min-width: 1024px) {
+    .nl__topicsGrid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+.nl__topicItem {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 12px 16px;
+    background: rgba(248, 250, 252, 0.5);
+    border: 1px solid rgba(15, 23, 42, 0.03);
+    border-radius: 16px;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.nl__topicItem:hover {
+    background: var(--n-card);
+    border-color: var(--n-primary);
+    transform: translateX(4px);
+    box-shadow: 0 4px 12px rgba(0, 56, 168, 0.05);
+}
+
+.dark .nl__topicItem {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.dark .nl__topicItem:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.nl__topicLabel {
+    flex-shrink: 0;
+    background: var(--n-card);
+    padding: 6px 12px;
+    border-radius: 10px;
+    font-size: 0.7rem;
+    font-weight: 800;
+    color: var(--n-primary);
+    box-shadow: 0 2px 4px rgba(0, 56, 168, 0.08);
+    border: 1px solid rgba(0, 56, 168, 0.1);
+    min-width: 60px;
+    text-align: center;
+}
+
+.nl__topicText {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #334155;
+    line-height: 1.4;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* 2x2 Select Matrix for Mobile */
+.nl__selectGrid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    width: 100%;
+}
+
+/* Tech Wave Animation */
+.nl__loading-bars {
+    display: flex;
+    gap: 3px;
+    align-items: center;
+    justify-content: center;
+    height: 14px;
+}
+
+.nl__loading-bars .bar {
+    width: 3px;
+    height: 12px;
+    background: #fff;
+    border-radius: 99px;
+    animation: nlWave 1s infinite ease-in-out;
+}
+
+.nl__loading-bars .bar:nth-child(1) {
+    animation-delay: -0.2s;
+}
+
+.nl__loading-bars .bar:nth-child(2) {
+    animation-delay: -0.1s;
+}
+
+@keyframes nlWave {
+
+    0%,
+    40%,
+    100% {
+        transform: scaleY(0.6);
+        opacity: 0.6;
+    }
+
+    20% {
+        transform: scaleY(1.3);
+        opacity: 1;
+    }
+}
+
+.dark .nl__loading-bars .bar {
+    background: var(--n-primary);
+    opacity: 0.7;
+}
+
+.dark .nl__topicItem:hover {
+    background: var(--n-card);
+}
+
+.dark .nl__topicLabel {
+    background: var(--n-card);
+}
+
+/* --- ULTIMATE CONSOLIDATED PREMIUM MOBILE EXPERIENCE --- */
+
+/* Mobile Nav Dropdown (Global) */
+.nl__mobileNavTrigger {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 12px 18px;
+    background: var(--n-card);
+    border: 1px solid var(--n-border);
+    border-radius: 14px;
+    color: var(--n-ink);
+    box-shadow: var(--n-shadow-soft);
+}
+
+.nl__mobileNavDropdown {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    width: 100%;
+    background: var(--n-card);
+    border: 1px solid var(--n-border);
+    border-radius: 14px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+    z-index: 100;
+    overflow: hidden;
+}
+
+.nl__mobileNavItem {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    padding: 14px 18px;
+    border: none;
+    background: transparent;
+    color: var(--n-ink);
+    font-size: 0.9rem;
+    font-weight: 600;
+    text-align: left;
+}
+
+.nl__mobileNavItem.active {
+    background: rgba(0, 56, 168, 0.05);
+    color: var(--n-primary);
+}
+
+
+
+
+/* --- ULTIMATE CONSOLIDATED PREMIUM MOBILE EXPERIENCE --- */
+
+/* Mobile Nav Styles (Global) */
+.nl__mobileNavTrigger {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 12px 18px;
+    background: var(--n-card);
+    border: 1px solid var(--n-border);
+    border-radius: 14px;
+    color: var(--n-ink);
+    box-shadow: var(--n-shadow-soft);
+}
+
+.nl__mobileNavDropdown {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    width: 100%;
+    background: var(--n-card);
+    border: 1px solid var(--n-border);
+    border-radius: 14px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+    z-index: 100;
+    overflow: hidden;
+}
+
+.nl__mobileNavItem {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    padding: 14px 18px;
+    border: none;
+    background: transparent;
+    color: var(--n-ink);
+    font-size: 0.9rem;
+    font-weight: 600;
+    text-align: left;
+}
+
+.nl__mobileNavItem.active {
+    background: rgba(0, 56, 168, 0.05);
+    color: var(--n-primary);
+}
+
+
+@media (max-width: 768px) {
+    /* 1. Context Bar & Filters */
+    .nl__contextBar {
+        flex-direction: column !important;
+        background: transparent !important;
+        border: none !important;
+        padding: 0 !important;
+        gap: 12px !important;
+        margin-bottom: 12px !important;
+        box-shadow: none !important;
+        position: relative !important;
+        overflow: visible !important;
+    }
+
+    .nl__filterGroup {
+        flex-direction: column !important;
+        gap: 12px !important;
+        width: 100% !important;
+        position: relative !important;
+        overflow: visible !important;
+        /* Reset kartu bar tersegmentasi desktop — di mobile chip kembali jadi kartu masing-masing */
+        background: transparent !important;
+        border: none !important;
+        border-radius: 0 !important;
+        box-shadow: none !important;
+    }
+
+    .nl__filterChip {
+        width: 100% !important;
+        background: var(--n-card) !important;
+        border: 1px solid var(--n-border) !important;
+        border-radius: 16px !important;
+        padding: 14px 16px !important;
+        display: flex !important;
+        align-items: center !important;
+        gap: 14px !important;
+        box-shadow: var(--n-shadow-soft) !important;
+        cursor: pointer !important;
+        transition: background 0.2s !important;
+        position: relative !important;
+    }
+
+    .nl__filterChip.is-active {
+        z-index: 1000 !important;
+        border-color: var(--n-primary) !important;
+        box-shadow: 0 8px 20px rgba(0, 56, 168, 0.1) !important;
+    }
+
+    .nl__filterChip:active {
+        transform: scale(0.98);
+        background: rgba(0, 0, 0, 0.02) !important;
+    }
+
+    .nl__filterChipBody {
+        flex: 1 !important;
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 2px !important;
+        overflow: visible !important;
+    }
+
+    .nl__filterChipLabel {
+        font-size: 0.62rem !important;
+        font-weight: 800 !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.05em !important;
+        color: var(--n-muted) !important;
+    }
+
+    .nl__filterChipValue {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+        width: 100% !important;
+    }
+
+    .nl__filterChipValue span {
+        font-size: 1rem !important;
+        font-weight: 800 !important;
+        color: var(--n-ink) !important;
+    }
+
+    .nl__filterChipValue i {
+        font-size: 0.9rem !important;
+        color: var(--n-muted) !important;
+    }
+
+    .nl__filterChipIcon {
+        width: 40px !important;
+        height: 40px !important;
+        border-radius: 12px !important;
+        font-size: 1.1rem !important;
+        background: rgba(0, 56, 168, 0.05) !important;
+        color: var(--n-primary) !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+    }
+
+    .nl__filterDropdown--periode {
+        background: rgba(255, 255, 255, 1) !important;
+        border: 1px solid rgba(0, 0, 0, 0.05) !important;
+        box-shadow: 0 10px 40px rgba(0, 56, 168, 0.12) !important;
+        border-radius: 20px !important;
+        padding: 12px 6px !important;
+        min-width: 220px !important;
+        margin-top: 10px !important;
+        z-index: 100 !important;
+    }
+
+    .nl__periodeDivider {
+        height: 1.5px !important;
+        background: rgba(0, 56, 168, 0.05) !important;
+        margin: 10px 14px !important;
+    }
+
+    .nl__filterDivider {
+        display: none !important;
+    }
+
+    /* 2. Nav & Search */
+    .nl__navBar {
+        flex-direction: column !important;
+        padding: 0 !important;
+        gap: 12px !important;
+        width: 100% !important;
+        align-items: stretch !important;
+        background: transparent !important;
+        border: none !important;
+    }
+
+    /* 3. Sub Bar & SUM Card */
+    .nl__subBarGrid {
+        margin-top: 0 !important;
+    }
+
+    .nl__subBar--grid {
+        display: flex !important;
+        flex-direction: column !important;
+        padding: 12px 14px !important;
+        border-radius: 16px !important;
+        background: var(--n-card) !important;
+        border: 1px solid var(--n-border) !important;
+        gap: 12px !important;
+        box-shadow: var(--n-shadow-soft) !important;
+        align-items: stretch !important;
+        width: 100% !important;
+    }
+
+    /* 4. Topic Card (hide on mobile) & Student Card */
+    .nl__topicCard {
+        display: none !important;
+    }
+
+    .nl__topicItem {
+        display: flex !important;
+        align-items: flex-start !important;
+        padding: 8px 10px !important;
+        gap: 10px !important;
+        background: rgba(0, 0, 0, 0.015) !important;
+        border-radius: 12px !important;
+    }
+
+    .nl__searchPill {
+        width: 100% !important;
+        height: 48px !important;
+        border-radius: 14px !important;
+        background: var(--n-card) !important;
+        border: 1px solid var(--n-border) !important;
+        margin: 0 !important;
+        box-shadow: var(--n-shadow-soft) !important;
+    }
+
+    .nl__actionBtn--sm {
+        width: 48px !important;
+        height: 48px !important;
+        border-radius: 14px !important;
+        background: var(--n-card) !important;
+        border: 1px solid var(--n-border) !important;
+        box-shadow: var(--n-shadow-soft) !important;
+    }
+
+    .nl__subBarGrid {
+        width: 100% !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 8px !important;
+    }
+
+    .nl__subBarGrid--right {
+        width: 100% !important;
+        margin-top: 4px !important;
+    }
+
+    /* Premium One-Row 3-Column Layout */
+    .nl__subBar--oneRow {
+        width: 100% !important;
+        background: rgba(255, 255, 255, 0.8) !important;
+        backdrop-filter: blur(10px) !important;
+        border: 1px solid rgba(226, 232, 240, 0.8) !important;
+        border-radius: 20px !important;
+        padding: 10px 14px !important;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03) !important;
+        position: relative !important;
+        margin-bottom: 20px !important;
+    }
+
+    .dark .nl__subBar--oneRow {
+        background: rgba(30, 41, 59, 0.7) !important;
+        border-color: rgba(51, 65, 85, 0.8) !important;
+    }
+
+    /* Grid Logic */
+    .nl__oneRowGrid {
+        display: grid !important;
+        grid-template-columns: auto 1fr auto !important;
+        align-items: center !important;
+        gap: 16px !important;
+        width: 100% !important;
+    }
+
+    /* Col 1: Controls (SUM + Mini Icons) */
+    .nl__oneCol--controls {
+        display: flex !important;
+        align-items: center !important;
+        gap: 12px !important;
+        flex-shrink: 0 !important;
+        padding-right: 12px !important;
+        border-right: 1.5px solid rgba(0,0,0,0.05) !important;
+    }
+
+    .nl__sumPicker {
+        display: flex !important;
+        align-items: center !important;
+        gap: 6px !important;
+        cursor: pointer !important;
+        padding: 4px 8px !important;
+        background: rgba(var(--n-primary-rgb), 0.05) !important;
+        border-radius: 10px !important;
+        transition: all 0.2s ease !important;
+    }
+
+    .nl__subBar--oneRow {
+        margin-top: 12px !important;
+        margin-bottom: 12px !important;
+    }
+
+    .nl__sumPicker {
+        flex: 1 !important;
+    }
+
+    .nl__sumName {
+        font-size: 0.85rem !important;
+        font-weight: 800 !important;
+        color: var(--n-primary) !important;
+        letter-spacing: -0.01em !important;
+        white-space: nowrap !important;
+    }
+
+    .nl__sumChevron {
+        font-size: 0.7rem !important;
+        color: var(--n-primary) !important;
+        opacity: 0.7 !important;
+    }
+
+    .nl__sumIcons {
+        display: flex !important;
+        gap: 6px !important;
+    }
+
+    .nl__miniBtn {
+        width: 32px !important;
+        height: 32px !important;
+        border-radius: 10px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        border: none !important;
+        font-size: 0.9rem !important;
+        transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+    }
+
+    .nl__miniBtn:active { transform: scale(0.9) !important; }
+
+    .nl__miniBtn--add {
+        background: rgba(2, 132, 199, 0.1) !important;
+        color: #0284c7 !important;
+    }
+
+    .nl__miniBtn--edit {
+        background: rgba(59, 130, 246, 0.1) !important;
+        color: #3b82f6 !important;
+    }
+
+    .nl__miniBtn--view {
+        background: rgba(59, 130, 246, 0.1) !important;
+        color: #3b82f6 !important;
+    }
+
+    /* Col 2: Judul center */
+    .nl__oneCol--title {
+        min-width: 0 !important;
+        display: flex !important;
+        align-items: center !important;
+    }
+
+    .nl__titleText {
+        font-size: 0.8rem !important;
+        font-weight: 500 !important;
+        color: #475569 !important;
+        white-space: normal !important;
+        word-break: break-word !important;
+        text-align: left !important;
+        line-height: 1.4 !important;
+        max-height: none !important;
+        overflow: visible !important;
+        font-style: italic !important;
+    }
+
+    .nl__oneRowGrid {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 8px !important;
+    }
+
+    .nl__oneCol--controls {
+        display: flex !important;
+        align-items: center !important;
+        gap: 10px !important;
+        flex-shrink: 0 !important;
+        padding-right: 0 !important;
+        border-right: none !important;
+        min-width: unset !important;
+    }
+
+    .nl__oneCol--controls { order: 1 !important; width: 100% !important; justify-content: space-between !important; }
+    .nl__oneCol--title { order: 2 !important; width: 100% !important; display: none !important; min-width: 0 !important; align-items: center !important; }
+    .nl__oneCol--nav { order: 3 !important; width: 100% !important; justify-content: stretch !important; }
+
+    .nl__segmented { width: 100% !important; }
+    .nl__segBtn { flex: 1 !important; }
+
+    .nl__sumPicker { flex: unset !important; min-width: 120px !important; }
+
+    .nl__oneCol--nav {
+        flex-shrink: 0 !important;
+        display: flex !important;
+        justify-content: flex-start !important;
+        padding-left: 0 !important;
+        border-left: none !important;
+    }
+
+    .nl__segmented {
+        height: 40px !important;
+        background: rgba(0, 0, 0, 0.04) !important;
+        padding: 3px !important;
+        border-radius: 12px !important;
+        display: flex !important;
+        gap: 3px !important;
+    }
+
+    .nl__segBtn {
+        padding: 0 8px !important;
+        font-size: 0.65rem !important;
+        font-weight: 850 !important;
+        border-radius: 9px !important;
+        background: transparent !important;
+        border: none !important;
+        color: #64748b !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.02em !important;
+        transition: all 0.2s ease !important;
+        white-space: nowrap !important;
+    }
+
+    .nl__segBtn--active {
+        background: white !important;
+        color: var(--n-primary) !important;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08) !important;
+    }
+
+    /* Fixed Dropdown Styling */
+    .nl__sumDropdown {
+        position: absolute !important;
+        top: 100% !important;
+        left: 0 !important;
+        right: 0 !important;
+        margin-top: 8px !important;
+        z-index: 2015 !important;
+        background: white !important;
+        border-radius: 18px !important;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15) !important;
+        border: 1px solid rgba(226, 232, 240, 0.8) !important;
+        overflow: hidden !important;
+        animation: nl__dropdownFade 0.2s ease-out !important;
+    }
+
+    @keyframes nl__dropdownFade {
+        from { opacity: 0; transform: translateY(-5px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    .dark .nl__sumDropdown { background: #1e293b !important; }
+
+    .nl__segBtn {
+        flex: 1 !important;
+        height: 100% !important;
+        font-size: 0.68rem !important;
+        font-weight: 800 !important;
+        background: transparent !important;
+        border: none !important;
+        color: var(--n-muted) !important;
+        text-transform: uppercase !important;
+    }
+
+    .nl__segBtn--active {
+        background: white !important;
+        color: var(--n-primary) !important;
+        border-radius: 8px !important;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05) !important;
+    }
+
+    .nl__topicLabel {
+        font-size: 0.65rem !important;
+        font-weight: 800 !important;
+        color: var(--n-primary) !important;
+        text-transform: uppercase !important;
+        margin-bottom: 4px !important;
+        display: block !important;
+    }
+
+    .nl__topicText {
+        font-size: 0.78rem !important;
+        font-weight: 600 !important;
+        color: #475569 !important;
+        display: block !important;
+        line-height: 1.4 !important;
+        white-space: normal !important;
+        overflow: visible !important;
+        text-overflow: clip !important;
+    }
+
+    .nl__topicEditAction {
+        width: 28px !important;
+        height: 28px !important;
+        background: white !important;
+        color: var(--n-primary) !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        font-size: 0.8rem !important;
+        border-radius: 6px !important;
+        border: 1px solid rgba(0, 56, 168, 0.12) !important;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
+    }
+
+    .nl__topicEditAction:active {
+        background: rgba(0, 56, 168, 0.05) !important;
+        transform: scale(0.92) !important;
+    }
+
+    .nl__scoreBadge {
+        background: #ffffff !important;
+        color: #1e3a8a !important;
+        padding: 6px 12px !important;
+        border-radius: 10px !important;
+        font-size: 0.85rem !important;
+        font-weight: 850 !important;
+        border: 1px solid #e2e8f0 !important;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02) !important;
+    }
+
+    .nl__scoreFinal {
+        background: linear-gradient(135deg, #1e3a8a, #3b82f6) !important;
+        color: #ffffff !important;
+        padding: 8px 16px !important;
+        border-radius: 12px !important;
+        font-size: 1rem !important;
+        font-weight: 900 !important;
+        box-shadow: 0 6px 12px rgba(30, 58, 138, 0.2) !important;
+    }
+}
+
+/* Desktop: 3-column one-row layout for subBar */
+.nl__subBar--oneRow {
+    position: relative;
+    padding: 10px 16px;
+    background: var(--n-card);
+    border: 1px solid var(--n-border);
+    border-radius: 16px;
+    margin-bottom: 16px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+}
+
+.nl__oneRowGrid {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    align-items: center;
+    gap: 0;
+    width: 100%;
+}
+
+.nl__oneCol--controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+    padding-right: 14px;
+    border-right: 1.5px solid var(--n-border);
+    min-width: 160px;
+}
+
+.nl__oneCol--nav {
+    flex-shrink: 0;
+    display: flex;
+    justify-content: flex-end;
+    padding-left: 14px;
+}
+
+/* Elegant subBar icon colors */
+.nl__sumName { color: var(--n-primary); font-weight: 700; }
+.nl__sumChevron { color: var(--n-primary); opacity: 0.7; font-size: 0.7rem; }
+.nl__miniBtn--add { color: #0284c7; border-color: rgba(2, 132, 199, 0.35); background: rgba(2, 132, 199, 0.08); }
+.nl__miniBtn--add:hover { background: rgba(2, 132, 199, 0.18) !important; }
+.nl__miniBtn--edit { color: var(--n-primary); border-color: rgba(0, 56, 168, 0.35); background: rgba(0, 56, 168, 0.08); }
+.nl__miniBtn--edit:hover { background: rgba(0, 56, 168, 0.18) !important; }
+
+.nl__miniBtn {
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1.5px solid transparent;
+    font-size: 0.82rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    flex-shrink: 0;
+}
+
+.nl__sumIcons {
+    display: flex;
+    flex-direction: row;
+    gap: 8px;
+    align-items: center;
+}
+
+/* ============================================================
+   GOOGLE ONE PITCH BLACK DARK THEME (NILAI)
+============================================================ */
+
+/* Hero Banner */
+.dark .nl-hero,
+.dark .nl__pageHeader {
+    background: #000000 !important;
+    border: 2px solid #1a73e8 !important;
+    border-radius: 20px !important;
+    box-shadow: 0 0 30px rgba(26, 115, 232, 0.25) !important;
+}
+.dark .nl-hero::before,
+.dark .nl-hero-grid {
+    display: none !important;
+}
+.dark .nl-hero-title {
+    background: linear-gradient(90deg, #1d6bf3 0%, #3b82f6 30%, #60a5fa 70%, #93c5fd 100%) !important;
+    -webkit-background-clip: text !important;
+    -webkit-text-fill-color: transparent !important;
+    background-clip: text !important;
+    color: transparent !important;
+    display: inline-block;
+}
+.dark .nl-hero-subtitle {
+    color: #94a3b8 !important;
+}
+
+/* Toolbar, Cards & SubBar */
+.dark .nl__toolbar,
+.dark .nl__card,
+.dark .nl__subBar,
+.dark .nl__subBar--oneRow {
+    background: #000000 !important;
+    border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
+    border-radius: 10px !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5) !important;
+}
+.dark .nl__oneCol--controls {
+    border-right-color: rgba(59, 130, 246, 0.25) !important;
+}
+.dark .nl__sumName {
+    color: #60a5fa !important;
+}
+.dark .nl__sumChevron {
+    color: #38bdf8 !important;
+}
+
+/* Mode Switcher */
+.dark .nl__modeSwitcher {
+    background: #000000 !important;
+    border: 1.5px solid rgba(59, 130, 246, 0.4) !important;
+    border-radius: 12px !important;
+}
+.dark .nl__modeBtn {
+    color: #94a3b8 !important;
+}
+.dark .nl__modeBtn.active {
+    background: #1a73e8 !important;
+    border: 1.5px solid #3b82f6 !important;
+    color: #ffffff !important;
+    box-shadow: 0 0 12px rgba(26, 115, 232, 0.45) !important;
+}
+
+/* Form Controls & Inputs */
+.dark .nl__select,
+.dark .nl__searchInput,
+.dark .filter-select,
+.dark .nl-select-dark {
+    background: #000000 !important;
+    border: 1.5px solid rgba(59, 130, 246, 0.4) !important;
+    color: #f1f5f9 !important;
+    border-radius: 10px !important;
+}
+.dark .nl__select:focus,
+.dark .nl__searchInput:focus,
+.dark .filter-select:focus {
+    border-color: #3b82f6 !important;
+    box-shadow: 0 0 10px rgba(26, 115, 232, 0.4) !important;
+}
+.dark .nl__select option,
+.dark .filter-select option {
+    background: #000000 !important;
+    color: #f1f5f9 !important;
+}
+.dark .nl__filterChip {
+    background: #000000 !important;
+    border: 1.5px solid rgba(59, 130, 246, 0.35) !important;
+    color: #94a3b8 !important;
+}
+.dark .nl__filterChip.active {
+    background: #1a73e8 !important;
+    border-color: #3b82f6 !important;
+    color: #ffffff !important;
+}
+
+/* Table Design */
+.dark .nl__tableContainer,
+.dark .nl__tableWrap {
+    background: #000000 !important;
+    border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
+    border-radius: 16px !important;
+    box-shadow: none !important;
+    /* JANGAN `overflow: hidden` di sini — wrapper adalah viewport gulir tabel
+       (sticky header + kolom identitas). Menyembunyikannya memotong kolom. */
+}
+.dark .nl__table {
+    background: #000000 !important;
+}
+.dark .nl__table th {
+    background: #000000 !important;
+    color: #93c5fd !important;
+    border-bottom: 2px solid rgba(59, 130, 246, 0.35) !important;
+    border-right: 1px solid rgba(59, 130, 246, 0.15) !important;
+}
+.dark .nl__table td {
+    background: #000000 !important;
+    border-bottom: 1px solid rgba(59, 130, 246, 0.15) !important;
+    border-right: 1px solid rgba(59, 130, 246, 0.1) !important;
+    color: #f1f5f9 !important;
+}
+.dark .nl__table tbody tr:hover td {
+    background: rgba(26, 115, 232, 0.08) !important;
+}
+.dark .nl__table tbody tr:nth-child(even) td {
+    background: #000000 !important;
+}
+.dark .nl__table tbody tr:hover:nth-child(even) td {
+    background: rgba(26, 115, 232, 0.08) !important;
+}
+
+/* Score Inputs & Badges */
+.dark .nl__scoreInput,
+.dark input.nl__scoreInput {
+    background: #000000 !important;
+    border: 1.5px solid rgba(59, 130, 246, 0.35) !important;
+    color: #38bdf8 !important;
+    border-radius: 8px !important;
+}
+.dark .nl__scoreInput:focus,
+.dark input.nl__scoreInput:focus {
+    border-color: #3b82f6 !important;
+    background: #000000 !important;
+    box-shadow: 0 0 10px rgba(26, 115, 232, 0.45) !important;
+    color: #ffffff !important;
+}
+.dark .nl__scoreBadge {
+    background: rgba(26, 115, 232, 0.18) !important;
+    border: 1px solid rgba(59, 130, 246, 0.4) !important;
+    color: #38bdf8 !important;
+}
+.dark .nl__scoreFinal {
+    background: #1a73e8 !important;
+    border: 1.5px solid #3b82f6 !important;
+    color: #ffffff !important;
+    box-shadow: 0 0 12px rgba(26, 115, 232, 0.45) !important;
+}
+
+/* Buttons & Mini Buttons */
+.dark .nl__btnPrimary {
+    background: #1a73e8 !important;
+    border: 1.5px solid #3b82f6 !important;
+    color: #ffffff !important;
+    box-shadow: 0 0 14px rgba(26, 115, 232, 0.45) !important;
+}
+.dark .nl__btnPrimary:hover {
+    background: #1557b0 !important;
+    box-shadow: 0 0 20px rgba(26, 115, 232, 0.6) !important;
+}
+.dark .nl__btnSecondary,
+.dark .nl__btnGhost {
+    background: #000000 !important;
+    border: 1.5px solid rgba(59, 130, 246, 0.4) !important;
+    color: #93c5fd !important;
+}
+.dark .nl__btnSecondary:hover,
+.dark .nl__btnGhost:hover {
+    background: rgba(26, 115, 232, 0.15) !important;
+    color: #ffffff !important;
+}
+.dark .nl__miniBtn {
+    background: #000000 !important;
+    border: 1px solid rgba(59, 130, 246, 0.35) !important;
+}
+.dark .nl__miniBtn--add {
+    color: #38bdf8 !important;
+    border-color: rgba(56, 189, 248, 0.4) !important;
+    background: rgba(56, 189, 248, 0.12) !important;
+}
+.dark .nl__miniBtn--add:hover {
+    background: rgba(56, 189, 248, 0.25) !important;
+}
+.dark .nl__miniBtn--edit {
+    color: #818cf8 !important;
+    border-color: rgba(129, 140, 248, 0.4) !important;
+    background: rgba(129, 140, 248, 0.12) !important;
+}
+.dark .nl__miniBtn--edit:hover {
+    background: rgba(129, 140, 248, 0.25) !important;
+}
+
+/* Modals (Google One Pitch Black) */
+.dark .nl__modalOverlay,
+.dark .nl__adminModalOverlay,
+.dark .nl__viewTopicOverlay {
+    background: rgba(0, 0, 0, 0.85) !important;
+    backdrop-filter: blur(8px) !important;
+}
+.dark .nl__modalContent,
+.dark .nl__adminModal,
+.dark .nl__viewTopicModal {
+    background: #000000 !important;
+    background-image: linear-gradient(180deg, rgba(59, 130, 246, 0.12) 0%, rgba(0, 0, 0, 0.4) 30%, #000000 100%) !important;
+    border: 1px solid rgba(37, 99, 235, 0.4) !important;
+    border-radius: 20px !important;
+    box-shadow: inset 0 1.5px 1.5px 0 rgba(255, 255, 255, 0.4), inset 0 0 20px 0 rgba(26, 115, 232, 0.25), 0 25px 60px rgba(0, 0, 0, 0.95) !important;
+    overflow: hidden !important;
+}
+.dark .nl__modalHeader,
+.dark .nl__adminModalHeader {
+    background: #000000 !important;
+    border-bottom: 1px solid rgba(59, 130, 246, 0.25) !important;
+}
+.dark .nl__modalTitle,
+.dark .nl__adminModalHeaderLeft h3 {
+    background: linear-gradient(90deg, #1d6bf3 0%, #3b82f6 30%, #60a5fa 70%, #93c5fd 100%) !important;
+    -webkit-background-clip: text !important;
+    -webkit-text-fill-color: transparent !important;
+    background-clip: text !important;
+    color: transparent !important;
+    display: inline-block;
+}
+.dark .nl__modalClose,
+.dark .nl__adminModalClose {
+    background: rgba(255, 255, 255, 0.06) !important;
+    color: #94a3b8 !important;
+}
+.dark .nl__modalClose:hover,
+.dark .nl__adminModalClose:hover {
+    background: rgba(239, 68, 68, 0.2) !important;
+    color: #f87171 !important;
+}
+.dark .nl__modalBody,
+.dark .nl__adminModalBody {
+    background: #000000 !important;
+    color: #f1f5f9 !important;
+}
+.dark .nl__modalFooter {
+    background: #000000 !important;
+    border-top: 1px solid rgba(59, 130, 246, 0.25) !important;
+}
+
+/* Popovers & Dropdowns */
+.dark .nl__periodePopover,
+.dark .nl__popover {
+    background: #000000 !important;
+    border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.7) !important;
+    border-radius: 14px !important;
+}
+.dark .nl__periodePopoverHeader {
+    background: #000000 !important;
+    border-bottom-color: rgba(59, 130, 246, 0.25) !important;
+}
+.dark .nl__periodeOption {
+    color: #f1f5f9 !important;
+}
+.dark .nl__periodeOption:hover {
+    background: rgba(26, 115, 232, 0.15) !important;
+    color: #38bdf8 !important;
+}
+.dark .nl__periodeOption--active {
+    background: #1a73e8 !important;
+    color: #ffffff !important;
+}
+
+/* Admin Panel */
+.dark .nl__adminPanel {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
+/* Eliminate Sharp Square Corner Artifacts Outside Curved Borders in Dark Mode */
+.dark .nl-hero,
+.dark .nl__contextBar,
+.dark .nl__filterGroup,
+.dark .nl__controlArea,
+.dark .nl__tableContainer,
+.dark .nl__tableWrap,
+.dark .nl__adminHeaderCard,
+.dark .nl__adminTableCard,
+html.dark .nl-hero,
+html.dark .nl__contextBar,
+html.dark .nl__filterGroup,
+html.dark .nl__controlArea,
+html.dark .nl__tableContainer,
+html.dark .nl__tableWrap,
+html.dark .nl__adminHeaderCard,
+html.dark .nl__adminTableCard {
+    box-shadow: none !important;
+    background-clip: padding-box !important;
+}
+
+.dark .nl__adminHeaderCard,
+.dark .nl__adminTableCard {
+    background: #000000 !important;
+    border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
+    border-radius: 16px !important;
+    box-shadow: none !important;
+    background-clip: padding-box !important;
+}
+.dark .nl__adminTable th {
+    background: #000000 !important;
+    color: #93c5fd !important;
+    border-bottom: 2px solid rgba(59, 130, 246, 0.35) !important;
+}
+.dark .nl__adminTable td {
+    background: #000000 !important;
+    border-bottom: 1px solid rgba(59, 130, 246, 0.15) !important;
+    color: #f1f5f9 !important;
+}
+.dark .nl__adminTable tr:hover td {
+    background: rgba(26, 115, 232, 0.08) !important;
+}
+.dark .nl__adminKelasBadge,
+.dark .nl__adminKelasCell {
+    background: transparent !important;
+    border: none !important;
+    color: #f1f5f9 !important;
+}
+
+/* Mobile Cards & Subbar in Dark Mode */
+@media (max-width: 768px) {
+
+    .dark .nl__segBtn--active,
+    html.dark .nl__segBtn--active {
+        background: #1a73e8 !important;
+        border: 1px solid #3b82f6 !important;
+        color: #ffffff !important;
+        box-shadow: 0 2px 10px rgba(26, 115, 232, 0.5) !important;
+    }
+
+    .dark .nl__segBtn:not(.nl__segBtn--active),
+    html.dark .nl__segBtn:not(.nl__segBtn--active) {
+        color: #94a3b8 !important;
+        background: transparent !important;
+    }
+}
+
+/* Dark Mode Select Dropdown Chevron Icons & Options */
+.dark select.nl__select,
+.dark .nl-wrapper select:not(.ftb-input),
+.dark .nl__adminPanel select,
+.dark .nl__modalContent select {
+    appearance: none !important;
+    -webkit-appearance: none !important;
+    -moz-appearance: none !important;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2360a5fa' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E") !important;
+    background-repeat: no-repeat !important;
+    background-position: right 12px center !important;
+    background-size: 14px 14px !important;
+    padding-right: 36px !important;
+    color: #f8fafc !important;
+    background-color: #000000 !important;
+    border-color: rgba(59, 130, 246, 0.45) !important;
+}
+
+.dark select option,
+html.dark select option {
+    background-color: #0f172a !important;
+    color: #f8fafc !important;
+}
+
+.dark .nl__adminPanelClose,
+html.dark .nl__adminPanelClose {
+    background: rgba(239, 68, 68, 0.18) !important;
+    border: 1px solid rgba(239, 68, 68, 0.4) !important;
+    color: #fca5a5 !important;
+}
+
+.dark .nl__adminPanelClose:hover,
+html.dark .nl__adminPanelClose:hover {
+    background: #ef4444 !important;
+    color: #ffffff !important;
+    border-color: #ef4444 !important;
+}
+
+.dark .nl-hero-back-btn,
+html.dark .nl-hero-back-btn {
+    background: rgba(26, 115, 232, 0.18) !important;
+    border: 1.5px solid rgba(59, 130, 246, 0.45) !important;
+    color: #60a5fa !important;
+    box-shadow: 0 0 14px rgba(26, 115, 232, 0.25) !important;
+}
+
+.dark .nl-hero-back-btn:hover,
+html.dark .nl-hero-back-btn:hover {
+    background: #1a73e8 !important;
+    color: #ffffff !important;
+    border-color: #3b82f6 !important;
+    box-shadow: 0 0 18px rgba(26, 115, 232, 0.5) !important;
+    transform: translateX(-3px) !important;
+}
+
+/* Dark Mode Overrides for Mode Switcher & Import/Export Buttons */
+.dark .nl__modeSwitcher,
+html.dark .nl__modeSwitcher {
+    background: #000000 !important;
+    border: 1.5px solid rgba(59, 130, 246, 0.4) !important;
+    border-radius: 12px !important;
+    box-shadow: none !important;
+    padding: 4px !important;
+    background-clip: padding-box !important;
+}
+
+.dark .nl__modeBtn:not(.active),
+html.dark .nl__modeBtn:not(.active) {
+    color: #94a3b8 !important;
+    background: transparent !important;
+}
+
+.dark .nl__modeBtn:hover:not(.active),
+html.dark .nl__modeBtn:hover:not(.active) {
+    color: #f1f5f9 !important;
+    background: rgba(255, 255, 255, 0.08) !important;
+}
+
+.dark .nl__modeBtn.active,
+html.dark .nl__modeBtn.active {
+    background: #1a73e8 !important;
+    color: #ffffff !important;
+    box-shadow: 0 2px 10px rgba(26, 115, 232, 0.5) !important;
+}
+
+.dark .nl__importBtn,
+html.dark .nl__importBtn {
+    background: rgba(26, 115, 232, 0.18) !important;
+    border: 1.5px solid rgba(59, 130, 246, 0.45) !important;
+    color: #38bdf8 !important;
+    box-shadow: none !important;
+}
+
+.dark .nl__importBtn:hover,
+html.dark .nl__importBtn:hover {
+    background: rgba(26, 115, 232, 0.35) !important;
+    border-color: #3b82f6 !important;
+    color: #ffffff !important;
+    box-shadow: 0 0 12px rgba(26, 115, 232, 0.4) !important;
+}
+
+.dark .nl__exportBtn,
+html.dark .nl__exportBtn {
+    background: #1a73e8 !important;
+    border-color: #3b82f6 !important;
+    color: #ffffff !important;
+    box-shadow: 0 2px 10px rgba(26, 115, 232, 0.4) !important;
+}
+
+.dark .nl__exportBtn:hover,
+html.dark .nl__exportBtn:hover {
+    background: #1d4ed8 !important;
+    box-shadow: 0 0 16px rgba(26, 115, 232, 0.6) !important;
+}
+
+/* =========================================================
+   Sub-bar BAB (desktop) — kontrol SUM/BAB + pemilih jenis nilai
+
+   Catatan penting: utility spacing Tailwind (`p-*`, `m-*`) MATI di aplikasi ini
+   karena reset global `* { margin:0; padding:0 }` di globals.css berada di luar
+   @layer sehingga mengalahkan utility. Karena itu seluruh jarak di bawah ini
+   ditulis eksplisit sebagai CSS, bukan lewat class Tailwind.
+   ========================================================= */
+.nl__babBar {
+    position: relative;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+    padding: 12px 20px;
+    /* Jarak ke tabel/kartu di bawahnya disediakan oleh margin-top mereka
+       (utility `mb-4` Tailwind mati di app ini), jadi jangan digandakan. */
+    margin-bottom: 0;
+    background: var(--n-card);
+    border: 1px solid var(--n-border);
+    border-radius: 14px;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.dark .nl__babBar {
+    background: rgba(255, 255, 255, 0.03);
+    border-color: rgba(255, 255, 255, 0.08);
+    box-shadow: none;
+}
+
+.nl__babControls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.nl__babPicker {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    height: 36px;
+    padding: 0 14px;
+    border: 1px solid var(--n-border);
+    border-radius: 10px;
+    background: rgba(241, 245, 249, 0.85);
+    color: var(--n-ink);
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+    white-space: nowrap;
+}
+
+.nl__babPicker:hover {
+    background: rgba(226, 232, 240, 0.95);
+    border-color: rgba(59, 130, 246, 0.35);
+}
+
+.nl__babPicker i:first-child {
+    color: var(--n-primary);
+    font-size: 0.9rem;
+}
+
+.nl__babPickerChevron {
+    font-size: 0.65rem;
+    color: var(--n-muted);
+    margin-left: 2px;
+}
+
+.dark .nl__babPicker {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.12);
+    color: #e2e8f0;
+}
+
+.dark .nl__babPicker:hover {
+    background: rgba(255, 255, 255, 0.09);
+}
+
+.nl__babIconBtn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    flex-shrink: 0;
+    border: 1px solid var(--n-border);
+    border-radius: 10px;
+    background: rgba(241, 245, 249, 0.85);
+    color: var(--n-primary);
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.nl__babIconBtn:hover {
+    background: var(--n-primary);
+    border-color: var(--n-primary);
+    color: #fff;
+}
+
+.dark .nl__babIconBtn {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.12);
+    color: #60a5fa;
+}
+
+.nl__babTopik {
+    display: none;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    max-width: 420px;
+    height: 36px;
+    padding: 0 14px;
+    border: 1px solid var(--n-border);
+    border-radius: 10px;
+    background: rgba(248, 250, 252, 0.9);
+    font-size: 0.75rem;
+}
+
+@media (min-width: 1180px) {
+    .nl__babTopik { display: flex; }
+}
+
+.nl__babTopikLabel {
+    flex-shrink: 0;
+    color: var(--n-muted);
+    font-weight: 600;
+}
+
+.nl__babTopikValue {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: 600;
+    color: var(--n-ink);
+}
+
+.nl__babTopik > i {
+    flex-shrink: 0;
+    color: var(--n-primary);
+}
+
+.dark .nl__babTopik {
+    background: rgba(255, 255, 255, 0.03);
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
+.dark .nl__babTopikValue { color: #e2e8f0; }
+
+/* Segmented Kuis / Tugas / UH */
+.nl__typeSwitch {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+    padding: 4px;
+    border: 1px solid var(--n-border);
+    border-radius: 12px;
+    background: rgba(226, 232, 240, 0.7);
+}
+
+.dark .nl__typeSwitch {
+    background: rgba(2, 6, 23, 0.7);
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+.nl__typeSwitchBtn {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    height: 32px;
+    padding: 0 14px;
+    border: none;
+    border-radius: 9px;
+    background: transparent;
+    color: var(--n-muted);
+    font-size: 0.75rem;
+    font-weight: 700;
+    line-height: 1;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+}
+
+.nl__typeSwitchBtn i {
+    font-size: 0.78rem;
+    opacity: 0.75;
+}
+
+.nl__typeSwitchBtn:hover:not(.is-active) {
+    background: rgba(255, 255, 255, 0.75);
+    color: var(--n-ink);
+}
+
+.dark .nl__typeSwitchBtn:hover:not(.is-active) {
+    background: rgba(255, 255, 255, 0.07);
+    color: #f1f5f9;
+}
+
+.nl__typeSwitchBtn.is-active {
+    background: var(--n-primary);
+    color: #fff;
+    box-shadow: 0 1px 3px rgba(30, 58, 138, 0.3);
+}
+
+.nl__typeSwitchBtn.is-active i { opacity: 1; }
+
+.nl__typeCount {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 999px;
+    background: rgba(148, 163, 184, 0.35);
+    color: var(--n-muted);
+    font-size: 0.62rem;
+    font-weight: 800;
+    line-height: 1;
+}
+
+.nl__typeSwitchBtn.is-active .nl__typeCount {
+    background: rgba(255, 255, 255, 0.25);
+    color: #fff;
+}
+
+.dark .nl__typeCount {
+    background: rgba(255, 255, 255, 0.12);
+    color: #cbd5e1;
+}
+
+@media (max-width: 900px) {
+    .nl__babBar {
+        padding: 12px 14px;
+    }
+    .nl__typeSwitchBtn {
+        padding: 0 10px;
+    }
+}
+
+/* =========================================================
+   Tabel nilai — penyempurnaan kolom & keadaan kosong
+   ========================================================= */
+.nl__thLabel {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 18px;
+}
+
+/* Baris tombol aksi di header hanya muncul saat kolomnya di-hover,
+   tapi ruangnya selalu dicadangkan supaya tinggi header tidak "melompat". */
+.nl__table thead th {
+    height: 62px;
+    vertical-align: middle;
+}
+
+.nl__thEmpty {
+    font-weight: 600 !important;
+    text-transform: none !important;
+    letter-spacing: 0 !important;
+    color: var(--n-muted);
+    font-style: italic;
+    white-space: nowrap;
+    padding: 10px 20px !important;
+}
+
+/* Sel keadaan kosong memakai colSpan, jadi jangan ikut aturan sticky kolom
+   identitas (nth-child(-n+3)) yang akan mengunci lebarnya. */
+.nl__table .nl__tableEmpty {
+    position: static;
+    text-align: center;
+    color: var(--n-muted);
+    font-size: 0.85rem;
+    padding: 28px 16px !important;
+}
+
+/* Nama siswa: satu baris + ellipsis supaya tinggi baris seragam */
+.nl__table td.nl__studentName {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 320px;
+}
+
+/* Input nilai memenuhi sel supaya seluruh area sel bisa diklik */
+.nl__table td .nl__scoreInput {
+    display: block;
+    width: 100%;
+    height: 46px;
+    text-align: center;
+}
+
+.nl__rekapInfo {
+    margin-top: 16px;
+    justify-content: space-between;
+}
+
+/* Kolom Rapor di mode REKAP diberi aksen agar mudah dipindai */
+.nl__table tbody .nl__scoreFinal {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 46px;
+    height: 28px;
+    padding: 0 10px;
+    border-radius: 8px;
+    background: rgba(37, 99, 235, 0.09);
+    border: 1px solid rgba(37, 99, 235, 0.18);
+}
+
+.dark .nl__table tbody .nl__scoreFinal {
+    background: rgba(59, 130, 246, 0.18);
+    border-color: rgba(59, 130, 246, 0.35);
+}
+
+/* Header kolom Rapor & badge topik SUM di mode REKAP */
+.nl__table th.nl__colRapor {
+    color: var(--n-primary);
+}
+
+.nl__thTopik {
+    max-width: 92px;
+    margin: 3px auto 0;
+    padding: 1px 6px;
+    border: 1px solid var(--n-border);
+    border-radius: 5px;
+    background: rgba(241, 245, 249, 0.9);
+    color: var(--n-muted);
+    font-size: 0.58rem;
+    font-weight: 700;
+    letter-spacing: 0;
+    text-transform: none;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.dark .nl__thTopik {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.12);
+}
+
+/* =========================================================
+   Mobile (≤768px) — sub-bar BAB & daftar kartu nilai
+   ========================================================= */
+@media (max-width: 768px) {
+    .nl__babBar {
+        gap: 10px;
+        padding: 12px;
+        border-radius: 12px;
+    }
+
+    .nl__babControls {
+        flex: 1 1 auto;
+        min-width: 0;
+    }
+
+    .nl__babPicker {
+        flex: 1 1 auto;
+        min-width: 0;
+        justify-content: flex-start;
+    }
+
+    .nl__babPicker > span {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .nl__babPickerChevron {
+        margin-left: auto;
+    }
+
+    /* Pemilih Kuis/Tugas/UH melebar penuh dengan tombol sama lebar */
+    .nl__typeSwitch {
+        display: flex;
+        flex: 1 1 100%;
+        width: 100%;
+    }
+
+    .nl__typeSwitchBtn {
+        flex: 1 1 0;
+        justify-content: center;
+        padding: 0 8px;
+    }
+
+    .nl__mobileCards {
+        gap: 12px;
+        margin-top: 16px;
+        padding-bottom: 32px;
+    }
+}

@@ -1,0 +1,521 @@
+apps/api/src/absensi/absensi.controller.ts Controller('absensi') UseGuards(JwtAuthGuard)
+Get('sesi') => this.absensiService.getSesi
+Get('sesi/:id') => this.absensiService.getSesiById
+Post('sesi') => this.absensiService.createSesi
+Patch('sesi/:id') => this.absensiService.updateSesi
+Delete('sesi/:id') => this.absensiService.deleteSesi
+Get('detail') => this.absensiService.getDetail
+Post('detail') => this.absensiService.upsertDetail
+Get('classes') => this.absensiService.getTeacherClasses
+Post('export') => this.absensiService.exportAbsensi
+apps/api/src/access/access.controller.ts Controller('access/internal')
+Get('user/:authId') => this.accessService.resolveUserAccess
+Get('username/:username') => this.accessService.resolveUserAccess
+apps/api/src/access/access.controller.ts UseGuards(JwtAuthGuard) Controller('access')
+Get('me') => this.accessService.resolveUserAccess
+Get('role-pages') => this.accessService.getRolePagesMap,this.accessService.getRoleFlatGroupsMap
+Put('role-pages/:role') => this.accessService.setRolePages
+Put('role-flat-groups/:role') => this.accessService.setRoleFlatGroups
+Get('role-capabilities') => this.accessService.getRoleCapabilitiesMap
+Put('role-capabilities/:role') => this.accessService.setRoleCapabilities
+Get('user-capabilities/:userId') => this.accessService.getUserCapabilityOverrides
+Put('user-capabilities/:userId') => this.accessService.setUserCapabilities
+Get('capability-holders') => this.accessService.getCapabilityHolders
+Put('capability-holders/:key') => this.accessService.setCapabilityHolders
+Get('theme-roles') => this.accessService.getRoleThemeMap
+Put('theme-roles') => this.accessService.setRoleThemeMap
+Get('roles') => this.accessService.getRoles
+Post('roles') => this.accessService.createRole
+Get('roles/:id') => 
+Put('roles/:id') => this.accessService.updateRole
+Delete('roles/:id') => this.accessService.deleteRole
+Get('users/:id/roles') => this.accessService.getUserRoles
+Post('users/:id/roles') => this.accessService.updateUserRoles
+Post('role-pages') => this.accessService.setRolePages,this.accessService.setRoleFlatGroups
+apps/api/src/agenda/agenda.controller.ts Controller('agenda')
+Get('public') => this.agendaService.getPublicAgendas
+Get('izin-saya') UseGuards(JwtAuthGuard) => this.agendaService.getIzinAgenda
+Get() UseGuards(JwtAuthGuard) => this.agendaService.getAgendas
+Post() UseGuards(JwtAuthGuard, FeatureAccessGuard) => this.agendaService.createAgenda
+Put() UseGuards(JwtAuthGuard, FeatureAccessGuard) => this.agendaService.updateAgenda
+Delete() UseGuards(JwtAuthGuard, FeatureAccessGuard) => this.agendaService.deleteAgenda
+Get('kategori') UseGuards(JwtAuthGuard) => this.agendaService.getKategori
+Post('kategori') UseGuards(JwtAuthGuard, FeatureAccessGuard) => this.agendaService.createKategori
+Put('kategori') UseGuards(JwtAuthGuard, FeatureAccessGuard) => this.agendaService.updateKategori
+Delete('kategori') UseGuards(JwtAuthGuard, FeatureAccessGuard) => this.agendaService.deleteKategori
+Post('foto') UseGuards(JwtAuthGuard, FeatureAccessGuard) => this.agendaService.uploadFoto
+Put('foto') UseGuards(JwtAuthGuard, FeatureAccessGuard) => this.agendaService.updateFotoUrutan
+Delete('foto') UseGuards(JwtAuthGuard, FeatureAccessGuard) => this.agendaService.deleteFoto
+apps/api/src/analisis-beban/analisis-beban.controller.ts UseGuards(JwtAuthGuard, PageAccessGuard) RequiresPage('analisis-beban') Controller('analisis-beban')
+Get() => this.analisisBebanService.getAll
+Post() => this.analisisBebanService.upsert
+Delete() => this.analisisBebanService.delete
+apps/api/src/auth/auth.controller.ts Controller('auth')
+Post('login') => this.authService.login
+Post('register') UseGuards(JwtAuthGuard, RolesGuard) Roles('ADMIN', 'ADMINISTRATOR') => this.authService.register
+Get('me') UseGuards(JwtAuthGuard) => this.authService.getProfile
+Post('admin/reset-password') UseGuards(JwtAuthGuard) => this.authService.adminResetPassword
+apps/api/src/bank-data/bank-data.controller.ts Controller('bank-data')
+Get() UseGuards(JwtAuthGuard) => this.service.getCatalog
+Post() UseGuards(JwtAuthGuard) => this.service.handlePost
+Get('config') UseGuards(JwtAuthGuard) => this.service.getConfig
+Put('config') UseGuards(JwtAuthGuard) => this.service.updateConfig
+Get('log') UseGuards(JwtAuthGuard) => this.service.getLogs
+apps/api/src/catatan-siswa/catatan-siswa.controller.ts Controller('catatan-siswa') UseGuards(JwtAuthGuard)
+Get() => this.catatanSiswaService.getCatatan
+Post() => this.catatanSiswaService.createCatatan
+Patch(':id') Put(':id') => this.catatanSiswaService.updateCatatan
+Delete(':id') => this.catatanSiswaService.deleteCatatan
+Post(':id/tindak-lanjut') => this.catatanSiswaService.tindakLanjut
+apps/api/src/dashboard/dashboard.controller.ts UseGuards(JwtAuthGuard) Controller('dashboard')
+Get('summary') => this.dashboardService.getDashboardSummary
+Get('stats') => this.dashboardService.getDashboardStats
+Get('charts') => this.dashboardService.getDashboardCharts
+apps/api/src/dokumen/dokumen.controller.ts UseGuards(JwtAuthGuard, FeatureAccessGuard) Controller('dokumen')
+Post('bulk-upload') => this.dokumenService.bulkUpload
+Post('bulk-delete') => this.dokumenService.bulkDelete
+Get('uploaded-documents') => this.dokumenService.getUploadedDocuments
+Post('uploaded-documents') => this.dokumenService.createUploadedDocument
+Delete('uploaded-documents/:id') => this.dokumenService.deleteUploadedDocument
+Get('categories') => this.dokumenService.getCategories
+Post('categories') => this.dokumenService.createCategory
+Put('categories/:id') => this.dokumenService.updateCategory
+Delete('categories/:id') => this.dokumenService.deleteCategory
+Post('dokumen-siswa') => this.dokumenService.createDokumenSiswa
+Get('uploader-search') => this.dokumenService.searchUploader
+apps/api/src/e-supervisi/e-supervisi.controller.ts Controller('e-supervisi') UseGuards(JwtAuthGuard, PageAccessGuard) RequiresPage('e-supervisi')
+Get('dokumen') => this.eSupervisiService.getDokumen
+Post('dokumen') => this.eSupervisiService.upsertDokumen
+Delete('dokumen') => this.eSupervisiService.deleteDokumen
+Get('nilai') => this.eSupervisiService.getNilai
+Post('nilai') => this.eSupervisiService.upsertNilai
+Get('penugasan') => this.eSupervisiService.getPenugasan
+Post('penugasan') => this.eSupervisiService.upsertPenugasan
+Delete('penugasan') => this.eSupervisiService.deletePenugasan
+Patch('penugasan') => this.eSupervisiService.updateStatusPenugasan
+Get('rekap') => this.eSupervisiService.getRekap
+Get('supervisor-list') => this.eSupervisiService.getSupervisorList
+Get('unggahan') => this.eSupervisiService.getUnggahan
+Post('unggahan/record') => this.eSupervisiService.upsertUnggahanRecord
+Delete('unggahan') => this.eSupervisiService.deleteUnggahan
+Get('tahun-ajaran') => this.eSupervisiService.getTahunAjaranList
+apps/api/src/ekskul/ekskul-submission.controller.ts UseGuards(JwtAuthGuard) Controller('ekskul/submission')
+Get() => this.service.getSubmissions
+Post() => this.service.postSubmission
+Delete() => this.service.deleteSubmission
+Post('pembayaran') => this.service.postPembayaran
+apps/api/src/ekskul/ekskul.controller.ts UseGuards(JwtAuthGuard) Controller('ekskul')
+Get() => this.ekskulService.getEkskulList
+Post() => this.ekskulService.isManager,this.ekskulService.upsertEkskul
+Delete() => this.ekskulService.isManager,this.ekskulService.deleteEkskul
+Get('siswa') => this.ekskulService.getEkskulSiswaList
+Post('siswa') => this.ekskulService.upsertEkskulSiswa
+Delete('siswa') => this.ekskulService.deleteEkskulSiswa
+Get('pembina') => this.ekskulService.getPembinaList
+Post('pembina') => this.ekskulService.upsertPembina
+Delete('pembina') => this.ekskulService.deletePembina
+Get('pertemuan') => this.ekskulService.getPertemuanList
+Post('pertemuan') => this.ekskulService.upsertPertemuan
+Delete('pertemuan') => this.ekskulService.deletePertemuan
+Get('absensi') => this.ekskulService.getAbsensiPertemuan
+Post('absensi') => this.ekskulService.saveAbsensiPertemuan
+Post('approval') => this.ekskulService.approveSubmission
+Post('report-data') => this.ekskulService.getReportData
+Post('update-pdf') => this.ekskulService.updatePdfUrl
+apps/api/src/forms/forms.controller.ts Controller('forms')
+Get('pengembangan-diri') => this.formsService.getPengembanganDiriSurvey
+Delete('pengembangan-diri') => this.formsService.deletePengembanganDiriSurvey
+Post('pengembangan-diri/submit') => this.formsService.submitPengembanganDiriSurvey
+Get('public') => this.formsService.getPublicForms
+Get('dynamic-options') => this.formsService.getDynamicOptions
+Post('submit') UseGuards(OptionalJwtAuthGuard) => this.formsService.submitResponse
+Get() UseGuards(JwtAuthGuard) => this.formsService.getForms
+Post() UseGuards(JwtAuthGuard) => this.formsService.createForm
+Get(':id') UseGuards(OptionalJwtAuthGuard) => this.formsService.getFormById
+Put(':id') UseGuards(JwtAuthGuard) => this.formsService.updateForm
+Delete(':id') UseGuards(JwtAuthGuard) => this.formsService.deleteForm
+Get(':id/responses') UseGuards(JwtAuthGuard) => this.formsService.getResponses
+Delete(':id/responses') UseGuards(JwtAuthGuard) => this.formsService.deleteResponses
+Delete(':id/responses/:responseId') UseGuards(JwtAuthGuard) => this.formsService.deleteResponses
+Post(':id/allocate') UseGuards(JwtAuthGuard) => this.formsService.allocate
+Patch(':id/allocate') UseGuards(JwtAuthGuard) => this.formsService.recalculateScores
+apps/api/src/guru-asuh/guru-asuh.controller.ts Controller('guru-asuh')
+Get('absensi-akumulasi') UseGuards(JwtAuthGuard) => this.service.getAbsensiAkumulasi
+Get('ekskul') UseGuards(JwtAuthGuard) => this.service.getEkskul
+Get('kokurikuler') UseGuards(JwtAuthGuard) => this.service.getKokurikuler
+Get('laporan') UseGuards(JwtAuthGuard) => this.service.getLaporan
+Post('laporan') UseGuards(JwtAuthGuard) => this.service.saveLaporan
+Delete('laporan') UseGuards(JwtAuthGuard) => this.service.deleteLaporan
+Get('laporan-submission') UseGuards(JwtAuthGuard) => this.service.getSubmissions
+Post('laporan-submission') UseGuards(JwtAuthGuard) => this.service.postSubmission
+Delete('laporan-submission') UseGuards(JwtAuthGuard) => this.service.deleteSubmission
+Post('laporan-submission/approve') UseGuards(JwtAuthGuard) => this.service.approveSubmission
+Get('laporan-submission/verify') => this.service.verifySubmission
+Post('laporan-submission/pembayaran') UseGuards(JwtAuthGuard) => this.service.postPembayaran
+Get('laporan-submission/report-data') UseGuards(JwtAuthGuard) => this.service.getReportData
+Post('laporan-submission/pdf-url') UseGuards(JwtAuthGuard) => this.service.updatePdfUrl
+Post('bulk-copy') UseGuards(JwtAuthGuard) => this.service.bulkCopy
+apps/api/src/health/health.controller.ts Controller('health')
+Get() => 
+apps/api/src/informasi/informasi.controller.ts Controller('informasi') UseGuards(JwtAuthGuard, FeatureAccessGuard)
+Get() => this.informasiService.getInformasiUntuk
+Get('izin-saya') => this.informasiService.getIzinInformasi
+Post() => this.informasiService.createInformasi
+Patch() => this.informasiService.updateInformasi
+Delete() => this.informasiService.deleteInformasi
+Get('share') => this.informasiService.getShareLink
+Post('share') => this.informasiService.createShareLink
+Delete('share') => this.informasiService.deleteShareLink
+apps/api/src/izin-guru/izin-guru.controller.ts Controller('izin-guru') UseGuards(JwtAuthGuard)
+Get() => this.izinGuruService.getIzin
+Post() => this.izinGuruService.createIzin
+Patch(':id') => this.izinGuruService.updateIzin
+Delete(':id') => this.izinGuruService.deleteIzin
+apps/api/src/jadwal/jadwal.controller.ts UseGuards(JwtAuthGuard, RolesGuard, FeatureAccessGuard) Controller('jadwal')
+Post('generate') => this.writer.generate
+Post('save') => this.writer.save
+Post('delete-dates') => this.writer.deleteDates
+Post('delete-rows') => this.writer.deleteRows
+Post('move-date') => this.writer.moveDate
+Get() => this.jadwalService.getJadwal
+Post() => this.jadwalService.bulkCreateJadwal
+Get('izin-saya') => this.jadwalService.getIzinJadwal
+Get('tukar/slots') => this.jadwalService.getTukarSlots
+Get('tukar/guru') => this.jadwalService.getTukarGuru
+Get('tukar') => this.jadwalService.getTukarList
+Post('tukar') => this.jadwalService.createTukar
+Get('tukar/:id') => this.jadwalService.getTukarDetail
+Put('tukar/:id') => this.jadwalService.respondTukar
+Patch('tukar/:id') => this.jadwalService.respondTukar
+Delete('tukar/:id') => this.jadwalService.cancelTukar
+Get('scopes') => this.jadwalService.getScopes
+apps/api/src/jurnal/jurnal.controller.ts Controller('jurnal') UseGuards(JwtAuthGuard)
+Get('pengaturan') => this.jurnalService.getSettings
+Post('pengaturan') => this.jurnalService.updateSettings
+Post('pengaturan/generate-massal') => this.jurnalService.generateMassal
+Delete('pengaturan/delete-by-date') => this.jurnalService.deleteByDate
+Get('check-slot') => this.jurnalService.checkSlot
+Get('rekap') => this.jurnalService.getRekap
+Get('banding') => this.jurnalService.getBanding
+Post('banding') => this.jurnalService.createBanding
+Get('banding/:id') => this.jurnalService.getBandingById
+Patch('banding/:id') => this.jurnalService.updateBanding
+Get(':id') => this.jurnalService.findById
+Patch(':id') => this.jurnalService.update
+Delete(':id') => this.jurnalService.remove
+Get('jurnal-master') => this.jurnalService.getJurnalMaster
+Get() => this.jurnalService.findAll
+Post() => this.jurnalService.create
+apps/api/src/ketidakhadiran/ketidakhadiran.controller.ts Controller('ketidakhadiran') UseGuards(JwtAuthGuard, PageAccessGuard)
+Get('log') => this.ketidakhadiranService.getLog
+Get('log/guru-asuh') => this.ketidakhadiranService.getLogGuruAsuh
+Get('log/wali-kelas') => this.ketidakhadiranService.getLogWaliKelas
+Get('log/siswa/:nisn') => this.ketidakhadiranService.getLogSiswa
+Get('absensi') RequiresPage(...PAGE_KELOLA, 'absensi') => this.ketidakhadiranService.getAbsensi
+Get('rekap') RequiresPage(...PAGE_KELOLA) => this.ketidakhadiranService.getRekap
+Get('rekam-medis-siswa') RequiresPage('rekam-medis') => this.ketidakhadiranService.getRekamMedisSiswa
+Post('rekam-medis-siswa') RequiresPage('rekam-medis') => this.ketidakhadiranService.createRekamMedisSiswa
+Put('rekam-medis-siswa/:id') RequiresPage('rekam-medis') => this.ketidakhadiranService.updateRekamMedisSiswa
+Put('rekam-medis-siswa') RequiresPage('rekam-medis') => this.ketidakhadiranService.updateRekamMedisSiswa
+Delete('rekam-medis-siswa/:id') RequiresPage('rekam-medis') => this.ketidakhadiranService.deleteRekamMedisSiswa
+Delete('rekam-medis-siswa') RequiresPage('rekam-medis') => this.ketidakhadiranService.deleteRekamMedisSiswa
+Get('acca-letter/verify') => this.ketidakhadiranService.verifyAccaLetter
+Get('acca-letter') RequiresPage(...PAGE_KELOLA) => this.ketidakhadiranService.getAccaLetters
+Post('acca-letter') RequiresPage(...PAGE_KELOLA) => this.ketidakhadiranService.createAccaLetter
+Delete('acca-letter/:id') RequiresPage(...PAGE_KELOLA) => this.ketidakhadiranService.deleteAccaLetter
+Post('save-letter') RequiresPage(...PAGE_KELOLA) => this.ketidakhadiranService.saveAccaLetter
+Get() RequiresPage(...PAGE_KELOLA, 'absensi') => this.ketidakhadiranService.findAll
+Post('bulk') RequiresPage(...PAGE_KELOLA) => this.ketidakhadiranService.createBulk
+Get(':id') RequiresPage(...PAGE_KELOLA) => this.ketidakhadiranService.findById
+Patch(':id') RequiresPage(...PAGE_KELOLA) => this.ketidakhadiranService.update
+Delete(':id') RequiresPage(...PAGE_KELOLA) => this.ketidakhadiranService.remove
+apps/api/src/keuangan/keuangan.controller.ts Controller('keuangan') UseGuards(JwtAuthGuard)
+Get('catatan-keuangan') => this.keuanganService.getCatatanKeuangan
+Post('catatan-keuangan') => this.keuanganService.postCatatanKeuangan
+Put('catatan-keuangan') => this.keuanganService.putCatatanKeuangan
+Delete('catatan-keuangan') => this.keuanganService.deleteCatatanKeuangan
+Get('tarif-honor') => this.keuanganService.getTarifHonor
+Put('tarif-honor') => this.keuanganService.putTarifHonor
+Get('utama') => this.keuanganService.getKeuangan
+Post('utama') => this.keuanganService.postKeuangan
+Get() => this.keuanganService.getKeuangan
+Post() => this.keuanganService.postKeuangan
+apps/api/src/kinerja-guru/kinerja-guru.controller.ts UseGuards(JwtAuthGuard, PageAccessGuard) RequiresPage('kinerja-guru') Controller('kinerja-guru')
+Get() => this.kinerjaGuruService.getStats
+apps/api/src/klinik/klinik.controller.ts UseGuards(JwtAuthGuard) Controller('klinik')
+Get() => this.klinikService.handleGet
+Post() => this.klinikService.handlePost
+Patch() => this.klinikService.handlePatch
+apps/api/src/kokurikuler/kokurikuler.controller.ts UseGuards(JwtAuthGuard) Controller('kokurikuler')
+Get('master') => this.kokurikulerService.getMaster
+Post('master') => this.kokurikulerService.createMaster
+Put('master/:id') => this.kokurikulerService.updateMaster
+Delete('master/:id') => this.kokurikulerService.deleteMaster
+Get('siswa') => this.kokurikulerService.getSiswaLogs
+Post('siswa') => this.kokurikulerService.saveSiswaLogs
+Get('verifikasi') => this.kokurikulerService.getVerifikasiList
+Post('verifikasi') => this.kokurikulerService.verifyLogs
+Get('laporan') => this.kokurikulerService.getLaporan
+apps/api/src/laporan-piket/laporan-piket.controller.ts Controller('laporan-piket') UseGuards(JwtAuthGuard)
+Get() => this.laporanPiketService.getLaporan
+Post() => this.laporanPiketService.createLaporan
+Patch() => this.laporanPiketService.updateLaporan
+Delete() => this.laporanPiketService.deleteLaporan
+apps/api/src/lckh/lckh.controller.ts Controller('lckh') UseGuards(JwtAuthGuard)
+Get('nilai-detail') => this.lckhService.getNilaiDetail
+Get('print/data') => this.lckhService.getPrintData
+Get('print/lembar-pengesahan') => this.lckhService.getPrintData
+Get('periods') => this.lckhService.getPeriods
+Get('submissions') => this.lckhService.getSubmissions
+Get('submissions/:id') => this.lckhService.getSubmissionById
+Post('submissions') => this.lckhService.saveSubmission
+Delete('submissions/:id') => this.lckhService.deleteSubmission
+Get('approvals/:submissionId') => this.lckhService.getApprovals
+Post('approvals/:submissionId') => this.lckhService.approveSubmission
+apps/api/src/libur/libur.controller.ts UseGuards(JwtAuthGuard) Controller('libur')
+Get() => this.liburService.getLibur
+Post() => this.liburService.createLibur
+Put(':id') => this.liburService.updateLibur
+Put() => this.liburService.updateLibur
+Delete(':id') => this.liburService.deleteLibur
+Delete() => this.liburService.deleteLibur
+apps/api/src/master/master.controller.ts UseGuards(JwtAuthGuard) Controller('master')
+Get('dropdown') => this.masterService.getDropdowns
+Post('jp-mapel/bulk') => this.masterService.bulkCreateJpMapel
+Get('mapel-kelas/mappings') => this.masterService.getMapelKelas
+Post('mapel-kelas/mappings') => this.masterService.saveMapelKelas
+Get('guru/rekening') => this.masterService.getGuruRekening
+Get('guru/pindah') => this.masterService.getPindahPreview
+Post('guru/pindah') => this.masterService.executePindah
+Post('check-import') => this.masterService.checkImport
+Get(':entity') => this.masterService.list
+Post(':entity') => this.masterService.create
+Put(':entity') => this.masterService.update
+Delete(':entity') => this.masterService.remove
+apps/api/src/monitoring/monitoring.controller.ts Controller('monitoring') UseGuards(JwtAuthGuard)
+Get('activity') => this.monitoringService.getActivityLogs
+Get('users') => this.monitoringService.getUsers
+apps/api/src/nilai/nilai.controller.ts Controller('nilai') UseGuards(JwtAuthGuard)
+Get() => this.nilaiService.getNilai
+Post() => this.nilaiService.saveNilai
+Get('admin') => this.nilaiService.getAdminNilai
+Get('filters') => this.nilaiService.getFilters
+Get('guru-list') => this.nilaiService.getGuruList
+Post('bobot') => this.nilaiService.saveBobot
+Get('siswa/photos') => this.nilaiService.getSiswaPhotos
+Get('siswa') => this.nilaiService.getSiswaNilai
+Get('siswa/apresiasi') => this.nilaiService.getSiswaApresiasi
+Get('siswa/students') => this.nilaiService.getSiswaStudents
+Get('tagihan') => this.nilaiService.getTagihan
+Post('tagihan') => this.nilaiService.saveTagihan
+Delete('tagihan/:id') => this.nilaiService.deleteTagihan
+Get('apresiasi') => this.nilaiService.getApresiasi
+Post('apresiasi') => this.nilaiService.saveApresiasi
+Delete('apresiasi/:id') => this.nilaiService.deleteApresiasi
+apps/api/src/notifications/notifications.controller.ts UseGuards(JwtAuthGuard) Controller('notifications')
+Get() => this.service.getNotifications
+Post() => this.service.createNotification
+apps/api/src/observasi-kelas/observasi-kelas.controller.ts UseGuards(JwtAuthGuard, PageAccessGuard) RequiresPage('observasi-kelas') Controller('observasi-kelas')
+Get() => this.observasiKelasService.findAll
+Get(':id') => this.observasiKelasService.findOne
+Post() => this.observasiKelasService.create
+Put(':id') => this.observasiKelasService.update
+Delete(':id') => this.observasiKelasService.delete
+apps/api/src/orangtua/orangtua.controller.ts UseGuards(JwtAuthGuard) Controller('orangtua')
+Get('anak') => this.orangtuaService.listAnak
+Get('anak/:nisn') => this.orangtuaService.getAnakDetail
+Post('anak') => this.orangtuaService.claimAnak
+Get('relasi') => this.orangtuaService.searchSiswa,this.orangtuaService.listRelasi
+Post('relasi') => this.orangtuaService.addRelasi
+Patch('relasi') => this.orangtuaService.updateRelasi
+Delete('relasi') => this.orangtuaService.deleteRelasi
+apps/api/src/pengumuman/pengumuman.controller.ts Controller('pengumuman') UseGuards(JwtAuthGuard)
+Get() => this.pengumumanService.getPengumuman
+Post() => this.pengumumanService.createPengumuman
+Put(':id') => this.pengumumanService.updatePengumuman
+Delete(':id') => this.pengumumanService.deletePengumuman
+apps/api/src/personal-docs/personal-docs.controller.ts UseGuards(JwtAuthGuard) Controller('personal')
+Get('folders') => this.service.getFolders
+Post('folders') => this.service.createFolder
+Delete('folders/delete') => this.service.deleteFolder
+Post('folders/share') => this.service.shareFolder
+Delete('folders/share/revoke') => this.service.revokeFolderShare
+Get('documents') => this.service.getDocuments
+Post('documents') => this.service.createDocument
+Post('documents/move') => this.service.moveDocuments
+Delete('documents/delete') => this.service.deleteDocuments
+Post('documents/share') => this.service.shareDocument
+Delete('documents/share/revoke') => this.service.revokeDocumentShare
+Get('documents/:id/file') => this.service.getDocumentFile
+Get('users/search') => this.service.searchUsers
+apps/api/src/prestasi/prestasi.controller.ts UseGuards(JwtAuthGuard, PageAccessGuard) RequiresPage('prestasi') Controller('prestasi')
+Get() => this.prestasiService.findAll
+Get(':id') => this.prestasiService.findOne
+Post() => this.prestasiService.create
+Put(':id') => this.prestasiService.update
+Delete(':id') => this.prestasiService.delete
+apps/api/src/ptsp/ptsp.controller.ts UseGuards(JwtAuthGuard) Controller('ptsp')
+Get() => this.ptspService.getTableData
+Post() => this.ptspService.updateTableData
+Delete() => this.ptspService.deleteTableData
+Get('notify-wa') => this.ptspService.notifyWa
+apps/api/src/sanggar/sanggar.controller.ts Controller('sanggar') UseGuards(JwtAuthGuard, PageAccessGuard) RequiresPage('sanggar-kurikulum')
+Get() => this.sanggarService.findAll
+Get('check') => this.sanggarService.check
+Get('kuota') => this.sanggarService.getKuota
+Get(':id') => this.sanggarService.findOne
+Post() => this.sanggarService.create
+Put(':id') UseGuards(JwtAuthGuard) => this.sanggarService.update
+Delete(':id') UseGuards(JwtAuthGuard) => this.sanggarService.delete
+Get('broadcast/config') UseGuards(JwtAuthGuard) => this.sanggarService.getBroadcastConfig
+Post('broadcast') UseGuards(JwtAuthGuard) => this.sanggarService.postBroadcast
+apps/api/src/settings/settings.controller.ts UseGuards(JwtAuthGuard, RolesGuard, FeatureAccessGuard) Controller('settings')
+Get('jadwal-piket') => this.settingsService.getJadwalPiket
+Post('jadwal-piket') => this.settingsService.createJadwalPiket
+Put('jadwal-piket') => this.settingsService.updateJadwalPiketDates,this.settingsService.updateJadwalPiket
+Delete('jadwal-piket') => this.settingsService.deleteJadwalPiket
+Get('jadwal-guru') => this.settingsService.getJadwalGuru
+Post('jadwal-guru') => this.settingsService.createJadwalGuru
+Put('jadwal-guru') => this.settingsService.updateJadwalGuru
+Delete('jadwal-guru') => this.settingsService.deleteJadwalGuru
+Get('siswa-kelas') => this.settingsService.getSiswaKelas
+Post('siswa-kelas') Roles('ADMIN', 'ADMINISTRATOR', 'KURIKULUM', 'WKM_AKADEMIK') => this.settingsService.createSiswaKelas
+Put('siswa-kelas') Roles('ADMIN', 'ADMINISTRATOR', 'KURIKULUM', 'WKM_AKADEMIK') => this.settingsService.updateSiswaKelas
+Delete('siswa-kelas') Roles('ADMIN', 'ADMINISTRATOR', 'KURIKULUM', 'WKM_AKADEMIK') => this.settingsService.deleteSiswaKelas
+Get('guru-mapel') => this.settingsService.getGuruMapel
+Post('guru-mapel') Roles('ADMIN', 'ADMINISTRATOR', 'KURIKULUM', 'WKM_AKADEMIK') => this.settingsService.createGuruMapel
+Put('guru-mapel') Roles('ADMIN', 'ADMINISTRATOR', 'KURIKULUM', 'WKM_AKADEMIK') => this.settingsService.updateGuruMapel
+Delete('guru-mapel') Roles('ADMIN', 'ADMINISTRATOR', 'KURIKULUM', 'WKM_AKADEMIK') => this.settingsService.deleteGuruMapel
+Get('wali-kelas') => this.settingsService.getWaliKelas
+Post('wali-kelas') Roles('ADMIN', 'ADMINISTRATOR', 'KURIKULUM', 'WKM_AKADEMIK') => this.settingsService.createWaliKelas
+Put('wali-kelas') Roles('ADMIN', 'ADMINISTRATOR', 'KURIKULUM', 'WKM_AKADEMIK') => this.settingsService.updateWaliKelas
+Delete('wali-kelas') Roles('ADMIN', 'ADMINISTRATOR', 'KURIKULUM', 'WKM_AKADEMIK') => this.settingsService.deleteWaliKelas
+Get('guru-asuh') => this.settingsService.getGuruAsuh
+UseGuards(JwtAuthGuard) Post('guru-asuh') => this.settingsService.createGuruAsuh
+UseGuards(JwtAuthGuard) Put('guru-asuh') => this.settingsService.updateGuruAsuh
+UseGuards(JwtAuthGuard) Delete('guru-asuh') => this.settingsService.deleteGuruAsuh
+Get('guru-mapel/check') => this.settingsService.checkGuruMapel
+Post('jadwal-guru/import') => this.settingsService.importJadwalGuru
+Post('jadwal-piket/import') => this.settingsService.importJadwalPiket
+Get('um-lock/debug') => this.settingsService.getUmLockDebug
+Post('um-lock/debug') Roles('ADMIN', 'ADMINISTRATOR') => this.settingsService.updateUmLockDebug
+apps/api/src/siswa/siswa.controller.ts Controller('siswa') UseGuards(JwtAuthGuard)
+Get() => this.siswaService.findAll
+Get(':nisn/kelas') => this.siswaService.getStudentClasses
+Get(':nisn') => this.siswaService.findByNisn
+Get('by-kelas/:kelas') => this.siswaService.getSiswaByKelas
+apps/api/src/site-settings/site-settings.controller.ts Controller()
+UseGuards(OptionalJwtAuthGuard) Get('site-settings') => this.siteSettingsService.getSetting,this.siteSettingsService.getAllSettings
+UseGuards(JwtAuthGuard) Get('site-settings/api-logs') => this.siteSettingsService.getApiLogs
+UseGuards(JwtAuthGuard) Put('site-settings') => this.siteSettingsService.updateSetting
+Get('pages') => this.pagesService.getPages
+UseGuards(OptionalJwtAuthGuard) Get('menu-layout') => this.menuLayoutService.getMenuLayout,this.accessService.getRoleFlatGroupsMap
+UseGuards(JwtAuthGuard) Put('menu-layout') => this.menuLayoutService.setMenuLayout
+Get('profil-sekolah') => this.siteSettingsService.getProfilSekolah
+UseGuards(JwtAuthGuard) Post('profil-sekolah') => this.siteSettingsService.createProfilSekolah
+UseGuards(JwtAuthGuard) Put('profil-sekolah') => this.siteSettingsService.updateProfilSekolah
+Get('fitur-akademik') => this.siteSettingsService.getFiturAkademik
+UseGuards(JwtAuthGuard) Post('fitur-akademik') => this.siteSettingsService.createFiturAkademik
+UseGuards(JwtAuthGuard) Put('fitur-akademik') => this.siteSettingsService.updateFiturAkademik
+UseGuards(JwtAuthGuard) Delete('fitur-akademik') => this.siteSettingsService.deleteFiturAkademik
+Get('master-dropdown') => this.siteSettingsService.getMasterDropdownByColumnNull,this.siteSettingsService.getMasterDropdown
+UseGuards(JwtAuthGuard) Post('master-dropdown') => this.siteSettingsService.createMasterDropdown
+UseGuards(JwtAuthGuard) Put('master-dropdown') => this.siteSettingsService.updateMasterDropdown
+UseGuards(JwtAuthGuard) Delete('master-dropdown') => this.siteSettingsService.deleteMasterDropdown
+UseGuards(JwtAuthGuard) Post('master-dropdown/column') => 
+UseGuards(JwtAuthGuard) Delete('master-dropdown/column') => 
+UseGuards(OptionalJwtAuthGuard) Get('site-settings/file-storage-config') => this.siteSettingsService.getFileStorageConfig
+UseGuards(JwtAuthGuard) Post('site-settings/file-storage-config/switch') => this.siteSettingsService.switchFileStorageConfig
+UseGuards(JwtAuthGuard) Put('site-settings/file-storage-config/:id') => this.siteSettingsService.updateFileStorageConfig
+Get('config') => this.siteSettingsService.getSystemConfig
+Put('config') UseGuards(JwtAuthGuard) => this.siteSettingsService.updateSystemConfig
+Get('testimonials') => this.siteSettingsService.getTestimonials
+Post('testimonials') => this.siteSettingsService.createTestimonial
+Get('storage-usage') => this.siteSettingsService.getStorageUsage
+Post('site-settings/file-registry/register') => this.siteSettingsService.registerUpload
+Post('site-settings/file-registry/unregister') => this.siteSettingsService.unregisterUpload
+apps/api/src/students/students.controller.ts UseGuards(JwtAuthGuard) Controller('students')
+Get('card') => this.studentsService.getOrCreateCards,this.studentsService.getOrCreateCards
+Get('bulk-status') => this.studentsService.auditBulkStatus
+Post('bulk-status') => this.studentsService.applyBulkStatus
+Get('verify') => this.studentsService.verifyStudent
+apps/api/src/surat/surat.controller.ts Controller('surat/templates') UseGuards(JwtAuthGuard)
+Get() => this.suratService.getTemplates
+Get('urls') => this.suratService.getTemplateUrls
+Get(':id') => this.suratService.getTemplateById
+Post() => this.accessService.resolveUserAccess,this.suratService.createOrUpdateTemplate
+Put(':id') => this.accessService.resolveUserAccess,this.suratService.updateTemplate
+Delete(':id') => this.accessService.resolveUserAccess,this.suratService.softDeleteTemplate
+apps/api/src/surat/surat.controller.ts Controller('surat')
+Get('dropdown/jenis-surat') => this.suratService.getJenisSuratDropdown
+Get('verify') => this.suratService.verifySurat
+Get('by-nomor') UseGuards(JwtAuthGuard) => this.suratService.getSuratByNomor
+Get('search') UseGuards(JwtAuthGuard) => this.suratService.searchSurat
+Get('generate-number') UseGuards(JwtAuthGuard) => this.suratService.generateNumber
+Post('generate-number') UseGuards(JwtAuthGuard) => this.suratService.generateNumber
+Get('guru') UseGuards(JwtAuthGuard) => this.suratService.getGuru
+Get('siswa') UseGuards(JwtAuthGuard) => this.suratService.getSiswa
+Get('items') UseGuards(JwtAuthGuard) => this.suratService.getAllSurat
+Get('items/:id') UseGuards(JwtAuthGuard) => this.suratService.getSuratById
+Post('items') UseGuards(JwtAuthGuard) => this.suratService.createSurat
+Put('items/:id') UseGuards(JwtAuthGuard) => this.suratService.updateSurat
+Delete('items/:id') UseGuards(JwtAuthGuard) => this.suratService.deleteSurat
+Get('permintaan') UseGuards(JwtAuthGuard) => this.suratService.getPermintaanList
+Get('permintaan/:id') UseGuards(JwtAuthGuard) => this.suratService.getPermintaanById
+Post('permintaan') UseGuards(JwtAuthGuard) => this.suratService.createPermintaan
+Put('permintaan/:id') UseGuards(JwtAuthGuard) => this.suratService.updatePermintaan
+Delete('permintaan/:id') UseGuards(JwtAuthGuard) => this.suratService.deletePermintaan
+Get('config') UseGuards(JwtAuthGuard) => this.suratService.getConfigSurat
+Post('config') UseGuards(JwtAuthGuard) => this.suratService.saveConfigSurat
+Put('config') UseGuards(JwtAuthGuard) => this.suratService.saveConfigSurat
+Post('generate-pdf-data') UseGuards(JwtAuthGuard) => this.suratService.getSuratForPdf
+apps/api/src/tugas-siswa/tugas-siswa.controller.ts Controller('tugas-siswa') UseGuards(JwtAuthGuard)
+Get('master') => this.tugasSiswaService.getMasterData
+Get('action') => this.tugasSiswaService.getStats
+Post('action') => this.tugasSiswaService.toggleChecklist
+Get() => this.tugasSiswaService.findAll
+Get(':id') => this.tugasSiswaService.findById
+Post() => this.tugasSiswaService.create
+Put(':id') => this.tugasSiswaService.update
+Delete(':id') => this.tugasSiswaService.remove
+apps/api/src/tugas-tambahan/tugas-tambahan.controller.ts UseGuards(JwtAuthGuard, PageAccessGuard) Controller('tugas-tambahan')
+Get() => this.tugasTambahanService.getTugasTambahan
+Post() RequiresPage('tugas-tambahan', 'pengaturan-tugas') => this.tugasTambahanService.upsertTugasTambahan
+Delete() RequiresPage('tugas-tambahan', 'pengaturan-tugas') => this.tugasTambahanService.deleteTugasTambahan
+Get('jurnal') => this.tugasTambahanService.getJurnalTugas
+Post('jurnal') RequiresPage('tugas-tambahan', 'pengaturan-tugas') => this.tugasTambahanService.upsertJurnalTugas
+Delete('jurnal') RequiresPage('tugas-tambahan', 'pengaturan-tugas') => this.tugasTambahanService.deleteJurnalTugas
+apps/api/src/um-kelulusan/um-kelulusan.controller.ts UseGuards(JwtAuthGuard) Controller()
+Get('kelulusan') => this.umKelulusanService.getKelulusan
+Post('kelulusan') => this.umKelulusanService.postKelulusan
+Patch('kelulusan') => this.umKelulusanService.patchKelulusan
+Get('ujian-madrasah') => this.umKelulusanService.getUjianMadrasah
+Post('ujian-madrasah') => this.umKelulusanService.postUjianMadrasah
+Get('ujian-madrasah/kelas-xii') => this.umKelulusanService.getKelasXii
+Post('ujian-madrasah/config') => this.umKelulusanService.postUmConfig
+Post('ujian-madrasah/import-raport') => this.umKelulusanService.postUmRaport
+Get('settings/um-lock') => this.umKelulusanService.getUmLock
+Post('settings/um-lock') => this.umKelulusanService.postUmLock
+apps/api/src/users/register.controller.ts Controller('register')
+Post('parent') => this.usersService.registerParent
+apps/api/src/users/users.controller.ts UseGuards(JwtAuthGuard) Controller('users')
+Get() => this.usersService.list,this.accessService.resolveManyUserAccess
+Post() => this.usersService.create
+Post('bulk') => this.usersService.bulkUpsert
+Put('me') => this.usersService.update,this.usersService.changeOwnPassword
+Get('pinned-pages') => this.usersService.getPinnedPages
+Put('pinned-pages') => this.usersService.updatePinnedPages
+Get('profile-guru') => this.usersService.getProfileGuru
+Get('profile-siswa') => this.usersService.getProfileSiswa
+Post('heartbeat') => this.usersService.heartbeat
+Post('bulk-replace') => this.usersService.bulkReplace
+Post('link-auth') => this.usersService.linkAuth
+Get(':id') => this.usersService.findById,this.accessService.resolveUserAccess
+Put(':id') => this.usersService.update
+Put(':id/status') => this.usersService.updateStatus
+Delete(':id') => this.usersService.remove
+apps/api/src/wali-kelas/wali-kelas.controller.ts UseGuards(JwtAuthGuard) Controller('wali-kelas')
+Get('absensi-akumulasi') => this.waliKelasService.getAbsensiAkumulasi
+Post('absensi-akumulasi/lock') => this.waliKelasService.lockAbsensi
+Post('absensi-akumulasi/unlock') => this.waliKelasService.unlockAbsensi
+Get('ekskul') => this.waliKelasService.getEkskul

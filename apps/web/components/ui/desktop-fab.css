@@ -1,0 +1,103 @@
+/**
+ * FAB melayang (desktop) — sama persis dengan tombol melayang di halaman Jadwal.
+ *
+ * Hanya tampil di >= 992px; di bawah itu aksi utama halaman sudah diwakili
+ * <MobileFab> yang menempati slot tengah BottomNav, jadi menampilkan keduanya
+ * cuma menumpuk dua tombol untuk satu aksi yang sama.
+ *
+ * Kelas berdiri sendiri di file ini (bukan styled-jsx) supaya gaya tetap
+ * berlaku walau tombol dirender dari komponen lain.
+ */
+.dfab-wrapper {
+    display: none;
+}
+
+@media (min-width: 768px) {
+    .dfab-wrapper {
+        display: flex;
+        position: fixed;
+        bottom: 30px;
+        right: 30px;
+        /* Di atas konten halaman & header sticky (500), tapi tetap di bawah
+           dropdown notifikasi (1000+) dan modal (9999+). */
+        z-index: 450;
+    }
+
+    .dfab {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #3083FF;
+        color: #ffffff;
+        border: none;
+        height: 52px;
+        min-width: 52px;
+        padding: 0;
+        border-radius: 999px;
+        font-family: inherit;
+        font-size: 0.95rem;
+        font-weight: 600;
+        cursor: pointer;
+        box-shadow: 0 8px 24px rgba(0, 56, 168, 0.35);
+        transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+        overflow: hidden;
+        white-space: nowrap;
+        /* Drag ditangani pointer event; matikan gestur bawaan browser. */
+        touch-action: none;
+        user-select: none;
+    }
+
+    /* Saat diseret tombol harus menempel di kursor: transisi 0.4s bikin
+       posisinya tertinggal, dan efek hover mengangkatnya jadi ikut goyang. */
+    .dfab.is-dragging,
+    .dfab.is-dragging:hover:not(.is-expanded) {
+        transition: none;
+        transform: none;
+        cursor: grabbing;
+    }
+
+    .dfab.is-expanded {
+        padding: 0 24px;
+    }
+
+    .dfab:hover:not(.is-expanded) {
+        transform: translateY(-4px) scale(1.02);
+        box-shadow: 0 12px 28px rgba(0, 56, 168, 0.45);
+        background: #002D8B;
+    }
+
+    .dfab:active {
+        transform: translateY(0) scale(0.98);
+    }
+
+    .dfab-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.15rem;
+        line-height: 1;
+    }
+
+    .dfab-text {
+        display: inline-block;
+        max-width: 0;
+        opacity: 0;
+        transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .dfab.is-expanded .dfab-text {
+        max-width: 200px;
+        opacity: 1;
+        margin-left: 10px;
+    }
+
+    .dark .dfab {
+        background: #3B82F6;
+        box-shadow: 0 8px 24px rgba(59, 130, 246, 0.35);
+    }
+
+    .dark .dfab:hover:not(.is-expanded) {
+        background: #2563EB;
+        box-shadow: 0 12px 28px rgba(59, 130, 246, 0.45);
+    }
+}

@@ -1,0 +1,1227 @@
+/* =========================================================
+   MOBILE UI — pola daftar, toolbar, dan sheet untuk layar <768px
+   Prefix global: .mui-*  (jangan dipakai untuk hal lain)
+
+   File .css biasa, BUKAN <style jsx>: styled-jsx tidak menjangkau
+   subkomponen, jadi gaya yang ditulis di view.tsx tidak akan sampai ke
+   komponen di folder ini — alasan yang sama dengan components/modal.css
+   dan components/filter-toolbar.css.
+
+   Token ditaruh di :root, bukan di .mui, karena .mui-sheet dirender lewat
+   portal ke document.body dan tidak berada di dalam .mui.
+   ========================================================= */
+
+:root {
+    --mui-tap: 44px;
+    /* ambang sentuh minimum (Apple HIG 44pt) */
+    --mui-tap-lg: 48px;
+    /* input & tombol utama */
+    --mui-radius: 14px;
+    --mui-pad: 12px;
+    --mui-gap: 10px;
+    --mui-fs-primary: 0.95rem;
+    --mui-fs-secondary: 0.8rem;
+    --mui-fs-meta: 0.72rem;
+    /* jangan turun di bawah ini */
+
+    /* Token material kaca (--mui-glass-bg / --mui-glass-blur) ada di
+       app/globals.css, BUKAN di sini: components/bottom-nav.css juga
+       memakainya, dan file itu dimuat di semua halaman — sementara file ini
+       hanya ikut terbawa di halaman yang mengimpor komponen mobile. Kalau
+       tokennya di sini, bar bawah jadi berkaca di sebagian halaman saja. */
+}
+
+.mui {
+    display: flex;
+    flex-direction: column;
+    gap: var(--mui-gap);
+    position: relative;
+}
+
+/* ========================= Toolbar (search-first) ========================= */
+
+/* Melayang sticky sebagai kartu tersendiri, bukan strip selebar layar:
+   di dark mode .main-content transparan (gradien radial ikut terlihat), jadi
+   strip solid selebar layar akan tampak seperti pita hitam menempel. */
+.mui-bar {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px;
+    background: var(--n-card);
+    border: 1px solid var(--n-border);
+    border-radius: var(--mui-radius);
+    box-shadow: 0 4px 14px rgba(2, 6, 23, 0.08);
+}
+
+/* Kapsul penuh (radius = setengah tinggi), bukan kotak beradius kecil: kolom
+   cari adalah satu-satunya kontrol yang selalu terlihat, dan bentuk kapsul
+   membedakannya dari kartu/daftar di sekitarnya yang semuanya persegi.
+   Padding kiri dinaikkan ke 16px supaya ikon tidak menempel ke lengkungan. */
+.mui-search {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: var(--mui-tap);
+    padding: 0 6px 0 16px;
+    box-sizing: border-box;
+    background: var(--n-surface);
+    border: 1px solid var(--n-border);
+    border-radius: 999px;
+}
+
+.mui-search:focus-within {
+    border-color: var(--n-primary);
+    box-shadow: 0 0 0 3px rgba(0, 56, 168, 0.12);
+}
+
+.mui-search>i {
+    flex-shrink: 0;
+    font-size: 1rem;
+    color: var(--n-muted);
+}
+
+/* 16px wajib: di bawah itu iOS Safari melakukan auto-zoom saat input difokus,
+   dan halaman tidak pernah kembali ke skala semula. */
+.mui-input {
+    flex: 1 1 auto;
+    width: 100%;
+    min-width: 0;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+    background: transparent !important;
+    font-family: inherit;
+    font-size: 16px;
+    color: var(--n-text);
+}
+
+.mui-input::placeholder {
+    color: var(--n-muted);
+}
+
+.mui-iconbtn {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--mui-tap);
+    height: var(--mui-tap);
+    padding: 0;
+    background: transparent;
+    border: none;
+    /* Bulat, mengikuti kolom cari di sebelahnya: tombol ini selalu ikon saja
+       dan berukuran persegi, jadi kotak beradius kecil terbaca sebagai bentuk
+       ketiga yang tidak perlu. */
+    border-radius: 50%;
+    color: var(--n-text);
+    font-size: 1.2rem;
+    cursor: pointer;
+}
+
+.mui-iconbtn:active,
+.mui-iconbtn.isOpen {
+    background: rgba(0, 56, 168, 0.08);
+    color: var(--n-primary);
+}
+
+/* --------------------------------- Chip --------------------------------- */
+
+.mui-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.mui-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 32px;
+    padding: 0 12px;
+    background: rgba(0, 56, 168, 0.08);
+    border: 1px solid rgba(0, 56, 168, 0.2);
+    border-radius: 999px;
+    color: var(--n-primary);
+    font-size: var(--mui-fs-secondary);
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.mui-chip i {
+    font-size: 0.72rem;
+}
+
+/* ---------------------------- Menu overflow ----------------------------- */
+
+.mui-menuWrap {
+    position: relative;
+    display: inline-flex;
+}
+
+.mui-menu {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    z-index: 40;
+    min-width: 240px;
+    display: flex;
+    flex-direction: column;
+    padding: 6px;
+    background: var(--n-card);
+    border: 1px solid var(--n-border);
+    border-radius: 14px;
+    box-shadow: 0 16px 40px rgba(2, 6, 23, 0.18);
+}
+
+.mui-menuItem {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    min-height: var(--mui-tap);
+    padding: 0 10px;
+    background: none;
+    border: none;
+    border-radius: 10px;
+    color: var(--n-text);
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-align: left;
+    cursor: pointer;
+}
+
+.mui-menuItem:active {
+    background: rgba(0, 56, 168, 0.08);
+}
+
+.mui-menuItem i {
+    font-size: 1rem;
+    color: var(--n-primary);
+}
+
+.mui-menuItem.isDanger,
+.mui-menuItem.isDanger i {
+    color: #dc2626;
+}
+
+.mui-menuSep {
+    height: 1px;
+    margin: 4px 6px;
+    background: var(--n-border);
+}
+
+/* Baris meta: chip filter + hitungan disatukan. Sebelumnya dua baris terpisah
+   yang masing-masing cuma berisi satu elemen kecil. */
+.mui-meta {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+/* ============================== Daftar ================================== */
+
+.mui-count {
+    color: var(--n-muted);
+    font-size: var(--mui-fs-meta);
+    font-weight: 600;
+}
+
+.mui-list {
+    display: flex;
+    flex-direction: column;
+    background: var(--n-card);
+    border: 1px solid var(--n-border);
+    border-radius: var(--mui-radius);
+    overflow: hidden;
+}
+
+/* Baris ~60px: avatar 40 + padding 2×10. Pola lama (kartu key-value) ~224px,
+   jadi satu layar cuma memuat 2-3 siswa dari 900+. */
+.mui-item {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    padding: 10px 12px;
+    background: transparent;
+    border: none;
+    text-align: left;
+    cursor: pointer;
+    /* Tekan-lama untuk mode seleksi: matikan menu konteks & seleksi teks bawaan
+       browser, kalau tidak Android memunculkan "Copy/Share" di tengah gestur. */
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* Garis pemisah MENJOROK, mulai sejajar teks (12 padding + 40 avatar + 12 gap),
+   bukan selebar penuh: garis penuh memotong kolom avatar dan membuat tiap baris
+   terbaca sebagai kotak sendiri-sendiri. Dipakai ::after karena `border-bottom`
+   tidak bisa diberi jarak kiri. */
+.mui-item::after {
+    content: '';
+    position: absolute;
+    left: 64px;
+    right: 0;
+    bottom: 0;
+    height: 1px;
+    background: var(--n-border);
+}
+
+.mui-list>.mui-item:last-child::after {
+    display: none;
+}
+
+/* Tanpa avatar, tidak ada kolom kiri yang perlu dilewati — garisnya mulai
+   sejajar teks lagi, yaitu di padding kiri baris. */
+.mui-item--noAvatar::after {
+    left: 12px;
+}
+
+.mui-item:active {
+    background: rgba(0, 56, 168, 0.05);
+}
+
+.mui-item.isSelected {
+    background: rgba(0, 56, 168, 0.08);
+}
+
+.mui-avatar {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    font-size: var(--mui-fs-secondary);
+    font-weight: 700;
+    letter-spacing: 0.02em;
+}
+
+.mui-avatar i {
+    font-size: 1.05rem;
+}
+
+/* Foto profil mengisi penuh lingkaran avatar. object-fit: cover supaya potret
+   maupun lanskap tetap terpotong di tengah, bukan gepeng. */
+.mui-avatar__img {
+    width: 100%;
+    height: 100%;
+    border-radius: inherit;
+    object-fit: cover;
+    display: block;
+}
+
+/* Rona avatar dipilih deterministik dari kunci baris (lihat tintOf di
+   MobileList.tsx) — bukan warna acak per render, supaya baris yang sama selalu
+   berona sama dan mata bisa mengenalinya saat scroll balik. Warnanya dekoratif;
+   tidak ada informasi yang HANYA disampaikan lewat warna. */
+.mui-avatar--t0 {
+    background: rgba(0, 56, 168, 0.10);
+    color: #3083ff;
+}
+
+.mui-avatar--t1 {
+    background: rgba(13, 148, 136, 0.12);
+    color: #0f766e;
+}
+
+.mui-avatar--t2 {
+    background: rgba(190, 24, 93, 0.10);
+    color: #9d174d;
+}
+
+.mui-avatar--t3 {
+    background: rgba(180, 83, 9, 0.12);
+    color: #92400e;
+}
+
+.mui-avatar--t4 {
+    background: rgba(109, 40, 217, 0.10);
+    color: #6d28d9;
+}
+
+.mui-avatar--t5 {
+    background: rgba(15, 23, 42, 0.08);
+    color: #334155;
+}
+
+.mui-item__text {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+/* Rata KIRI, satu baris, ellipsis. Nilai rata kanan yang membungkus (pola lama)
+   membuat arah baca zig-zag di kolom selebar ~195px.
+
+   `display: block` WAJIB: keduanya <span>, dan span inline tidak bisa dipotong
+   `text-overflow` maupun dipisah `margin-top` — judul dan subjudul akan
+   menyambung jadi satu baris ("NAMA0101523449") lalu meluber keluar kartu. */
+/* Sedikit lebih kecil dari --mui-fs-primary, dan hanya di baris daftar: judul
+   di sini rata-rata pendek dan berpasangan (judul + subjudul), jadi ukuran
+   penuh membuat baris terbaca seperti heading dan memakan tinggi. Toolbar,
+   sheet, dan field tetap memakai token supaya target sentuh & teks isian
+   (16px, cegah zoom otomatis iOS) tidak ikut mengecil. */
+.mui-item__title {
+    display: block;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--n-text);
+    line-height: 1.3;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.mui-item__sub {
+    display: block;
+    margin-top: 1px;
+    font-size: 0.75rem;
+    color: var(--n-muted);
+    line-height: 1.3;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.mui-item__trail {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--n-muted);
+}
+
+/* Badge hanya dipasang saat nilainya MENYIMPANG dari yang diharapkan.
+   Menandai "Aktif" di tiap baris saat filter memang "Aktif" adalah derau. */
+.mui-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 9px;
+    border-radius: 999px;
+    font-size: var(--mui-fs-meta);
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+/* Untuk daftar yang mayoritas isinya non-aktif, justru "aktif" yang menyimpang —
+   di sanalah badge positif ini dipakai. Jangan dipasang di daftar yang memang
+   isinya aktif semua; itu kembali jadi derau. */
+.mui-badge.isOn {
+    background: rgba(22, 163, 74, 0.14);
+    color: #15803d;
+}
+
+.mui-badge.isOff {
+    background: rgba(148, 163, 184, 0.18);
+    color: #475569;
+}
+
+.mui-badge.isWarn {
+    background: rgba(245, 158, 11, 0.15);
+    color: #b45309;
+}
+
+.mui-check {
+    flex: 0 0 auto;
+    width: 24px;
+    height: 24px;
+    margin: 8px;
+    pointer-events: none;
+}
+
+.mui-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 40px 20px;
+    color: var(--n-muted);
+    text-align: center;
+}
+
+.mui-empty i {
+    font-size: 1.8rem;
+    opacity: 0.5;
+}
+
+.mui-empty__title {
+    font-size: var(--mui-fs-primary);
+    font-weight: 600;
+    color: var(--n-text);
+}
+
+.mui-empty__sub {
+    font-size: var(--mui-fs-secondary);
+}
+
+.mui-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 48px 0;
+}
+
+/* Tombol "muat lagi" — menggantikan paginasi bernomor. Dengan 900+ siswa,
+   90 nomor halaman tidak menyelesaikan apa pun; pencarian yang menyelesaikannya. */
+.mui-more {
+    width: 100%;
+    height: var(--mui-tap-lg);
+    background: var(--n-card);
+    border: 1px solid var(--n-border);
+    border-radius: var(--mui-radius);
+    color: var(--n-primary);
+    font-family: inherit;
+    font-size: 0.85rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.mui-more:active {
+    background: rgba(0, 56, 168, 0.08);
+}
+
+/* ================================ FAB =================================== */
+
+/* Tidak ada lagi tombol mengambang di sini. <MobileFab> kini hanya MENDAFTARKAN
+   aksinya ke BottomNav, yang menampilkannya sebagai tombol bundar menonjol di
+   tengah bilah nav (components/bottom-nav.css, .bnav__fab). Gaya .mui-fab* dan
+   cadangan ruang :has(.mui-fabWrap) ikut dibuang bersamanya: markup-nya sudah
+   tidak pernah dirender, jadi aturannya cuma jadi jejak yang menyesatkan. */
+
+/* ========================= Bar mode seleksi ============================= */
+
+.mui-selbar {
+    position: sticky;
+    bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+    z-index: 26;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px;
+    background: var(--n-card);
+    border: 1px solid var(--n-border);
+    border-radius: var(--mui-radius);
+    box-shadow: 0 8px 28px rgba(2, 6, 23, 0.18);
+}
+
+.mui-selbar__count {
+    flex: 1 1 auto;
+    min-width: 0;
+    padding-left: 6px;
+    font-size: var(--mui-fs-secondary);
+    font-weight: 700;
+    color: var(--n-text);
+}
+
+.mui-selbar__btn {
+    flex: 0 0 auto;
+    height: var(--mui-tap);
+    padding: 0 14px;
+    background: var(--n-surface);
+    border: 1px solid var(--n-border);
+    border-radius: 10px;
+    color: var(--n-text);
+    font-family: inherit;
+    font-size: var(--mui-fs-secondary);
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.mui-selbar__btn.isOk {
+    background: #16a34a;
+    border-color: #16a34a;
+    color: #fff;
+}
+
+.mui-selbar__btn.isDanger {
+    background: #dc2626;
+    border-color: #dc2626;
+    color: #fff;
+}
+
+.mui-selbar__btn:disabled {
+    opacity: 0.5;
+}
+
+/* =============================== Sheet ================================== */
+
+.mui-sheetOverlay {
+    position: fixed;
+    inset: 0;
+    z-index: 3000;
+    display: flex;
+    align-items: flex-end;
+    background: rgba(2, 6, 23, 0.5);
+    animation: muiFade 0.18s ease-out;
+}
+
+.mui-sheet {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    max-height: 92dvh;
+    background: var(--n-card);
+    border-radius: 22px 22px 0 0;
+    box-shadow: 0 -8px 40px rgba(2, 6, 23, 0.3);
+    animation: muiSlideUp 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Sheet penuh untuk isi panjang (form): tinggi tetap, bukan mengikuti isi. */
+.mui-sheet--full {
+    height: 100dvh;
+    max-height: 100dvh;
+    border-radius: 0;
+}
+
+@keyframes muiFade {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes muiSlideUp {
+    from {
+        transform: translateY(24px);
+    }
+
+    to {
+        transform: translateY(0);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+    .mui-sheetOverlay,
+    .mui-sheet {
+        animation: none;
+    }
+}
+
+.mui-sheet__grab {
+    flex: 0 0 auto;
+    width: 40px;
+    height: 4px;
+    margin: 10px auto 2px;
+    background: #112E59 !important;
+    border-radius: 999px;
+}
+
+.mui-sheet__head {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 16px 12px;
+    border-bottom: 1px solid var(--n-border);
+}
+
+.mui-sheet__headText {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.mui-sheet__title {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--n-text);
+    line-height: 1.3;
+}
+
+.mui-sheet__sub {
+    margin-top: 2px;
+    font-size: var(--mui-fs-secondary);
+    color: var(--n-muted);
+}
+
+.mui-sheet__body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 4px 16px 12px;
+}
+
+.mui-sheet__foot {
+    flex: 0 0 auto;
+    display: flex;
+    gap: 8px;
+    padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 0px));
+    background: var(--n-card);
+    border-top: 1px solid var(--n-border);
+}
+
+.mui-sheet__foot .mui-btn,
+/* Sheet boleh memakai <Button> bersama (components/ui/Button) di footernya.
+   Tanpa aturan ini lebar tiap tombol mengikuti panjang labelnya, sehingga
+   barisnya rata kiri dan menyisakan celah kosong di kanan. */
+.mui-sheet__foot .ui-btn {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.mui-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    height: var(--mui-tap-lg);
+    padding: 0 18px;
+    background: var(--n-surface);
+    border: 1px solid var(--n-border);
+    border-radius: 12px;
+    color: var(--n-text);
+    font-family: inherit;
+    font-size: 0.88rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.mui-btn--primary {
+    background: var(--n-primary);
+    border-color: var(--n-primary);
+    color: #fff;
+}
+
+.mui-btn--icon {
+    flex: 0 0 var(--mui-tap-lg) !important;
+    width: var(--mui-tap-lg);
+    padding: 0;
+}
+
+.mui-btn:disabled {
+    opacity: 0.5;
+}
+
+/* Aksi destruktif tidak pernah bersebelahan dengan aksi biasa: dipisah ke
+   dasar body, di bawah pemisah — pola "Delete Contact" iOS. */
+.mui-sheet__danger {
+    width: 100%;
+    height: var(--mui-tap-lg);
+    margin-top: 8px;
+    background: transparent;
+    border: 1px solid rgba(220, 38, 38, 0.3);
+    border-radius: 12px;
+    color: #dc2626;
+    font-family: inherit;
+    font-size: 0.85rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.mui-sheet__sep {
+    height: 1px;
+    margin: 16px 0 4px;
+    background: var(--n-border);
+}
+
+/* Label di ATAS nilai, dua-duanya rata kiri — arah baca tunggal.
+   Bukan label-kiri/nilai-kanan yang membuat mata bolak-balik. */
+.mui-kv {
+    padding: 10px 0;
+    border-bottom: 1px solid var(--n-border);
+}
+
+.mui-kv:last-of-type {
+    border-bottom: none;
+}
+
+.mui-kv__k {
+    font-size: var(--mui-fs-meta);
+    font-weight: 600;
+    color: var(--n-muted);
+}
+
+.mui-kv__v {
+    margin-top: 2px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--n-text);
+    overflow-wrap: anywhere;
+}
+
+.mui-kv__v.isMono {
+    font-family: ui-monospace, monospace;
+}
+
+.mui-sheet__section {
+    margin-top: 14px;
+    padding-top: 10px;
+    border-top: 1px solid var(--n-border);
+    font-size: var(--mui-fs-meta);
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--n-primary);
+}
+
+/* Opsi pilih-satu di dalam sheet (filter status, pemilih tab) */
+.mui-opt {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    min-height: var(--mui-tap-lg);
+    padding: 8px 4px;
+    background: none;
+    border: none;
+    border-bottom: 1px solid var(--n-border);
+    color: var(--n-text);
+    font-family: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.mui-opt:last-child {
+    border-bottom: none;
+}
+
+.mui-opt__icon {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: rgba(0, 56, 168, 0.08);
+    color: var(--n-primary);
+    font-size: 1rem;
+}
+
+.mui-opt__text {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.mui-opt__label {
+    display: block;
+    font-size: 0.9rem;
+    font-weight: 600;
+    line-height: 1.3;
+}
+
+.mui-opt__hint {
+    display: block;
+    margin-top: 1px;
+    font-size: var(--mui-fs-secondary);
+    font-weight: 400;
+    color: var(--n-muted);
+    line-height: 1.3;
+}
+
+.mui-opt.isSelected .mui-opt__label {
+    color: var(--n-primary);
+    font-weight: 700;
+}
+
+.mui-opt.isSelected .mui-opt__icon {
+    background: var(--n-primary);
+    color: #ffffff;
+}
+
+.mui-opt__mark {
+    flex: 0 0 auto;
+    width: 20px;
+    text-align: right;
+    color: var(--n-primary);
+    font-size: 1rem;
+}
+
+/* ============================= Dark mode ================================
+   Standar app: pitch black + garis biru elektrik. */
+
+.dark .mui-bar,
+.dark .mui-list,
+.dark .mui-more,
+.dark .mui-selbar,
+.dark .mui-menu {
+    background: #000000;
+    border: 1.8px solid rgba(26, 115, 232, 0.75);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+}
+
+.dark .mui-search {
+    background: #000000;
+    border: 1.8px solid rgba(26, 115, 232, 0.55);
+}
+
+.dark .mui-search:focus-within {
+    border-color: #60a5fa;
+    box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.18);
+}
+
+.dark .mui-search>i {
+    color: #60a5fa;
+}
+
+/* Ditulis eksplisit karena globals.css punya rantai `.dark input[type="text"]`
+   yang memaksa border + glow biru pada input tanpa kelas yang dikenali. */
+.dark .mui-search input.mui-input {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    color: #ffffff !important;
+}
+
+.dark .mui-input::placeholder {
+    color: #64748b;
+}
+
+.dark .mui-iconbtn {
+    color: #cbd5e1;
+}
+
+.dark .mui-iconbtn:active,
+.dark .mui-iconbtn.isOpen {
+    background: rgba(26, 115, 232, 0.2);
+    color: #60a5fa;
+}
+
+.dark .mui-chip {
+    background: rgba(26, 115, 232, 0.2);
+    border-color: rgba(26, 115, 232, 0.75);
+    color: #60a5fa;
+}
+
+.dark .mui-item {
+    border-bottom-color: rgba(37, 99, 235, 0.28);
+}
+
+.dark .mui-item:active,
+.dark .mui-item.isSelected {
+    background: rgba(26, 115, 232, 0.15);
+}
+
+.dark .mui-item__title {
+    color: #e2e8f0;
+}
+
+.dark .mui-item__sub {
+    color: #94a3b8;
+}
+
+.dark .mui-avatar--t0 {
+    background: rgba(26, 115, 232, 0.2);
+    color: #60a5fa;
+}
+
+.dark .mui-avatar--t1 {
+    background: rgba(20, 184, 166, 0.18);
+    color: #5eead4;
+}
+
+.dark .mui-avatar--t2 {
+    background: rgba(236, 72, 153, 0.18);
+    color: #f9a8d4;
+}
+
+.dark .mui-avatar--t3 {
+    background: rgba(245, 158, 11, 0.18);
+    color: #fcd34d;
+}
+
+.dark .mui-avatar--t4 {
+    background: rgba(139, 92, 246, 0.2);
+    color: #c4b5fd;
+}
+
+.dark .mui-avatar--t5 {
+    background: rgba(148, 163, 184, 0.16);
+    color: #cbd5e1;
+}
+
+.dark .mui-badge.isOn {
+    background: rgba(34, 197, 94, 0.18);
+    color: #4ade80;
+}
+
+.dark .mui-badge.isOff {
+    background: rgba(148, 163, 184, 0.15);
+    color: #94a3b8;
+}
+
+.dark .mui-badge.isWarn {
+    background: rgba(245, 158, 11, 0.18);
+    color: #fbbf24;
+}
+
+.dark .mui-menuItem {
+    color: #e2e8f0;
+}
+
+.dark .mui-menuItem i {
+    color: #60a5fa;
+}
+
+.dark .mui-menuItem.isDanger,
+.dark .mui-menuItem.isDanger i {
+    color: #f87171;
+}
+
+.dark .mui-menuSep,
+.dark .mui-sheet__sep {
+    background: rgba(37, 99, 235, 0.3);
+}
+
+.dark .mui-more {
+    color: #60a5fa;
+}
+
+.dark .mui-sheet {
+    background: #000000;
+    border-top: 1.8px solid rgba(26, 115, 232, 0.75);
+}
+
+.dark .mui-sheet__head,
+.dark .mui-sheet__foot,
+.dark .mui-kv,
+.dark .mui-opt,
+.dark .mui-sheet__section {
+    border-color: rgba(37, 99, 235, 0.3);
+}
+
+.dark .mui-sheet__foot {
+    background: #000000;
+}
+
+.dark .mui-sheet__grab {
+    background: rgba(37, 99, 235, 0.5);
+}
+
+.dark .mui-sheet__title,
+.dark .mui-kv__v,
+.dark .mui-opt,
+.dark .mui-opt__label {
+    color: #e2e8f0;
+}
+
+.dark .mui-opt__icon {
+    background: rgba(26, 115, 232, 0.2);
+    color: #60a5fa;
+}
+
+.dark .mui-opt__hint {
+    color: #94a3b8;
+}
+
+.dark .mui-opt.isSelected .mui-opt__label,
+.dark .mui-opt__mark {
+    color: #60a5fa;
+}
+
+.dark .mui-opt.isSelected .mui-opt__icon {
+    background: linear-gradient(135deg, #1d6bf3 0%, #3083ff 100%);
+    color: #ffffff;
+}
+
+.dark .mui-sheet__sub,
+.dark .mui-kv__k {
+    color: #94a3b8;
+}
+
+.dark .mui-sheet__section {
+    color: #60a5fa;
+}
+
+.dark .mui-btn,
+.dark .mui-selbar__btn {
+    background: #000000;
+    border: 1.8px solid rgba(26, 115, 232, 0.75);
+    color: #60a5fa;
+}
+
+.dark .mui-btn--primary {
+    background: linear-gradient(135deg, #1d6bf3 0%, #3083ff 100%);
+    border-color: #3b82f6;
+    color: #ffffff;
+}
+
+.dark .mui-selbar__btn.isOk {
+    background: #15803d;
+    border-color: #16a34a;
+    color: #ffffff;
+}
+
+.dark .mui-selbar__btn.isDanger {
+    background: #b91c1c;
+    border-color: #dc2626;
+    color: #ffffff;
+}
+
+.dark .mui-sheet__danger {
+    border-color: rgba(248, 113, 113, 0.5);
+    color: #f87171;
+}
+
+.dark .mui-selbar__count,
+.dark .mui-empty__title {
+    color: #e2e8f0;
+}
+
+/* =========================================================
+   MODE PERMUKAAN (opt-in: kelas .mui-surface di root .mui)
+   =========================================================
+   Masalahnya: "kartu mengambang di atas kanvas" itu bahasa DESKTOP — masuk akal
+   kalau ada ruang luas untuk mengambang. Di layar 375px, kanvas 4–8px di kiri
+   dan kanan bukan ruang bernapas, cuma bingkai. Hasilnya empat kotak putih
+   bertumpuk (pemilih tab, pencarian, daftar, muat-lagi) yang masing-masing
+   menambah border + radius + bayangan tanpa menambah informasi.
+
+   Di mode ini keempatnya lebur jadi SATU bidang selebar layar, dipisah garis
+   rambut — pola grouped list iOS / Android Settings.
+
+   Opt-in, bukan global: ~40 halaman lain masih merender kartu putihnya sendiri.
+   Kalau bidang ini dipasang global, kartu-kartu itu jadi putih-di-atas-putih dan
+   hilang tanpa ada yang tahu. Halaman ikut hanya setelah dimigrasi.
+   ========================================================= */
+
+/* Mengikuti MOBILE_QUERY di lib/use-breakpoint.ts — satu ambang untuk seluruh
+   cangkang aplikasi; ubah di sana dan di sini bersamaan. */
+@media (max-width: 767.98px) {
+
+    /* Padding samping container dilepas supaya bidangnya benar-benar selebar
+       layar. `:has()` dipakai supaya HANYA halaman yang opt-in yang terpengaruh.
+       DUA lapis: `.content-area` (8px + safe-area, ditulis !important di
+       styled-jsx app/(dashboard)/layout.tsx) dan `.content-container` (4px).
+       Menghapus salah satunya saja menyisakan gutter tipis di kiri-kanan, dan
+       bidang yang tidak menyentuh tepi layar terbaca sebagai kartu melayang —
+       persis bentuk yang mode ini hendak dihilangkan.
+
+       Nama elemen (main. / div.) ikut ditulis BUKAN demi kejelasan: aturan
+       lawannya ditulis di styled-jsx, jadi selektornya .content-area.jsx-xxx
+       — spesifisitas sama persis (0,2,0) dan sama-sama !important, sehingga
+       yang menang adalah urutan sisip, dan styled-jsx disisipkan belakangan.
+       Menambah nama elemen menaikkannya ke (0,2,1) dan hasilnya tidak lagi
+       bergantung pada urutan. */
+    main.content-area:has(.mui-surface),
+    div.content-container:has(.mui-surface) {
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+    }
+
+    .mui.mui-surface {
+        gap: 0;
+        background: var(--n-card);
+        border-top: 1px solid var(--n-border);
+        border-bottom: 1px solid var(--n-border);
+    }
+
+    /* Semua seksi kehilangan rangka kartunya sendiri; yang memisahkan mereka
+       sekarang garis rambut, bukan celah + border. */
+    .mui-surface .mui-bar {
+        border: none;
+        border-bottom: 1px solid var(--n-border);
+        border-radius: 0;
+        box-shadow: none;
+        padding: 8px 10px;
+    }
+
+    .mui-surface .mui-meta {
+        padding: 10px 12px;
+        border-bottom: 1px solid var(--n-border);
+    }
+
+    .mui-surface .mui-list {
+        border: none;
+        border-radius: 0;
+        overflow: visible;
+    }
+
+    .mui-surface .mui-more {
+        border: none;
+        border-top: 1px solid var(--n-border);
+        border-radius: 0;
+        height: 52px;
+    }
+
+    .mui-surface .mui-empty {
+        padding: 56px 20px;
+    }
+
+    /* Bar seleksi tetap mengambang di atas bidang: ia kontrol, bukan bagian isi. */
+    .mui-surface .mui-selbar {
+        margin: 12px;
+    }
+}
+
+.dark .mui-surface {
+    background: #000000;
+    border-color: rgba(37, 99, 235, 0.45);
+}
+
+.dark .mui-surface .mui-bar,
+.dark .mui-surface .mui-meta,
+.dark .mui-surface .mui-more {
+    background: #000000;
+    border-color: rgba(37, 99, 235, 0.3);
+}
+
+.dark .mui-item::after {
+    background: rgba(37, 99, 235, 0.28);
+}
+
+/* =========================================================
+   MATERIAL KACA — chrome saja
+   =========================================================
+   Yang diberi kaca hanya elemen yang benar-benar MENGAMBANG di atas sesuatu:
+
+     .mui-bar      sticky di atas daftar — baris lewat di belakangnya saat scroll
+     .mui-selbar   sticky di dasar — sama
+     .mui-menu     mengambang di atas daftar
+     .actab-picker di luar .mui-surface, jadi di belakangnya kanvas bergradien
+
+   Yang TIDAK diberi kaca, dan alasannya:
+
+     .mui-surface / .mui-list  permukaan baca — lihat catatan di token di atas
+     .mui-sheet                permukaan baca (detail siswa 9 field)
+
+   Dibungkus @supports supaya browser tanpa backdrop-filter tidak mendapat
+   panel bening tanpa blur — itu justru kondisi paling tidak terbaca. Tanpa
+   dukungan, latarnya tetap solid seperti sebelumnya.
+   ========================================================= */
+
+@supports ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
+
+    .mui-bar,
+    .mui-selbar,
+    .mui-menu {
+        background: var(--mui-glass-bg);
+        -webkit-backdrop-filter: var(--mui-glass-blur);
+        backdrop-filter: var(--mui-glass-blur);
+    }
+
+    /* Dark mode tidak boleh ikut dipaksa hitam solid oleh aturan
+       `.dark .mui-bar, .dark .mui-list, …` di atas. */
+    .dark .mui-bar,
+    .dark .mui-selbar,
+    .dark .mui-menu {
+        background: var(--mui-glass-bg);
+    }
+
+    /* Di dalam .mui-surface, .mui-bar juga kehilangan latar solidnya
+       (aturan `.dark .mui-surface .mui-bar { background: #000 }`). */
+    .mui-surface .mui-bar,
+    .dark .mui-surface .mui-bar {
+        background: var(--mui-glass-bg);
+    }
+}

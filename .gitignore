@@ -1,0 +1,83 @@
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# dependencies
+# Pola SENGAJA tidak diawali '/' supaya ikut menutup workspace (frontend/, backend/).
+# Dengan '/node_modules', hanya folder di root yang terabaikan dan puluhan ribu
+# berkas dependensi workspace ikut masuk ke git.
+node_modules/
+.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# testing
+coverage/
+
+# next.js
+.next/
+out/
+
+# production
+build/
+
+# nest.js (hasil build backend)
+dist/
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# env files (can opt-in for committing if needed)
+.env*
+# ...kecuali berkas contohnya. Pola `.env*` di atas ikut menelan `.env.example`,
+# sehingga berkas yang justru ADA untuk dibagikan tidak pernah masuk repo —
+# isinya hanya placeholder dan nama konfigurasi, tidak ada kredensial.
+!**/.env.example
+
+# Pengaturan lokal Claude Code — memuat perintah yang di-allowlist, dan
+# perintah itu bisa mengandung kredensial (mis. header apikey pada curl).
+.claude/settings.local.json
+.claude/worktrees/
+
+
+# vercel
+# cloudflare
+.open-next/
+.wrangler/
+.next-env.mjs
+
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+.vercel
+
+# Baileys WhatsApp session (jangan commit kredensial)
+.baileys_auth/
+
+# Scratch / debris pengembangan (skrip codemod sekali pakai, dump, backup)
+/scratch/
+fix-*.js
+update-*.js
+replace-*.js
+diff.txt
+old_grid.txt
+temp_old.tsx
+
+# Hasil dump basis data (scripts/salin-dari-supabase.sh). Isinya SELURUH data
+# madrasah termasuk hash kata sandi di auth.users — jangan sampai ter-commit.
+/acca-data.sql
+*.dump
+*.bak
+.git_backup/

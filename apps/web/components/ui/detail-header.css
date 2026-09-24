@@ -1,0 +1,159 @@
+/* =====================================================
+   DETAIL HEADER — baris "kembali + nama + filter/aksi" bersama,
+   ditiru & dipoles dari halaman Guru Asuh > Penilaian
+   ===================================================== */
+
+.dh-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 18px;
+    background: var(--n-card);
+    border: 1.8px solid rgba(0, 56, 168, 0.45);
+    border-radius: 18px;
+    color: var(--n-text);
+    flex-wrap: wrap;
+    box-shadow: 0 4px 16px rgba(0, 56, 168, 0.08);
+}
+
+.dh-backBtn {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    background: var(--n-soft);
+    border: 1.8px solid rgba(0, 56, 168, 0.35);
+    color: #3083FF;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+}
+.dh-backBtn:hover {
+    background: rgba(0, 56, 168, 0.1);
+    border-color: #3083FF;
+    transform: scale(1.05);
+}
+
+.dh-avatar {
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #3083ff, #3b82f6);
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.05rem;
+    font-weight: 800;
+    flex-shrink: 0;
+    box-shadow: 0 3px 10px rgba(0, 56, 168, 0.25);
+}
+
+.dh-info {
+    flex: 1;
+    min-width: 160px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 2px;
+}
+.dh-name {
+    font-size: 1.08rem;
+    font-weight: 800;
+    margin: 0;
+    line-height: 1.15;
+    letter-spacing: -0.01em;
+    color: var(--n-ink, var(--n-text));
+}
+.dh-meta {
+    font-size: 0.78rem;
+    color: var(--n-muted);
+    line-height: 1.2;
+}
+
+.dh-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.dh-selectGroup {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--n-soft);
+    border: 1.8px solid rgba(0, 56, 168, 0.35);
+    border-radius: 12px;
+    padding: 0 10px;
+    min-height: 42px;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.dh-selectGroup:focus-within {
+    border-color: var(--n-primary, #3083ff);
+    box-shadow: 0 0 0 3px rgba(0, 56, 168, 0.1);
+}
+.dh-selectGroup i {
+    font-size: 0.88rem;
+    color: var(--n-muted);
+    flex-shrink: 0;
+}
+.dh-select {
+    flex: 1;
+    border: none;
+    background-color: transparent;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%2364748b' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 2px center;
+    padding: 10px 22px 10px 2px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--n-text);
+    cursor: pointer;
+    outline: none;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+}
+
+/* Dark mode — Pitch Black & Electric Blue Standard */
+.dark .dh-header {
+    background: #000000;
+    border: 1.8px solid rgba(26, 115, 232, 0.75);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+}
+.dark .dh-backBtn {
+    background: rgba(26, 115, 232, 0.12);
+    border-color: rgba(26, 115, 232, 0.5);
+    color: #60a5fa;
+}
+.dark .dh-backBtn:hover {
+    background: #1a73e8;
+    border-color: #1a73e8;
+    color: #ffffff;
+}
+.dark .dh-name { color: #ffffff; }
+.dark .dh-meta { color: #94a3b8; }
+.dark .dh-selectGroup {
+    background: #000000;
+    border-color: rgba(26, 115, 232, 0.6);
+}
+.dark .dh-selectGroup:focus-within {
+    border-color: #60a5fa;
+    box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.2);
+}
+.dark .dh-selectGroup i { color: #60a5fa; }
+.dark .dh-select {
+    color: #ffffff;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%2360a5fa' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");
+}
+.dark .dh-select option { background-color: #000000; color: #ffffff; }
+
+@media (max-width: 640px) {
+    .dh-header { padding: 12px 14px; gap: 12px; }
+    .dh-actions { width: 100%; }
+    .dh-selectGroup { flex: 1; min-width: 0; }
+}

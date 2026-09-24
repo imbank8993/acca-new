@@ -1,0 +1,32 @@
+[
+  {
+    "id": "A12",
+    "status": "NOT_REPRODUCED",
+    "error": "Anda hanya dapat mengubah tugas Anda sendiri"
+  },
+  {
+    "id": "A13",
+    "status": "NOT_REPRODUCED",
+    "error": "Konteks pelaku wajib untuk modifikasi kelulusan"
+  },
+  {
+    "id": "A14",
+    "status": "NOT_REPRODUCED",
+    "error": "Cannot destructure property 'penugasan_id' of 'body' as it is undefined."
+  },
+  {
+    "id": "A15",
+    "status": "NOT_REPRODUCED",
+    "error": "Anda tidak memiliki hak akses untuk menyetujui LCKH"
+  },
+  {
+    "id": "A16",
+    "status": "NOT_REPRODUCED",
+    "error": "Anda tidak memiliki akses ke Bank Data"
+  },
+  {
+    "id": "A17",
+    "status": "NOT_REPRODUCED",
+    "error": "'object' == 'bigint'"
+  }
+]

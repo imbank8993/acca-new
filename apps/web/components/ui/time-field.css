@@ -1,0 +1,90 @@
+/**
+ * Kolom jam — pasangan <input type="time"> untuk <DatePicker>.
+ *
+ * Angkanya (tinggi 42px, padding 14px, jarak ikon 10px, radius 12px, latar
+ * #f8fafc) disalin dari `.dpk-trigger` di components/DatePicker.css supaya
+ * kolom jam dan kolom tanggal yang biasanya berdampingan tampak satu bentuk.
+ *
+ * File CSS biasa, BUKAN <style jsx>: gaya styled-jsx milik sebuah halaman
+ * tidak pernah menjangkau DOM yang dirender komponen lain, jadi versi
+ * styled-jsx-nya tampil tanpa gaya sama sekali.
+ */
+.tfd {
+    position: relative;
+    display: flex;
+    align-items: center;
+    width: 100%;
+}
+
+.tfd__input {
+    width: 100%;
+    height: 42px;
+    box-sizing: border-box;
+    /* 14 (padding) + 16 (ikon) + 10 (jarak) = 40px, sejajar dengan teks
+       .dpk-trigger yang memakai flex gap. */
+    padding: 0 14px 0 40px;
+    background: #f8fafc;
+    border: 1px solid var(--n-border);
+    border-radius: 12px;
+    color: var(--n-ink);
+    font: inherit;
+    font-size: 0.88rem;
+    font-weight: 500;
+    outline: none;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+}
+
+.tfd__input:hover:not(:disabled) {
+    border-color: var(--n-primary);
+    background: #ffffff;
+}
+
+.tfd__input:focus {
+    border-color: var(--n-primary);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    background: #ffffff;
+}
+
+.tfd__input:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+/* Ikon jam bawaan browser dimatikan: bentuk dan posisinya beda-beda antar
+   browser dan selalu menempel di tepi kanan, berlawanan dengan ikon kiri
+   .dpk-icon. Penggantinya tombol .tfd__icon yang memanggil showPicker(). */
+.tfd__input::-webkit-calendar-picker-indicator {
+    display: none;
+}
+
+.tfd__icon {
+    position: absolute;
+    left: 14px;
+    display: flex;
+    align-items: center;
+    padding: 0;
+    border: none;
+    background: none;
+    color: var(--n-primary);
+    cursor: pointer;
+}
+
+.tfd__icon:disabled {
+    cursor: not-allowed;
+}
+
+.dark .tfd__input {
+    background: #000000 !important;
+    border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
+    color: #f1f5f9 !important;
+}
+
+.dark .tfd__input:hover:not(:disabled),
+.dark .tfd__input:focus {
+    border-color: #3b82f6 !important;
+    box-shadow: 0 0 10px rgba(59, 130, 246, 0.35) !important;
+}
+
+.dark .tfd__icon {
+    color: #60a5fa !important;
+}

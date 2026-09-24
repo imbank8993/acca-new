@@ -1,0 +1,184 @@
+apps/web/.next/types/app/api/ptsp/route.ts(14,13): error TS2344: Type 'OmitWithTag<typeof import("D:/acca-new/apps/web/app/api/ptsp/route"), "GET" | "POST" | "dynamic" | "HEAD" | "PATCH" | "DELETE" | "revalidate" | "PUT" | "runtime" | "OPTIONS" | "config" | "generateStaticParams" | ... 5 more ... | "maxDuration", "">' does not satisfy the constraint '{ [x: string]: never; }'.
+  Property 'PTSP_TABLES' is incompatible with index signature.
+    Type 'Record<string, string>' is not assignable to type 'never'.
+apps/web/.next/types/app/piket/input/page.ts(37,13): error TS2344: Type 'OmitWithTag<{ isTabMode?: boolean | undefined; }, keyof PageProps, "default">' does not satisfy the constraint '{ [x: string]: never; }'.
+  Property 'isTabMode' is incompatible with index signature.
+    Type 'boolean' is not assignable to type 'never'.
+apps/web/.next/types/app/piket/input/page.ts(37,29): error TS2559: Type '{ isTabMode?: boolean | undefined; }' has no properties in common with type 'PageProps'.
+apps/web/app/(dashboard)/bank-data/page.tsx(9,27): error TS2322: Type '{ user: User; }' is not assignable to type 'IntrinsicAttributes'.
+  Property 'user' does not exist on type 'IntrinsicAttributes'.
+apps/web/app/(dashboard)/catatan-keuangan/page.tsx(9,27): error TS2322: Type '{ user: User; }' is not assignable to type 'IntrinsicAttributes'.
+  Property 'user' does not exist on type 'IntrinsicAttributes'.
+apps/web/app/(dashboard)/dashboard/DashboardContent.tsx(1180,64): error TS2339: Property 'attendance' does not exist on type '{ siswaAktif: number; weeklyTrends: { day: string; tanggal: string; hadir: number; sakitIzin: number; }[]; jurnalStats: { total: number; sesuai: number; terlambat: number; kosong: number; lainnya: number; }; }'.
+apps/web/app/(dashboard)/form/builder/page.tsx(9,27): error TS2322: Type '{ user: User; }' is not assignable to type 'IntrinsicAttributes'.
+  Property 'user' does not exist on type 'IntrinsicAttributes'.
+apps/web/app/(dashboard)/form/page.tsx(9,27): error TS2322: Type '{ user: User; }' is not assignable to type 'IntrinsicAttributes'.
+  Property 'user' does not exist on type 'IntrinsicAttributes'.
+apps/web/app/(dashboard)/form/responses/page.tsx(9,27): error TS2322: Type '{ user: User; }' is not assignable to type 'IntrinsicAttributes'.
+  Property 'user' does not exist on type 'IntrinsicAttributes'.
+apps/web/app/(dashboard)/kinerja-guru/page.tsx(9,27): error TS2322: Type '{ user: User; }' is not assignable to type 'IntrinsicAttributes'.
+  Property 'user' does not exist on type 'IntrinsicAttributes'.
+apps/web/app/(dashboard)/layanan-ptsp/page.tsx(9,27): error TS2322: Type '{ user: User; }' is not assignable to type 'IntrinsicAttributes'.
+  Property 'user' does not exist on type 'IntrinsicAttributes'.
+apps/web/app/(dashboard)/lckh-approval/page.tsx(9,27): error TS2322: Type '{ user: User; }' is not assignable to type 'IntrinsicAttributes'.
+  Property 'user' does not exist on type 'IntrinsicAttributes'.
+apps/web/app/(dashboard)/lckh/page.tsx(9,27): error TS2322: Type '{ user: User; }' is not assignable to type 'IntrinsicAttributes'.
+  Property 'user' does not exist on type 'IntrinsicAttributes'.
+apps/web/app/(dashboard)/monitoring/page.tsx(9,27): error TS2322: Type '{ user: User; }' is not assignable to type 'IntrinsicAttributes'.
+  Property 'user' does not exist on type 'IntrinsicAttributes'.
+apps/web/app/(dashboard)/nilai/page.tsx(9,27): error TS2322: Type '{ user: User; }' is not assignable to type 'IntrinsicAttributes'.
+  Property 'user' does not exist on type 'IntrinsicAttributes'.
+apps/web/app/(dashboard)/observasi-kelas/page.tsx(9,27): error TS2322: Type '{ user: User; }' is not assignable to type 'IntrinsicAttributes'.
+  Property 'user' does not exist on type 'IntrinsicAttributes'.
+apps/web/app/(dashboard)/pembayaran/page.tsx(9,27): error TS2322: Type '{ user: User; }' is not assignable to type 'IntrinsicAttributes'.
+  Property 'user' does not exist on type 'IntrinsicAttributes'.
+apps/web/app/(dashboard)/rekap-jurnal/page.tsx(9,27): error TS2322: Type '{ user: User; }' is not assignable to type 'IntrinsicAttributes'.
+  Property 'user' does not exist on type 'IntrinsicAttributes'.
+apps/web/app/(dashboard)/surat/page.tsx(9,27): error TS2322: Type '{ user: User; }' is not assignable to type 'IntrinsicAttributes'.
+  Property 'user' does not exist on type 'IntrinsicAttributes'.
+apps/web/app/(dashboard)/tugas-tambahan/page.tsx(9,27): error TS2322: Type '{ user: User; }' is not assignable to type 'IntrinsicAttributes'.
+  Property 'user' does not exist on type 'IntrinsicAttributes'.
+apps/web/app/actions/cbt-proktor.ts(40,55): error TS2339: Property 'allow_token_system' does not exist on type '{ id: string; name: string; created_at: Date | null; logo_url: string | null; slug: string; is_active: boolean | null; max_students: number; hero_image_url: string | null; }'.
+apps/web/app/actions/cbt-proktor.ts(174,57): error TS2353: Object literal may only specify known properties, and 'join_code' does not exist in type 'Without<cbt_classesCreateInput, cbt_classesUncheckedCreateInput> & cbt_classesUncheckedCreateInput'.
+apps/web/app/actions/cbt-proktor.ts(353,19): error TS2339: Property 'cbt_school_years' does not exist on type 'PrismaClient<PrismaClientOptions, never, DefaultArgs>'.
+apps/web/app/actions/cbt-proktor.ts(362,37): error TS2339: Property 'cbt_school_years' does not exist on type 'PrismaClient<PrismaClientOptions, never, DefaultArgs>'.
+apps/web/app/actions/cbt-question.ts(127,21): error TS2353: Object literal may only specify known properties, and 'updated_at' does not exist in type '(Without<cbt_question_banksUpdateInput, cbt_question_banksUncheckedUpdateInput> & cbt_question_banksUncheckedUpdateInput) | (Without<...> & cbt_question_banksUpdateInput)'.
+apps/web/app/actions/cbt-question.ts(152,25): error TS2353: Object literal may only specify known properties, and 'updated_at' does not exist in type '(Without<cbt_question_banksUpdateInput, cbt_question_banksUncheckedUpdateInput> & cbt_question_banksUncheckedUpdateInput) | (Without<...> & cbt_question_banksUpdateInput)'.
+apps/web/app/actions/cbt-question.ts(287,17): error TS2561: Object literal may only specify known properties, but 'cbt_bank_folders' does not exist in type 'cbt_question_banksInclude<DefaultArgs>'. Did you mean to write 'bank_folders'?
+apps/web/app/actions/cbt-question.ts(324,19): error TS2551: Property 'cbt_bank_folders' does not exist on type 'PrismaClient<PrismaClientOptions, never, DefaultArgs>'. Did you mean 'bank_folders'?
+apps/web/app/actions/cbt-question.ts(333,35): error TS2551: Property 'cbt_bank_folders' does not exist on type 'PrismaClient<PrismaClientOptions, never, DefaultArgs>'. Did you mean 'bank_folders'?
+apps/web/app/actions/cbt-question.ts(356,25): error TS2353: Object literal may only specify known properties, and 'updated_at' does not exist in type '(Without<cbt_question_banksUpdateInput, cbt_question_banksUncheckedUpdateInput> & cbt_question_banksUncheckedUpdateInput) | (Without<...> & cbt_question_banksUpdateInput)'.
+apps/web/app/actions/cbt-question.ts(364,21): error TS2353: Object literal may only specify known properties, and 'updated_at' does not exist in type '(Without<cbt_question_banksUpdateInput, cbt_question_banksUncheckedUpdateInput> & cbt_question_banksUncheckedUpdateInput) | (Without<...> & cbt_question_banksUpdateInput)'.
+apps/web/app/actions/cbt-siswa.ts(83,35): error TS2339: Property 'cbt_unlocked_exams' does not exist on type 'PrismaClient<PrismaClientOptions, never, DefaultArgs>'.
+apps/web/app/actions/cbt-siswa.ts(249,54): error TS2345: Argument of type 'string | null' is not assignable to parameter of type 'string'.
+  Type 'null' is not assignable to type 'string'.
+apps/web/app/actions/cbt-siswa.ts(253,142): error TS2345: Argument of type 'string | null' is not assignable to parameter of type 'string'.
+  Type 'null' is not assignable to type 'string'.
+apps/web/app/actions/cbt-siswa.ts(256,153): error TS2345: Argument of type 'string | null' is not assignable to parameter of type 'string'.
+  Type 'null' is not assignable to type 'string'.
+apps/web/app/actions/cbt-siswa.ts(257,147): error TS2345: Argument of type 'string | null' is not assignable to parameter of type 'string'.
+  Type 'null' is not assignable to type 'string'.
+apps/web/app/actions/cbt-siswa.ts(364,19): error TS2353: Object literal may only specify known properties, and 'token_balance' does not exist in type 'cbt_profilesSelect<DefaultArgs>'.
+apps/web/app/actions/cbt-siswa.ts(366,21): error TS2339: Property 'token_balance' does not exist on type '{ id: string; created_at: Date | null; full_name: string; avatar_url: string | null; identity_number: string | null; }'.
+apps/web/app/actions/cbt-siswa.ts(381,23): error TS2353: Object literal may only specify known properties, and 'token_balance' does not exist in type 'cbt_profilesSelect<DefaultArgs>'.
+apps/web/app/actions/cbt-siswa.ts(383,34): error TS2339: Property 'token_balance' does not exist on type '{ id: string; created_at: Date | null; full_name: string; avatar_url: string | null; identity_number: string | null; }'.
+apps/web/app/actions/cbt-siswa.ts(389,21): error TS2353: Object literal may only specify known properties, and 'token_balance' does not exist in type '(Without<cbt_profilesUpdateInput, cbt_profilesUncheckedUpdateInput> & cbt_profilesUncheckedUpdateInput) | (Without<...> & cbt_profilesUpdateInput)'.
+apps/web/app/actions/cbt-siswa.ts(391,22): error TS2339: Property 'cbt_token_transactions' does not exist on type 'PrismaClient<PrismaClientOptions, never, DefaultArgs>'.
+apps/web/app/actions/cbt-siswa.ts(394,22): error TS2339: Property 'cbt_unlocked_exams' does not exist on type 'PrismaClient<PrismaClientOptions, never, DefaultArgs>'.
+apps/web/app/api/reset-data/replace/route.ts(134,29): error TS2339: Property 'oldValue' does not exist on type 'ReplaceRow'.
+apps/web/app/api/surat/generate-pdf/route.ts(979,48): error TS2345: Argument of type 'FunctionComponentElement<{ pages: ContentElement[][]; backgroundUrl: string; qrCodeUrl: string; logoUrl: string; letterId: string; lampiranData?: { title: string; rows: any[]; type: "guru" | "siswa"; fileData?: string | undefined; } | undefined; suratData: any; }>' is not assignable to parameter of type 'ReactElement<DocumentProps, string | JSXElementConstructor<any>>'.
+  Types of property 'props' are incompatible.
+    Type '{ pages: ContentElement[][]; backgroundUrl: string; qrCodeUrl: string; logoUrl: string; letterId: string; lampiranData?: { title: string; rows: any[]; type: "guru" | "siswa"; fileData?: string | undefined; } | undefined; suratData: any; }' has no properties in common with type 'DocumentProps'.
+apps/web/app/bimbingan-konseling/view.tsx(307,62): error TS2322: Type '{ children: Element[]; style: { justifyContent: string; }; }' is not assignable to type 'IntrinsicAttributes & { children: ReactNode; className?: string | undefined; align?: string | undefined; }'.
+  Property 'style' does not exist on type 'IntrinsicAttributes & { children: ReactNode; className?: string | undefined; align?: string | undefined; }'.
+apps/web/app/dokumen/tabs/ManageDokumenTab.tsx(2223,28): error TS2322: Type '{ children: Element[]; style: { display: string; flexDirection: string; gap: string; }; }' is not assignable to type 'IntrinsicAttributes & { children: ReactNode; className?: string | undefined; }'.
+  Property 'style' does not exist on type 'IntrinsicAttributes & { children: ReactNode; className?: string | undefined; }'.
+apps/web/app/dokumen/tabs/ManageDokumenTab.tsx(2368,28): error TS2322: Type '{ children: Element[]; style: { display: string; flexDirection: string; gap: string; }; }' is not assignable to type 'IntrinsicAttributes & { children: ReactNode; className?: string | undefined; }'.
+  Property 'style' does not exist on type 'IntrinsicAttributes & { children: ReactNode; className?: string | undefined; }'.
+apps/web/app/dokumen/tabs/UnggahDokumenTab.tsx(39,39): error TS7006: Parameter 'r' implicitly has an 'any' type.
+apps/web/app/dokumen/tabs/UnggahDokumenTab.tsx(40,43): error TS7006: Parameter 'r' implicitly has an 'any' type.
+apps/web/app/e-supervisi/view.tsx(56,49): error TS7006: Parameter 'ta' implicitly has an 'any' type.
+apps/web/app/e-supervisi/view.tsx(62,55): error TS7006: Parameter 't' implicitly has an 'any' type.
+apps/web/app/ekstrakurikuler/view.tsx(958,133): error TS2322: Type '{ action: "delete"; size: string; onClick: () => Promise<void>; tooltip: string; }' is not assignable to type 'IntrinsicAttributes & ActionButtonProps'.
+  Property 'tooltip' does not exist on type 'IntrinsicAttributes & ActionButtonProps'.
+apps/web/app/guru-asuh/tabs/GuruAsuhTabKlaim.tsx(274,17): error TS2322: Type '{ label: string; icon: string; mobileLabel: string; onClick: () => void; }' is not assignable to type 'IntrinsicAttributes & { label: string; icon?: string | undefined; onClick: () => void; }'.
+  Property 'mobileLabel' does not exist on type 'IntrinsicAttributes & { label: string; icon?: string | undefined; onClick: () => void; }'.
+apps/web/app/informasi/view.tsx(242,29): error TS2353: Object literal may only specify known properties, and 'badge' does not exist in type 'TabItem<string>'.
+apps/web/app/informasi/view.tsx(248,29): error TS2353: Object literal may only specify known properties, and 'badge' does not exist in type 'TabItem<string>'.
+apps/web/app/informasi/view.tsx(255,29): error TS2353: Object literal may only specify known properties, and 'badge' does not exist in type 'TabItem<string>'.
+apps/web/app/informasi/view.tsx(261,29): error TS2353: Object literal may only specify known properties, and 'badge' does not exist in type 'TabItem<string>'.
+apps/web/app/informasi/view.tsx(415,21): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(props: { url: string; title: string; onClose: () => void; inline?: boolean | undefined; }, context?: any): string | number | bigint | boolean | ReactElement<unknown, string | JSXElementConstructor<any>> | ... 4 more ... | undefined', gave the following error.
+    Type '{ fileUrl: string; fileName: string; title: string; onClose: () => void; }' is not assignable to type 'IntrinsicAttributes & { url: string; title: string; onClose: () => void; inline?: boolean | undefined; }'.
+      Property 'fileUrl' does not exist on type 'IntrinsicAttributes & { url: string; title: string; onClose: () => void; inline?: boolean | undefined; }'.
+  Overload 2 of 2, '(props: { url: string; title: string; onClose: () => void; inline?: boolean | undefined; }): string | number | bigint | boolean | ReactElement<unknown, string | JSXElementConstructor<any>> | ... 4 more ... | undefined', gave the following error.
+    Type '{ fileUrl: string; fileName: string; title: string; onClose: () => void; }' is not assignable to type 'IntrinsicAttributes & { url: string; title: string; onClose: () => void; inline?: boolean | undefined; }'.
+      Property 'fileUrl' does not exist on type 'IntrinsicAttributes & { url: string; title: string; onClose: () => void; inline?: boolean | undefined; }'.
+apps/web/app/jurnal/components/AjukanBandingModal.tsx(135,30): error TS2345: Argument of type '{ value: unknown; label: unknown; }[]' is not assignable to parameter of type 'SetStateAction<{ value: string; label: string; }[]>'.
+  Type '{ value: unknown; label: unknown; }[]' is not assignable to type '{ value: string; label: string; }[]'.
+    Type '{ value: unknown; label: unknown; }' is not assignable to type '{ value: string; label: string; }'.
+      Types of property 'value' are incompatible.
+        Type 'unknown' is not assignable to type 'string'.
+apps/web/app/jurnal/components/AjukanBandingModal.tsx(139,30): error TS2345: Argument of type '{ value: unknown; label: unknown; }[]' is not assignable to parameter of type 'SetStateAction<{ value: string; label: string; }[]>'.
+  Type '{ value: unknown; label: unknown; }[]' is not assignable to type '{ value: string; label: string; }[]'.
+    Type '{ value: unknown; label: unknown; }' is not assignable to type '{ value: string; label: string; }'.
+      Types of property 'value' are incompatible.
+        Type 'unknown' is not assignable to type 'string'.
+apps/web/app/jurnal/components/JournalModal.tsx(113,29): error TS7006: Parameter 'prev' implicitly has an 'any' type.
+apps/web/app/jurnal/components/JurnalDetailModal.tsx(750,9): error TS2322: Type 'Journal | null' is not assignable to type '{ id: number; nip: string; nama_guru: string; tanggal: string; hari: string; jam_ke: string; kelas: string; mata_pelajaran: string; materi?: string | undefined; refleksi?: string | undefined; ... 6 more ...; keterangan_tambahan?: string | undefined; } | null'.
+  Type 'Journal' is not assignable to type '{ id: number; nip: string; nama_guru: string; tanggal: string; hari: string; jam_ke: string; kelas: string; mata_pelajaran: string; materi?: string | undefined; refleksi?: string | undefined; guru_pengganti?: string | undefined; ... 5 more ...; keterangan_tambahan?: string | undefined; }'.
+    Types of property 'durasi_terlambat' are incompatible.
+      Type 'string | number | undefined' is not assignable to type 'string | undefined'.
+        Type 'number' is not assignable to type 'string'.
+apps/web/app/jurnal/hooks/useJurnal.ts(123,35): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(options: SweetAlertOptions): Promise<SweetAlertResult<any>>', gave the following error.
+    Object literal may only specify known properties, and 'header' does not exist in type 'SweetAlertCustomClass'.
+  Overload 2 of 2, '(title?: string | undefined, html?: string | undefined, icon?: SweetAlertIcon | undefined): Promise<SweetAlertResult<any>>', gave the following error.
+    Argument of type '{ title: string; html: string; showCancelButton: boolean; confirmButtonText: string; cancelButtonText: string; reverseButtons: boolean; width: string; padding: string; showCloseButton: boolean; customClass: { ...; }; buttonsStyling: boolean; }' is not assignable to parameter of type 'string'.
+apps/web/app/jurnal/hooks/useJurnal.ts(166,18): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(options: SweetAlertOptions): Promise<SweetAlertResult<any>>', gave the following error.
+    Object literal may only specify known properties, and 'content' does not exist in type 'SweetAlertCustomClass'.
+  Overload 2 of 2, '(title?: string | undefined, html?: string | undefined, icon?: SweetAlertIcon | undefined): Promise<SweetAlertResult<any>>', gave the following error.
+    Argument of type '{ title: string; text: string; icon: string; timer: number; showConfirmButton: boolean; width: string; padding: string; customClass: { popup: string; title: string; content: string; icon: string; }; }' is not assignable to parameter of type 'string'.
+apps/web/app/jurnal/input/view.tsx(104,21): error TS2345: Argument of type 'User' is not assignable to parameter of type 'SetStateAction<User | null>'.
+  Type 'import("D:/acca-new/apps/web/lib/types").User' is not assignable to type 'User'.
+    Types of property 'auth_id' are incompatible.
+      Type 'string | null' is not assignable to type 'string'.
+        Type 'null' is not assignable to type 'string'.
+apps/web/app/jurnal/input/view.tsx(120,25): error TS7006: Parameter 'prev' implicitly has an 'any' type.
+apps/web/app/jurnal/input/view.tsx(234,38): error TS7006: Parameter 'j' implicitly has an 'any' type.
+apps/web/app/jurnal/input/view.tsx(240,61): error TS7006: Parameter 'j' implicitly has an 'any' type.
+apps/web/app/jurnal/lib/jurnalService.ts(22,36): error TS2352: Conversion of type '{ id: bigint; created_at: Date | null; tanggal: Date; jam_ke: string | null; target_kelas: string[]; keterangan: string; lingkup: string | null; }[]' to type 'Libur[]' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Type '{ id: bigint; created_at: Date | null; tanggal: Date; jam_ke: string | null; target_kelas: string[]; keterangan: string; lingkup: string | null; }' is not comparable to type 'Libur'.
+    Types of property 'id' are incompatible.
+      Type 'bigint' is not comparable to type 'number'.
+apps/web/app/jurnal/lib/jurnalService.ts(87,44): error TS2352: Conversion of type '{ id: bigint; created_at: Date | null; tanggal: Date; jam_ke: string | null; target_kelas: string[]; keterangan: string; lingkup: string | null; }[]' to type 'Libur[]' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Type '{ id: bigint; created_at: Date | null; tanggal: Date; jam_ke: string | null; target_kelas: string[]; keterangan: string; lingkup: string | null; }' is not comparable to type 'Libur'.
+    Types of property 'id' are incompatible.
+      Type 'bigint' is not comparable to type 'number'.
+apps/web/app/jurnal/lib/jurnalService.ts(120,49): error TS2345: Argument of type 'Date' is not assignable to parameter of type 'string'.
+apps/web/app/jurnal/lib/jurnalService.ts(120,74): error TS2345: Argument of type 'Date' is not assignable to parameter of type 'string'.
+apps/web/app/jurnal/view.tsx(321,17): error TS2322: Type '{ isAdminModeUser: any; adminMode: boolean; setAdminMode: Dispatch<SetStateAction<boolean>>; bandingPending: number; onBandingClick: () => void; }' is not assignable to type 'IntrinsicAttributes & JurnalHeaderProps'.
+  Property 'isAdminModeUser' does not exist on type 'IntrinsicAttributes & JurnalHeaderProps'.
+apps/web/app/ketidakhadiran/components/ImportModal.tsx(110,58): error TS18047: 'p' is possibly 'null'.
+apps/web/app/ketidakhadiran/components/ImportModal.tsx(110,69): error TS18047: 'p' is possibly 'null'.
+apps/web/app/ketidakhadiran/components/ImportModal.tsx(110,81): error TS18047: 'p' is possibly 'null'.
+apps/web/app/ketidakhadiran/components/ImportModal.tsx(110,97): error TS18047: 'p' is possibly 'null'.
+apps/web/app/ketidakhadiran/components/ImportModal.tsx(132,52): error TS7006: Parameter 'f' implicitly has an 'any' type.
+apps/web/app/ketidakhadiran/components/ImportModal.tsx(139,74): error TS7006: Parameter 's' implicitly has an 'any' type.
+apps/web/app/ketidakhadiran/log-components/KetidakhadiranCards.tsx(98,37): error TS2322: Type '{ action: "view"; size: string; onClick: () => void; tooltip: string; }' is not assignable to type 'IntrinsicAttributes & ActionButtonProps'.
+  Property 'tooltip' does not exist on type 'IntrinsicAttributes & ActionButtonProps'.
+apps/web/app/ketidakhadiran/log-components/KetidakhadiranTable.tsx(203,45): error TS2322: Type '{ action: "view"; size: string; onClick: () => void; tooltip: string; }' is not assignable to type 'IntrinsicAttributes & ActionButtonProps'.
+  Property 'tooltip' does not exist on type 'IntrinsicAttributes & ActionButtonProps'.
+apps/web/app/ketidakhadiran/tabs/RekapTab.tsx(358,49): error TS2353: Object literal may only specify known properties, and 'drawBorder' does not exist in type '_DeepPartialObject<Partial<GridLineOptions>>'.
+apps/web/app/kinerja-guru/view.tsx(319,49): error TS2353: Object literal may only specify known properties, and 'drawBorder' does not exist in type '_DeepPartialObject<Partial<GridLineOptions>>'.
+apps/web/app/kokurikuler/admin/view.tsx(147,21): error TS2322: Type '{ variant: "slider"; activeTab: "laporan" | "master"; onChange: (t: "laporan" | "master") => void; tabs: ({ key: "master"; label: string; icon: string; } | { key: "laporan"; label: string; icon: string; })[]; style: { ...; }; }' is not assignable to type 'IntrinsicAttributes & TabProps<"laporan" | "master">'.
+  Property 'style' does not exist on type 'IntrinsicAttributes & TabProps<"laporan" | "master">'.
+apps/web/app/layanan-ptsp/components/PTSPClient.tsx(112,38): error TS2304: Cannot find name 'Row'.
+apps/web/app/layanan-ptsp/components/PTSPClient.tsx(118,44): error TS2304: Cannot find name 'Row'.
+apps/web/app/layanan-ptsp/components/PTSPClient.tsx(119,44): error TS2304: Cannot find name 'Row'.
+apps/web/app/layanan-ptsp/components/PTSPClient.tsx(120,48): error TS2304: Cannot find name 'Row'.
+apps/web/app/layanan-ptsp/components/PTSPClient.tsx(121,52): error TS2304: Cannot find name 'Row'.
+apps/web/app/layanan-ptsp/components/PTSPClient.tsx(228,35): error TS2304: Cannot find name 'Row'.
+apps/web/app/layanan-ptsp/components/PTSPClient.tsx(265,28): error TS2304: Cannot find name 'Row'.
+apps/web/app/surat/components/SuratPengaturanCard.tsx(34,7): error TS2739: Type '{ background_url: null; logo_url: null; logo_kecil_url: null; logo_qr_url: null; header_text: null; footer_text: null; format_nomor_template: string; kode1_options: never[]; kode2_options: never[]; kode3_options: never[]; pejabat_default: { ...; }; }' is missing the following properties from type 'SuratConfig': template_a4_url, template_a4_nama, template_f4_url, template_f4_nama
+apps/web/app/tugas-siswa/components/TugasSiswaForm.tsx(124,30): error TS2339: Property 'kelas_list' does not exist on type 'TugasSiswa'.
+apps/web/app/tugas-siswa/components/TugasSiswaForm.tsx(125,41): error TS2339: Property 'kelas_list' does not exist on type 'TugasSiswa'.
+apps/web/app/tugas-siswa/components/TugasSiswaForm.tsx(126,62): error TS2339: Property 'kelas_list' does not exist on type 'TugasSiswa'.
+apps/web/app/tugas-siswa/components/TugasSiswaForm.tsx(127,55): error TS2339: Property 'kelas_list' does not exist on type 'TugasSiswa'.
+apps/web/app/tugas-siswa/components/TugasSiswaForm.tsx(128,45): error TS2339: Property 'kelas_list' does not exist on type 'TugasSiswa'.
+apps/web/app/tugas-siswa/components/TugasSiswaForm.tsx(151,44): error TS2339: Property 'target_siswa' does not exist on type 'TugasSiswa'.
+apps/web/app/tugas-siswa/components/TugasSiswaForm.tsx(238,35): error TS2339: Property 'nip' does not exist on type '{ guru_id: string; nama_lengkap: string; }'.
+apps/web/app/tugas-siswa/components/TugasSiswaForm.tsx(240,38): error TS2339: Property 'nip' does not exist on type '{ guru_id: string; nama_lengkap: string; }'.
+apps/web/app/tugas-siswa/components/TugasSiswaForm.tsx(278,73): error TS2339: Property 'nip' does not exist on type '{ guru_id: string; nama_lengkap: string; }'.
+apps/web/components/cbt/CBTPlaceholders.tsx(18,68): error TS2339: Property 'fullName' does not exist on type 'User'.
+apps/web/lib/settings-server.ts(21,58): error TS2322: Type 'string | null' is not assignable to type 'string'.
+  Type 'null' is not assignable to type 'string'.
+apps/web/lib/settings-server.ts(35,58): error TS2322: Type 'string | null' is not assignable to type 'string'.
+  Type 'null' is not assignable to type 'string'.
+apps/web/lib/settings-server.ts(65,17): error TS2322: Type 'number' is not assignable to type 'string | StringNullableFilter<"master_tahun_ajaran"> | null | undefined'.
+apps/web/lib/storage/supabase-storage.ts(67,17): error TS2353: Object literal may only specify known properties, and 'contentDisposition' does not exist in type 'FileOptions'.
+apps/web/lib/timezone.ts(46,9): error TS2322: Type 'string | null' is not assignable to type 'string'.
+  Type 'null' is not assignable to type 'string'.
+apps/web/lib/wa-sender.ts(64,31): error TS2322: Type 'string | null' is not assignable to type 'string'.
+  Type 'null' is not assignable to type 'string'.

@@ -1,0 +1,312 @@
+/*
+ * ============================================================
+ * FORMIO MODAL / DIALOG GLOBAL STYLES
+ * 
+ * Form.io appends its settings dialog directly to document.body,
+ * OUTSIDE of the React root. This means scoped CSS from components
+ * (dangerouslySetInnerHTML style tags) CANNOT reach these elements.
+ *
+ * This file is imported in globals.css so it applies globally.
+ * ============================================================
+ */
+
+/* ---- Overlay (the dark backdrop) ---- */
+.component-settings {
+  position: fixed !important;
+  inset: 0 !important;
+  background: rgba(15, 23, 42, 0.7) !important;
+  z-index: 99999 !important;
+  display: flex !important;
+  align-items: flex-start !important;
+  justify-content: center !important;
+  overflow-y: auto !important;
+  padding: 40px 20px !important;
+  backdrop-filter: blur(4px) !important;
+}
+
+/* ---- Modal Content Box ---- */
+.component-settings .formio-dialog-content {
+  background: #ffffff !important;
+  width: 100% !important;
+  max-width: 860px !important;
+  margin: 0 auto !important;
+  border-radius: 16px !important;
+  padding: 0 !important;
+  box-shadow: 0 32px 64px -12px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(0,0,0,0.05) !important;
+  position: relative !important;
+  overflow: hidden !important;
+  max-height: none !important;
+}
+
+/* ---- Modal Header ---- */
+.component-settings .formio-dialog-content > .row:first-child,
+.component-settings .formio-dialog-content .component-edit-container {
+  display: block !important;
+}
+
+/* Title bar area */
+.component-settings .formio-dialog-content::before {
+  content: "Pengaturan Komponen";
+  display: block;
+  background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
+  color: white;
+  font-size: 1.125rem;
+  font-weight: 700;
+  padding: 20px 24px;
+  letter-spacing: -0.01em;
+}
+
+/* ---- Close Button ---- */
+.component-settings .formio-dialog-close,
+.component-settings .close {
+  position: absolute !important;
+  top: 14px !important;
+  right: 14px !important;
+  width: 36px !important;
+  height: 36px !important;
+  background: rgba(255,255,255,0.2) !important;
+  border: 1px solid rgba(255,255,255,0.3) !important;
+  border-radius: 50% !important;
+  cursor: pointer !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 1.1rem !important;
+  font-weight: 700 !important;
+  color: white !important;
+  opacity: 1 !important;
+  z-index: 100 !important;
+  transition: background 0.15s !important;
+  line-height: 1 !important;
+}
+.component-settings .formio-dialog-close:hover,
+.component-settings .close:hover {
+  background: rgba(255,255,255,0.35) !important;
+}
+
+/* ---- Tab Navigation ---- */
+.component-settings .nav-tabs {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  list-style: none !important;
+  padding: 0 16px !important;
+  margin: 0 !important;
+  background: #f8fafc !important;
+  border-bottom: 1px solid #e2e8f0 !important;
+  gap: 0 !important;
+}
+.component-settings .nav-tabs .nav-item {
+  margin-bottom: -1px !important;
+}
+.component-settings .nav-tabs .nav-link {
+  display: block !important;
+  padding: 12px 16px !important;
+  border: 1px solid transparent !important;
+  border-bottom: 3px solid transparent !important;
+  color: #64748b !important;
+  text-decoration: none !important;
+  font-weight: 600 !important;
+  font-size: 0.8125rem !important;
+  cursor: pointer !important;
+  transition: all 0.15s !important;
+  background: transparent !important;
+  white-space: nowrap !important;
+  border-radius: 0 !important;
+}
+.component-settings .nav-tabs .nav-link:hover {
+  color: #1e40af !important;
+  border-bottom-color: #93c5fd !important;
+  background: transparent !important;
+}
+.component-settings .nav-tabs .nav-link.active {
+  color: #1d4ed8 !important;
+  border-bottom-color: #2563eb !important;
+  background: transparent !important;
+}
+
+/* ---- Tab Content Area ---- */
+.component-settings .tab-content {
+  padding: 24px !important;
+}
+.component-settings .tab-pane {
+  display: none !important;
+}
+.component-settings .tab-pane.active {
+  display: block !important;
+}
+
+/* ---- Bootstrap Grid inside modal only ---- */
+.component-settings .row {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  margin-left: -10px !important;
+  margin-right: -10px !important;
+}
+.component-settings [class*="col-"] {
+  padding-left: 10px !important;
+  padding-right: 10px !important;
+  box-sizing: border-box !important;
+  width: 100% !important;
+}
+@media (min-width: 768px) {
+  .component-settings .col-md-12 { width: 100% !important; }
+  .component-settings .col-md-8  { width: 66.666% !important; }
+  .component-settings .col-md-6  { width: 50% !important; }
+  .component-settings .col-md-4  { width: 33.333% !important; }
+  .component-settings .col-md-3  { width: 25% !important; }
+  .component-settings .col-sm-6  { width: 50% !important; }
+  .component-settings .col-sm-12 { width: 100% !important; }
+}
+
+/* ---- Form Elements inside modal ---- */
+.component-settings .form-group {
+  margin-bottom: 1.125rem !important;
+}
+.component-settings label {
+  display: block !important;
+  font-size: 0.8125rem !important;
+  font-weight: 600 !important;
+  color: #374151 !important;
+  margin-bottom: 6px !important;
+}
+.component-settings .form-control,
+.component-settings input[type="text"],
+.component-settings input[type="number"],
+.component-settings input[type="email"],
+.component-settings select,
+.component-settings textarea {
+  display: block !important;
+  width: 100% !important;
+  padding: 8px 12px !important;
+  font-size: 0.875rem !important;
+  line-height: 1.5 !important;
+  color: #1f2937 !important;
+  background: #fff !important;
+  border: 1px solid #d1d5db !important;
+  border-radius: 8px !important;
+  transition: border-color 0.15s, box-shadow 0.15s !important;
+  box-shadow: 0 1px 2px 0 rgba(0,0,0,0.05) !important;
+  outline: none !important;
+}
+.component-settings .form-control:focus,
+.component-settings input:focus,
+.component-settings select:focus,
+.component-settings textarea:focus {
+  border-color: #3b82f6 !important;
+  box-shadow: 0 0 0 3px rgba(59,130,246,0.15) !important;
+}
+
+/* Checkbox & Radio */
+.component-settings .form-check {
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  padding: 8px 0 !important;
+}
+.component-settings .form-check-input,
+.component-settings input[type="checkbox"],
+.component-settings input[type="radio"] {
+  width: 17px !important;
+  height: 17px !important;
+  cursor: pointer !important;
+  flex-shrink: 0 !important;
+  margin: 0 !important;
+}
+.component-settings .form-check-label {
+  font-size: 0.875rem !important;
+  font-weight: 500 !important;
+  color: #374151 !important;
+  cursor: pointer !important;
+  margin: 0 !important;
+}
+
+/* Help/hint text */
+.component-settings .help-block,
+.component-settings .formio-settings-help {
+  font-size: 0.75rem !important;
+  color: #6b7280 !important;
+  margin-top: 4px !important;
+}
+
+/* Validation errors */
+.component-settings .has-error .form-control {
+  border-color: #ef4444 !important;
+}
+.component-settings .has-error .help-block {
+  color: #ef4444 !important;
+  font-weight: 500 !important;
+}
+
+/* ---- Action Buttons ---- */
+.component-settings .formio-dialog-buttons,
+.component-settings [ref="dialogButtons"] {
+  display: flex !important;
+  gap: 10px !important;
+  padding: 16px 24px !important;
+  background: #f8fafc !important;
+  border-top: 1px solid #e2e8f0 !important;
+  justify-content: flex-end !important;
+}
+
+.component-settings .btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 6px !important;
+  padding: 9px 20px !important;
+  font-size: 0.875rem !important;
+  font-weight: 600 !important;
+  border-radius: 8px !important;
+  border: 1px solid transparent !important;
+  cursor: pointer !important;
+  transition: all 0.15s !important;
+  text-decoration: none !important;
+}
+
+.component-settings .btn-success {
+  background: #16a34a !important;
+  color: #fff !important;
+  border-color: #16a34a !important;
+}
+.component-settings .btn-success:hover {
+  background: #15803d !important;
+  border-color: #15803d !important;
+}
+
+.component-settings .btn-danger {
+  background: #dc2626 !important;
+  color: #fff !important;
+  border-color: #dc2626 !important;
+}
+.component-settings .btn-danger:hover {
+  background: #b91c1c !important;
+}
+
+.component-settings .btn-default {
+  background: #fff !important;
+  color: #374151 !important;
+  border-color: #d1d5db !important;
+}
+.component-settings .btn-default:hover {
+  background: #f9fafb !important;
+  border-color: #9ca3af !important;
+}
+
+/* ---- Nested editor tab layout ---- */
+.component-settings .component-edit-tabs {
+  min-height: unset !important;
+  height: auto !important;
+  overflow: visible !important;
+}
+.component-settings .component-edit-content {
+  height: auto !important;
+  overflow: visible !important;
+}
+
+/* ---- Collapse fix (no Bootstrap JS) ---- */
+.component-settings .collapse {
+  display: block !important;
+  visibility: visible !important;
+  height: auto !important;
+  opacity: 1 !important;
+}

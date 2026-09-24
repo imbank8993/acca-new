@@ -1,0 +1,868 @@
+/* =====================================================
+   TAB — pill tabs bersama, ditiru dari halaman Pengaturan Users
+   ===================================================== */
+
+.actab-wrap {
+    background: var(--n-card);
+    border: 1px solid var(--n-border);
+    border-radius: 20px;
+    padding: 6px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    overflow: hidden;
+}
+
+.actab-tabs {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    justify-content: center;
+    scrollbar-width: none;
+}
+.actab-tabs::-webkit-scrollbar { display: none; }
+
+.actab-tab {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 8px 14px;
+    background: transparent;
+    border: none;
+    border-radius: 14px;
+    font-size: 0.81rem;
+    font-weight: 600;
+    color: var(--n-text, #64748b);
+    cursor: pointer;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    white-space: nowrap;
+    position: relative;
+    overflow: hidden;
+    flex: 1 1 auto;
+    box-sizing: border-box;
+}
+
+.actab-tab::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 14px;
+    opacity: 0;
+    transition: opacity 0.25s;
+    background: var(--n-primary);
+}
+
+.actab-tab:hover {
+    color: #3083FF;
+    background: rgba(48, 131, 255, 0.08);
+}
+
+.actab-tab:hover .actab-tabIcon {
+    transform: scale(1.1);
+}
+
+.actab-tab.isActive {
+    color: white;
+    box-shadow: 0 4px 14px rgba(0, 56, 168, 0.25);
+    font-weight: 700;
+}
+
+.actab-tab.isActive::before {
+    opacity: 1;
+}
+
+.actab-tabBadge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2px 7px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    line-height: 1;
+    border-radius: 9999px;
+    background: rgba(48, 131, 255, 0.12);
+    color: #3083FF;
+    margin-left: 4px;
+    position: relative;
+    z-index: 1;
+}
+
+.actab-tab.isActive .actab-tabBadge {
+    background: rgba(255, 255, 255, 0.25);
+    color: #ffffff;
+}
+
+.actab-tabIconOuter {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.25s ease;
+    position: relative;
+    top: 1px;
+    z-index: 1;
+}
+
+.actab-tabIcon {
+    font-size: 1.15rem !important;
+    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    z-index: 1;
+}
+
+.actab-tabText {
+    position: relative;
+    z-index: 1;
+}
+
+/* Label pendek hanya untuk kartu tab di mobile; dari 768px ke atas yang dipakai
+   selalu label penuh. Ditulis sebagai @media tersendiri, bukan mengandalkan
+   spesifisitas melawan aturan `.actab-tabText` di blok mobile — dua aturan
+   `display` yang sama-sama !important dan berebut urutan itu yang biasanya
+   pecah diam-diam saat file ini ditambah kemudian.
+
+   768px, pasangan tepat dari `max-width: 767px` di blok-blok mobile file ini
+   dan dari MOBILE_QUERY di lib/use-breakpoint.ts. Sebelumnya 768.02px, yang
+   berpasangan dengan `max-width: 768px` dan menyisakan celah 768–768.02px
+   tanpa aturan mana pun; dengan 767/768 batasnya bersambung rapat tanpa celah
+   dan tanpa tumpang tindih. */
+@media (min-width: 768px) {
+    .actab-tabText--short {
+        display: none !important;
+    }
+}
+
+/* Dark mode — Pitch Black & Electric Blue Standard */
+.dark .actab-wrap {
+    background: #000000 !important;
+    border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
+    border-radius: 20px !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6) !important;
+    overflow: hidden !important;
+}
+.dark .actab-tab {
+    color: rgba(255, 255, 255, 0.65) !important;
+}
+.dark .actab-tab:hover {
+    color: #ffffff !important;
+    background: rgba(26, 115, 232, 0.15) !important;
+}
+.dark .actab-tab.isActive {
+    color: #ffffff !important;
+    box-shadow: 0 0 14px rgba(26, 115, 232, 0.5) !important;
+}
+.dark .actab-tab.isActive::before {
+    background: linear-gradient(135deg, #1d6bf3 0%, #3083ff 100%) !important;
+    opacity: 1 !important;
+}
+
+/* =====================================================
+   PEMILIH TAB DESKTOP
+   ===================================================== */
+
+.actab-picker {
+    display: none;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    height: 52px;
+    padding: 0 12px;
+    box-sizing: border-box;
+    background: var(--n-card);
+    border: 1px solid var(--n-border);
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(2, 6, 23, 0.06);
+    color: var(--n-text);
+    font-family: inherit;
+    cursor: pointer;
+}
+
+.actab-pickerIcon {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: var(--n-primary);
+    color: #ffffff;
+    font-size: 1rem;
+}
+
+.actab-pickerLabel {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-size: 0.95rem;
+    font-weight: 700;
+    text-align: left;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.actab-pickerChev {
+    flex: 0 0 auto;
+    font-size: 0.85rem;
+    color: var(--n-muted);
+}
+
+.actab-picker:active {
+    background: rgba(0, 56, 168, 0.05);
+}
+
+/* =====================================================
+   SLIDER VARIANT (4 Tabs Visible on Mobile, Scrollable/Slider)
+   ===================================================== */
+
+.actab-wrap.actab-wrap--slider,
+.dark .actab-wrap.actab-wrap--slider {
+    display: block !important;
+    background: var(--n-card);
+    border: 1px solid var(--n-border);
+    border-radius: 18px;
+    padding: 6px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+    overflow: hidden;
+}
+
+.actab-wrap.actab-wrap--slider .actab-tabs {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    -webkit-overflow-scrolling: touch;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+    gap: 6px !important;
+    justify-content: flex-start !important;
+    padding: 2px !important;
+}
+
+.actab-wrap.actab-wrap--slider .actab-tabs::-webkit-scrollbar {
+    display: none !important;
+}
+
+.actab-wrap.actab-wrap--slider .actab-picker {
+    display: none !important;
+}
+
+/* 4 kartu tab terlihat sekaligus di mobile (<= 768px).
+   ---------------------------------------------------------------------------
+   Bentuknya TANPA kontainer: tiap tab berdiri sendiri sebagai kartu persegi
+   yang melayang, isinya badge lingkaran ikon di atas dan teks di bawahnya.
+
+   Alasan kontainernya dilepas: kotak ikon di dalam kontainer selalu menyisakan
+   celah mati di kiri-kanannya — jarak antar-sel terkunci di seperempat lebar
+   layar, jadi celah = pitch − sisi kotak, dan satu-satunya cara memperkecilnya
+   adalah membesarkan kotak, yang ikut menaikkan tinggi. Dengan kartu-per-tab,
+   selnya SENDIRI yang jadi kotaknya, jadi tidak ada sisa ruang yang menganggur.
+   =========================================================================== */
+@media (max-width: 767.98px) {
+
+    .actab-wrap.actab-wrap--slider,
+    .dark .actab-wrap.actab-wrap--slider {
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        border-radius: 0 !important;
+        padding: 0 !important;
+        /* KOMPONEN INI TIDAK BOLEH MENYUMBANG JARAK SENDIRI.
+           .actab-tabs harus punya padding 2px/14px sebagai ruang bayangan kartu
+           DI DALAM scroller (overflow-x: auto akan memotongnya kalau ditaruh di
+           luar), tapi padding itu ruang mati yang ikut terlihat sebagai jarak.
+           Kedua margin di bawah meniadakannya persis, jadi:
+             - tepi atas kartu jatuh tepat di padding-top .content-area
+               (header + 12px), sama dengan halaman tanpa tab;
+             - jarak tab -> section berikutnya murni gap induknya (--page-gap),
+               sama dengan jarak antar-section lain di halaman yang sama.
+           Kalau salah satu padding .actab-tabs diubah, margin pasangannya WAJIB
+           ikut diubah. */
+        margin-top: -2px !important;
+        margin-bottom: -14px !important;
+        position: relative;
+        z-index: 10;
+    }
+
+    /* 2px atas: ruang bayangan kartu (ditiadakan lagi oleh margin-top -2px).
+       14px bawah: ruang bayangan kartu saat strip ini digulir (ditiadakan lagi
+       oleh margin-bottom -14px). Lihat catatan margin di atas. */
+    .actab-wrap.actab-wrap--slider .actab-tabs {
+        gap: 8px !important;
+        padding: 2px 2px 14px !important;
+    }
+
+    /* Tinggi kartu mengikuti isinya (7 + 34 + 5 + 25 + 7 ≈ 78px), TIDAK
+       dipaksa persegi lewat `aspect-ratio`: memaksa persegi berarti tinggi
+       ditentukan lebar layar, dan di layar lebar kartunya jadi tinggi tanpa
+       isi tambahan. Semua kartu tetap setinggi sama karena kotak teksnya
+       dipatok dua baris di aturan .actab-tabText di bawah. */
+    .actab-wrap.actab-wrap--slider .actab-tab {
+        flex: 0 0 calc((100% - 24px) / 4) !important;
+        min-width: calc((100% - 24px) / 4) !important;
+        max-width: calc((100% - 24px) / 4) !important;
+        scroll-snap-align: center;
+        padding: 7px 4px !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 5px !important;
+        background: var(--n-card) !important;
+        border: 1px solid var(--n-border) !important;
+        border-radius: 16px !important;
+        box-shadow: 0 2px 8px rgba(2, 6, 23, 0.06) !important;
+        text-align: center !important;
+        box-sizing: border-box !important;
+    }
+
+    .actab-wrap.actab-wrap--slider .actab-tab::before {
+        display: none !important;
+    }
+
+    .actab-wrap.actab-wrap--slider .actab-tab.isActive {
+        border-color: #3083FF !important;
+        box-shadow: 0 6px 16px rgba(48, 131, 255, 0.22) !important;
+    }
+
+    .dark .actab-wrap.actab-wrap--slider .actab-tab {
+        background: #000000 !important;
+        border-color: rgba(26, 115, 232, 0.35) !important;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.55) !important;
+    }
+
+    .dark .actab-wrap.actab-wrap--slider .actab-tab.isActive {
+        border-color: rgba(26, 115, 232, 0.9) !important;
+        box-shadow: 0 0 16px rgba(26, 115, 232, 0.4) !important;
+    }
+
+    /* BADGE KOTAK-MEMBULAT di dalam kartu — satu rona biru untuk semua tab.
+       Yang menyatakan tab AKTIF tetap satu hal saja: badge terisi penuh warna
+       primer + garis tepi kartu, supaya tidak ada dua bahasa warna bersaing. */
+    .actab-wrap.actab-wrap--slider .actab-tabIconOuter {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        width: 38px !important;
+        height: 38px !important;
+        border-radius: 12px !important;
+        flex: 0 0 auto !important;
+        transition: all 0.2s ease !important;
+        background: #e0ecff;
+        color: #3083ff !important;
+    }
+
+    /* #E0ECFF adalah rona untuk latar terang; di atas kartu hitam ia jadi pelat
+       menyilaukan yang menarik perhatian lebih dari tab yang sedang aktif.
+       Bidangnya dibalik jadi biru transparan, glyph-nya tetap #3083FF. */
+    .dark .actab-wrap.actab-wrap--slider .actab-tabIconOuter {
+        background: rgba(48, 131, 255, 0.18);
+        color: #3083ff !important;
+    }
+
+    .actab-wrap.actab-wrap--slider .actab-tab.isActive .actab-tabIconOuter {
+        background: #3083FF !important;
+        color: #ffffff !important;
+        box-shadow: 0 4px 12px rgba(48, 131, 255, 0.32) !important;
+    }
+
+    .dark .actab-wrap.actab-wrap--slider .actab-tab.isActive .actab-tabIconOuter {
+        background: linear-gradient(135deg, #1d6bf3 0%, #3083ff 100%) !important;
+        color: #ffffff !important;
+        box-shadow: 0 0 14px rgba(26, 115, 232, 0.55) !important;
+    }
+
+    .actab-wrap.actab-wrap--slider .actab-tabIcon {
+        font-size: 1.25rem !important;
+        width: 24px !important;
+        height: 24px !important;
+        max-width: 68% !important;
+        max-height: 68% !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        flex: 0 0 auto !important;
+    }
+
+    /* Label boleh dua baris, tapi kotak teksnya SELALU setinggi dua baris —
+       termasuk untuk label sebaris. Itulah yang menyamakan barisnya: tinggi
+       kartu jadi sama rata, badge tiap kartu duduk di garis yang sama, dan
+       label sebaris tidak menempel ke badge sementara tetangganya turun dua
+       baris.
+
+       `display: flex` + `align-items: center`, bukan `-webkit-box` dengan
+       line-clamp seperti sebelumnya: line-clamp merapatkan isi ke ATAS kotak,
+       jadi label sebaris akan tergantung di separuh atas dan justru terlihat
+       tidak seimbang dengan tetangganya yang dua baris. */
+    .actab-wrap.actab-wrap--slider .actab-tabText {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        white-space: normal !important;
+        word-break: break-word !important;
+        overflow: hidden !important;
+        width: 100% !important;
+        height: 2.4em !important;
+        line-height: 1.2 !important;
+        font-size: 0.60rem !important;
+        font-weight: 600 !important;
+        color: var(--n-text, #475569) !important;
+        text-align: center !important;
+        margin-top: 0 !important;
+    }
+
+    /* Versi panjang disingkirkan HANYA bila kartunya punya versi pendek.
+       `display: none` (bukan visibility/clip) dipilih supaya elemen yang
+       tersembunyi juga hilang dari pohon aksesibilitas — kalau tidak, pembaca
+       layar membacakan dua label untuk satu tombol. */
+    .actab-wrap.actab-wrap--slider .actab-tab:has(.actab-tabText--short) .actab-tabText:not(.actab-tabText--short) {
+        display: none !important;
+    }
+
+    .actab-wrap.actab-wrap--slider .actab-tab.isActive .actab-tabText {
+        color: #3083FF !important;
+        font-weight: 700 !important;
+    }
+
+    .dark .actab-wrap.actab-wrap--slider .actab-tab.isActive .actab-tabText {
+        color: #60a5fa !important;
+        font-weight: 700 !important;
+    }
+}
+
+/* =====================================================
+   3 TABS: Kartu Persegi Panjang (sama gaya dengan kartu 4-tab di atas,
+   hanya lebar dibagi 3 bukan 4 — jadi lebih lebar dari tinggi).
+   ===================================================== */
+@media (max-width: 767.98px) {
+    /* (100% - 16px) / 3: 16px = 2 celah × 8px, pasangan dari gap kartu-4
+       yang (100% - 24px) / 4 dengan 3 celah × 8px. Semua aturan tampilan
+       kartu (ikon di atas, label di bawah, warna aktif, dst) sudah dipakai
+       bersama dari blok SLIDER VARIANT di atas — di sini cuma lebarnya yang
+       diganti. */
+    .actab-wrap.actab-wrap--slider.actab-wrap--three .actab-tab {
+        flex: 0 0 calc((100% - 16px) / 3) !important;
+        min-width: calc((100% - 16px) / 3) !important;
+        max-width: calc((100% - 16px) / 3) !important;
+        padding: 8px 4px !important;
+        gap: 4px !important;
+    }
+
+    /* Padding .actab-tabs SENGAJA tidak ditimpa di sini: nilainya harus tetap
+       2px/14px seperti varian 4-tab, karena margin negatif di .actab-wrap
+       dikalibrasi persis terhadap angka itu. Dulu di sini ada
+       `padding: 3px 2px 14px` yang membuat tepi atas kartu 3-tab turun 1px
+       lebih dari varian lain. */
+
+    /* Kartunya lebih lebar (dibagi 3, bukan 4), jadi ikon & lencananya
+       diperkecil sedikit dari kartu 4-tab supaya proporsinya tidak
+       terlihat membesar dibanding label di bawahnya. */
+    .actab-wrap.actab-wrap--slider.actab-wrap--three .actab-tabIconOuter {
+        width: 32px !important;
+        height: 32px !important;
+        border-radius: 10px !important;
+    }
+
+    .actab-wrap.actab-wrap--slider.actab-wrap--three .actab-tabIcon {
+        width: 18px !important;
+        height: 18px !important;
+    }
+
+    .actab-wrap.actab-wrap--slider.actab-wrap--three .actab-tabText {
+        font-size: 0.58rem !important;
+        height: 2.1em !important;
+    }
+}
+
+/* =====================================================
+   2 TABS: Layout Horizontal (Ikon Kiri, Label Kanan)
+   ===================================================== */
+@media (max-width: 767.98px) {
+
+    /* Varian ini TIDAK ikut jadi kartu-per-tab: kartu persegi masuk akal saat
+       tabnya banyak dan digeser, sedangkan di sini keduanya sudah muat satu
+       baris. Karena blok slider di atas melucuti kontainernya, wadahnya
+       dipasang balik di sini — beserta latar & garis kartu tiap tab yang
+       dinolkan lagi. */
+    .actab-wrap.actab-wrap--slider.actab-wrap--few {
+        background: var(--n-card) !important;
+        border: 1px solid var(--n-border) !important;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04) !important;
+        padding: 5px !important;
+        border-radius: 16px !important;
+        /* Margin negatif dari blok slider dibatalkan: varian ini wadahnya kartu
+           betulan dan .actab-tabs di dalamnya `padding: 0`, jadi tidak ada
+           ruang mati yang perlu ditiadakan — tepi kartu SUDAH tepi kotaknya. */
+        margin-top: 0 !important;
+        margin-bottom: 0 !important;
+    }
+
+    .dark .actab-wrap.actab-wrap--slider.actab-wrap--few {
+        background: #000000 !important;
+        border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6) !important;
+    }
+
+    .actab-wrap.actab-wrap--slider.actab-wrap--few .actab-tabs {
+        justify-content: space-between !important;
+        overflow-x: hidden !important;
+        gap: 6px !important;
+        width: 100% !important;
+        padding: 0 !important;
+    }
+
+    .actab-wrap.actab-wrap--slider.actab-wrap--few .actab-tab,
+    .dark .actab-wrap.actab-wrap--slider.actab-wrap--few .actab-tab {
+        flex: 1 1 0 !important;
+        min-width: 0 !important;
+        max-width: 100% !important;
+        aspect-ratio: auto !important;
+        padding: 7px 8px !important;
+        flex-direction: row !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 8px !important;
+        min-height: 44px !important;
+        border-radius: 12px !important;
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+    }
+
+    .actab-wrap.actab-wrap--slider.actab-wrap--few .actab-tabIconOuter {
+        width: 32px !important;
+        height: 32px !important;
+        border-radius: 8px !important;
+        flex-shrink: 0 !important;
+    }
+
+    .actab-wrap.actab-wrap--slider.actab-wrap--few .actab-tabIcon {
+        width: 18px !important;
+        height: 18px !important;
+        max-width: 60% !important;
+        max-height: 60% !important;
+    }
+
+    .actab-wrap.actab-wrap--slider.actab-wrap--few .actab-tabText {
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        width: auto !important;
+        display: inline-block !important;
+        line-height: 1.2 !important;
+        font-size: 0.72rem !important;
+        font-weight: 700 !important;
+        height: auto !important;
+        margin-top: 0 !important;
+        text-align: left !important;
+    }
+}
+
+/* =====================================================
+   MOBILE (<992px)
+   Tabs default dialihkan ke tombol tengah (FAB) di BottomNav bar.
+   ===================================================== */
+
+@media (max-width: 767.98px) {
+    .actab-wrap:not(.actab-wrap--slider),
+    .dark .actab-wrap:not(.actab-wrap--slider) {
+        display: none !important;
+    }
+}
+
+/* =====================================================
+   FOLDER VARIANT (desktop saja) — tab map folder klasik
+
+   Bentuknya: sudut atas membulat, dan sudut BAWAH melebar keluar dengan
+   lengkung cekung ke arah garis dasar, persis map arsip. Tab aktif naik
+   sedikit, berwarna kartu, dan menyatu ke kartu di bawahnya.
+
+   PRASYARAT PEMAKAIAN: harus ada KARTU tepat di bawah `<Tab variant="folder">`.
+   Strip ini sengaja tidak menggambar badan kartunya sendiri — badan itu milik
+   section berikutnya, dan `margin-bottom` di bawah meniadakan gap induk supaya
+   keduanya menempel. Kalau yang menyusul bukan kartu (spinner, empty state),
+   pakai varian lain: tab aktif akan menggantung tanpa badan.
+
+   Lengkung cekung di kaki tab digambar oleh ::before (kiri) dan ::after (kanan):
+   sebuah kotak R×R DI LUAR tab, diisi warna tab, lalu seperempat lingkarannya
+   dikerok memakai `mask`. Cara ini dipilih karena `border-radius` hanya bisa
+   membulat ke DALAM — tidak ada nilai negatif untuk melebar keluar.
+   ===================================================== */
+@media (min-width: 768px) {
+    .actab-wrap--folder {
+        /* R lengkung kaki. Dipakai juga sebagai padding kiri strip supaya kaki
+           tab pertama mulai tepat di tepi kiri kartu di bawahnya, dan sebagai
+           setengah dari gap antar-tab (dua kaki bersinggungan membentuk lembah). */
+        --fold-r: 10px;
+        /* Gap induk yang perlu ditiadakan agar tab menempel ke kartu berikutnya.
+           Halaman yang gap-nya bukan 12px WAJIB menimpanya, mis.
+           `.db { --fold-gap: 20px }`, karena custom property menurun ke sini. */
+        --fold-gap: var(--page-gap, 12px);
+
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        border-radius: 0 !important;
+        padding: 0 0 0 var(--fold-r) !important;
+        /* +1px: tab aktif menindih garis tepi atas kartu, jadi sambungannya
+           mulus tanpa garis yang memotong di bawah tab. */
+        margin-bottom: calc(-1 * var(--fold-gap) - 1px) !important;
+        position: relative;
+        z-index: 5;
+        overflow: visible !important;
+    }
+
+    /* Selektor sengaja menyebut ketiga kelasnya. Blok SLIDER VARIANT menyetel
+       `.actab-wrap.actab-wrap--slider .actab-tabs` dengan `!important` pada
+       gap/padding/overflow-x/justify-content; itu (0,3,0), jadi
+       `.actab-wrap--folder .actab-tabs` yang cuma (0,2,0) KALAH meski ikut
+       !important. Empat kelas di sini menang telak tanpa bergantung urutan
+       baris — jangan disederhanakan. */
+    .actab-wrap.actab-wrap--slider.actab-wrap--folder .actab-tabs {
+        justify-content: flex-start !important;
+        flex-wrap: nowrap !important;
+        /* Kaki kiri tab berikutnya + kaki kanan tab ini = 2R, jadi keduanya
+           bertemu tanpa celah. */
+        gap: calc(var(--fold-r) * 2) !important;
+        /* Tab aktif lebih tinggi; yang menyamakan barisnya adalah KAKI-nya,
+           bukan puncaknya. */
+        align-items: flex-end !important;
+        /* WAJIB visible: kaki tab berada DI LUAR kotak .actab-tabs, dan
+           `overflow-x: auto` dari blok slider memaksa overflow-y ikut auto —
+           kaki tab pertama & terakhir akan terpotong. */
+        overflow: visible !important;
+        /* Slider memberi `padding: 2px` sebagai ruang bayangan kartu mobile.
+           Di sini harus nol: 2px sisa di bawah tab membuat kartu berikutnya
+           turun dan sambungannya menganga, karena margin-bottom di
+           .actab-wrap--folder dihitung dari tepi tab. */
+        padding: 0 !important;
+    }
+
+    .actab-wrap--folder .actab-tab {
+        flex: 0 0 auto;
+        position: relative;
+        /* Kaki tab keluar dari kotaknya, jadi `overflow: hidden` bawaan
+           `.actab-tab` harus dilepas atau lengkungnya ikut terpotong. */
+        overflow: visible !important;
+        border: none !important;
+        border-radius: 12px 12px 0 0 !important;
+        background: #e3e9f2 !important;
+        color: #64748b !important;
+        padding: 9px 18px !important;
+        margin: 0 !important;
+        font-weight: 600 !important;
+        box-shadow: none !important;
+    }
+
+    /* Kaki melebar. `background: inherit` membuatnya selalu ikut warna tab —
+       termasuk saat hover dan saat aktif — tanpa aturan warna berulang. */
+    .actab-wrap--folder .actab-tab::before,
+    .actab-wrap--folder .actab-tab::after {
+        content: '' !important;
+        position: absolute !important;
+        display: block !important;
+        top: auto !important;
+        bottom: 0 !important;
+        width: var(--fold-r) !important;
+        height: var(--fold-r) !important;
+        border-radius: 0 !important;
+        background: inherit !important;
+        opacity: 1 !important;
+        pointer-events: none;
+    }
+
+    /* Seperempat lingkaran dikerok dari sudut yang menghadap badan tab; 0.5px
+       lebih lebar dari R supaya tepi lengkungnya tidak bergerigi. */
+    .actab-wrap--folder .actab-tab::before {
+        left: calc(var(--fold-r) * -1) !important;
+        right: auto !important;
+        -webkit-mask: radial-gradient(circle at 0 0, transparent var(--fold-r), #000 calc(var(--fold-r) + 0.5px));
+        mask: radial-gradient(circle at 0 0, transparent var(--fold-r), #000 calc(var(--fold-r) + 0.5px));
+    }
+
+    .actab-wrap--folder .actab-tab::after {
+        right: calc(var(--fold-r) * -1) !important;
+        left: auto !important;
+        -webkit-mask: radial-gradient(circle at 100% 0, transparent var(--fold-r), #000 calc(var(--fold-r) + 0.5px));
+        mask: radial-gradient(circle at 100% 0, transparent var(--fold-r), #000 calc(var(--fold-r) + 0.5px));
+    }
+
+    .actab-wrap--folder .actab-tab:hover {
+        background: #edf1f7 !important;
+        color: #3083ff !important;
+    }
+
+    /* Tab aktif: warna kartu + naik 4px, sehingga ia terbaca sebagai lembar
+       paling depan. Bagian bawahnya sengaja tidak diberi garis apa pun supaya
+       menyatu dengan badan kartu di bawah. */
+    .actab-wrap--folder .actab-tab.isActive {
+        background: var(--n-card) !important;
+        color: #16345f !important;
+        font-weight: 700 !important;
+        padding-top: 13px !important;
+        box-shadow: none !important;
+        z-index: 2;
+    }
+
+    .actab-wrap--folder .actab-tab.isActive .actab-tabIcon {
+        color: #16345f !important;
+    }
+
+    /* ── Dark mode ──────────────────────────────────────
+       Tab aktif memakai hairline standar app (1px rgba(37,99,235,0.4)) lewat
+       inset shadow tiga sisi — BUKAN `border`: border ikut menggeser kotak dan
+       tidak bisa dibuat berhenti di kaki, sedangkan inset shadow mengikuti
+       radius sudut atas dan berhenti sendiri di garis dasar. */
+    .dark .actab-wrap--folder {
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        overflow: visible !important;
+    }
+
+    .dark .actab-wrap--folder .actab-tab {
+        background: #0d1526 !important;
+        color: rgba(255, 255, 255, 0.6) !important;
+    }
+
+    /* `.dark .actab-tab.isActive::before` di blok pil (gradien biru pengisi pil)
+       spesifisitasnya (0,3,0) — lebih tinggi dari `.actab-wrap--folder
+       .actab-tab::before` (0,2,0), jadi tanpa aturan ini kaki KIRI tab aktif
+       tercat gradien biru dan tampak sebagai noktah nyasar di mode gelap.
+       ::after ikut disebut supaya kedua kaki selalu dipimpin satu aturan. */
+    .dark .actab-wrap--folder .actab-tab::before,
+    .dark .actab-wrap--folder .actab-tab::after,
+    .dark .actab-wrap--folder .actab-tab.isActive::before,
+    .dark .actab-wrap--folder .actab-tab.isActive::after {
+        background: inherit !important;
+        opacity: 1 !important;
+    }
+
+    .dark .actab-wrap--folder .actab-tab:hover {
+        background: #131f38 !important;
+        color: #ffffff !important;
+    }
+
+    .dark .actab-wrap--folder .actab-tab.isActive {
+        background: #000000 !important;
+        color: #ffffff !important;
+        box-shadow:
+            inset 1px 0 0 rgba(37, 99, 235, 0.4),
+            inset -1px 0 0 rgba(37, 99, 235, 0.4),
+            inset 0 1px 0 rgba(37, 99, 235, 0.4) !important;
+    }
+
+    .dark .actab-wrap--folder .actab-tab.isActive .actab-tabIcon {
+        color: #60a5fa !important;
+    }
+}
+
+/* =====================================================
+   DESKTOP POLOS (>= 768px) — deret teks, tanpa kotak
+
+   Wujudnya: tidak ada kontainer, tidak ada pil, tidak ada ikon. Yang tersisa
+   hanya label rata kiri; tab aktif ditebalkan, diwarnai primer, dan diberi
+   garis bawah tipis.
+
+   Blok ini SENGAJA yang paling akhir dan tiap selektornya memakai
+   `:not(.actab-wrap--folder)`: varian 'folder' punya wujud desktopnya sendiri
+   (blok di atas) dan tidak boleh ikut dilucuti.
+
+   Catatan spesifisitas — blok SLIDER VARIANT menyetel
+   `.actab-wrap.actab-wrap--slider .actab-tabs` (0,3,0) dengan !important dan ia
+   BUKAN di dalam media query, jadi ikut berlaku di desktop. Karena itu aturan
+   `.actab-tabs` di bawah menyebut varian slider-nya sebagai selektor kedua —
+   jangan disederhanakan jadi satu selektor, nanti gap/padding/overflow-nya
+   kalah dan strip desktop balik jadi scroller berpadding.
+   ===================================================== */
+@media (min-width: 768px) {
+
+    /* Lebar satu spasi pada font tab: 0.81rem × ~0.28 (rasio spasi font UI ini).
+       Jarak antar tab = 3 × spasi, sesuai permintaan. Kalau terasa terlalu
+       rapat, yang diubah cukup angka 3 di aturan `gap` .actab-tabs. */
+    .actab-wrap:not(.actab-wrap--folder) {
+        --actab-space: 0.227rem;
+    }
+
+    /* Kontainer dilucuti habis. Baris .dark ikut disebut karena blok dark mode
+       di atas menyetel background/border `.dark .actab-wrap` (0,2,0) dengan
+       !important — selektor di sini (0,3,0) yang mengalahkannya. */
+    .actab-wrap:not(.actab-wrap--folder),
+    .dark .actab-wrap:not(.actab-wrap--folder) {
+        background: transparent !important;
+        border: none !important;
+        border-radius: 0 !important;
+        box-shadow: none !important;
+        padding: 0 !important;
+        overflow: visible !important;
+        margin-top: 14px !important;
+        margin-bottom: 8px !important;
+    }
+
+    .actab-wrap:not(.actab-wrap--folder) .actab-tabs,
+    .actab-wrap.actab-wrap--slider:not(.actab-wrap--folder) .actab-tabs {
+        justify-content: flex-start !important;
+        align-items: flex-end !important;
+        flex-wrap: wrap !important;
+        overflow: visible !important;
+        padding: 0 !important;
+        gap: 32px !important;
+        /* Kalau tab sampai turun baris, jarak antar-baris tidak boleh ikut
+           serapat jarak antar-tab — garis bawah tab atas akan hampir menempel
+           ke teks baris di bawahnya. */
+        row-gap: 6px !important;
+    }
+
+    /* Ikon dimatikan lewat CSS, bukan dilepas dari Tab.tsx: markup yang sama
+       masih dipakai kartu tab di mobile dan sheet pemilih. */
+    .actab-wrap:not(.actab-wrap--folder) .actab-tabIconOuter {
+        display: none !important;
+    }
+
+    .actab-wrap:not(.actab-wrap--folder) .actab-tab {
+        /* Dasarnya `flex: 1 1 auto` — tab akan melar memenuhi lebar dan
+           "rata kiri" jadi tak terlihat. */
+        flex: 0 0 auto !important;
+        justify-content: flex-start !important;
+        gap: 0 !important;
+        /* Nol di kiri-kanan supaya jarak yang terlihat benar-benar `gap`
+           .actab-tabs dan tab pertama mulai tepat di tepi kiri konten.
+           7px bawah = jarak teks ke garis bawahnya. */
+        padding: 0 0 7px !important;
+        background: transparent !important;
+        border: none !important;
+        border-radius: 0 !important;
+        box-shadow: none !important;
+        overflow: visible !important;
+        color: var(--n-muted, #64748b) !important;
+    }
+
+    .actab-wrap:not(.actab-wrap--folder) .actab-tab:hover,
+    .dark .actab-wrap:not(.actab-wrap--folder) .actab-tab:hover {
+        background: transparent !important;
+        color: var(--n-primary, #3083ff) !important;
+    }
+
+    /* ::before dipakai ulang: dulu bidang pil, sekarang garis bawah. Warnanya
+       tetap diwarisi dari aturan lama (primer di terang, gradien biru di
+       gelap), begitu juga transisi opacity-nya. */
+    .actab-wrap:not(.actab-wrap--folder) .actab-tab::before,
+    .dark .actab-wrap:not(.actab-wrap--folder) .actab-tab::before {
+        inset: auto 0 0 0 !important;
+        height: 2px !important;
+        border-radius: 2px !important;
+    }
+
+    .actab-wrap:not(.actab-wrap--folder) .actab-tab.isActive,
+    .dark .actab-wrap:not(.actab-wrap--folder) .actab-tab.isActive {
+        color: var(--n-primary, #3083ff) !important;
+        font-weight: 700 !important;
+        background: transparent !important;
+        box-shadow: none !important;
+    }
+
+    /* --n-primary di mode gelap = #1a73e8, terlalu redup di atas hitam untuk
+       teks setipis ini; dipakai #60a5fa, sama dengan penanda aktif lain. */
+    .dark .actab-wrap:not(.actab-wrap--folder) .actab-tab.isActive {
+        color: #60a5fa !important;
+    }
+}
+

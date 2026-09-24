@@ -1,0 +1,148 @@
+/* =====================================================
+   FORM MODULE STYLES
+   ===================================================== */
+
+.desktop-table-view {
+  display: block;
+}
+
+.mobile-card-view {
+  display: none;
+}
+
+@media (max-width: 639px) {
+  .desktop-table-view {
+    display: none !important;
+  }
+  .mobile-card-view {
+    display: flex !important;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════
+   MOBILE CARD STYLES
+   ══════════════════════════════════════════════════════════ */
+
+@keyframes formCardSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.form-mobile-card {
+  background-color: #ffffff;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.03);
+  transition: all 0.2s ease;
+  animation: formCardSlideUp 0.35s ease-out both;
+}
+
+.dark .form-mobile-card {
+  background-color: #000000 !important;
+  border: 1.8px solid rgba(26, 115, 232, 0.85) !important;
+  box-shadow: 0 0 20px rgba(26, 115, 232, 0.15) !important;
+}
+
+.form-mobile-card:active {
+  transform: scale(0.99);
+}
+
+.form-mobile-card-accent {
+  height: 3px;
+  background: linear-gradient(90deg, var(--n-primary, #3083FF) 0%, #c2185b 100%);
+}
+
+.form-mobile-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 9999px;
+  font-size: 10px;
+  font-weight: 800;
+  border: 1px solid;
+  white-space: nowrap;
+  flex-shrink: 0;
+  letter-spacing: 0.02em;
+}
+
+.form-mobile-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 16px;
+  border-radius: 6px;
+  background-color: #059669;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 800;
+  text-decoration: none;
+  border: none;
+  transition: all 0.15s ease;
+  box-shadow: 0 1px 3px rgba(5, 150, 105, 0.25);
+}
+
+.form-mobile-btn-primary:active {
+  transform: scale(0.96);
+  background-color: #047857;
+}
+
+.form-mobile-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  height: 36px;
+  padding: 0 14px;
+  border-radius: 6px;
+  background-color: #eff6ff;
+  color: #3083FF;
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: none;
+  border: 1px solid #bfdbfe;
+  transition: all 0.15s ease;
+}
+
+.form-mobile-btn-secondary:active {
+  transform: scale(0.96);
+  background-color: #dbeafe;
+}
+
+.form-mobile-btn-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 6px;
+  background-color: #f8fafc;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-decoration: none;
+}
+
+.form-mobile-btn-icon:active {
+  transform: scale(0.92);
+  background-color: #e2e8f0;
+}
+
+.form-mobile-btn-danger {
+  color: #e11d48;
+}
+
+.form-mobile-btn-danger:active {
+  background-color: #fff1f2;
+}

@@ -1,0 +1,28 @@
+name = "acca-app"
+pages_build_output_dir = ".open-next/out"
+compatibility_date = "2024-11-18"
+compatibility_flags = ["nodejs_compat"]
+
+
+observability = { enabled = true }
+
+# Environment variables.
+#
+# HANYA nilai non-rahasia yang boleh ada di sini — berkas ini ikut masuk repo.
+# Variabel NEXT_PUBLIC_* memang dikirim ke browser, jadi aman.
+#
+# Kredensial (FONNTE_TOKEN, WA_GROUP_ID, dsb.) TIDAK ditulis di sini. Set lewat:
+#   wrangler secret put FONNTE_TOKEN
+#   wrangler secret put WA_GROUP_ID
+# atau lewat dashboard Cloudflare → Settings → Variables and Secrets.
+[vars]
+NEXT_PUBLIC_SITE_URL = "https://acca-app.workers.dev"
+NEXT_PUBLIC_API_URL = "https://acca-app.workers.dev"
+NEXT_PUBLIC_APP_URL = "https://acca-app.workers.dev"
+NEXT_PUBLIC_SUPABASE_URL = "https://suwdqtaxnooowxaxvilr.supabase.co"
+NEXT_PUBLIC_SUPABASE_ANON_KEY = "sb_publishable_xGS9w_p7dFONA-ZjxJSRQQ_y8iPBxFc"
+
+# Development settings
+[dev]
+port = 3000
+local_protocol = "http"

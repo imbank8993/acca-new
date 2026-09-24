@@ -1,0 +1,134 @@
+[
+  {
+    "name": "A01 survei menolak siswa sebelum service",
+    "status": "PASS"
+  },
+  {
+    "name": "A02 secret hanya untuk internal",
+    "status": "PASS"
+  },
+  {
+    "name": "A02/A24 kunci internal kosong tidak melewati pemeriksaan",
+    "status": "PASS"
+  },
+  {
+    "name": "A02 storage write menolak siswa, menerima admin",
+    "status": "PASS"
+  },
+  {
+    "name": "A28 internal setting WhatsApp & authenticated timezone",
+    "status": "PASS"
+  },
+  {
+    "name": "A03 pengaturan/generate/delete semuanya memakai feature guard",
+    "status": "PASS"
+  },
+  {
+    "name": "A04 token akun nonaktif/null ditolak; akun aktif diterima",
+    "status": "PASS"
+  },
+  {
+    "name": "A05 alamat IPv4/IPv6 privat, loopback dan URL kredensial ditolak",
+    "status": "PASS"
+  },
+  {
+    "name": "A05 HTML/SVG/XML dan script ditolak, PDF diterima",
+    "status": "PASS"
+  },
+  {
+    "name": "A06 upload menerima konfigurasi objek aktif",
+    "status": "PASS"
+  },
+  {
+    "name": "A07 tanggal/BigInt/Decimal bersarang tetap valid di lima service",
+    "status": "PASS"
+  },
+  {
+    "name": "A08 jurnal-master dispatch ke handler statis",
+    "status": "PASS"
+  },
+  {
+    "name": "A09 sanggar meneruskan token pengguna",
+    "status": "PASS"
+  },
+  {
+    "name": "A10 sanitasi pengumuman baru dan historis",
+    "status": "PASS"
+  },
+  {
+    "name": "A11 siswa tidak dapat membaca NISN lain atau substring username",
+    "status": "PASS"
+  },
+  {
+    "name": "A11 orang tua wajib relasi anak di PostgreSQL",
+    "status": "PASS"
+  },
+  {
+    "name": "A11 guru tanpa penugasan kelas ditolak",
+    "status": "PASS"
+  },
+  {
+    "name": "A12 tugas lintas pemilik dan NIP kosong ditolak",
+    "status": "PASS"
+  },
+  {
+    "name": "A12 checklist BigInt pemilik boleh, siswa lain tidak",
+    "status": "PASS"
+  },
+  {
+    "name": "A12 pencarian tidak memperlebar kelas; checklist mengikuti sesi",
+    "status": "PASS"
+  },
+  {
+    "name": "A15 update LCKH orang lain tanpa nip tetap ditolak",
+    "status": "PASS"
+  },
+  {
+    "name": "A15 daftar/detail/print LCKH lintas NIP ditolak",
+    "status": "PASS"
+  },
+  {
+    "name": "A15 pemilik tidak bisa memalsukan status persetujuan",
+    "status": "PASS"
+  },
+  {
+    "name": "A15/A26 persetujuan WKM atomik dan tidak melompati Kamad",
+    "status": "PASS"
+  },
+  {
+    "name": "A15 Kamad final menyimpan approval code server",
+    "status": "PASS"
+  },
+  {
+    "name": "A16 Bank Data tanpa akses halaman ditolak",
+    "status": "PASS"
+  },
+  {
+    "name": "A16/A18 katalog tiga subjek, sensitif disembunyikan",
+    "status": "PASS"
+  },
+  {
+    "name": "A16 konfigurasi/dataset nonaktif/kolom tak dikenal ditolak",
+    "status": "PASS"
+  },
+  {
+    "name": "A18 XLSX nyata, select allowlist dan batas baris",
+    "status": "PASS"
+  },
+  {
+    "name": "A18 semua kolom katalog sesuai Prisma PostgreSQL",
+    "status": "PASS"
+  },
+  {
+    "name": "A19 pemilik file boleh hapus, pengguna lain ditolak",
+    "status": "PASS"
+  },
+  {
+    "name": "A26 switch storage invalid tidak menonaktifkan provider",
+    "status": "PASS"
+  },
+  {
+    "name": "A27 summary menghasilkan detail laporan dan filter tanggal",
+    "status": "PASS"
+  }
+]

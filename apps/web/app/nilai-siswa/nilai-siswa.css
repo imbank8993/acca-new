@@ -1,0 +1,395 @@
+/* =========================================================
+   NILAI SISWA — STYLE HALAMAN (Sesuai Referensi Gambar 2)
+   Pola referensi master/pengaturan-data: permukaan hitam +
+   bingkai #1a73e8 di mode gelap. Kartu bersih & modern.
+========================================================= */
+
+/* ── Kartu Mapel & Header Card ──────────────────────────── */
+.nilai-page__mapel-card {
+  background: var(--n-card, #ffffff);
+  border: 1.5px solid var(--n-border, #e2e8f0);
+  border-radius: 20px !important;
+  overflow: hidden;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.03);
+  margin-bottom: 1.25rem;
+}
+
+.nilai-page__mapel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.125rem 1.35rem;
+  background: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.nilai-page__mapel-header-left {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+}
+
+.nilai-page__mapel-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: #2563eb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25);
+}
+
+.nilai-page__mapel-icon-svg {
+  width: 20px;
+  height: 20px;
+  color: #ffffff;
+}
+
+.nilai-page__mapel-title {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #0f172a;
+  line-height: 1.25;
+}
+
+.nilai-page__mapel-guru {
+  font-size: 0.825rem;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.nilai-page__avg-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.25rem 0.5rem;
+  font-size: 1rem;
+  font-weight: 800;
+  color: #0f172a;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.nilai-page__avg-icon {
+  width: 18px;
+  height: 18px;
+  color: #0f172a;
+}
+
+/* ── Body & Tabel ────────────────────────────────────────── */
+.nilai-page__mapel-body {
+  padding: 1.125rem 1.35rem 1.25rem;
+}
+
+.nilai-page__table-wrap {
+  overflow-x: auto;
+  border: none !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+}
+
+.nilai-page__table {
+  width: 100%;
+  border-collapse: separate !important;
+  border-spacing: 0 !important;
+  font-size: 0.875rem;
+}
+
+/* Rounded Header Pill Strip (SUMATIF | JENIS | TOPIK | NILAI) */
+.nilai-page__table thead tr {
+  background: #f0f4f9 !important;
+}
+
+.nilai-page__th {
+  padding: 0.65rem 1rem !important;
+  text-align: left;
+  font-size: 0.725rem !important;
+  font-weight: 800 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.06em !important;
+  color: #64748b !important;
+  border: none !important;
+  background: transparent !important;
+}
+
+.nilai-page__th:first-child {
+  border-top-left-radius: 12px !important;
+  border-bottom-left-radius: 12px !important;
+  padding-left: 1.25rem !important;
+}
+
+.nilai-page__th:last-child {
+  border-top-right-radius: 12px !important;
+  border-bottom-right-radius: 12px !important;
+  padding-right: 1.25rem !important;
+  text-align: right !important;
+}
+
+.nilai-page__th--right {
+  text-align: right !important;
+}
+
+/* Table Rows */
+.nilai-page__tr {
+  border-top: none !important;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.nilai-page__tr:last-child {
+  border-bottom: none !important;
+}
+
+.nilai-page__td {
+  padding: 0.875rem 1rem !important;
+  vertical-align: middle;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.nilai-page__td:first-child {
+  padding-left: 1.25rem !important;
+}
+
+.nilai-page__td:last-child {
+  padding-right: 1.25rem !important;
+}
+
+.nilai-page__td--sumatif {
+  font-weight: 800 !important;
+  color: #0f172a !important;
+  font-size: 0.875rem !important;
+  border-right: none !important;
+}
+
+.nilai-page__td--muted {
+  color: #64748b !important;
+  font-size: 0.85rem !important;
+  font-weight: 500 !important;
+}
+
+.nilai-page__td--right {
+  text-align: right !important;
+  font-weight: 800 !important;
+  color: #0f172a !important;
+  font-size: 0.925rem !important;
+}
+
+/* Clean score display (like 60 in image 2) */
+.nilai-page__nilai-badge {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  color: #0f172a !important;
+  font-size: 0.925rem !important;
+  font-weight: 800 !important;
+  padding: 0 !important;
+  min-width: auto !important;
+}
+
+/* Jenis Penilaian Badges (UH, PAS, etc.) */
+.nilai-page__jenis-badge {
+  display: inline-flex !important;
+  align-items: center !important;
+  padding: 0.25rem 0.75rem !important;
+  border-radius: 8px !important;
+  font-size: 0.725rem !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.02em !important;
+  background: #e8f0fe !important;
+  color: #1d4ed8 !important;
+  border: none !important;
+}
+
+.nilai-page__jenis-badge--uh,
+.nilai-page__jenis-badge--pas,
+.nilai-page__jenis-badge--sum {
+  background: #e8f0fe !important;
+  color: #1d4ed8 !important;
+}
+
+.nilai-page__jenis-badge--tugas {
+  background: #e6f4ea !important;
+  color: #137333 !important;
+}
+
+.nilai-page__jenis-badge--kuis {
+  background: #fef7e0 !important;
+  color: #b06000 !important;
+}
+
+/* ── Nilai Apresiasi Card ──────────────────────────────── */
+.nilai-page__apresiasi {
+  border-radius: 20px !important;
+}
+
+.nilai-page__apresiasi-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+
+.nilai-page__apresiasi-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.875rem;
+  padding: 0.75rem 1rem;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+}
+
+.nilai-page__apresiasi-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.nilai-page__apresiasi-mapel {
+  font-size: 0.875rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.nilai-page__apresiasi-judul {
+  font-size: 0.8125rem;
+  color: #475569;
+}
+
+.nilai-page__apresiasi-meta {
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+.nilai-page__apresiasi-poin {
+  flex-shrink: 0;
+  padding: 0.25rem 0.75rem;
+  border-radius: 999px;
+  background: #e8f0fe;
+  color: #1d4ed8;
+  font-size: 0.875rem;
+  font-weight: 800;
+}
+
+.nilai-page__apresiasi-total {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.875rem;
+  margin-top: 1rem;
+  padding-top: 0.875rem;
+  border-top: 1.5px solid #e2e8f0;
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+/* ── MODE GELAP OVERRIDES ────────────────────────────────── */
+.dark .nilai-page__card,
+.dark .nilai-page__student-card,
+.dark .nilai-page__mapel-card,
+.dark .nilai-page__filter-card,
+.dark .nilai-page__table-container,
+.dark .nilai-page__legend,
+.dark .nilai-page__apresiasi {
+  background: #000000 !important;
+  border: 2.2px solid rgba(26, 115, 232, 0.85) !important;
+  border-radius: 20px !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6) !important;
+}
+
+.dark .nilai-page__mapel-header {
+  background: linear-gradient(135deg, rgba(26, 115, 232, 0.15), rgba(0, 40, 122, 0.25)) !important;
+  border-bottom: 2px solid rgba(26, 115, 232, 0.5) !important;
+}
+
+.dark .nilai-page__mapel-title { color: #ffffff !important; }
+.dark .nilai-page__mapel-guru { color: #94a3b8 !important; }
+.dark .nilai-page__mapel-icon { background: #1d6bf3 !important; }
+.dark .nilai-page__mapel-icon-svg { color: #ffffff !important; }
+
+.dark .nilai-page__avg-badge { color: #ffffff !important; }
+.dark .nilai-page__avg-icon { color: #60a5fa !important; }
+
+.dark .nilai-page__table thead tr {
+  background: rgba(26, 115, 232, 0.18) !important;
+}
+
+.dark .nilai-page__th {
+  color: #94a3b8 !important;
+}
+
+.dark .nilai-page__td,
+.dark .nilai-page__td--right {
+  color: #ffffff !important;
+  border-bottom-color: rgba(26, 115, 232, 0.2) !important;
+}
+
+.dark .nilai-page__td--muted { color: #94a3b8 !important; }
+.dark .nilai-page__td--sumatif {
+  background: #000000 !important;
+  color: #ffffff !important;
+}
+
+.dark .nilai-page__nilai-badge {
+  color: #ffffff !important;
+}
+
+.dark .nilai-page__jenis-badge--pas   { background: rgba(29, 107, 243, 0.28) !important; color: #93c5fd !important; }
+.dark .nilai-page__jenis-badge--sum   { background: rgba(59, 130, 246, 0.24) !important; color: #bfdbfe !important; }
+.dark .nilai-page__jenis-badge--uh    { background: rgba(96, 165, 250, 0.20) !important; color: #60a5fa !important; }
+.dark .nilai-page__jenis-badge--tugas { background: rgba(6, 78, 59, 0.45) !important; color: #34d399 !important; }
+.dark .nilai-page__jenis-badge--kuis  { background: rgba(146, 64, 14, 0.45) !important; color: #fbbf24 !important; }
+
+.dark .nilai-page__apresiasi-item {
+  background: rgba(255, 255, 255, 0.04) !important;
+  border: 1px solid rgba(37, 99, 235, 0.4) !important;
+}
+.dark .nilai-page__apresiasi-mapel,
+.dark .nilai-page__apresiasi-total { color: #e2e8f0 !important; }
+.dark .nilai-page__apresiasi-judul { color: #cbd5e1 !important; }
+.dark .nilai-page__apresiasi-meta { color: #94a3b8 !important; }
+.dark .nilai-page__apresiasi-poin {
+  background: rgba(96, 165, 250, 0.18) !important;
+  color: #60a5fa !important;
+}
+.dark .nilai-page__apresiasi-total { border-top-color: rgba(37, 99, 235, 0.4) !important; }
+
+/* ── Stat Card & Inputs Dark Mode ────────────────────── */
+.dark .nilai-page__stat-card {
+  background: #000000 !important;
+  border: 2.2px solid rgba(26, 115, 232, 0.85) !important;
+  border-radius: 14px !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5) !important;
+}
+.dark .nilai-page__stat-label { color: #94a3b8 !important; }
+.dark .nilai-page__stat-value { color: #ffffff !important; }
+.dark .nilai-page__stat-icon { background: rgba(96, 165, 250, 0.18) !important; }
+.dark .nilai-page__stat-svg,
+.dark .nilai-page__stat-color--blue,
+.dark .nilai-page__stat-color--emerald,
+.dark .nilai-page__stat-color--amber { color: #60a5fa !important; }
+
+.dark .nilai-page__input,
+.dark .nilai-page__select {
+  background: #000000 !important;
+  border: 2.2px solid rgba(26, 115, 232, 0.85) !important;
+  border-radius: 12px !important;
+  color: #ffffff !important;
+  color-scheme: dark;
+}
+.dark .nilai-page__label { color: #94a3b8 !important; }
+.dark .nilai-page__input-icon,
+.dark .nilai-page__select-arrow { color: #60a5fa !important; }
+
+.dark .nilai-page__legend-title { color: #ffffff !important; }
+.dark .nilai-page__legend-item {
+  background: rgba(255, 255, 255, 0.04) !important;
+  border: 1px solid rgba(37, 99, 235, 0.4) !important;
+  border-radius: 12px !important;
+}
+.dark .nilai-page__legend-desc { color: #e2e8f0 !important; }
+.dark .nilai-page__legend-icon { color: #60a5fa !important; }
