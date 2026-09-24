@@ -16,8 +16,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 FROM base AS builder
 WORKDIR /app
 
-# Disable Next.js telemetry during build
+# Disable Next.js telemetry & skip puppeteer browser download during build
 ENV NEXT_TELEMETRY_DISABLED=1
+ENV PUPPETEER_SKIP_DOWNLOAD=true
 ENV NODE_ENV=production
 ENV DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy?schema=public"
 
@@ -27,10 +28,10 @@ COPY packages/shared/package.json ./packages/shared/
 COPY apps/web/package.json ./apps/web/
 COPY apps/api/package.json ./apps/api/
 
-# Install dependencies
-RUN npm ci --legacy-peer-deps
+# Install dependencies safely without executing unnecessary native scripts
+RUN npm ci --legacy-peer-deps --ignore-scripts
 
-# Copy Prisma schema and generate client for Next.js server actions / API
+# Copy Prisma schema and generate client explicitly for Next.js server actions / API
 COPY apps/api/prisma ./apps/api/prisma
 RUN npx prisma generate --schema=./apps/api/prisma/schema.prisma
 

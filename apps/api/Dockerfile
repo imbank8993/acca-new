@@ -16,16 +16,18 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 FROM base AS builder
 WORKDIR /app
 
+ENV PUPPETEER_SKIP_DOWNLOAD=true
+
 # Copy root monorepo metadata and ALL workspace definitions
 COPY package.json package-lock.json ./
 COPY packages/shared/package.json ./packages/shared/
 COPY apps/api/package.json ./apps/api/
 COPY apps/web/package.json ./apps/web/
 
-# Install dependencies for monorepo
-RUN npm ci --legacy-peer-deps
+# Install dependencies safely without executing unnecessary native scripts
+RUN npm ci --legacy-peer-deps --ignore-scripts
 
-# Copy Prisma schema and generate client
+# Copy Prisma schema and generate client explicitly
 COPY apps/api/prisma ./apps/api/prisma
 ENV DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy?schema=public"
 RUN npx prisma generate --schema=./apps/api/prisma/schema.prisma
