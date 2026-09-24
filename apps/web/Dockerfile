@@ -19,7 +19,6 @@ WORKDIR /app
 # Disable Next.js telemetry & skip puppeteer browser download during build
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV PUPPETEER_SKIP_DOWNLOAD=true
-ENV NODE_ENV=production
 ENV NODE_OPTIONS="--max-old-space-size=2048"
 ENV DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy?schema=public"
 
@@ -29,7 +28,7 @@ COPY packages/shared/package.json ./packages/shared/
 COPY apps/web/package.json ./apps/web/
 COPY apps/api/package.json ./apps/api/
 
-# Install dependencies safely without executing unnecessary native scripts
+# Install ALL dependencies (termasuk devDependencies: tailwindcss, typescript, dll)
 RUN npm ci --legacy-peer-deps --ignore-scripts
 
 # Copy Prisma schema and generate client explicitly for Next.js server actions / API
