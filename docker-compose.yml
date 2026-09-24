@@ -9,7 +9,7 @@ services:
     container_name: acca-api
     restart: unless-stopped
     env_file:
-      - ./apps/api/.env
+      - .env
     environment:
       - PORT=3007
       - NODE_ENV=production
@@ -26,12 +26,10 @@ services:
     container_name: acca-web
     restart: unless-stopped
     env_file:
-      - ./apps/web/.env.local
+      - .env
     environment:
       - PORT=3006
       - NODE_ENV=production
-      # Di dalam docker network, Next.js juga bisa memanggil container API langsung
-      - NEXT_PUBLIC_NEST_API_URL=http://localhost:3007/api
     ports:
       - "3006:3006"
     depends_on:

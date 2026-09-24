@@ -16,11 +16,8 @@ git reset --hard origin/main
 
 # 2. Cek ketersediaan file environment
 echo "🔍 [2/4] Memeriksa file konfigurasi..."
-if [ ! -f "apps/api/.env" ]; then
-    echo "⚠️ PERINGATAN: apps/api/.env belum ditemukan!"
-fi
-if [ ! -f "apps/web/.env.local" ]; then
-    echo "⚠️ PERINGATAN: apps/web/.env.local belum ditemukan!"
+if [ ! -f ".env" ] && [ ! -f "apps/api/.env" ]; then
+    echo "⚠️ PERINGATAN: File .env belum ditemukan di root proyek!"
 fi
 
 # 3. Build & Jalankan Container dengan Docker Compose
