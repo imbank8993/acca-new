@@ -1,18 +1,65 @@
 version: '3.8'
 
 services:
+  # ── 1. Backend REST API (NestJS) ─────────────────────────────────────────────
+  acca-api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    container_name: acca-api
+    restart: unless-stopped
+    env_file:
+      - ./apps/api/.env
+    environment:
+      - PORT=3007
+      - NODE_ENV=production
+    ports:
+      - "3007:3007"
+    networks:
+      - acca-network
+
+  # ── 2. Frontend Application (Next.js) ────────────────────────────────────────
+  acca-web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    container_name: acca-web
+    restart: unless-stopped
+    env_file:
+      - ./apps/web/.env.local
+    environment:
+      - PORT=3006
+      - NODE_ENV=production
+      # Di dalam docker network, Next.js juga bisa memanggil container API langsung
+      - NEXT_PUBLIC_NEST_API_URL=http://localhost:3007/api
+    ports:
+      - "3006:3006"
+    depends_on:
+      - acca-api
+    networks:
+      - acca-network
+
+  # ── 3. Database Opsional (Hanya jika ingin database lokal mandiri) ───────────
   postgres:
     image: postgres:16-alpine
     container_name: acca-postgres
-    restart: always
+    restart: unless-stopped
+    profiles:
+      - dev-db
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgrespassword
       POSTGRES_DB: acca_db
     ports:
-      - '5432:5432'
+      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    networks:
+      - acca-network
+
+networks:
+  acca-network:
+    driver: bridge
 
 volumes:
   postgres_data:

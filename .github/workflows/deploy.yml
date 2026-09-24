@@ -1,0 +1,67 @@
+name: Build & Deploy ACCA via Docker
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  # ── 1. Verifikasi Build & Typecheck ─────────────────────────────────────────
+  verify:
+    name: Verify Build & Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Monorepo Dependencies
+        run: npm ci
+
+      - name: Generate Prisma Client
+        run: npx prisma generate --schema=apps/api/prisma/schema.prisma
+
+      - name: Typecheck Frontend
+        run: npm run typecheck
+
+      - name: Build Backend (NestJS)
+        run: npm run build:backend
+
+  # ── 2. Otomatis Deploy ke VPS via Docker ─────────────────────────────────────
+  deploy:
+    name: Deploy to VPS
+    needs: verify
+    runs-on: ubuntu-latest
+    # Hanya dijalankan jika rahasia VPS_HOST disetel di GitHub Secrets
+    if: "${{ secrets.VPS_HOST != '' }}"
+    steps:
+      - name: Trigger Remote Deployment via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USERNAME }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          script: |
+            echo "🚀 Menghubungkan ke VPS..."
+            TARGET_DIR="${{ secrets.VPS_APP_DIR || '~/acca-new' }}"
+            cd $TARGET_DIR || { echo "Folder $TARGET_DIR tidak ditemukan!"; exit 1; }
+            
+            echo "📥 Mengambil perubahan terbaru dari GitHub..."
+            git pull origin main
+            
+            echo "🐳 Membangun dan menjalankan container Docker..."
+            docker compose down --remove-orphans || true
+            docker compose up -d --build
+            
+            echo "🧹 Membersihkan image lama yang tidak terpakai..."
+            docker image prune -f
+            
+            echo "✅ Deployment berhasil diselesaikan!"
+            docker compose ps
