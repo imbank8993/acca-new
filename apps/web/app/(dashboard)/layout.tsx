@@ -238,10 +238,15 @@ export default function DashboardShellLayout({ children }: { children: React.Rea
     )
   }
 
+  const userContextValue = useMemo(() => ({
+    user: user!,
+    refreshUser: async () => { window.dispatchEvent(new Event('refresh-user')) }
+  }), [user])
+
   if (!user) return null
 
   return (
-    <DashboardUserContext.Provider value={{ user, refreshUser: async () => { window.dispatchEvent(new Event('refresh-user')) } }}>
+    <DashboardUserContext.Provider value={userContextValue}>
       <UserHeartbeat />
       <div className={`dashboard-layout ${sidebarOpen ? 'sidebar-mobile-open' : ''}`}>
         <Sidebar

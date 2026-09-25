@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState, type ReactNode, type TouchEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, useCallback, type ReactNode, type TouchEvent } from 'react';
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { useTimezone } from '@/hooks/use-timezone';
@@ -8,7 +8,6 @@ import { getActivePeriods } from '@/lib/settings-client';
 import { getAcademicYearFromDate } from '@/lib/date-utils';
 import type { User } from '@/lib/types';
 import { getProxiedImageUrl } from '@/lib/image-utils';
-import { useMediaQuery } from '@/hooks/use-breakpoint';
 import DOMPurify from 'isomorphic-dompurify';
 import DashboardCharts from './DashboardCharts';
 import Modal, { ModalBody, ModalFooter } from '@/components/ui/Modal';
@@ -43,12 +42,6 @@ import {
 } from 'lucide-react';
 
 export default function DashboardContent({ user, headerExtra }: { user: User; headerExtra?: ReactNode }) {
-    // Breakpoint sidebar/layout dashboard (sinkron dengan @media di style jsx
-    // bawah) — dipakai untuk memilih SATU pin pengumuman, bukan merender dua
-    // <Pin> lalu menyembunyikan salah satunya lewat CSS (rawan pecah kalau
-    // urutan @media di style block ini berantakan lagi).
-    const isMobileLayout = useMediaQuery('(max-width: 991.98px)');
-
     // Birthday state
     const [isBirthdayOpen, setIsBirthdayOpen] = useState(false);
 
@@ -105,25 +98,18 @@ export default function DashboardContent({ user, headerExtra }: { user: User; he
 
 
     const { timezone, getCurrentDate, getDayName } = useTimezone();
-
-    const [currentTime, setCurrentTime] = useState(new Date());
-
-    useEffect(() => {
-        const timer = setInterval(() => setCurrentTime(new Date()), 1000);
-        return () => clearInterval(timer);
-    }, []);
     const [age, setAge] = useState(0);
 
     // --- Strip hari (Min..Sab) pada kartu jam: tanggal minggu berjalan + penanda agenda disinkronkan ke zona waktu sekolah (WITA/site_settings) ---
-    const toSchoolISO = (d: Date) => {
+    const toSchoolISO = useCallback((d: Date) => {
         try {
             return d.toLocaleDateString('en-CA', { timeZone: timezone });
         } catch {
             return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
         }
-    };
+    }, [timezone]);
 
-    const todayISO = toSchoolISO(currentTime);
+    const todayISO = useMemo(() => toSchoolISO(new Date()), [toSchoolISO]);
 
     const [agendaOffset, setAgendaOffset] = useState(0);
 

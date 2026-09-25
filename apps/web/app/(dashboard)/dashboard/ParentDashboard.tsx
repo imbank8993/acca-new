@@ -241,7 +241,7 @@ export default function ParentDashboard({ user }: { user: User }) {
 
     // Switcher anak + aksi, dirender DI BAWAH banner hero lewat prop headerExtra
     // (1 anak = tanpa chip, hanya tombol aksi rata kanan)
-    const switcherRow = (
+    const switcherRow = useMemo(() => (
         <AnakSwitcher
             anakList={anakList}
             selectedNisn={selectedNisn}
@@ -275,7 +275,7 @@ export default function ParentDashboard({ user }: { user: User }) {
                 </>
             }
         />
-    );
+    ), [anakList, selectedNisn, selectedAnak]);
 
     return (
         <div>
