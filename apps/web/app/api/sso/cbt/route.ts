@@ -98,14 +98,14 @@ export async function GET(req: Request) {
             .setExpirationTime('5m')
             .sign(SSO_SECRET);
 
-        let cbtUrl = process.env.NEXT_PUBLIC_CBT_URL || 'https://acca-cbt.icgowa.sch.id';
+        let cbtUrl = process.env.NEXT_PUBLIC_CBT_URL || 'https://accav2-cbt.icgowa.sch.id';
         const hostHeader = req.headers.get('host') || '';
         
         // Jika diakses dari domain publik (bukan localhost)
         if (!hostHeader.includes('localhost')) {
             cbtUrl = process.env.NEXT_PUBLIC_CBT_URL && !process.env.NEXT_PUBLIC_CBT_URL.includes('localhost')
                 ? process.env.NEXT_PUBLIC_CBT_URL
-                : 'https://acca-cbt.icgowa.sch.id';
+                : 'https://accav2-cbt.icgowa.sch.id';
         } else {
             cbtUrl = process.env.NEXT_PUBLIC_CBT_URL || 'http://localhost:3008';
         }
