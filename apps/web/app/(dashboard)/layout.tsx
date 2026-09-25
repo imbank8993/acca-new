@@ -204,6 +204,14 @@ export default function DashboardShellLayout({ children }: { children: React.Rea
     return () => clearTimeout(timeoutId)
   }, [currentPage, user])
 
+  const userContextValue = useMemo(() => {
+    if (!user) return null
+    return {
+      user,
+      refreshUser: async () => { window.dispatchEvent(new Event('refresh-user')) }
+    }
+  }, [user])
+
   if (loading) {
     return (
       /* Gaya di sini WAJIB inline, bukan <style jsx>.
@@ -238,12 +246,7 @@ export default function DashboardShellLayout({ children }: { children: React.Rea
     )
   }
 
-  const userContextValue = useMemo(() => ({
-    user: user!,
-    refreshUser: async () => { window.dispatchEvent(new Event('refresh-user')) }
-  }), [user])
-
-  if (!user) return null
+  if (!user || !userContextValue) return null
 
   return (
     <DashboardUserContext.Provider value={userContextValue}>
