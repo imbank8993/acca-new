@@ -556,7 +556,15 @@ export default function BottomNav({
                 <button
                     type="button"
                     className={`bnav__item ${isPinnedOpen ? 'isActive' : ''}`}
-                    onClick={() => setIsPinnedOpen(!isPinnedOpen)}
+                    onClick={() => {
+                        // Jika hanya 1 menu yang di-pin, langsung navigasi
+                        // tanpa membuka modal — menghemat satu ketukan.
+                        if (pinnedItems.length === 1) {
+                            onNavigate(pinnedItems[0].id)
+                            return
+                        }
+                        setIsPinnedOpen(!isPinnedOpen)
+                    }}
                     title="Pintasan Menu"
                     aria-label="Pintasan Menu"
                 >
@@ -575,7 +583,7 @@ export default function BottomNav({
             {/* Bottom Sheet Drawer: Pintasan Menu (Pinned Pages) */}
             {isPinnedOpen && (
                 <div className="bnav__sheet-backdrop" onClick={() => setIsPinnedOpen(false)}>
-                    <div className="bnav__sheet" onClick={e => e.stopPropagation()} style={{ maxHeight: '82vh', display: 'flex', flexDirection: 'column' }}>
+                    <div className="bnav__sheet" onClick={e => e.stopPropagation()} style={{ display: 'flex', flexDirection: 'column' }}>
                         <div className="bnav__sheet-handle" />
                         <div className="bnav__sheet-header">
                             <div className="bnav__sheet-title-wrap">
@@ -657,7 +665,7 @@ export default function BottomNav({
             {/* Bottom Sheet Drawer: Pengumuman (Khusus Dashboard) */}
             {isAnnouncementsOpen && (
                 <div className="bnav__sheet-backdrop" onClick={() => setIsAnnouncementsOpen(false)}>
-                    <div className="bnav__sheet" onClick={e => e.stopPropagation()} style={{ maxHeight: '82vh', display: 'flex', flexDirection: 'column' }}>
+                    <div className="bnav__sheet" onClick={e => e.stopPropagation()} style={{ display: 'flex', flexDirection: 'column' }}>
                         <div className="bnav__sheet-handle" />
                         <div className="bnav__sheet-header">
                             <div className="bnav__sheet-title-wrap">
