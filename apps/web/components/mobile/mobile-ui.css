@@ -1097,7 +1097,7 @@
 
 /* Mengikuti MOBILE_QUERY di lib/use-breakpoint.ts — satu ambang untuk seluruh
    cangkang aplikasi; ubah di sana dan di sini bersamaan. */
-@media (max-width: 767.98px) {
+@media (max-width: 1023.98px) {
 
     /* Padding samping container dilepas supaya bidangnya benar-benar selebar
        layar. `:has()` dipakai supaya HANYA halaman yang opt-in yang terpengaruh.

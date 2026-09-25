@@ -254,8 +254,7 @@ export default function Header({ user, onMenuToggle, onNavigate, isCollapsed, on
                             <div className="user-menu-dropdown">
                                 <div className="user-menu-info">
                                     <div className="user-menu-name">{user.nama}</div>
-                                    <div className="user_menu_nip" style={{ fontSize: '0.75rem', color: 'var(--n-muted, rgba(255,255,255,0.7))', margin: '2px 0' }}>NIP/NISN: {user.nip || 'N/A'}</div>
-                                    <div className="user-menu-role">{user.roles.join(', ')}</div>
+                                    <div className="user_menu_nip" style={{ fontSize: '0.75rem', color: 'var(--n-muted, rgba(255,255,255,0.7))', margin: '2px 0 0 0' }}>NIP/NISN: {user.nip || 'N/A'}</div>
                                 </div>
                                 {canUseDarkMode && !forcedTheme && (
                                     <button

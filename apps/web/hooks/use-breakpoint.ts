@@ -13,11 +13,12 @@ import { useEffect, useState } from 'react'
  * pernah terjadi pada header (lihat catatan di components/header.css) —
  * header mobile di atas sidebar desktop.
  *
- * Dipilih 767.98px, bukan 991.98px: di 768–991px (tablet, jendela desktop yang
- * dikecilkan) daftar mobile satu kolom akan melar selebar layar dan menyisakan
- * ruang kosong panjang di kanan tiap baris. Tablet ditangani sebagai desktop.
+ * Dipilih 1023.98px: tablet portrait (~768–1024px) diperlakukan sebagai mobile.
+ * Di 768px dengan sidebar fixed 258px, konten hanya mendapat ~510px — terlalu
+ * sempit untuk tabel 5 kolom dan FilterToolbar satu baris. Tablet landscape
+ * (≥1024px) tetap memakai layout desktop dengan sidebar.
  */
-export const MOBILE_QUERY = '(max-width: 767.98px)'
+export const MOBILE_QUERY = '(max-width: 1023.98px)'
 
 /**
  * Cocokkan media query di klien.

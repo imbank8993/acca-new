@@ -227,43 +227,30 @@ export function applyThemeColor(): void {
     const overlay = topOverlayColor()
     const next = toHex(overlay ? blend(overlay, base) : base)
 
-    // 1. Perbarui semua meta theme-color di <head>
+    // 1. Perbarui semua meta theme-color di <head> jika ada perubahan
     const metas = getThemeColorMetas()
     metas.forEach(meta => {
         if (meta.hasAttribute('media')) {
             meta.removeAttribute('media')
         }
-        meta.setAttribute('content', next)
-        meta.content = next
+        if (meta.content !== next) {
+            meta.setAttribute('content', next)
+            meta.content = next
+        }
     })
 
     // 2. Sinkronkan color-scheme (Chrome Android & Safari UI chrome)
     syncColorSchemeMeta(dark)
-    document.documentElement.style.colorScheme = dark ? 'dark' : 'light'
+    const schemeVal = dark ? 'dark' : 'light'
+    if (document.documentElement.style.colorScheme !== schemeVal) {
+        document.documentElement.style.colorScheme = schemeVal
+    }
 
     // 3. Set background-color langsung pada <html> dan <body>
-    // Safari iOS mewarnai bilah URL bawah dengan live sampler yang membaca
-    // background dokumen di sekitar safe-area bilah bawah. Menyetel inline style di sini
-    // memastikan warnanya berubah seketika tanpa menunggu CSS selector atau transition selesai.
-    document.documentElement.style.backgroundColor = next
-    document.body.style.backgroundColor = next
-
-    // 4. Bangunkan live-sampler Safari iOS
-    // Safari di iOS mengevaluasi warna bilah status dan bilah URL bawah pada
-    // event gulir (compositor thread). Saat toggle ditekan, halaman tidak bergulir
-    // sehingga bilah bawah tetap di warna lama sampai halaman direfresh.
-    // Micro-scroll 1px bolak-balik membangkitkan sampler Safari secara instan.
-    if (typeof window !== 'undefined') {
-        window.dispatchEvent(new Event('scroll'))
-        requestAnimationFrame(() => {
-            const y = window.scrollY || window.pageYOffset || 0
-            if (y > 0) {
-                window.scrollBy(0, -1)
-                window.scrollBy(0, 1)
-            } else {
-                window.scrollBy(0, 1)
-                window.scrollBy(0, -1)
-            }
-        })
+    if (document.documentElement.style.backgroundColor !== next) {
+        document.documentElement.style.backgroundColor = next
+    }
+    if (document.body && document.body.style.backgroundColor !== next) {
+        document.body.style.backgroundColor = next
     }
 }

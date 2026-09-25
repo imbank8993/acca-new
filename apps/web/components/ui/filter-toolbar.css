@@ -167,7 +167,7 @@
   display: none;
 }
 
-@media (max-width: 639px) {
+@media (max-width: 767px) {
   .btn-text-desktop {
     display: none !important;
   }
@@ -394,7 +394,7 @@ html.dark .ftb-backBtn:hover {
     border-color: #60a5fa;
 }
 
-@media (max-width: 639px) {
+@media (max-width: 767px) {
     .ftb-backBtn {
         width: 42px;
         height: 42px;
@@ -536,7 +536,7 @@ html.dark .ftb-backBtn:hover {
     display: none !important;
 }
 
-@media (max-width: 639px) {
+@media (max-width: 767px) {
     /* Toolbar mobile tidak sticky — mengalir alami mengikuti halaman
        saat digulir (tidak menetap di bawah header). */
     .ftb-toolbar {
@@ -1450,7 +1450,7 @@ html.dark .ftb-backBtn:hover {
     background: rgba(59, 130, 246, 0.25);
 }
 
-@media (max-width: 639px) {
+@media (max-width: 767px) {
     .sk__menuItemMobileOnly {
         display: flex !important;
     }
@@ -1467,7 +1467,7 @@ html.dark .ftb-backBtn:hover {
     }
 }
 
-@media (min-width: 640px) {
+@media (min-width: 768px) {
     .sk__menuWrap {
         display: none !important;
     }
@@ -1481,7 +1481,7 @@ html.dark .ftb-backBtn:hover {
     border-radius: 16px;
 }
 
-@media (max-width: 639px) {
+@media (max-width: 767px) {
     /* Dulu bar ini dikosongkan total di mobile — benar selama ia ikut mengalir
        bersama konten. Sejak jadi sticky, latar transparan membuat baris daftar
        terbaca menembusnya, jadi chrome-nya dikembalikan: latar gelap pekat +

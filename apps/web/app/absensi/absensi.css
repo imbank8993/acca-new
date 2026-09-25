@@ -634,8 +634,8 @@ input[type="date"].form-input {
   background: rgba(255, 255, 255, 0.04);
 }
 
-/* ================= MOBILE OPTIMIZATION ================= */
-@media (max-width: 576px) {
+/* ================= MOBILE / TABLET PORTRAIT OPTIMIZATION ================= */
+@media (max-width: 1023px) {
   .absensi-header {
     padding: 16px 16px 20px;
     border-radius: 16px;
@@ -965,7 +965,7 @@ input[type="date"].form-input {
   }
 }
 
-@media (min-width: 577px) and (max-width: 768px) {
+@media (min-width: 1024px) and (max-width: 1200px) {
   .absensi-header {
     padding: 1.5rem;
   }
@@ -1100,7 +1100,7 @@ input[type="date"].form-input {
    luar itu cuma menghasilkan kotak-dalam-kotak. Gap vertikal induknya juga
    dirapatkan — 16px + padding 24px kartu luar membuat jarak dari baris filter
    ke daftar terasa menganga. */
-@media (max-width: 767px) {
+@media (max-width: 1023px) {
   .admin-mode-container {
     gap: 10px;
   }
@@ -1680,7 +1680,7 @@ input[type="date"].form-input {
   color: #1e293b !important;
   letter-spacing: -0.02em !important;
 }
-@media (max-width: 767px) {
+@media (max-width: 1023px) {
   .desktop-table-container {
     display: none !important;
   }

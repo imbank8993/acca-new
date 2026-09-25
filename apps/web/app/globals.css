@@ -37,7 +37,7 @@ html, body {
 }
 
 /* Desktop: match status bar to n-bg */
-@media (min-width: 768px) {
+@media (min-width: 1024px) {
   html, body {
     background-color: var(--n-bg, #EBECF1);
   }
@@ -114,7 +114,7 @@ body, .header, .sidebar, .main-content, .card, .p-card, .modal-box {
   padding: 0 24px;
 }
 
-@media (max-width: 767.98px) {
+@media (max-width: 1023.98px) {
   :root {
     --app-header-h: 56px;
     --app-bottomnav-h: 62px;
@@ -378,7 +378,7 @@ body, .header, .sidebar, .main-content, .card, .p-card, .modal-box {
      - app/rekap-jurnal: .rekap-content gap 12px -> jadi 24px;
      - app/klinik (ParticipantsModal): .plist-container gap 4px -> jadi 16px,
        padahal itu baris peserta yang memang rapat, bukan kartu halaman. */
-@media (max-width: 767.98px) {
+@media (max-width: 1023.98px) {
   .card + .card,
   .mui-card + .mui-card,
   .inf-group + .inf-group,
@@ -1449,7 +1449,7 @@ body {
 }
 
 /* Desktop: body background */
-@media (min-width: 768px) {
+@media (min-width: 1024px) {
   body {
     background: var(--n-bg);
   }
@@ -1487,7 +1487,7 @@ html.dark .acca-ambient-bg,
   background-color: #020718 !important;
 }
 
-@media (min-width: 768px) {
+@media (min-width: 1024px) {
   .acca-ambient-bg {
     display: none !important;
   }
@@ -2404,10 +2404,10 @@ html.dark body .swal2-popup button.swal2-styled.swal2-confirm.swal-btn-danger:ho
 }
 
 /* =========================================================
-   UNIVERSAL BOTTOM SHEET MODALS (Mobile / Responsive <992px)
+   UNIVERSAL BOTTOM SHEET MODALS (Mobile / Responsive <1024px)
    Matches BottomNav container style with upward extension
    ========================================================= */
-@media (max-width: 767.98px) {
+@media (max-width: 1023.98px) {
   /* All Modal Overlays / Backdrop */
   .modal-portal,
   .modal-portal-backdrop,
@@ -3620,7 +3620,7 @@ html.dark body .swal2-popup button.swal2-styled.swal2-confirm.swal-btn-danger:ho
   font-family: 'Poppins', sans-serif;
 }
 
-@media (max-width: 767.98px) {
+@media (max-width: 1023.98px) {
   .nilai-page__hero {
     border-radius: 16px;
     padding: 16px 16px 20px;
@@ -4021,7 +4021,7 @@ html.dark body .swal2-popup button.swal2-styled.swal2-confirm.swal-btn-danger:ho
   display: none;
 }
 
-@media (max-width: 767.98px) {
+@media (max-width: 1023.98px) {
   .nilai-page__student-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -4039,7 +4039,7 @@ html.dark body .swal2-popup button.swal2-styled.swal2-confirm.swal-btn-danger:ho
   display: none;
 }
 
-@media (max-width: 767.98px) {
+@media (max-width: 1023.98px) {
   .nilai-page__student-grid-mobile {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -4058,7 +4058,7 @@ html.dark body .swal2-popup button.swal2-styled.swal2-confirm.swal-btn-danger:ho
   display: none;
 }
 
-@media (min-width: 768px) {
+@media (min-width: 1024px) {
   .nilai-page__table-container {
     display: block;
   }
@@ -4544,7 +4544,7 @@ html.dark body .swal2-popup button.swal2-styled.swal2-confirm.swal-btn-danger:ho
   gap: 1rem;
 }
 
-@media (min-width: 768px) {
+@media (min-width: 1024px) {
   .nilai-page__stats-grid {
     grid-template-columns: repeat(4, 1fr);
     gap: 1.25rem;
@@ -4895,7 +4895,7 @@ html.dark body .swal2-popup button.swal2-styled.swal2-confirm.swal-btn-danger:ho
   gap: 0.75rem;
 }
 
-@media (min-width: 768px) {
+@media (min-width: 1024px) {
   .nilai-page__table-wrap {
     display: block;
   }
@@ -4913,7 +4913,7 @@ html.dark body .swal2-popup button.swal2-styled.swal2-confirm.swal-btn-danger:ho
   }
 }
 
-@media (max-width: 767px) {
+@media (max-width: 1023px) {
   .nilai-page__table-wrap {
     display: none;
   }
@@ -5099,7 +5099,7 @@ html.dark body .swal2-popup button.swal2-styled.swal2-confirm.swal-btn-danger:ho
   color: var(--n-ink);
 }
 
-@media (max-width: 767.98px) {
+@media (max-width: 1023.98px) {
   .dark .nilai-page {
     border-radius: 16px;
   }
@@ -6126,7 +6126,7 @@ html.dark body .swal2-popup button.swal2-styled.swal2-confirm.swal-btn-danger:ho
   display: none;
 }
 
-@media (max-width: 767.98px) {
+@media (max-width: 1023.98px) {
   .kehadiran-page__table-container,
   .kehadiran-page__table-wrap {
     display: none !important;

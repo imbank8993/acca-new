@@ -24,7 +24,7 @@
 }
 
 /* ===== Header Shell (Desktop) ===== */
-@media (min-width: 768px) {
+@media (min-width: 1024px) {
   .header {
     position: fixed;
     top: 0;
@@ -87,7 +87,7 @@
 }
 
 /* Mobile: header full width */
-@media (max-width: 767.98px) {
+@media (max-width: 1023.98px) {
   :root {
     /* Nilai ini HARUS sama dengan yang di app/globals.css — dua-duanya
        mendeklarasikan --app-header-h di :root untuk breakpoint yang sama,
@@ -170,7 +170,7 @@ html.dark .header-collapse-toggle:hover {
   color: #60a5fa;
 }
 
-@media (max-width: 767.98px) {
+@media (max-width: 1023.98px) {
   .header-left {
     gap: 8px;
     min-width: 0;
@@ -213,7 +213,7 @@ html.dark .header-collapse-toggle:hover {
   transition: all 0.2s ease;
 }
 
-@media (max-width: 767.98px) {
+@media (max-width: 1023.98px) {
   .menu-toggle {
     display: none !important;
   }
@@ -261,7 +261,7 @@ html.dark .header-collapse-toggle:hover {
   display: none;
 }
 
-@media (max-width: 767.98px) {
+@media (max-width: 1023.98px) {
   .header-mobile-br {
     display: block;
   }
@@ -297,7 +297,7 @@ html.dark .header-collapse-toggle:hover {
   opacity: 0.85;
 }
 
-@media (max-width: 767.98px) {
+@media (max-width: 1023.98px) {
   .header-subtitle {
     display: none;
   }
@@ -311,7 +311,7 @@ html.dark .header-collapse-toggle:hover {
   flex-shrink: 0;
 }
 
-@media (max-width: 767.98px) {
+@media (max-width: 1023.98px) {
   .header-right {
     gap: 6px;
   }
@@ -371,7 +371,7 @@ html.dark .header-collapse-toggle:hover {
   box-shadow: 0 0 18px rgba(96, 165, 250, 0.4);
 }
 
-@media (max-width: 767.98px) {
+@media (max-width: 1023.98px) {
   .dark-mode-toggle {
     width: 32px;
     height: 32px;
@@ -465,7 +465,7 @@ html.dark .header-collapse-toggle:hover {
   box-shadow: none;
 }
 
-@media (max-width: 767.98px) {
+@media (max-width: 1023.98px) {
   .notification-wrapper {
     position: relative;
     display: flex;
@@ -501,7 +501,7 @@ html.dark .header-collapse-toggle:hover {
   gap: 10px;
 }
 
-@media (max-width: 767.98px) {
+@media (max-width: 1023.98px) {
   .user-menu-trigger {
     background: transparent;
     padding: 0;
@@ -548,7 +548,7 @@ html.dark .header-collapse-toggle:hover {
   box-shadow: 0 0 18px rgba(96, 165, 250, 0.4);
 }
 
-@media (max-width: 767.98px) {
+@media (max-width: 1023.98px) {
   .user-avatar-small {
     width: 28px;
     height: 28px;
@@ -567,14 +567,14 @@ html.dark .header-collapse-toggle:hover {
   align-items: flex-start;
 }
 
-@media (max-width: 767.98px) {
+@media (max-width: 1023.98px) {
   .user-info-header {
     display: none;
   }
 }
 
 /* Hide user info text on desktop if sidebar is visible to keep it clean */
-@media (min-width: 768px) {
+@media (min-width: 1024px) {
   .user-info-header {
     display: none;
   }
@@ -651,6 +651,12 @@ html.dark .header-collapse-toggle:hover {
 .user-menu-item:hover {
   background: var(--n-surface);
 }
+
+/* Sembunyikan toggle mode gelap di menu profil pada desktop (karena sudah ada tombol langsung di header bar) */
+.user-menu-theme-btn {
+  display: none !important;
+}
+
 /* =========================================================
    HEADER MOBILE — melayang transparan, tanpa container
    =========================================================
@@ -666,7 +672,7 @@ html.dark .header-collapse-toggle:hover {
    Karena itu tidak perlu backdrop-filter atau tint apa pun.
    ========================================================= */
 
-@media (max-width: 767.98px) {
+@media (max-width: 1023.98px) {
 
   /* ≤767.98px: full-bleed floating bar — strip all container chrome.
      Ditaruh di sini (bukan nested 767px) agar tidak ada celah 4px
@@ -838,7 +844,7 @@ html.dark .header-collapse-toggle:hover {
 }
 
 /* Desktop: header tetap kartu putih, judulnya tetap nama aplikasi. */
-@media (min-width: 768px) {
+@media (min-width: 1024px) {
   .header-pageTitle-wrap {
     display: none;
   }
@@ -859,7 +865,7 @@ html.dark .header-collapse-toggle:hover {
    obatnya adalah semua ambang cangkang bergerak bersama. Kini ketiganya
    (header, sidebar, bilah nav) sama-sama 767.98px, jadi tablet dilayani
    sepenuhnya sebagai desktop dan tidak ada lagi rentang campur. */
-@media (max-width: 767.98px) {
+@media (max-width: 1023.98px) {
   .header-pageTitle-logo {
     display: none !important;
   }
@@ -1147,5 +1153,10 @@ html.dark .header-collapse-toggle:hover {
     padding: 11px 16px !important;
     font-size: 0.88rem !important;
     gap: 10px !important;
+  }
+
+  /* Tampilkan toggle mode gelap di menu profil pada mobile/tablet portrait (karena toggle di header bar mobile disembunyikan) */
+  .user-menu-theme-btn {
+    display: flex !important;
   }
 }

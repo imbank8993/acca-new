@@ -318,7 +318,7 @@ export default function DashboardShellLayout({ children }: { children: React.Rea
         /* =========================================
            DESKTOP (>= 992px): Fixed App Shell
            ========================================= */
-        @media (min-width: 768px) {
+        @media (min-width: 1024px) {
           .dashboard-content-wrapper {
             display: contents;
           }
@@ -398,7 +398,7 @@ export default function DashboardShellLayout({ children }: { children: React.Rea
         /* =========================================
            MOBILE (< 992px): Natural Document Scroll (Edge-to-Edge)
            ========================================= */
-        @media (max-width: 767.98px) {
+        @media (max-width: 1023.98px) {
           .dashboard-layout,
           :global(.dashboard-layout) {
             position: relative !important;
