@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { rolesUser } from '../auth/feature-access.guard';
 
 function serializeBigInt(obj: any): any {
   return JSON.parse(JSON.stringify(obj, (_, v) =>
@@ -11,10 +12,46 @@ function serializeBigInt(obj: any): any {
 export class DashboardService {
   constructor(private prisma: PrismaService) {}
 
-  async getDashboardSummary(user: any) {
-    const roleStr = (user.role || '').toLowerCase();
-    const isSiswa = roleStr.includes('siswa');
-    const isGuru = roleStr.includes('guru');
+  private async getSchoolTimezone(): Promise<{ timeZone: string; offsetHours: number }> {
+    try {
+      const setting = await this.prisma.site_settings.findUnique({
+        where: { key: 'timezone' },
+        select: { value: true },
+      });
+      const tz = setting?.value?.trim() || 'Asia/Makassar';
+      if (tz === 'Asia/Jakarta') return { timeZone: tz, offsetHours: 7 };
+      if (tz === 'Asia/Jayapura') return { timeZone: tz, offsetHours: 9 };
+      return { timeZone: 'Asia/Makassar', offsetHours: 8 };
+    } catch {
+      return { timeZone: 'Asia/Makassar', offsetHours: 8 };
+    }
+  }
+
+  private async getSchoolDateRange(): Promise<{
+    nowLocal: Date;
+    todayStr: string;
+    startOfToday: Date;
+    endOfToday: Date;
+    offsetHours: number;
+    timeZone: string;
+  }> {
+    const { timeZone, offsetHours } = await this.getSchoolTimezone();
+    const nowLocal = new Date(Date.now() + offsetHours * 3600 * 1000);
+    const yr = nowLocal.getUTCFullYear();
+    const mo = String(nowLocal.getUTCMonth() + 1).padStart(2, '0');
+    const dy = String(nowLocal.getUTCDate()).padStart(2, '0');
+    const todayStr = `${yr}-${mo}-${dy}`;
+    const startOfToday = new Date(`${todayStr}T00:00:00.000Z`);
+    const endOfToday = new Date(`${todayStr}T23:59:59.999Z`);
+    return { nowLocal, todayStr, startOfToday, endOfToday, offsetHours, timeZone };
+  }
+
+  async getDashboardSummary(user: any, targetNisn?: string) {
+    const roles = rolesUser(user);
+    const isSiswa = roles.includes('SISWA');
+    const isGuru = roles.includes('GURU');
+    const isOrtu = roles.includes('ORANG_TUA') || roles.includes('ORANGTUA') || roles.includes('WALI');
+    const isAdmin = roles.includes('ADMIN') || roles.includes('ADMINISTRATOR');
     
     // Get newest active year
     const activePeriods = await this.prisma.master_tahun_ajaran.findMany({
@@ -30,10 +67,28 @@ export class DashboardService {
     let siswaData = null;
     let guruData = null;
 
+    // Tentukan effectiveNisn untuk Siswa atau Orang Tua (atau Admin melihat siswa)
+    let effectiveNisn: string | null = null;
+    if (isSiswa && user.username) {
+      effectiveNisn = targetNisn && targetNisn === user.username ? targetNisn : user.username;
+    } else if (isOrtu && user.id) {
+      const relasi = await this.prisma.orangtua_siswa.findMany({
+        where: { user_id: BigInt(user.id) },
+        select: { nisn: true }
+      });
+      if (targetNisn && relasi.some(r => r.nisn === targetNisn)) {
+        effectiveNisn = targetNisn;
+      } else if (relasi.length > 0) {
+        effectiveNisn = relasi[0].nisn;
+      }
+    } else if (isAdmin && targetNisn) {
+      effectiveNisn = targetNisn;
+    }
+
     // Check Birthday
-    if (isSiswa && user.username) { // Assuming nisn is mapped to username for siswa
+    if (effectiveNisn) {
       const bData = await this.prisma.master_siswa.findUnique({
-        where: { nisn: user.username },
+        where: { nisn: effectiveNisn },
         select: { tanggal_lahir: true }
       });
       if (bData?.tanggal_lahir) birthday = bData.tanggal_lahir;
@@ -46,16 +101,18 @@ export class DashboardService {
     }
 
     if (birthday) {
+      const { offsetHours } = await this.getSchoolTimezone();
       const dob = new Date(birthday);
-      const today = new Date();
-      const dobLocal = new Date(dob.getTime() + Math.abs(dob.getTimezoneOffset() * 60000));
-      if (dobLocal.getDate() === today.getDate() && dobLocal.getMonth() === today.getMonth()) {
-        age = today.getFullYear() - dobLocal.getFullYear();
+      // Gunakan waktu lokal sekolah (WITA / default UTC+8)
+      const nowLocal = new Date(Date.now() + offsetHours * 3600 * 1000);
+      const dobLocal = new Date(dob.getTime() + offsetHours * 3600 * 1000);
+      if (dobLocal.getUTCDate() === nowLocal.getUTCDate() && dobLocal.getUTCMonth() === nowLocal.getUTCMonth()) {
+        age = nowLocal.getUTCFullYear() - dobLocal.getUTCFullYear();
       }
     }
 
-    if (isSiswa && user.username) {
-      const nisn = user.username;
+    if (effectiveNisn) {
+      const nisn = effectiveNisn;
       
       // 1. Siswa ID
       const sMaster = await this.prisma.master_siswa.findUnique({
@@ -125,9 +182,10 @@ export class DashboardService {
         if (wk) waliKelasName = wk.nama_guru;
       }
 
-      // 5. Guru Asuh
+      // 5. Guru Asuh & Saudara Asuh
       let guruAsuhName = null;
       let guruAsuhNip = null;
+      let saudaraAsuh: any[] = [];
       if (activeYear) {
         const ga = await this.prisma.guru_asuh.findFirst({
           where: { nisn_siswa: nisn, aktif: true, tahun_ajaran: activeYear },
@@ -137,6 +195,52 @@ export class DashboardService {
         if (ga) {
           guruAsuhName = ga.nama_guru;
           guruAsuhNip = ga.nip;
+
+          if (ga.nip) {
+            const saudaraList = await this.prisma.guru_asuh.findMany({
+              where: {
+                nip: ga.nip,
+                aktif: true,
+                tahun_ajaran: activeYear,
+                nisn_siswa: { not: nisn }
+              },
+              select: { nama_siswa: true, kelas: true, nisn_siswa: true }
+            });
+
+            if (saudaraList.length > 0) {
+              const sNisnList = [...new Set(saudaraList.map(d => d.nisn_siswa).filter(Boolean))];
+              const photoMap: Record<string, string | null> = {};
+              if (sNisnList.length > 0) {
+                const userProfiles = await this.prisma.public_users.findMany({
+                  where: { username: { in: sNisnList } },
+                  select: { username: true, foto_profil: true }
+                });
+                userProfiles.forEach(up => { if (up.username && up.foto_profil) photoMap[up.username] = up.foto_profil; });
+              }
+
+              const classOrder: Record<string, number> = { 'X': 1, 'XI': 2, 'XII': 3 };
+              const getClassWeight = (cls: string) => {
+                  if (!cls) return 99;
+                  const roman = cls.split(' ')[0];
+                  return classOrder[roman] || 99;
+              };
+
+              saudaraAsuh = saudaraList.map(item => ({
+                  ...item,
+                  foto_profil: photoMap[item.nisn_siswa] || null
+              })).sort((a, b) => {
+                  const weightA = getClassWeight(a.kelas || '');
+                  const weightB = getClassWeight(b.kelas || '');
+                  if (weightA !== weightB) return weightA - weightB;
+                  const classA = a.kelas || '';
+                  const classB = b.kelas || '';
+                  if (classA !== classB) return classA.localeCompare(classB);
+                  const nameA = a.nama_siswa || '';
+                  const nameB = b.nama_siswa || '';
+                  return nameA.localeCompare(nameB);
+              });
+            }
+          }
         }
       }
 
@@ -145,7 +249,8 @@ export class DashboardService {
         kelasSekarang: currentKelas,
         kelasHistory: uniqueClasses,
         waliKelas: waliKelasName,
-        guruAsuh: guruAsuhName ? { nama: guruAsuhName, nip: guruAsuhNip } : null
+        guruAsuh: guruAsuhName ? { nama: guruAsuhName, nip: guruAsuhNip } : null,
+        saudaraAsuh
       };
     }
 
@@ -297,23 +402,44 @@ export class DashboardService {
       activeClasses = Array.from(new Set(sk.map(k => k.kelas))).sort();
     }
 
-    // `tgl_mulai`/`tgl_selesai` bertipe `DateTime @db.Date`, jadi filternya HARUS
-    // objek Date. Sebelumnya di sini diberikan STRING hasil
-    // `toISOString().slice(0, 10)`, dan Prisma menolaknya — membuat seluruh
-    // endpoint ini melempar 500 setiap kali dashboard dibuka. Bentuknya tetap
-    // "tanggal hari ini menurut UTC" seperti semula, hanya tipenya yang benar.
-    const today = new Date(`${new Date().toISOString().slice(0, 10)}T00:00:00.000Z`);
+    // Gunakan rentang waktu lokal sekolah (WITA / default UTC+8 dari site_settings)
+    const { startOfToday, endOfToday } = await this.getSchoolDateRange();
+
     const kh = await this.prisma.ketidakhadiran.findMany({
       where: {
         aktif: true,
-        tgl_mulai: { lte: today },
-        tgl_selesai: { gte: today }
+        tgl_mulai: { lte: endOfToday },
+        tgl_selesai: { gte: startOfToday }
       },
-      select: { jenis: true }
+      select: { nisn: true, jenis: true }
     });
 
-    const sakitToday = kh.filter(k => k.jenis === 'SAKIT').length;
-    const izinToday = kh.filter(k => k.jenis === 'IZIN').length;
+    const detailToday = await this.prisma.absensi_detail.findMany({
+      where: {
+        created_at: { gte: startOfToday, lte: endOfToday }
+      },
+      select: { nisn: true, status: true }
+    });
+
+    const sakitSet = new Set<string>();
+    const izinSet = new Set<string>();
+
+    for (const item of kh) {
+      if (!item.nisn) continue;
+      const j = (item.jenis || '').toUpperCase();
+      if (j === 'SAKIT') sakitSet.add(item.nisn);
+      else if (j === 'IZIN') izinSet.add(item.nisn);
+    }
+
+    for (const d of detailToday) {
+      if (!d.nisn) continue;
+      const st = (d.status || '').toUpperCase();
+      if (st === 'SAKIT') sakitSet.add(d.nisn);
+      else if (st === 'IZIN') izinSet.add(d.nisn);
+    }
+
+    const sakitToday = sakitSet.size;
+    const izinToday = izinSet.size;
 
     return {
       guruCount,
@@ -327,10 +453,7 @@ export class DashboardService {
   }
 
   async getDashboardCharts() {
-    const now = new Date();
-    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-    const startOfToday = new Date(`${todayStr}T00:00:00.000Z`);
-    const endOfToday = new Date(`${todayStr}T23:59:59.999Z`);
+    const { nowLocal, startOfToday, endOfToday } = await this.getSchoolDateRange();
 
     const activePeriods = await this.prisma.master_tahun_ajaran.findMany({
       where: { is_active: true },
@@ -393,12 +516,24 @@ export class DashboardService {
     const alpaCount = alpaSet.size;
     const hadirCount = Math.max(0, siswaAktif - sakitCount - izinCount - alpaCount);
 
+    const isSunday = nowLocal.getUTCDay() === 0;
+    const sesiTodayCount = await this.prisma.absensi_sesi.count({
+      where: {
+        tanggal: { gte: startOfToday, lte: endOfToday }
+      }
+    });
+
+    const isNotStarted = !isSunday && sesiTodayCount === 0 && sakitCount === 0 && izinCount === 0 && alpaCount === 0;
+
     const attendance = {
-      hadir: hadirCount,
+      hadir: isSunday || isNotStarted ? 0 : hadirCount,
       sakit: sakitCount,
       izin: izinCount,
       alpa: alpaCount,
-      total: siswaAktif
+      total: siswaAktif,
+      isSunday,
+      isNotStarted,
+      sesiCount: sesiTodayCount
     };
 
     // 2. Tren Kehadiran Mingguan (7 Hari Terakhir)
@@ -406,12 +541,12 @@ export class DashboardService {
     const weeklyTrends: { day: string; tanggal: string; hadir: number; sakitIzin: number }[] = [];
 
     for (let i = 6; i >= 0; i--) {
-      const d = new Date(now);
-      d.setDate(now.getDate() - i);
+      const d = new Date(nowLocal);
+      d.setUTCDate(nowLocal.getUTCDate() - i);
 
-      const yr = d.getFullYear();
-      const mo = String(d.getMonth() + 1).padStart(2, '0');
-      const dy = String(d.getDate()).padStart(2, '0');
+      const yr = d.getUTCFullYear();
+      const mo = String(d.getUTCMonth() + 1).padStart(2, '0');
+      const dy = String(d.getUTCDate()).padStart(2, '0');
       const dateIso = `${yr}-${mo}-${dy}`;
 
       const dayStart = new Date(`${dateIso}T00:00:00.000Z`);
@@ -439,12 +574,18 @@ export class DashboardService {
         ...detailDay.map(a => a.nisn).filter(Boolean)
       ]);
 
-      const tidakHadir = Math.min(absentNisns.size, siswaAktif);
-      const persenTidakHadir = siswaAktif > 0 ? parseFloat(((tidakHadir / siswaAktif) * 100).toFixed(2)) : 0;
-      const persenHadir = Math.max(0, parseFloat((100 - persenTidakHadir).toFixed(2)));
+      const isDaySunday = d.getUTCDay() === 0;
+      let persenHadir = 0;
+      let persenTidakHadir = 0;
+
+      if (!isDaySunday) {
+        const tidakHadir = Math.min(absentNisns.size, siswaAktif);
+        persenTidakHadir = siswaAktif > 0 ? parseFloat(((tidakHadir / siswaAktif) * 100).toFixed(2)) : 0;
+        persenHadir = Math.max(0, parseFloat((100 - persenTidakHadir).toFixed(2)));
+      }
 
       weeklyTrends.push({
-        day: NAMA_HARI[d.getDay()],
+        day: NAMA_HARI[d.getUTCDay()],
         tanggal: dateIso,
         hadir: persenHadir,
         sakitIzin: persenTidakHadir
@@ -452,8 +593,8 @@ export class DashboardService {
     }
 
     // 3. Keterisian Jurnal KBM Bulan Ini
-    const currentYear = now.getFullYear();
-    const currentMonth = now.getMonth();
+    const currentYear = nowLocal.getUTCFullYear();
+    const currentMonth = nowLocal.getUTCMonth();
 
     const startOfMonth = new Date(Date.UTC(currentYear, currentMonth, 1, 0, 0, 0, 0));
     const endOfMonth = new Date(Date.UTC(currentYear, currentMonth + 1, 0, 23, 59, 59, 999));

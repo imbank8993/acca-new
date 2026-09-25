@@ -122,7 +122,10 @@ export class SuratController {
 @ApiTags('Surat Records')
 @Controller('surat')
 export class SuratRecordController {
-  constructor(private suratService: SuratService) {}
+  constructor(
+    private suratService: SuratService,
+    private accessService: AccessService,
+  ) {}
 
   @Get('dropdown/jenis-surat')
   @ApiOperation({ summary: 'Dropdown pilihan jenis surat' })
@@ -288,7 +291,17 @@ export class SuratRecordController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Simpan konfigurasi surat' })
-  async saveConfigSurat(@Body() body: any) {
+  async saveConfigSurat(@Request() req: any, @Body() body: any) {
+    const access = await this.accessService.resolveUserAccess(req.user);
+    const isAdmin = access.roles.some(
+      (r: string) =>
+        r.toUpperCase() === 'ADMIN' || r.toUpperCase() === 'ADMINISTRATOR',
+    );
+    if (!isAdmin) {
+      throw new ForbiddenException(
+        'Hanya admin yang dapat menyimpan konfigurasi surat',
+      );
+    }
     return this.suratService.saveConfigSurat(body);
   }
 
@@ -296,7 +309,17 @@ export class SuratRecordController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Update konfigurasi surat' })
-  async updateConfigSurat(@Body() body: any) {
+  async updateConfigSurat(@Request() req: any, @Body() body: any) {
+    const access = await this.accessService.resolveUserAccess(req.user);
+    const isAdmin = access.roles.some(
+      (r: string) =>
+        r.toUpperCase() === 'ADMIN' || r.toUpperCase() === 'ADMINISTRATOR',
+    );
+    if (!isAdmin) {
+      throw new ForbiddenException(
+        'Hanya admin yang dapat mengubah konfigurasi surat',
+      );
+    }
     return this.suratService.saveConfigSurat(body);
   }
 

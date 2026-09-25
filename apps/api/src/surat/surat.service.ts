@@ -237,6 +237,22 @@ export class SuratService {
   }
 
   async updateSurat(id: string, body: any, user: any) {
+    const existing = await this.prisma.surat.findUnique({ where: { id } });
+    if (!existing) throw new NotFoundException('Surat tidak ditemukan');
+
+    const role = (user?.role || '').toUpperCase();
+    const roles: string[] = Array.isArray(user?.roles)
+      ? user.roles.map((r: string) => String(r).toUpperCase())
+      : role.split(/[,|]/).map((r: string) => r.trim().toUpperCase());
+
+    const isAdminOrSurat = roles.some((r: string) =>
+      ['ADMIN', 'ADMINISTRATOR', 'SURAT'].includes(r),
+    );
+
+    if (!isAdminOrSurat && existing.created_by && existing.created_by !== (user?.auth_id || String(user?.id))) {
+      throw new ForbiddenException('Anda tidak berhak mengubah surat ini');
+    }
+
     const data = await this.prisma.surat.update({
       where: { id },
       data: {
@@ -315,8 +331,11 @@ export class SuratService {
         tempat_ttd: surat.tempat_ttd,
         tanggal_ttd: surat.tanggal_ttd,
         created_at: surat.created_at,
+        status: surat.status,
         pejabat_nama: surat.pejabat_nama,
         pejabat_jabatan: surat.pejabat_jabatan,
+        penandatangan_nama: surat.pejabat_nama,
+        penandatangan_jabatan: surat.pejabat_jabatan,
         file_url: surat.file_url,
       },
       message: isValid

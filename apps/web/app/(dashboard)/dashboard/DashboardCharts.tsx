@@ -20,6 +20,9 @@ interface AttendanceData {
     izin: number;
     alpa: number;
     total: number;
+    isSunday?: boolean;
+    isNotStarted?: boolean;
+    sesiCount?: number;
 }
 
 interface JurnalData {
@@ -84,9 +87,19 @@ export default function DashboardCharts({
                             <h3 className="db-chart-card__title">Statistik Kehadiran</h3>
                         </div>
                     </div>
-                    <span className="db-chart-card__live-pill">
-                        <span className="db-chart-card__dot" /> Realtime
-                    </span>
+                    {attendance.isSunday ? (
+                        <span className="db-chart-card__live-pill" style={{ background: '#f1f5f9', color: '#64748b' }}>
+                            Hari Libur
+                        </span>
+                    ) : attendance.isNotStarted ? (
+                        <span className="db-chart-card__live-pill" style={{ background: '#fef9c3', color: '#854d0e' }}>
+                            Belum Dimulai
+                        </span>
+                    ) : (
+                        <span className="db-chart-card__live-pill">
+                            <span className="db-chart-card__dot" /> Realtime
+                        </span>
+                    )}
                 </div>
 
                 <div className="db-chart-donut-body">
@@ -107,11 +120,13 @@ export default function DashboardCharts({
                                 r="40"
                                 className="db-chart-donut-segment db-chart-donut-segment--hadir"
                                 strokeDasharray={strokeDash}
-                                strokeDashoffset={offsetHadir}
+                                strokeDashoffset={attendance.isSunday || attendance.isNotStarted ? strokeDash : offsetHadir}
                             />
                         </svg>
                         <div className="db-chart-donut-center">
-                            <span className="db-chart-donut-value">{loading ? '—' : `${hadirPct}%`}</span>
+                            <span className="db-chart-donut-value">
+                                {loading ? '—' : attendance.isSunday ? 'Libur' : attendance.isNotStarted ? '—' : `${hadirPct}%`}
+                            </span>
                         </div>
                     </div>
 

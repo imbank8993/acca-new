@@ -11,14 +11,17 @@ interface SuratDetail {
     jenis_surat: string;
     perkara: string;
     kepada: string;
-    alamat: string;
+    alamat?: string;
+    alamat_tujuan?: string;
     tempat_ttd: string;
     tanggal_ttd: string;
     created_at: string;
-    status: string;
+    status?: string;
     file_url?: string;
     penandatangan_nama?: string;
     penandatangan_jabatan?: string;
+    pejabat_nama?: string;
+    pejabat_jabatan?: string;
 }
 
 function ScanVerificationPage() {
@@ -42,25 +45,32 @@ function ScanVerificationPage() {
         setLoading(true);
         try {
             // Clean the letter ID - remove SRT- prefix if present
-            const cleanId = letterId.replace('SRT-', '');
+            const cleanId = letterId.replace(/^SRT-/i, '');
 
-            const res = await fetch(`/api/surat/verify?letter_id=${cleanId}`);
+            const res = await fetch(`/api/surat/verify?letter_id=${encodeURIComponent(cleanId)}`);
             const data = await res.json();
 
-            if (!data.ok || !data.letter) {
+            const letterData = data.surat || data.letter;
+
+            if (!data.ok || !letterData) {
                 setError(data.error || 'Surat tidak ditemukan atau belum dipublikasikan.');
                 setLoading(false);
                 return;
             }
 
-            // Ensure only final status can be viewed on public verification page
-            if (data.letter.status !== 'FINAL') {
-                setError('Dokumen surat belum dipublikasikan secara final.');
+            // Ensure only final/valid status can be viewed on public verification page
+            const isValid = data.valid ?? (letterData.status === 'FINAL' || letterData.status === 'ACTIVE' || letterData.status === 'VALID');
+            if (!isValid) {
+                setError('Dokumen surat belum dipublikasikan secara final atau masih berstatus draft.');
                 setLoading(false);
                 return;
             }
 
-            setSurat(data.letter);
+            setSurat({
+                ...letterData,
+                penandatangan_nama: letterData.penandatangan_nama || letterData.pejabat_nama || '-',
+                penandatangan_jabatan: letterData.penandatangan_jabatan || letterData.pejabat_jabatan || '',
+            });
         } catch (e: any) {
             setError(e.message || 'Gagal memuat data surat');
         } finally {

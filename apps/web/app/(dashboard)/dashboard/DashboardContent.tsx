@@ -8,10 +8,8 @@ import { getActivePeriods } from '@/lib/settings-client';
 import { getAcademicYearFromDate } from '@/lib/date-utils';
 import type { User } from '@/lib/types';
 import { getProxiedImageUrl } from '@/lib/image-utils';
-import { useDarkMode } from '@/hooks/use-dark-mode';
 import { useMediaQuery } from '@/hooks/use-breakpoint';
 import DOMPurify from 'isomorphic-dompurify';
-import NotificationBell from '@/components/NotificationBell';
 import DashboardCharts from './DashboardCharts';
 import Modal, { ModalBody, ModalFooter } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
@@ -45,11 +43,6 @@ import {
 } from 'lucide-react';
 
 export default function DashboardContent({ user, headerExtra }: { user: User; headerExtra?: ReactNode }) {
-    // Halaman dashboard tidak merender <Header> (lihat app/(dashboard)/layout.tsx,
-    // isDashboard) — kartu identitas profil di bawah menggantikannya sepenuhnya,
-    // jadi notifikasi & mode gelap perlu diulang di sini lewat modul yang sama.
-    const { isDark, canUseDarkMode, forcedTheme, toggleDarkMode } = useDarkMode(user);
-
     // Breakpoint sidebar/layout dashboard (sinkron dengan @media di style jsx
     // bawah) — dipakai untuk memilih SATU pin pengumuman, bukan merender dua
     // <Pin> lalu menyembunyikan salah satunya lewat CSS (rawan pecah kalau
@@ -65,7 +58,9 @@ export default function DashboardContent({ user, headerExtra }: { user: User; he
         const loadSummary = async () => {
             if (!user) return;
             try {
-                const res = await fetch('/api/dashboard/summary');
+                const targetNisn = user.nisn || (user.roles?.includes('SISWA') || user.role === 'SISWA' ? user.username : '');
+                const url = targetNisn ? `/api/dashboard/summary?nisn=${encodeURIComponent(targetNisn)}` : '/api/dashboard/summary';
+                const res = await fetch(url);
                 if (!res.ok) return;
                 const json = await res.json().catch(() => null);
                 if (json?.ok && json?.data) {
@@ -90,6 +85,9 @@ export default function DashboardContent({ user, headerExtra }: { user: User; he
                         } else {
                             setGuruAsuhName(null);
                         }
+                        if (Array.isArray(json.data.siswaData.saudaraAsuh)) {
+                            setAnakAsuh(json.data.siswaData.saudaraAsuh);
+                        }
                     }
 
                     if (json.data.guruData) {
@@ -106,6 +104,8 @@ export default function DashboardContent({ user, headerExtra }: { user: User; he
     }, [user]);
 
 
+    const { timezone, getCurrentDate, getDayName } = useTimezone();
+
     const [currentTime, setCurrentTime] = useState(new Date());
 
     useEffect(() => {
@@ -114,11 +114,16 @@ export default function DashboardContent({ user, headerExtra }: { user: User; he
     }, []);
     const [age, setAge] = useState(0);
 
-    // --- Strip hari (Min..Sab) pada kartu jam: tanggal minggu berjalan + penanda agenda ---
-    const toLocalISO = (d: Date) =>
-        `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    // --- Strip hari (Min..Sab) pada kartu jam: tanggal minggu berjalan + penanda agenda disinkronkan ke zona waktu sekolah (WITA/site_settings) ---
+    const toSchoolISO = (d: Date) => {
+        try {
+            return d.toLocaleDateString('en-CA', { timeZone: timezone });
+        } catch {
+            return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        }
+    };
 
-    const todayISO = toLocalISO(currentTime);
+    const todayISO = toSchoolISO(currentTime);
 
     const [agendaOffset, setAgendaOffset] = useState(0);
 
@@ -139,13 +144,11 @@ export default function DashboardContent({ user, headerExtra }: { user: User; he
     // 5 Hari agenda di desktop, 4 di mobile (5th day hidden via CSS on mobile)
     const weekDays = useMemo(() => {
         const base = new Date(`${todayISO}T00:00:00`);
-        const todayDate = new Date(base);
-        const futureDays = Array.from({ length: 4 }, (_, i) => {
+        return Array.from({ length: 5 }, (_, i) => {
             const d = new Date(base);
-            d.setDate(base.getDate() + 1 + agendaOffset + i);
+            d.setDate(base.getDate() + agendaOffset + i);
             return d;
         });
-        return [todayDate, ...futureDays];
     }, [todayISO, agendaOffset]);
 
     const [agendaDates, setAgendaDates] = useState<Set<string>>(new Set());
@@ -160,7 +163,7 @@ export default function DashboardContent({ user, headerExtra }: { user: User; he
                     months.map(m => fetch(`/api/agenda-madrasah?bulan=${m}`).then(r => r.json()).catch(() => null))
                 );
 
-                const weekISO = weekDays.map(toLocalISO);
+                const weekISO = weekDays.map(toSchoolISO);
                 const firstISO = weekISO[0];
                 const lastISO = weekISO[weekISO.length - 1];
                 const marked = new Set<string>();
@@ -269,7 +272,6 @@ export default function DashboardContent({ user, headerExtra }: { user: User; he
     const [adminStats, setAdminStats] = useState<{ guruCount: number; siswaCount: number; orangTuaCount: number; lainnyaCount: number; activeClasses: string[]; sakitToday: number; izinToday: number } | null>(null);
     const [loadingAdminStats, setLoadingAdminStats] = useState(false);
 
-    const { getCurrentDate, getDayName } = useTimezone();
 
     // Resolve user roles robustly
     const roleStr = user?.role || '';
@@ -321,6 +323,13 @@ export default function DashboardContent({ user, headerExtra }: { user: User; he
             loadRecentTugas();
         }
     }, [siswaKelas]);
+
+    // Load ekskul segera setelah siswaData teridentifikasi (tidak tergantung kelas)
+    useEffect(() => {
+        if (dashboardSummary?.siswaData?.id) {
+            loadEkskuls(dashboardSummary.siswaData.id);
+        }
+    }, [dashboardSummary?.siswaData?.id]);
 
     
 
@@ -390,10 +399,8 @@ export default function DashboardContent({ user, headerExtra }: { user: User; he
         if (!isSiswa && !user?.nip) return;
         setLoadingJadwal(true);
         try {
-            const today = new Date();
-            const dayNames = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
-            const dayName = dayNames[today.getDay()];
-            const todayStr = today.toISOString().split('T')[0];
+            const dayName = getDayName();
+            const todayStr = getCurrentDate();
 
             let url = '';
             if (isSiswa) {
@@ -548,15 +555,15 @@ export default function DashboardContent({ user, headerExtra }: { user: User; he
     const loadPengumuman = async () => {
         setLoadingPengumuman(true);
         try {
-            const primaryRole = roles[0] || 'GURU';
-            const res = await fetch(`/api/pengumuman?role=${encodeURIComponent(primaryRole)}`);
+            const queryRole = roles.length > 0 ? `?role=${encodeURIComponent(roles.join(','))}` : '';
+            const res = await fetch(`/api/pengumuman${queryRole}`);
             if (!res.ok) return;
             const json = await res.json().catch(() => null);
             if (json?.ok) {
                 const list = (json.data || []).slice();
                 list.sort((a: any, b: any) => {
-                    const aPinned = a.pinned === true || a.pinned === 1 || a.pinned === 'true';
-                    const bPinned = b.pinned === true || b.pinned === 1 || b.pinned === 'true';
+                    const aPinned = a.pinned === true || a.pinned === 1 || a.pinned === 'true' || a.pinned === '1';
+                    const bPinned = b.pinned === true || b.pinned === 1 || b.pinned === 'true' || b.pinned === '1';
                     if (aPinned && !bPinned) return -1;
                     if (!aPinned && bPinned) return 1;
                     const timeA = new Date(a.updated_at || a.created_at || 0).getTime();
@@ -584,32 +591,32 @@ export default function DashboardContent({ user, headerExtra }: { user: User; he
 
     const loadAllStudentClasses = async () => {};;
 
-    const loadEkskuls = async () => { 
-    if (!dashboardSummary?.siswaData?.id) return;
-    try {
-        const studentId = dashboardSummary.siswaData.id;
-        const res = await fetch(`/api/ekskul/siswa?siswa_id=${studentId}&distinct=true`);
-        if (!res.ok) { setEkskuls([]); return; }
-        const json = await res.json().catch(() => null);
-        if (json?.ok && Array.isArray(json.data)) {
-            const unique = [];
-            const seen = new Set();
-            for (const item of json.data) {
-                const key = item.ekskul_id || item.nama_ekskul;
-                if (key && !seen.has(key)) {
-                    seen.add(key);
-                    unique.push(item);
+    const loadEkskuls = async (overrideStudentId?: any) => { 
+        const studentId = overrideStudentId || dashboardSummary?.siswaData?.id;
+        if (!studentId) return;
+        try {
+            const res = await fetch(`/api/ekskul/siswa?siswa_id=${studentId}&distinct=true`);
+            if (!res.ok) { setEkskuls([]); return; }
+            const json = await res.json().catch(() => null);
+            if (json?.ok && Array.isArray(json.data)) {
+                const unique = [];
+                const seen = new Set();
+                for (const item of json.data) {
+                    const key = item.ekskul_id || item.nama_ekskul;
+                    if (key && !seen.has(key)) {
+                        seen.add(key);
+                        unique.push(item);
+                    }
                 }
+                setEkskuls(unique);
+                return;
             }
-            setEkskuls(unique);
-            return;
+            setEkskuls([]);
+        } catch (e) {
+            console.error(e);
+            setEkskuls([]);
         }
-        setEkskuls([]);
-    } catch (e) {
-        console.error(e);
-        setEkskuls([]);
-    }
- };;
+    };
 
     const loadRecentTugas = async () => { 
     if (!siswaKelas || !dashboardSummary?.siswaData?.id) return;
@@ -670,7 +677,8 @@ export default function DashboardContent({ user, headerExtra }: { user: User; he
                 month: 'short',
                 year: 'numeric',
                 hour: '2-digit',
-                minute: '2-digit'
+                minute: '2-digit',
+                timeZone: timezone
             });
         } catch {
             return isoString;
@@ -743,7 +751,7 @@ export default function DashboardContent({ user, headerExtra }: { user: User; he
                         ) : (
                             <div ref={announcementTrackRef} className="db__announcements-track">
                                 {pengumuman.map((p) => {
-                                    const isPinned = p.pinned;
+                                    const isPinned = p.pinned === true || p.pinned === 1 || p.pinned === 'true' || p.pinned === '1';
                                     const hasContent = p.content && p.content.trim().length > 0;
                                     const plainText = hasContent ? p.content.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim() : '';
                                     const previewText = plainText.length > 95 ? plainText.slice(0, 95) + '...' : plainText;
@@ -814,22 +822,51 @@ export default function DashboardContent({ user, headerExtra }: { user: User; he
                                                 Agenda Madrasah
                                             </h3>
                                         </div>
-                                        <Link href="/agenda-madrasah" style={{ fontSize: '0.75rem', fontWeight: 600, color: '#3083FF', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '2px', whiteSpace: 'nowrap', flexShrink: 0 }}>
-                                            Lihat Semua
-                                        </Link>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setAgendaOffset(prev => Math.max(0, prev - 1))}
+                                                    disabled={agendaOffset === 0}
+                                                    title="Hari sebelumnya"
+                                                    aria-label="Hari sebelumnya"
+                                                    className="db__announcement-scroll-btn"
+                                                    style={{ width: '26px', height: '26px', opacity: agendaOffset === 0 ? 0.35 : 1, cursor: agendaOffset === 0 ? 'not-allowed' : 'pointer' }}
+                                                >
+                                                    <ChevronLeft size={14} />
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setAgendaOffset(prev => prev + 1)}
+                                                    title="Hari berikutnya"
+                                                    aria-label="Hari berikutnya"
+                                                    className="db__announcement-scroll-btn"
+                                                    style={{ width: '26px', height: '26px', cursor: 'pointer' }}
+                                                >
+                                                    <ChevronRight size={14} />
+                                                </button>
+                                            </div>
+                                            <Link href="/agenda-madrasah" style={{ fontSize: '0.75rem', fontWeight: 600, color: '#3083FF', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '2px', whiteSpace: 'nowrap' }}>
+                                                Lihat Semua
+                                            </Link>
+                                        </div>
                                     </div>
                                     
                                     {/* Grafik Alur Agenda Terhubung (Connected Flow Track) */}
-                                    <div className="db__agenda-flow-track">
+                                    <div
+                                        className="db__agenda-flow-track"
+                                        onTouchStart={handleAgendaTouchStart}
+                                        onTouchEnd={handleAgendaTouchEnd}
+                                    >
                                         {/* Track Line Gradient */}
                                         <div className="db__agenda-track-line" />
 
                                         {/* Flow Nodes Container */}
                                         <div style={{ position: 'relative', zIndex: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                            {weekDays.map((d, index) => {
-                                                const iso = toLocalISO(d);
-                                                const isToday = index === 0;
-                                                const activeDate = selectedAgendaDate || (weekDays[0] ? toLocalISO(weekDays[0]) : '');
+                                            {weekDays.map((d) => {
+                                                const iso = toSchoolISO(d);
+                                                const isToday = iso === todayISO;
+                                                const activeDate = selectedAgendaDate || (weekDays[0] ? toSchoolISO(weekDays[0]) : '');
                                                 const isSelected = activeDate === iso;
                                                 const hasAgenda = agendaDates.has(iso);
                                                 const dayNames = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
@@ -871,7 +908,7 @@ export default function DashboardContent({ user, headerExtra }: { user: User; he
 
                                     {/* Compact Agenda Items List */}
                                     {(() => {
-                                        const activeDate = selectedAgendaDate || (weekDays[0] ? toLocalISO(weekDays[0]) : '');
+                                        const activeDate = selectedAgendaDate || (weekDays[0] ? toSchoolISO(weekDays[0]) : '');
                                         const displayItems = agendaItemsList.filter((item) => {
                                             const mulai = String(item.tanggal_mulai).slice(0, 10);
                                             const selesai = String(item.tanggal_selesai || item.tanggal_mulai).slice(0, 10);
@@ -882,7 +919,8 @@ export default function DashboardContent({ user, headerExtra }: { user: User; he
                                             <div className="db__agenda-items-container">
                                                 {displayItems.length > 0 ? (
                                                     displayItems.slice(0, 4).map((item) => {
-                                                        const itemDate = new Date(item.tanggal_mulai + 'T00:00:00');
+                                                        const tglMulai = String(item.tanggal_mulai).slice(0, 10);
+                                                        const itemDate = new Date(`${tglMulai}T00:00:00`);
                                                         const formattedDate = itemDate.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
                                                         return (
                                                             <div 
@@ -1086,7 +1124,24 @@ export default function DashboardContent({ user, headerExtra }: { user: User; he
                                                     <p className="text-muted text-center py-3">Belum ada {titleWidget.toLowerCase()} yang diplot.</p>
                                                 ) : (
                                                     <>
-                                                        <div className={`db__chip-grid ${!hasIzin && !hasSakit && !showAllAnakAsuh ? 'all-present-mobile' : ''}`}>
+                                                        {!hasIzin && !hasSakit && (
+                                                            <div style={{
+                                                                padding: '8px 12px',
+                                                                marginBottom: '10px',
+                                                                background: '#f0fdf4',
+                                                                border: '1px solid #bbf7d0',
+                                                                borderRadius: '10px',
+                                                                fontSize: '0.8rem',
+                                                                color: '#166534',
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                gap: '8px'
+                                                            }}>
+                                                                <CheckCircle2 size={16} style={{ color: '#16a34a', flexShrink: 0 }} />
+                                                                <span>Semua {titleWidget.toLowerCase()} hadir hari ini</span>
+                                                            </div>
+                                                        )}
+                                                        <div className="db__chip-grid">
                                                             {[...anakAsuh].sort((a, b) => {
                                                                 const khA = anakAsuhKehadiran[a.nisn_siswa]?.kode?.toUpperCase() || 'HADIR';
                                                                 const khB = anakAsuhKehadiran[b.nisn_siswa]?.kode?.toUpperCase() || 'HADIR';

@@ -14,6 +14,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { extractRequestToken } from '@/lib/app-jwt';
 import { nestFetchAsUser } from '@/lib/nest-api';
 import { getApiUser } from '@/lib/api-auth';
+import { fetchSafeFile } from '@/lib/proxy-guard';
 
 /** Ubah tautan tampilan Google Drive jadi tautan unduh langsung. */
 function toDirectUrl(url: string): string {
@@ -57,7 +58,14 @@ export async function GET(request: NextRequest) {
             return new NextResponse('Berkas surat tidak ditemukan', { status: 404 });
         }
 
-        const upstream = await fetch(toDirectUrl(fileUrl));
+        let upstream: Response;
+        try {
+            upstream = await fetchSafeFile(toDirectUrl(fileUrl));
+        } catch (fetchErr: any) {
+            console.error('[Download Surat] fetchSafeFile failed:', fetchErr?.message);
+            return new NextResponse(fetchErr?.message || 'Gagal mengambil berkas dari penyimpanan', { status: 400 });
+        }
+
         if (!upstream.ok) {
             return new NextResponse('Gagal mengambil berkas dari penyimpanan', { status: upstream.status });
         }

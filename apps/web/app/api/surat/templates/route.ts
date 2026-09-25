@@ -42,6 +42,12 @@ export async function POST(req: NextRequest) {
 
       const ext = file.name.split('.').pop()?.toLowerCase()
 
+      const uploadHeaders: Record<string, string> = {}
+      const reqCookie = req.headers.get('cookie')
+      if (reqCookie) uploadHeaders['cookie'] = reqCookie
+      const reqAuth = req.headers.get('authorization')
+      if (reqAuth) uploadHeaders['authorization'] = reqAuth
+
       if (ext === 'docx') {
         const uploadFormData = new FormData()
         uploadFormData.append('file', file)
@@ -49,9 +55,7 @@ export async function POST(req: NextRequest) {
 
         const uploadRes = await fetch(new URL('/api/upload', req.url).toString(), {
           method: 'POST',
-          headers: {
-            cookie: req.headers.get('cookie') || '',
-          },
+          headers: uploadHeaders,
           body: uploadFormData,
         })
 
@@ -86,9 +90,7 @@ export async function POST(req: NextRequest) {
 
         const uploadRes = await fetch(new URL('/api/upload', req.url).toString(), {
           method: 'POST',
-          headers: {
-            cookie: req.headers.get('cookie') || '',
-          },
+          headers: uploadHeaders,
           body: uploadFormData,
         })
 

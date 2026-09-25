@@ -131,10 +131,10 @@ const SignView = ({
                 <div className="control-section">
                     <label className="section-label"><i className="bi bi-file-earmark-pdf"></i> Dokumen Asli</label>
                     <div className={`file-uploader ${pdfFile ? 'has-file' : ''}`}>
-                        <input type="file" accept=".pdf,.doc,.docx" onChange={handleFileChange} id="pdfInputSign" className="hidden-input" />
+                        <input type="file" accept=".pdf" onChange={handleFileChange} id="pdfInputSign" className="hidden-input" />
                         <label htmlFor="pdfInputSign" className="upload-label">
                             <i className={`bi ${pdfFile ? 'bi-check-circle-fill text-success' : 'bi-cloud-arrow-up'}`}></i>
-                            <span>{pdfFile ? pdfFile.name : 'Pilih PDF / Word'}</span>
+                            <span>{pdfFile ? pdfFile.name : 'Pilih Dokumen PDF'}</span>
                         </label>
                     </div>
                 </div>
@@ -177,9 +177,11 @@ const SignView = ({
                                 <input
                                     type="text"
                                     className="srt-input"
-                                    placeholder="Ketik nama..."
+                                    placeholder="Klik untuk memilih penandatangan..."
+                                    readOnly
+                                    style={{ cursor: 'pointer' }}
                                     value={guruList.find((g: any) => g.id === meta.penandatangan_id)?.label || ''}
-                                    onChange={e => {}}
+                                    onClick={() => setGuruSearchOpen(true)}
                                     onFocus={() => setGuruSearchOpen(true)}
                                 />
                                 <input type="hidden" value={meta.penandatangan_id} />
@@ -522,6 +524,20 @@ export default function SuratPage() {
             if (profilRes.ok && profilRes.data) {
                 setProfilSekolah(profilRes.data);
             }
+            // Ambil URL template tersimpan dari /api/surat/templates/urls
+            const tmplRes = await fetch('/api/surat/templates/urls').then(r => r.json().catch(() => ({ ok: false })));
+            if (tmplRes.ok && tmplRes.data) {
+                const a4 = tmplRes.data['TEMPLATE_A4'];
+                const f4 = tmplRes.data['TEMPLATE_F4'];
+                if (a4?.template_html) {
+                    setTemplateA4Url(a4.template_html);
+                    setTemplateA4Nama(a4.nama_template || 'Template A4');
+                }
+                if (f4?.template_html) {
+                    setTemplateF4Url(f4.template_html);
+                    setTemplateF4Nama(f4.nama_template || 'Template F4');
+                }
+            }
             setLoading(false);
         };
         init();
@@ -536,30 +552,50 @@ export default function SuratPage() {
 
     const handleUploadTemplate = async (format: 'A4' | 'F4', file: File) => {
         if (!file) return;
-        const reader = new FileReader();
-        reader.onload = async e => {
-            const dataUrl = e.target?.result as string;
-            if (format === 'A4') setUploadingA4(true); else setUploadingF4(true);
+        if (format === 'A4') setUploadingA4(true); else setUploadingF4(true);
+        try {
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('folder', 'Template Surat');
+
+            const uploadRes = await fetch('/api/upload', {
+                method: 'POST',
+                body: formData,
+            });
+            const uploadJson = await uploadRes.json();
+            if (!uploadRes.ok || !uploadJson.ok || !uploadJson.publicUrl) {
+                throw new Error(uploadJson.error || 'Upload gagal');
+            }
+
+            // Simpan referensi ke database template surat
             try {
-                const uploadRes = await fetch('/api/upload', {
-                    method: 'POST', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ folder: 'Template Surat', filename: `template_${format.toLowerCase()}_${Date.now()}.${file.name.split('.').pop()}`, data: dataUrl }),
+                await fetch('/api/surat/templates', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        jenis_surat: `TEMPLATE_${format}`,
+                        nama_template: file.name.replace(/\.[^.]+$/i, ''),
+                        template_html: uploadJson.publicUrl,
+                    }),
                 });
-                const uploadJson = await uploadRes.json();
-                if (!uploadJson.ok || !uploadJson.publicUrl) throw new Error(uploadJson.error || 'Upload gagal');
-                const saveRes = await fetch('/api/config-surat', {
-                    method: 'PUT', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ [format === 'A4' ? 'template_a4_url' : 'template_f4_url']: uploadJson.publicUrl, [format === 'A4' ? 'template_a4_nama' : 'template_f4_nama']: file.name }),
-                });
-                const saveJson = await saveRes.json();
-                if (!saveJson.ok) throw new Error(saveJson.error);
-                if (format === 'A4') { setTemplateA4Url(uploadJson.publicUrl); setTemplateA4Nama(file.name); }
-                else { setTemplateF4Url(uploadJson.publicUrl); setTemplateF4Nama(file.name); }
-                Swal.fire({ icon: 'success', title: 'Tersimpan', text: `Template ${format} berhasil diupload`, confirmButtonColor: '#3083FF' });
-            } catch (err: any) { Swal.fire('Error', err.message, 'error'); }
-            finally { setUploadingA4(false); setUploadingF4(false); }
-        };
-        reader.readAsDataURL(file);
+            } catch (tmplErr) {
+                console.warn('Gagal mencatat template ke surat_templates:', tmplErr);
+            }
+
+            if (format === 'A4') {
+                setTemplateA4Url(uploadJson.publicUrl);
+                setTemplateA4Nama(file.name);
+            } else {
+                setTemplateF4Url(uploadJson.publicUrl);
+                setTemplateF4Nama(file.name);
+            }
+            Swal.fire({ icon: 'success', title: 'Tersimpan', text: `Template ${format} berhasil diupload`, confirmButtonColor: '#3083FF' });
+        } catch (err: any) {
+            Swal.fire('Error', err.message, 'error');
+        } finally {
+            setUploadingA4(false);
+            setUploadingF4(false);
+        }
     };
 
     const handleSavePengaturan = async (data: any) => {
@@ -570,9 +606,30 @@ export default function SuratPage() {
             });
             const saveJson = await saveRes.json();
             if (!saveJson.ok) throw new Error(saveJson.error);
-            setShowPengaturan(false);
+
+            // Perbarui state lokal secara reaktif seketika
+            setSuratConfig(prev => ({
+                format_nomor_template: data.format_nomor_template,
+                kode1_options: data.kode1_options || [],
+                kode2_options: data.kode2_options || [],
+                kode3_options: prev?.kode3_options || [],
+                template_a4_url: prev?.template_a4_url || null,
+                template_a4_nama: prev?.template_a4_nama || null,
+                template_f4_url: prev?.template_f4_url || null,
+                template_f4_nama: prev?.template_f4_nama || null,
+            }));
+            if (data.kode1_options?.length > 0) {
+                setMeta(prev => ({ ...prev, nomor_kode1: data.kode1_options[0].kode }));
+            }
+            if (data.kode2_options?.length > 0) {
+                setMeta(prev => ({ ...prev, nomor_kode2: data.kode2_options[0].kode }));
+            }
+
+            handleClosePengaturan();
             Swal.fire({ icon: 'success', title: 'Tersimpan', text: 'Pengaturan surat berhasil disimpan', confirmButtonColor: '#3083FF' });
-        } catch (err: any) { Swal.fire('Error', err.message, 'error'); }
+        } catch (err: any) {
+            Swal.fire('Error', err.message, 'error');
+        }
     };
 
     const handleGenerateNomor = async () => {
@@ -594,14 +651,19 @@ export default function SuratPage() {
         const file = e.target.files?.[0];
         if (!file) return;
         const ext = file.name.split('.').pop()?.toLowerCase();
-        if (!['pdf', 'doc', 'docx'].includes(ext || '')) return Swal.fire('Error', 'Mohon pilih file PDF atau Word (.doc/.docx).', 'error');
+        if (ext !== 'pdf') {
+            e.target.value = '';
+            return Swal.fire({
+                icon: 'warning',
+                title: 'Format Dokumen',
+                html: `Dokumen yang akan ditandatangani secara digital harus dalam format <strong>PDF</strong> agar posisi QR verifikasi presisi.<br/><br/><small style="color:#64748b">Jika Anda menggunakan Microsoft Word (.docx), silakan simpan terlebih dahulu via <em>File &rarr; Save As &rarr; PDF</em> lalu unggah file PDF tersebut.</small>`,
+                confirmButtonColor: '#3083FF',
+                confirmButtonText: 'Mengerti'
+            });
+        }
         setPdfFile(file);
         setPlacement(null);
-        if (['doc', 'docx'].includes(ext || '')) {
-            Swal.fire({ icon: 'info', title: 'File Word', text: 'File Word akan dikonversi ke PDF saat diproses.', toast: true, position: 'top-end', timer: 4000, showConfirmButton: false });
-        } else {
-            await loadPdfDocument(file);
-        }
+        await loadPdfDocument(file);
     };
 
     const loadPdfJsIfNeeded = (): Promise<void> => {

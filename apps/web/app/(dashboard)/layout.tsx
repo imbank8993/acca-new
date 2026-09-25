@@ -66,12 +66,6 @@ export default function DashboardShellLayout({ children }: { children: React.Rea
 
   // Id halaman aktif untuk highlight sidebar, diturunkan dari URL
   const currentPage = decodeURIComponent(pathname.replace(/^\//, '')) || 'dashboard'
-  // Dashboard punya kartu identitas profilnya sendiri (foto, nama, jam,
-  // mode gelap, notifikasi) sebagai pengganti <Header> — menu sidebar mobile
-  // sudah tersedia lewat BottomNav, jadi Header tidak perlu dirender sama
-  // sekali di halaman ini. Lihat .main-content.no-header di bawah untuk
-  // penyesuaian ruang yang biasanya dipesan untuk tinggi Header.
-  const isDashboard = currentPage === 'dashboard'
 
   // Judul halaman untuk header mobile (menggantikan nama aplikasi yang konstan).
   // Label kustom "Susun Menu" dibaca dari cache localStorage yang ditulis Sidebar,

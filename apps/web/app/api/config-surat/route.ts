@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { extractRequestToken } from '@/lib/app-jwt';
 import { nestFetchAsUser } from '@/lib/nest-api';
+import { getApiUser } from '@/lib/api-auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -25,6 +26,14 @@ export async function GET(req: NextRequest) {
 
 export async function PUT(req: NextRequest) {
     try {
+        const user = await getApiUser(req);
+        if (!user) {
+            return NextResponse.json({ ok: false, error: 'Unauthorized' }, { status: 401 });
+        }
+        if (!user.isAdmin) {
+            return NextResponse.json({ ok: false, error: 'Hanya administrator yang diizinkan mengubah konfigurasi surat' }, { status: 403 });
+        }
+
         const token = extractRequestToken(req);
         const body = await req.json();
 
@@ -43,6 +52,14 @@ export async function PUT(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
     try {
+        const user = await getApiUser(req);
+        if (!user) {
+            return NextResponse.json({ ok: false, error: 'Unauthorized' }, { status: 401 });
+        }
+        if (!user.isAdmin) {
+            return NextResponse.json({ ok: false, error: 'Hanya administrator yang diizinkan membuat konfigurasi surat' }, { status: 403 });
+        }
+
         const token = extractRequestToken(req);
         const body = await req.json();
 

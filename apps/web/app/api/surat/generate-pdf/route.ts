@@ -9,6 +9,9 @@ import { renderToBuffer, Document, Page, View, Text, Image, StyleSheet } from '@
 import { PDFDocument, rgb } from 'pdf-lib';
 import QRCode from 'qrcode';
 import React from 'react';
+import fs from 'fs/promises';
+import path from 'path';
+import { fetchSafeFile } from '@/lib/proxy-guard';
 
 // A4 dimensions in points (72 dpi)
 const A4_WIDTH = 595.28;
@@ -27,6 +30,29 @@ async function imageToDataUrl(url: string): Promise<string> {
         return '';
     }
     try {
+        // Fast local disk resolution for public assets
+        if (url.includes('/images/Surat%20ACCA%20A4.png') || url.includes('/images/Surat ACCA A4.png')) {
+            try {
+                const filePath = path.join(process.cwd(), 'public', 'images', 'Surat ACCA A4.png');
+                const buf = await fs.readFile(filePath);
+                return `data:image/png;base64,${buf.toString('base64')}`;
+            } catch {}
+        }
+        if (url.includes('/logo-icon.png')) {
+            try {
+                const filePath = path.join(process.cwd(), 'public', 'logo-icon.png');
+                const buf = await fs.readFile(filePath);
+                return `data:image/png;base64,${buf.toString('base64')}`;
+            } catch {}
+        }
+        if (url.includes('/logo_final.png')) {
+            try {
+                const filePath = path.join(process.cwd(), 'public', 'logo_final.png');
+                const buf = await fs.readFile(filePath);
+                return `data:image/png;base64,${buf.toString('base64')}`;
+            } catch {}
+        }
+
         const response = await fetch(url);
         if (!response.ok) {
             console.error(`[PDF] Failed to fetch image: ${url}, status: ${response.status}`);
@@ -43,12 +69,12 @@ async function imageToDataUrl(url: string): Promise<string> {
     }
 }
 
-// Helper: Download any file from URL and convert to base64 data URL
+// Helper: Download any file from URL and convert to base64 data URL with SSRF protection
 async function fetchFileToDataUrl(url: string): Promise<string> {
     if (!url || !url.startsWith('http')) return url;
     try {
         console.log(`[PDF] Fetching external file attachment from URL: ${url}`);
-        const response = await fetch(url);
+        const response = await fetchSafeFile(url);
         if (!response.ok) {
             console.error(`[PDF] Failed to download file: ${url}, status: ${response.status}`);
             return url; // Fallback
@@ -861,10 +887,12 @@ export async function POST(request: NextRequest) {
         }
 
         // 1. Background & Logo Setup
-        // CRITICAL FIX: Use baseUrl from frontend (window.location.origin) instead of hardcoded localhost.
-        // Server-side fetch cannot reach localhost:3000 on Vercel/Cloudflare.
-        const localBaseUrl = baseUrl && baseUrl.startsWith('http') ? baseUrl : 'http://localhost:3000';
-        let backgroundUrl = `${localBaseUrl}/images/Surat%20ACCA.png`;
+        const hostHeader = request.headers.get('x-forwarded-host') || request.headers.get('host') || '';
+        const protoHeader = request.headers.get('x-forwarded-proto') || 'https';
+        const serverOrigin = process.env.NEXT_PUBLIC_APP_URL || (hostHeader ? `${protoHeader}://${hostHeader}` : 'https://acca.icgowa.sch.id');
+
+        const localBaseUrl = baseUrl && baseUrl.startsWith('http') ? baseUrl : serverOrigin;
+        let backgroundUrl = `${localBaseUrl}/images/Surat%20ACCA%20A4.png`;
         let logoUrl = `${localBaseUrl}/logo-icon.png`;
         let qrLogoUrl = `${localBaseUrl}/logo_final.png`; // Default: logo ACCA untuk QR
         console.log('[PDF] Using localBaseUrl:', localBaseUrl, '(passed baseUrl from frontend:', baseUrl, ')');
@@ -911,8 +939,8 @@ export async function POST(request: NextRequest) {
         const tempResult = buildContentElements(suratData, '', '', guruList, siswaList, null, suratId);
         const letterId = tempResult.letterId;
 
-        // Fleksibel mengarah ke halaman hosting saat ini
-        const verificationUrl = `${baseUrl}/surat/scan/${letterId}`;
+        // URL verifikasi resmi menggunakan domain terverifikasi (anti spoofing/phishing)
+        const verificationUrl = `${serverOrigin.replace(/\/$/, '')}/surat/scan/${letterId}`;
 
         console.log('[PDF] Generating PDF...');
         console.log('[PDF] Scan URL:', verificationUrl);

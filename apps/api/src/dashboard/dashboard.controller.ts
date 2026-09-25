@@ -1,4 +1,4 @@
-import { Controller, Get, UseGuards, Req } from '@nestjs/common';
+import { Controller, Get, UseGuards, Req, Query } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { DashboardService } from './dashboard.service';
@@ -11,8 +11,8 @@ export class DashboardController {
   constructor(private readonly dashboardService: DashboardService) {}
 
   @Get('summary')
-  async getSummary(@Req() req: any) {
-    const data = await this.dashboardService.getDashboardSummary(req.user);
+  async getSummary(@Req() req: any, @Query('nisn') targetNisn?: string) {
+    const data = await this.dashboardService.getDashboardSummary(req.user, targetNisn);
     return { ok: true, data };
   }
 

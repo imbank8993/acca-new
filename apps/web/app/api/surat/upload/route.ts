@@ -8,14 +8,16 @@ export async function POST(request: NextRequest) {
     // Forward to main upload handler
     const uploadUrl = new URL('/api/upload', request.url);
 
-    const formData = await request.formData();
-    const cookieHeader = request.headers.get('cookie') || '';
+    const headers: Record<string, string> = {};
+    const cookieHeader = request.headers.get('cookie');
+    if (cookieHeader) headers['Cookie'] = cookieHeader;
+    const authHeader = request.headers.get('authorization');
+    if (authHeader) headers['Authorization'] = authHeader;
 
+    const formData = await request.formData();
     const response = await fetch(uploadUrl.toString(), {
         method: 'POST',
-        headers: {
-            'Cookie': cookieHeader
-        },
+        headers,
         body: formData
     });
 

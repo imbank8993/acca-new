@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { PDFDocument, degrees } from 'pdf-lib';
 import { extractRequestToken } from '@/lib/app-jwt';
 import { nestFetchAsUser } from '@/lib/nest-api';
+import { getApiUser } from '@/lib/api-auth';
 import QRCode from 'qrcode';
 
 export const dynamic = 'force-dynamic';
@@ -73,6 +74,12 @@ async function generateQRWithLogo(scanUrl: string, logoPath: string | Buffer): P
 
 export async function POST(req: NextRequest) {
     try {
+        const apiUser = await getApiUser(req);
+        if (!apiUser) {
+            return NextResponse.json({ ok: false, error: 'Unauthorized' }, { status: 401 });
+        }
+        const authenticatedUserId = apiUser.authId;
+
         const formData = await req.formData();
         const file = formData.get('file') as File;
         const rawJson = formData.get('data') as string;
@@ -93,9 +100,7 @@ export async function POST(req: NextRequest) {
         const config = JSON.parse(rawJson);
         const {
             suratData,          // metadata for db (nomor, perkara, etc)
-            userId,             // user id creating this
             placement,          // { x, y, width, height, pageNum, pageWidth, pageHeight } from client
-            baseUrl             // system base url
         } = config;
 
         if (!placement || placement.pageNum === undefined) {
@@ -116,13 +121,34 @@ export async function POST(req: NextRequest) {
         }
 
         // ─── STEP 1: DAFTAR KE DATABASE ───
+        const penandatanganId = suratData.penandatangan_id || suratData.pejabat_id || null;
+        const penandatanganNama = suratData.penandatangan_nama || suratData.pejabat_nama || '';
+        const penandatanganJabatan = suratData.penandatangan_jabatan || suratData.pejabat_jabatan || '';
+        const penandatanganNip = suratData.penandatangan_nip || suratData.pejabat_nip || '';
+
+        let safeTanggalTtd = new Date().toISOString().split('T')[0];
+        if (suratData.tanggal_ttd && !isNaN(Date.parse(suratData.tanggal_ttd))) {
+            safeTanggalTtd = new Date(suratData.tanggal_ttd).toISOString().split('T')[0];
+        }
+
         const dbPayload = {
             ...suratData,
-            tempat_ttd: kabupatenKota,       // auto dari profil sekolah
-            tanggal_ttd: suratData.tanggal_ttd || new Date().toISOString().split('T')[0], // custom date from client, fallback to system
-            created_by: userId,
+            nomor_surat: String(suratData.nomor_surat || '').slice(0, 100),
+            perkara: String(suratData.perkara || '').slice(0, 500),
+            kepada: String(suratData.kepada || '').slice(0, 500),
+            tempat_ttd: String(kabupatenKota || '').slice(0, 255),
+            tanggal_ttd: safeTanggalTtd,
+            created_by: authenticatedUserId,
             status: 'DRAFT',
-            jenis_surat: suratData.jenis_surat || 'EXTERNAL',
+            jenis_surat: String(suratData.jenis_surat || 'EXTERNAL').slice(0, 100),
+            pejabat_id: penandatanganId,
+            pejabat_nama: String(penandatanganNama || '').slice(0, 255),
+            pejabat_jabatan: String(penandatanganJabatan || '').slice(0, 255),
+            pejabat_nip: String(penandatanganNip || '').slice(0, 50),
+            penandatangan_id: penandatanganId,
+            penandatangan_nama: String(penandatanganNama || '').slice(0, 255),
+            penandatangan_jabatan: String(penandatanganJabatan || '').slice(0, 255),
+            penandatangan_nip: String(penandatanganNip || '').slice(0, 50),
         };
 
         const { status: createStatus, body: createBody } = await nestFetchAsUser('/surat/items', token || '', {
@@ -135,8 +161,21 @@ export async function POST(req: NextRequest) {
         }
 
         const suratId = createBody.data.id;
-        const scanBaseUrl = baseUrl.includes('localhost') ? 'https://acca.icgowa.sch.id' : baseUrl;
-        const verificationUrl = `${scanBaseUrl}/surat/scan/${suratId}`;
+
+        // Tentukan baseUrl server yang terpercaya, JANGAN percaya baseUrl mentah dari klien
+        let serverOrigin = process.env.NEXT_PUBLIC_APP_URL || '';
+        if (!serverOrigin || serverOrigin.includes('localhost')) {
+            const host = req.headers.get('host') || '';
+            const proto = req.headers.get('x-forwarded-proto') || 'https';
+            if (host) {
+                serverOrigin = `${proto}://${host}`;
+            }
+        }
+        if (!serverOrigin || serverOrigin.includes('localhost')) {
+            serverOrigin = 'https://acca.icgowa.sch.id';
+        }
+        const cleanBaseUrl = serverOrigin.replace(/\/$/, '');
+        const verificationUrl = `${cleanBaseUrl}/surat/scan/${suratId}`;
 
         console.log(`[Sign-PDF] Database ID Created: ${suratId}`);
         console.log(`[Sign-PDF] Verification URL: ${verificationUrl}`);
@@ -389,14 +428,16 @@ export async function POST(req: NextRequest) {
         const uploadApiUrl = new URL('/api/upload', req.url);
         console.log(`[Sign-PDF] Forwarding final bytes to: ${uploadApiUrl.toString()}`);
 
-        // Forward session cookies so the internal API call bypasses auth middleware correctly
-        const cookieHeader = req.headers.get('cookie') || '';
+        // Forward session cookies and Authorization header so the internal API call bypasses auth middleware correctly
+        const forwardHeaders: Record<string, string> = {};
+        const cookieHeader = req.headers.get('cookie');
+        if (cookieHeader) forwardHeaders['Cookie'] = cookieHeader;
+        const authHeader = req.headers.get('authorization');
+        if (authHeader) forwardHeaders['Authorization'] = authHeader;
 
         const uploadRes = await fetch(uploadApiUrl.toString(), {
             method: 'POST',
-            headers: {
-                'Cookie': cookieHeader
-            },
+            headers: forwardHeaders,
             body: uploadFormData,
         });
 
