@@ -3,6 +3,7 @@ import { SignJWT } from 'jose';
 import { cookies } from 'next/headers';
 import { verifyAppToken } from '@/lib/app-jwt';
 import { fetchUserAccessByAuthId, fetchUserAccessByUsername } from '@/lib/nest-api';
+import { prisma } from '@/lib/prisma';
 
 // Tanpa nilai cadangan: rahasia bersama yang ikut terbaca di repo bisa dipakai
 // menempa token SSO ke aplikasi CBT. Bila env-nya kosong, SSO ditolak.
@@ -98,18 +99,32 @@ export async function GET(req: Request) {
             .setExpirationTime('5m')
             .sign(SSO_SECRET);
 
-        let cbtUrl = process.env.NEXT_PUBLIC_CBT_URL || 'https://accav2-cbt.icgowa.sch.id';
-        const hostHeader = req.headers.get('host') || '';
-        
-        // Jika diakses dari domain publik (bukan localhost)
-        if (!hostHeader.includes('localhost')) {
-            cbtUrl = process.env.NEXT_PUBLIC_CBT_URL && !process.env.NEXT_PUBLIC_CBT_URL.includes('localhost')
-                ? process.env.NEXT_PUBLIC_CBT_URL
-                : 'https://accav2-cbt.icgowa.sch.id';
-        } else {
-            cbtUrl = process.env.NEXT_PUBLIC_CBT_URL || 'http://localhost:3008';
+        // Baca URL CBT dari environment variables (.env / .env.local)
+        // Mendukung CBT_URL maupun NEXT_PUBLIC_CBT_URL
+        const envCbtUrl = process.env.CBT_URL || process.env.NEXT_PUBLIC_CBT_URL;
+        let cbtUrl = envCbtUrl?.trim();
+
+        // Jika belum diset di .env, periksa apakah ada di database site_settings (key: 'cbt_url')
+        if (!cbtUrl) {
+            try {
+                const setting = await prisma.site_settings.findUnique({
+                    where: { key: 'cbt_url' },
+                    select: { value: true },
+                });
+                if (setting?.value?.trim()) {
+                    cbtUrl = setting.value.trim();
+                }
+            } catch {
+                // Abaikan jika database belum siap
+            }
         }
 
+        // Fallback default jika sama sekali belum dikonfigurasi di .env atau database
+        if (!cbtUrl) {
+            cbtUrl = 'https://accav2-cbt.icgowa.sch.id';
+        }
+
+        cbtUrl = cbtUrl.replace(/\/$/, '');
         const redirectUrl = `${cbtUrl}/api/auth/sso?token=${token}`;
 
         if (req.headers.get('accept')?.includes('application/json')) {
