@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import Pagination from '@/components/ui/Pagination';
 import { useTahunAjaranFilter } from '@/hooks/use-tahun-ajaran-filter';
 import { FilterToolbar, FilterSelect, FilterSearch } from '@/components/ui/FilterToolbar';
 import { Spinner } from '@/components/ui/Spinner';
@@ -39,9 +40,8 @@ interface SiswaKelas {
     kelas: string;
 }
 
-const ITEMS_PER_PAGE = 15;
-
 export default function WaliKelasTabNilai({ user }: { user?: any }) {
+    const [limit, setLimit] = useState(10);
     const [loading, setLoading] = useState(true);
     const [students, setStudents] = useState<SiswaKelas[]>([]);
     const [myClass, setMyClass] = useState<string>('');
@@ -195,11 +195,11 @@ export default function WaliKelasTabNilai({ user }: { user?: any }) {
         return students.filter(s => s.nisn.toLowerCase().includes(q) || s.nama_siswa.toLowerCase().includes(q));
     }, [students, searchQuery]);
 
-    const totalPages = Math.ceil(filteredStudents.length / ITEMS_PER_PAGE);
+    const totalPages = Math.ceil(filteredStudents.length / limit);
     const paginatedStudents = useMemo(() => {
-        const start = (currentPage - 1) * ITEMS_PER_PAGE;
-        return filteredStudents.slice(start, start + ITEMS_PER_PAGE);
-    }, [filteredStudents, currentPage]);
+        const start = (currentPage - 1) * limit;
+        return filteredStudents.slice(start, start + limit);
+    }, [filteredStudents, currentPage, limit]);
 
     useEffect(() => { setCurrentPage(1); }, [searchQuery]);
 
@@ -347,17 +347,15 @@ export default function WaliKelasTabNilai({ user }: { user?: any }) {
                 </div>
 
                 {/* Pagination */}
-                {totalPages > 1 && (
-                    <div className="wkn-pagination">
-                        <button disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)}>
-                            <i className="bi bi-chevron-left" />
-                        </button>
-                        <span>{currentPage} / {totalPages}</span>
-                        <button disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => p + 1)}>
-                            <i className="bi bi-chevron-right" />
-                        </button>
-                    </div>
-                )}
+                <Pagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    limit={limit}
+                    totalItems={filteredStudents.length}
+                    onPageChange={setCurrentPage}
+                    onLimitChange={setLimit}
+                    itemLabel="siswa"
+                />
 
                 <style jsx>{`
                     .wkn-wrap {

@@ -1,4 +1,5 @@
 'use client';
+import Pagination from '@/components/ui/Pagination';
 
 import { useState, useEffect, useMemo } from 'react';
 import { Spinner } from '@/components/ui/Spinner';
@@ -378,7 +379,7 @@ export default function AbsensiPage({ user }: { user?: any }) {
 
     // Admin Pagination
     const [adminPage, setAdminPage] = useState(1);
-    const [adminLimit, setAdminLimit] = useState(50);
+    const [adminLimit, setAdminLimit] = useState(10);
     const [totalAdminSessions, setTotalAdminSessions] = useState(0);
 
     // Data user dimuat saat mount
@@ -2369,44 +2370,19 @@ export default function AbsensiPage({ user }: { user?: any }) {
 
 
                             {/* Pagination */}
-                            {!adminLoading && adminSessions.length > 0 && totalAdminSessions > adminLimit && (
-                                <div className="admin-pagination">
-                                    <div className="pagination-info">
-                                        Menampilkan <b>{adminSessions.length}</b> dari <b>{totalAdminSessions}</b> sesi
-                                    </div>
-                                    <div className="pagination-controls">
-                                        <button 
-                                            className="pag-btn"
-                                            disabled={adminPage === 1}
-                                            onClick={() => fetchAdminSessions(adminPage - 1)}
-                                        >
-                                            <i className="bi bi-chevron-left"></i>
-                                        </button>
-                                        {(() => {
-                                            // Jendela maks 5 nomor halaman mengikuti halaman aktif,
-                                            // supaya halaman > 5 tetap bisa dijangkau
-                                            const totalPages = Math.ceil(totalAdminSessions / adminLimit);
-                                            const windowSize = Math.min(5, totalPages);
-                                            const start = Math.max(1, Math.min(adminPage - 2, totalPages - windowSize + 1));
-                                            return Array.from({ length: windowSize }, (_, i) => start + i).map(pageNum => (
-                                                <button
-                                                    key={pageNum}
-                                                    className={`pag-btn ${adminPage === pageNum ? 'active' : ''}`}
-                                                    onClick={() => fetchAdminSessions(pageNum)}
-                                                >
-                                                    {pageNum}
-                                                </button>
-                                            ));
-                                        })()}
-                                        <button 
-                                            className="pag-btn"
-                                            disabled={adminPage >= Math.ceil(totalAdminSessions / adminLimit)}
-                                            onClick={() => fetchAdminSessions(adminPage + 1)}
-                                        >
-                                            <i className="bi bi-chevron-right"></i>
-                                        </button>
-                                    </div>
-                                </div>
+                            {!adminLoading && adminSessions.length > 0 && (
+                                <Pagination
+                                    currentPage={adminPage}
+                                    totalPages={Math.ceil(totalAdminSessions / adminLimit)}
+                                    limit={adminLimit}
+                                    totalItems={totalAdminSessions}
+                                    onPageChange={(p) => fetchAdminSessions(p)}
+                                    onLimitChange={(l) => {
+                                        setAdminLimit(l);
+                                        fetchAdminSessions(1);
+                                    }}
+                                    itemLabel="sesi"
+                                />
                             )}
                         </div>
                     </div>

@@ -51,6 +51,11 @@ export function useDarkMode(user: User | null | undefined) {
             localStorage.setItem('darkMode', '0')
         }
         applyThemeColor()
+        if (typeof window !== 'undefined') {
+            requestAnimationFrame(() => applyThemeColor())
+            setTimeout(() => applyThemeColor(), 100)
+            setTimeout(() => applyThemeColor(), 350)
+        }
         setIsDark(nextDark)
     }
 

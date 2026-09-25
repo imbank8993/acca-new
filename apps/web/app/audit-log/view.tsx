@@ -1,4 +1,5 @@
 'use client';
+import Pagination from '@/components/ui/Pagination';
 
 import { useState, useEffect, useMemo } from 'react';
 import type { User } from '@/lib/types';
@@ -51,7 +52,7 @@ export default function AuditLogView({ user }: { user?: User }) {
 
     // Pagination
     const [page, setPage] = useState(1);
-    const pageSize = 20;
+    const [pageSize, setPageSize] = useState(10);
 
     const userRoles = (user?.roles || []).map(r => r.toUpperCase());
     const isAdminOrWkm = userRoles.some(r =>
@@ -97,7 +98,7 @@ export default function AuditLogView({ user }: { user?: User }) {
         if (isAdminOrWkm) {
             fetchLogs();
         }
-    }, [page, entityFilter, actionFilter]);
+    }, [page, pageSize, entityFilter, actionFilter]);
 
     // Handle search on submit or debounce
     const handleSearchSubmit = (e: React.FormEvent) => {

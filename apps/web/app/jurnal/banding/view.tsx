@@ -1,4 +1,5 @@
 'use client';
+import Pagination from '@/components/ui/Pagination';
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useTabParam } from '@/hooks/useTabParam';
@@ -136,7 +137,7 @@ export default function BandingPage({ user, activeTabProp, hideHeaderTab = false
     const [deleteTargetItem, setDeleteTargetItem] = useState<BandingItem | null>(null);
     const [isDeleting, setIsDeleting]             = useState(false);
 
-    const limit = 15;
+    const [limit, setLimit] = useState(10);
 
     const loadSaya = useCallback(async () => {
         if (!isGuru) return;

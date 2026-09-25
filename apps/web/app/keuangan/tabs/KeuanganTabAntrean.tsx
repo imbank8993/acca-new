@@ -1,4 +1,6 @@
 'use client';
+import { useState, useMemo, useEffect } from 'react';
+import Pagination from '@/components/ui/Pagination';
 
 import React from 'react';
 import ActionButton, { ActionGroup } from '@/components/ui/ActionButtons';
@@ -28,6 +30,14 @@ export default function KeuanganTabAntrean({
     canManageRegisters,
     openRegisterModal,
 }: KeuanganTabAntreanProps) {
+    const [page, setPage] = useState(1);
+    const [pageSize, setPageSize] = useState(10);
+    useEffect(() => { setPage(1); }, [filteredRequests]);
+    const totalPages = Math.ceil(filteredRequests.length / pageSize);
+    const paginatedRequests = useMemo(() => {
+        const start = (page - 1) * pageSize;
+        return filteredRequests.slice(start, start + pageSize);
+    }, [filteredRequests, page, pageSize]);
     return (
         <div>
             <h3 style={{ margin: '0 0 12px 0', fontSize: '1.1rem', fontWeight: 700 }}>Antrean Persetujuan</h3>
@@ -42,7 +52,7 @@ export default function KeuanganTabAntrean({
                     </tr>
                 </thead>
                 <tbody>
-                    {filteredRequests.map(r => (
+                    {paginatedRequests.map(r => (
                         <tr key={r.id}>
                             <td>
                                 <div style={{ fontWeight: 600 }}>{r.users?.nama}</div>
@@ -68,6 +78,7 @@ export default function KeuanganTabAntrean({
                     {filteredRequests.length === 0 && <tr><td colSpan={5} style={{ textAlign: 'center' }}>Belum ada antrean pengajuan</td></tr>}
                 </tbody>
             </table>
+            <Pagination currentPage={page} totalPages={totalPages} limit={pageSize} totalItems={filteredRequests.length} onPageChange={setPage} onLimitChange={setPageSize} itemLabel="pengajuan" />
         </div>
     );
 }

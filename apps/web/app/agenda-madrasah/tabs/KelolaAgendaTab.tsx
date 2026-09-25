@@ -569,8 +569,9 @@ export default function KelolaAgendaTab({ user, onBack, headerTabs }: KelolaAgen
                             onClick={() => setShowCatModal(true)}
                             title="Kelola Kategori"
                             className="ftb-btn-icon-mobile"
+                            leftIcon={<i className="bi bi-tags" />}
                         >
-                            <i className="bi bi-tags" />
+                            <span className="btn-text-desktop">Kategori</span>
                         </Button>
                     </FilterActions>
                 )}

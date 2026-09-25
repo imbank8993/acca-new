@@ -1,6 +1,8 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import Pagination from '@/components/ui/Pagination';
+
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import Swal from 'sweetalert2'
 import type { User } from '@/lib/types'
 
@@ -45,6 +47,14 @@ export default function TabPengelolaan({ user, onEdit }: TabPengelolaanProps) {
     const [search, setSearch] = useState('')
     const [selectedRow, setSelectedRow] = useState<PermintaanSurat | null>(null)
     const [showDetail, setShowDetail] = useState(false)
+    const [page, setPage] = useState(1)
+    const [pageSize, setPageSize] = useState(10)
+    useEffect(() => { setPage(1); }, [rows, filterStatus, filterJenis, search]);
+    const totalPages = Math.ceil(rows.length / pageSize);
+    const paginatedRows = useMemo(() => {
+        const start = (page - 1) * pageSize;
+        return rows.slice(start, start + pageSize);
+    }, [rows, page, pageSize]);
 
     const loadData = useCallback(async () => {
         setLoading(true)
@@ -215,7 +225,7 @@ export default function TabPengelolaan({ user, onEdit }: TabPengelolaanProps) {
                             </tr>
                         </thead>
                         <tbody>
-                            {rows.map(row => (
+                            {paginatedRows.map(row => (
                                 <tr key={row.id}>
                                     <td>
                                         <span className="ps-manage__jenis">

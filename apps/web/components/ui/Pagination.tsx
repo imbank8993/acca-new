@@ -14,24 +14,29 @@ function getMobilePages(current: number, total: number): (number | '…')[] {
 interface PaginationProps {
     currentPage: number;
     totalPages: number;
-    limit: number;
+    limit?: number;
     totalItems: number;
     recordCount?: number;
     itemLabel?: string;
     onPageChange: (page: number) => void;
-    onLimitChange: (limit: number) => void;
+    onLimitChange?: (limit: number) => void;
 }
 
 export default function Pagination({
     currentPage,
     totalPages,
-    limit,
+    limit = 10,
     totalItems,
     recordCount,
     itemLabel = 'data',
     onPageChange,
     onLimitChange
 }: PaginationProps) {
+    // Sembunyikan pagination jika jumlah baris data <= 10
+    if (totalItems <= 10) {
+        return null;
+    }
+
     const startRecord = totalItems === 0 ? 0 : (currentPage - 1) * limit + 1;
     const endRecord = Math.min(currentPage * limit, totalItems);
     const mobilePages = getMobilePages(currentPage, Math.max(totalPages, 1));
@@ -52,20 +57,22 @@ export default function Pagination({
 
             {/* Right: Controls (Limit & Navigation) */}
             <div className="pagination-controls">
-                <div className="limit-selector">
-                    <select
-                        value={limit}
-                        onChange={(e) => {
-                            onLimitChange(Number(e.target.value));
-                            onPageChange(1);
-                        }}
-                        aria-label="Jumlah baris per halaman"
-                    >
-                        {[10, 20, 50, 100].map(size => (
-                            <option key={size} value={size}>{size} / hal</option>
-                        ))}
-                    </select>
-                </div>
+                {onLimitChange && (
+                    <div className="limit-selector">
+                        <select
+                            value={limit}
+                            onChange={(e) => {
+                                onLimitChange(Number(e.target.value));
+                                onPageChange(1);
+                            }}
+                            aria-label="Jumlah baris per halaman"
+                        >
+                            {[10, 20, 50, 100].map(size => (
+                                <option key={size} value={size}>{size} / hal</option>
+                            ))}
+                        </select>
+                    </div>
+                )}
 
                 {/* Desktop Page Numbers */}
                 <div className="page-buttons desktop-pages">

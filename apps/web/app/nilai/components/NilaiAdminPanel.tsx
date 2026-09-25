@@ -1,4 +1,5 @@
 'use client';
+import Pagination from '@/components/ui/Pagination';
 
 import { useState, useEffect, useMemo } from 'react';
 import Swal from 'sweetalert2';

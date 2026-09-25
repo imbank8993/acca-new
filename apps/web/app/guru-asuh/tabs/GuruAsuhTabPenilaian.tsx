@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import Pagination from '@/components/ui/Pagination';
 import { PageLoader } from '@/components/ui/Spinner';
 import { DetailHeader, DetailHeaderSelect } from '@/components/ui/DetailHeader';
 import { useTahunAjaranFilter } from '@/hooks/use-tahun-ajaran-filter';
@@ -37,9 +38,8 @@ interface GroupedData {
     all: NilaiItem[];
 }
 
-const ITEMS_PER_PAGE = 15;
-
 export default function GuruAsuhTabPenilaian({ user }: { user?: any }) {
+    const [limit, setLimit] = useState(10);
     const nip = user?.nip || user?.username || '';
     const ta = useTahunAjaranFilter();
 
@@ -135,11 +135,11 @@ export default function GuruAsuhTabPenilaian({ user }: { user?: any }) {
         return data.siswa_list.filter(s => s.nisn.toLowerCase().includes(q) || s.nama.toLowerCase().includes(q));
     }, [data?.siswa_list, searchQuery]);
 
-    const totalPages = Math.ceil(filteredStudents.length / ITEMS_PER_PAGE);
+    const totalPages = Math.ceil(filteredStudents.length / limit);
     const paginatedStudents = useMemo(() => {
-        const start = (currentPage - 1) * ITEMS_PER_PAGE;
-        return filteredStudents.slice(start, start + ITEMS_PER_PAGE);
-    }, [filteredStudents, currentPage]);
+        const start = (currentPage - 1) * limit;
+        return filteredStudents.slice(start, start + limit);
+    }, [filteredStudents, currentPage, limit]);
 
     useEffect(() => { setCurrentPage(1); }, [searchQuery]);
 
@@ -493,17 +493,15 @@ export default function GuruAsuhTabPenilaian({ user }: { user?: any }) {
                         ))}
                     </div>
 
-                    {totalPages > 1 && (
-                        <div className="pagination">
-                            <button className="page-btn" disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)}>
-                                <i className="bi bi-chevron-left" />
-                            </button>
-                            <span className="page-info">{currentPage} / {totalPages}</span>
-                            <button className="page-btn" disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => p + 1)}>
-                                <i className="bi bi-chevron-right" />
-                            </button>
-                        </div>
-                    )}
+                    <Pagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    limit={limit}
+                    totalItems={filteredStudents.length}
+                    onPageChange={setCurrentPage}
+                    onLimitChange={setLimit}
+                    itemLabel="siswa"
+                />
                 </>
             )}
 

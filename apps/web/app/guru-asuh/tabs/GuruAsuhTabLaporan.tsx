@@ -326,10 +326,11 @@ export default function GuruAsuhTabLaporan({ user }: { user?: any }) {
                 const blob = await res.blob();
                 const url = window.URL.createObjectURL(blob);
                 window.open(url, '_blank');
+                setTimeout(() => window.URL.revokeObjectURL(url), 60_000);
             } else {
                 const data = await res.json();
                 if (!res.ok || !data.ok) throw new Error(data.error || 'Gagal membuat PDF');
-                window.open(data.file_url, '_blank');
+                if (data.file_url) window.open(data.file_url, '_blank');
             }
         } catch (e: any) { showMsg('error', e.message || 'Gagal membuat PDF'); }
         finally { setPrintingPdf(false); }

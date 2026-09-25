@@ -1,4 +1,5 @@
 'use client';
+import Pagination from '@/components/ui/Pagination';
 import { useTabParam } from '@/hooks/useTabParam';
 import { useState, useEffect, useCallback } from 'react';
 import { useDashboardUser } from '@/components/UserContext';
@@ -54,7 +55,7 @@ export function KetidakhadiranLogTab(props: { user?: any }) {
     const [page, setPage] = useState(1);
     const [stats, setStats] = useState<any>(null);
     const [selectedNisn, setSelectedNisn] = useState<string | null>(null);
-    const limit = 20;
+    const [limit, setLimit] = useState(10);
 
     const isSiswa = (user?.roles || []).some((r: string) => (r || '').toUpperCase() === 'SISWA');
 
@@ -210,45 +211,15 @@ export function KetidakhadiranLogTab(props: { user?: any }) {
                         </div>
 
                         {/* Pagination */}
-                        {totalPages > 1 && (
-                            <div className="klog__pagination">
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => setPage(p => Math.max(1, p - 1))}
-                                    disabled={page === 1}
-                                    leftIcon={<i className="bi bi-chevron-left" />}
-                                >
-                                    Sebelumnya
-                                </Button>
-                                <div className="klog__pageDots">
-                                    {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
-                                        const start = Math.max(0, Math.min(page - 3, totalPages - 5));
-                                        const num = start + i + 1;
-                                        return (
-                                            <Button
-                                                key={num}
-                                                variant={num === page ? 'primary' : 'ghost'}
-                                                size="sm"
-                                                onClick={() => setPage(num)}
-                                                style={{ minWidth: '34px', padding: '0 8px' }}
-                                            >
-                                                {num}
-                                            </Button>
-                                        );
-                                    })}
-                                </div>
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                                    disabled={page === totalPages}
-                                    rightIcon={<i className="bi bi-chevron-right" />}
-                                >
-                                    Selanjutnya
-                                </Button>
-                            </div>
-                        )}
+                        <Pagination
+                            currentPage={page}
+                            totalPages={totalPages}
+                            limit={limit}
+                            totalItems={total}
+                            onPageChange={setPage}
+                            onLimitChange={setLimit}
+                            itemLabel="log"
+                        />
                     </>
                 )}
 

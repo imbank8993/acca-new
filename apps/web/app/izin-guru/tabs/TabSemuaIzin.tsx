@@ -1,4 +1,5 @@
 'use client';
+import Pagination from '@/components/ui/Pagination';
 
 import { useState, useEffect, useMemo } from 'react';
 import { StatusBadge, JenisBadge } from '../components/StatusBadge';
@@ -51,6 +52,14 @@ export default function TabSemuaIzin({ rows, loading, onView, onDelete, onEdit, 
   const [timezone, setTimezone] = useState(DEFAULT_TIMEZONE);
   const { openFile, viewer } = useFileViewer();
   const isMobile = useIsMobile();
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  useEffect(() => { setPage(1); }, [rows]);
+  const totalPages = Math.ceil(rows.length / pageSize);
+  const paginatedRows = useMemo(() => {
+    const start = (page - 1) * pageSize;
+    return rows.slice(start, start + pageSize);
+  }, [rows, page, pageSize]);
 
   /**
    * URL foto per baris, dihitung sekali per perubahan `rows`.
@@ -139,7 +148,7 @@ export default function TabSemuaIzin({ rows, loading, onView, onDelete, onEdit, 
           />
         ) : (
           <MobileList label="Daftar pengajuan izin guru">
-            {rows.map(row => (
+            {paginatedRows.map(row => (
               <MobileListItem
                 key={row.id}
                 title={row.nama_guru}
@@ -162,6 +171,7 @@ export default function TabSemuaIzin({ rows, loading, onView, onDelete, onEdit, 
             ))}
           </MobileList>
         )}
+        <Pagination currentPage={page} totalPages={totalPages} limit={pageSize} totalItems={rows.length} onPageChange={setPage} onLimitChange={setPageSize} itemLabel="izin" />
         {viewer}
       </>
     );
@@ -198,7 +208,7 @@ export default function TabSemuaIzin({ rows, loading, onView, onDelete, onEdit, 
                 </td>
               </tr>
             ) : (
-              rows.map((row) => {
+              paginatedRows.map((row) => {
                 const isRange = row.tanggal_mulai !== row.tanggal_selesai;
                 const isDinas = row.jenis === 'dinas_luar';
                 return (

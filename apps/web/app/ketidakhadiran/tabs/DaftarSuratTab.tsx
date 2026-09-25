@@ -1,4 +1,5 @@
 'use client';
+import Pagination from '@/components/ui/Pagination';
 import MaintenanceBanner from '@/components/MaintenanceBanner';
 import { useState, useEffect } from 'react';
 import { getCurrentUser } from '@/lib/auth-client';
@@ -83,7 +84,7 @@ function DaftarAccaContent() {
 
     // Pagination
     const [currentPage, setCurrentPage] = useState(1);
-    const [limit, setLimit] = useState(20);
+    const [limit, setLimit] = useState(10);
 
     useEffect(() => {
         const init = async () => {
@@ -510,39 +511,15 @@ function DaftarAccaContent() {
                         </div>
 
                         {/* Pagination */}
-                        <div className="srt-pagination">
-                            <div className="srt-pagination-info">
-                                Menampilkan {startIdx + 1} - {endIdx} dari {totalItems} surat
-                            </div>
-                            <div className="srt-pagination-controls">
-                                <select
-                                    value={limit}
-                                    onChange={e => { setLimit(Number(e.target.value)); setCurrentPage(1); }}
-                                    className="srt-select"
-                                >
-                                    <option value={20}>20</option>
-                                    <option value={50}>50</option>
-                                    <option value={100}>100</option>
-                                </select>
-                                <button
-                                    className="srt-btn srt-btn-secondary srt-btn-sm"
-                                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                                    disabled={currentPage === 1}
-                                >
-                                    <i className="bi bi-chevron-left"></i>
-                                </button>
-                                <span className="srt-pagination-pages">
-                                    Halaman {currentPage} / {totalPages}
-                                </span>
-                                <button
-                                    className="srt-btn srt-btn-secondary srt-btn-sm"
-                                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                                    disabled={currentPage >= totalPages}
-                                >
-                                    <i className="bi bi-chevron-right"></i>
-                                </button>
-                            </div>
-                        </div>
+                        <Pagination
+                            currentPage={currentPage}
+                            totalPages={totalPages}
+                            limit={limit}
+                            totalItems={totalItems}
+                            onPageChange={setCurrentPage}
+                            onLimitChange={setLimit}
+                            itemLabel="surat"
+                        />
                     </>
                 )}
             </div>

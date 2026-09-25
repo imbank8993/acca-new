@@ -102,9 +102,11 @@ function baseColor(): Rgba {
     // dipakai. Dipakai sebagai cadangan untuk halaman TANPA bilah nav — mis.
     // login, form publik, halaman info-link.
     const ambient = document.querySelector('.acca-ambient-bg')
+    const navDefault = dark ? '#000000' : '#ffffff'
     const candidates = [
         sidebarBg,
         navFace,
+        navDefault,
         ambient ? getComputedStyle(ambient).backgroundColor : '',
         getComputedStyle(document.body).backgroundColor,
     ]
@@ -181,39 +183,87 @@ function topOverlayColor(): Rgba | null {
 }
 
 /**
- * Hitung ulang dan pasang <meta name="theme-color">.
+ * Dapatkan atau buat node <meta name="theme-color"> di <head>.
+ * Mengembalikan array dari semua node theme-color yang ada di dokumen.
+ */
+function getThemeColorMetas(): HTMLMetaElement[] {
+    const list = Array.from(document.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]'))
+    if (list.length > 0) return list
+
+    const meta = document.createElement('meta')
+    meta.name = 'theme-color'
+    meta.id = 'theme-color-meta'
+    meta.content = '#ffffff'
+    document.head.appendChild(meta)
+    return [meta]
+}
+
+/** Sinkronkan <meta name="color-scheme"> */
+function syncColorSchemeMeta(dark: boolean): void {
+    let cs = document.querySelector<HTMLMetaElement>('meta[name="color-scheme"]')
+    if (!cs) {
+        cs = document.createElement('meta')
+        cs.name = 'color-scheme'
+        cs.id = 'color-scheme-meta'
+        document.head.appendChild(cs)
+    }
+    const val = dark ? 'dark' : 'light'
+    if (cs.content !== val) {
+        cs.content = val
+        cs.setAttribute('content', val)
+    }
+}
+
+/**
+ * Hitung ulang dan pasang <meta name="theme-color">, color-scheme, dan latar dokumen.
+ * Menjamin area bilah URL bawah di browser mobile responsif seketika saat tema berganti.
  * Aman dipanggil berkali-kali; tidak melakukan apa-apa di server.
  */
 export function applyThemeColor(): void {
     if (typeof document === 'undefined') return
-    const meta = document.getElementById('theme-color-meta') as HTMLMetaElement | null
-    if (!meta) return
 
+    const dark = document.documentElement.classList.contains('dark')
     const base = baseColor()
     const overlay = topOverlayColor()
     const next = toHex(overlay ? blend(overlay, base) : base)
-    if (meta.content === next) return
 
-    meta.content = next
+    // 1. Perbarui semua meta theme-color di <head>
+    const metas = getThemeColorMetas()
+    metas.forEach(meta => {
+        if (meta.hasAttribute('media')) {
+            meta.removeAttribute('media')
+        }
+        meta.setAttribute('content', next)
+        meta.content = next
+    })
 
-    // Node-nya DIPASANG ULANG, bukan cuma diubah `content`-nya.
-    //
-    // Sebagian browser — paling kentara Chrome di Android — mengevaluasi
-    // `theme-color` sekali saat dokumen dimuat dan tidak memperhatikan
-    // perubahan atribut pada node yang sudah terpasang. Gejalanya: menekan
-    // tombol mode gelap mengubah seluruh halaman seketika, tapi bilah URL
-    // tetap warna lama sampai halaman dimuat ulang.
-    //
-    // Melepas lalu memasang kembali node-nya membuat browser melihatnya
-    // sebagai meta baru dan menghitung ulang warna chrome-nya. Urutannya harus
-    // begitu — `content` disetel DULU sebelum dipasang ulang, supaya yang
-    // terbaca saat pemasangan sudah nilai barunya.
-    //
-    // Aman diulang: `applyThemeColor` sudah keluar lebih awal kalau warnanya
-    // tidak berubah, jadi node ini tidak dicabut-pasang tiap frame.
-    const parent = meta.parentNode
-    if (parent) {
-        parent.removeChild(meta)
-        parent.appendChild(meta)
+    // 2. Sinkronkan color-scheme (Chrome Android & Safari UI chrome)
+    syncColorSchemeMeta(dark)
+    document.documentElement.style.colorScheme = dark ? 'dark' : 'light'
+
+    // 3. Set background-color langsung pada <html> dan <body>
+    // Safari iOS mewarnai bilah URL bawah dengan live sampler yang membaca
+    // background dokumen di sekitar safe-area bilah bawah. Menyetel inline style di sini
+    // memastikan warnanya berubah seketika tanpa menunggu CSS selector atau transition selesai.
+    document.documentElement.style.backgroundColor = next
+    document.body.style.backgroundColor = next
+
+    // 4. Bangunkan live-sampler Safari iOS
+    // Safari di iOS mengevaluasi warna bilah status dan bilah URL bawah pada
+    // event gulir (compositor thread). Saat toggle ditekan, halaman tidak bergulir
+    // sehingga bilah bawah tetap di warna lama sampai halaman direfresh.
+    // Micro-scroll 1px bolak-balik membangkitkan sampler Safari secara instan.
+    if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event('scroll'))
+        requestAnimationFrame(() => {
+            const y = window.scrollY || window.pageYOffset || 0
+            if (y > 0) {
+                window.scrollBy(0, -1)
+                window.scrollBy(0, 1)
+            } else {
+                window.scrollBy(0, 1)
+                window.scrollBy(0, -1)
+            }
+        })
     }
 }

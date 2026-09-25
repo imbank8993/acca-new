@@ -1493,7 +1493,7 @@ html.dark .acca-ambient-bg,
   }
 }
 
-@media (max-width: 767.98px) {
+@media (max-width: 1024px) {
   /* `:not(.dark)` bukan hiasan. Sebelumnya pasangan aturan ini ditulis
      `html, body` (terang) lalu `html.dark, html.dark body` (gelap) dan
      mengandalkan yang kedua menang karena lebih spesifik — dan pada `body` itu
@@ -1528,8 +1528,8 @@ html.dark .acca-ambient-bg,
        ikut berubah saat bilah alamat beranimasi; dukungannya penuh sejak
        iOS 16. Jadi baris ini bukan cadangan tambahan, melainkan penimpa yang
        mengalahkan nilai yang benar. */
-    /* `clip`, bukan `hidden` — lihat catatan di aturan html,body di atas.
-       Justru di breakpoint inilah bilah nav bawah yang sticky hidup. */
+  /* `clip`, bukan `hidden` — lihat catatan di aturan html,body di atas.
+     Justru di breakpoint inilah bilah nav bawah yang sticky hidup. */
     overflow-x: clip !important;
     -webkit-overflow-scrolling: touch !important;
   }
@@ -1554,6 +1554,7 @@ html.dark .acca-ambient-bg,
        bersama. */
     background-color: #ffffff !important;
     background-image: none !important;
+    color-scheme: light;
   }
 
   html.dark,
@@ -1577,6 +1578,7 @@ html.dark .acca-ambient-bg,
        body di sana tetap utuh. */
     background-color: #000000 !important;
     background-image: none !important;
+    color-scheme: dark;
   }
 }
 

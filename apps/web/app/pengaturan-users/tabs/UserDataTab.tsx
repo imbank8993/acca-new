@@ -1,4 +1,5 @@
 'use client'
+import Pagination from '@/components/ui/Pagination';
 
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { Spinner } from '@/components/ui/Spinner'
@@ -12,6 +13,10 @@ import { FilterToolbar, FilterSearch, FilterSelect, FilterActions } from '@/comp
 import Button from '@/components/ui/Button'
 import { Modal, ModalHeader, ModalBody, ModalFooter } from '@/components/ui/Modal'
 import { ActionButton, ActionGroup } from '@/components/ui/ActionButtons'
+import { MobileList, MobileListItem, MobileFab } from '@/components/mobile'
+import { MobileSheet, MobileKV } from '@/components/mobile/MobileSheet'
+import { MobileAvatar } from '@/components/mobile/MobileList'
+import { getProxiedImageUrl } from '@/lib/image-utils'
 
 function getInitials(name: string) {
     return name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase()
@@ -76,6 +81,8 @@ export default function UserDataTab({ user }: { user?: User }) {
   const [editingUser, setEditingUser] = useState<User | null>(null)
   const [isAdding, setIsAdding] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
   const [filter, setFilter] = useState<'all' | 'active' | 'inactive'>('all')
   const [roleFilter, setRoleFilter] = useState<string>('all')
   const [isMobile, setIsMobile] = useState(false)
@@ -90,6 +97,11 @@ export default function UserDataTab({ user }: { user?: User }) {
   const [showDeleteSheet, setShowDeleteSheet] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
+  // Mobile detail sheet + action menu
+  const [sheetUser, setSheetUser] = useState<User | null>(null)
+  const [showActionMenu, setShowActionMenu] = useState(false)
+  const actionMenuRef = useRef<HTMLDivElement>(null)
+
   // Modal states
   const [deleteItemId, setDeleteItemId] = useState<string | number | null>(null)
   const [deleteItemData, setDeleteItemData] = useState<User | null>(null)
@@ -99,6 +111,18 @@ export default function UserDataTab({ user }: { user?: User }) {
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set())
 
   const { registerModal } = useModalBlur()
+
+  // Click-outside handler for the three-dot action menu
+  useEffect(() => {
+    if (!showActionMenu) return
+    const handler = (e: MouseEvent) => {
+      if (actionMenuRef.current && !actionMenuRef.current.contains(e.target as Node)) {
+        setShowActionMenu(false)
+      }
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [showActionMenu])
 
   /**
    * ADMIN / ADMINISTRATOR, dicocokkan per ELEMEN daftar role.
@@ -174,6 +198,14 @@ export default function UserDataTab({ user }: { user?: User }) {
     return filtered
   }, [users, filter, roleFilter, searchQuery])
 
+  useEffect(() => { setPage(1); }, [filter, roleFilter, searchQuery]);
+
+  const totalPages = Math.ceil(filteredUsers.length / pageSize);
+  const paginatedUsers = useMemo(() => {
+    const start = (page - 1) * pageSize;
+    return filteredUsers.slice(start, start + pageSize);
+  }, [filteredUsers, page, pageSize]);
+
   const stats = useMemo(() => ({
     total: users.length,
     active: users.filter(u => u.aktif).length,
@@ -212,8 +244,8 @@ export default function UserDataTab({ user }: { user?: User }) {
 
   // Blur trigger for modals
   useEffect(() => {
-    if (deleteItemId !== null || resetItem !== null || isAdding || editingUser !== null) return registerModal()
-  }, [deleteItemId, resetItem, isAdding, editingUser, registerModal])
+    if (deleteItemId !== null || resetItem !== null || isAdding || editingUser !== null || sheetUser !== null) return registerModal()
+  }, [deleteItemId, resetItem, isAdding, editingUser, sheetUser, registerModal])
 
   const handleAdd = () => { setIsAdding(true); setEditingUser(null) }
   const handleEdit = (u: User) => { setEditingUser(u); setIsAdding(false) }
@@ -520,7 +552,7 @@ export default function UserDataTab({ user }: { user?: User }) {
       </div>
 
       {/* Toolbar */}
-      <FilterToolbar>
+      <FilterToolbar actionsInline>
         <FilterSelect
           label="Status"
           value={filter}
@@ -546,15 +578,50 @@ export default function UserDataTab({ user }: { user?: User }) {
           placeholder="Cari nama, username, NIP..."
         />
         <FilterActions>
+          {/* Mobile: three-dot menu for Export/Import */}
+          {(canExport || canImport) && (
+            <div className="sk__menuWrap" ref={actionMenuRef}>
+              <button
+                type="button"
+                className={`sk__btnActionMenu ftb-btn--iconOnlyMobile ${showActionMenu ? 'isOpen' : ''}`}
+                onClick={() => setShowActionMenu(v => !v)}
+                title="Lainnya"
+                aria-label="Lainnya"
+                aria-haspopup="menu"
+                aria-expanded={showActionMenu}
+              >
+                <i className="bi bi-three-dots" />
+                <span className="ftb-btn-label">Aksi</span>
+              </button>
+              {showActionMenu && (
+                <div className="sk__menu" role="menu">
+                  {canExport && (
+                    <button type="button" role="menuitem" className="sk__menuItem sk__menuItemMobileOnly" onClick={() => { setShowActionMenu(false); handleExport() }}>
+                      <span className="sk__menuIcon"><i className="bi bi-download" style={{ color: '#10b981' }} /></span>
+                      <span className="sk__menuLabel">Export Excel</span>
+                    </button>
+                  )}
+                  {canImport && (
+                    <button type="button" role="menuitem" className="sk__menuItem sk__menuItemMobileOnly" onClick={() => { setShowActionMenu(false); fileInputRef.current?.click() }}>
+                      <span className="sk__menuIcon"><i className="bi bi-file-earmark-excel-fill" style={{ color: '#f97316' }} /></span>
+                      <span className="sk__menuLabel">Import Excel</span>
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Desktop: buttons as-is (hidden on mobile by CSS) */}
           {isAdmin && (
-            <Button variant="primary" icon="add" onClick={handleAdd}>
+            <Button variant="primary" icon="add" onClick={handleAdd} className="sk__btnDesktopOnly">
               Tambah
             </Button>
           )}
-          <Button variant="outline" icon="export" onClick={handleExport} disabled={!canExport}>
+          <Button variant="outline" icon="export" onClick={handleExport} disabled={!canExport} className="sk__btnDesktopOnly">
             Export
           </Button>
-          <Button variant="outline" icon="import" onClick={() => fileInputRef.current?.click()} disabled={importing || !canImport} isLoading={importing}>
+          <Button variant="outline" icon="import" onClick={() => fileInputRef.current?.click()} disabled={importing || !canImport} isLoading={importing} className="sk__btnDesktopOnly">
             {importing ? 'Memproses...' : 'Import'}
           </Button>
         </FilterActions>
@@ -618,7 +685,7 @@ export default function UserDataTab({ user }: { user?: User }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredUsers.map((u, idx) => {
+                  {paginatedUsers.map((u, idx) => {
                     const [ab, af] = getAvatarColor(u.nama_lengkap || u.nama)
                     const roleColors = getRoleBadgeColor(u.role || 'GURU')
                     return (
@@ -630,7 +697,7 @@ export default function UserDataTab({ user }: { user?: User }) {
                             onClick={() => toggleSelect(u.id)}
                             title={selectedIds.has(u.id) ? 'Batalkan pilih' : 'Pilih'}
                           >
-                            {idx + 1}
+                            {((page - 1) * pageSize) + idx + 1}
                             {selectedIds.has(u.id) && (
                               <span className="udt-no-box__tick"><i className="bi bi-check"></i></span>
                             )}
@@ -713,99 +780,46 @@ export default function UserDataTab({ user }: { user?: User }) {
                 </tbody>
               </table>
             </div>
+            <Pagination
+              currentPage={page}
+              totalPages={totalPages}
+              limit={pageSize}
+              totalItems={filteredUsers.length}
+              onPageChange={setPage}
+              onLimitChange={setPageSize}
+              itemLabel="pengguna"
+            />
           </div>
         ) : (
-          /* ===== CARD VIEW (Mobile / switcher) ===== */
-          Object.entries(groupedUsers).map(([role, roleUsers]) => {
-            const { bg, fg, border } = getRoleBadgeColor(role)
-            return (
-              <div key={role} className="udt-group">
-                <div className="udt-group__header">
-                  <span className="udt-group__badge" style={{ background: bg, color: fg, borderColor: border }}>
-                    <i className="bi bi-shield-fill"></i>
-                    {role}
-                  </span>
-                  <span className="udt-group__count">{roleUsers.length} user</span>
-                </div>
-                <div className="udt-card-grid">
-                  {roleUsers.map(u => {
-                    const [ab, af] = getAvatarColor(u.nama_lengkap || u.nama)
-                    return (
-                      <div key={u.id} className={`udt-[#card ${!u.aktif ? 'udt-card--inactive' : ''}`}>
-                        <div className="udt-card__top">
-                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 4 }}>
-                            <input
-                              type="checkbox"
-                              checked={selectedIds.has(u.id)}
-                              onChange={() => toggleSelect(u.id)}
-                              style={{ cursor: 'pointer' }}
-                              title="Pilih user ini"
-                            />
-                          </div>
-                          <div className="udt-card__info">
-                            <div className="udt-card__name">{u.nama_lengkap || u.nama}</div>
-                            <div className="udt-card__meta">
-                              {u.nip && <span className="udt-card__nip">NIP/NISN: {u.nip}</span>}
-                            </div>
-                          </div>
-                          <div className="udt-card__status">
-                            <label 
-                              className={`udt-status-toggle ${toggling === u.id || !isAdmin ? 'is-disabled' : ''}`}
-                              onClick={(e) => {
-                                e.preventDefault();
-                                if (isAdmin && toggling !== u.id) handleToggleStatus(u);
-                              }}
-                            >
-                              <input
-                                type="checkbox"
-                                style={{ display: 'none' }}
-                                checked={u.aktif}
-                                readOnly
-                                disabled={toggling === u.id || !isAdmin}
-                              />
-                              <div className="udt-status-toggle__switch"></div>
-                              <span className="udt-status-toggle__label">
-                                {toggling === u.id ? '...' : (u.aktif ? 'Aktif' : 'Nonaktif')}
-                              </span>
-                            </label>
-                          </div>
-                        </div>
-                        {u.username && (
-                          <div className="udt-card__divisi">
-                            <i className="bi bi-person"></i>
-                            @{u.username}
-                          </div>
-                        )}
-                        {isAdmin && (
-                          <ActionGroup>
-                            <ActionButton
-                              action="edit"
-                              onClick={() => handleEdit(u)}
-                            />
-                            <button
-                              className="udt-iconBtn udt-iconBtn--key"
-                              onClick={() => { setResetItem(u); setShowResetSheet(true); }}
-                              title="Reset Password"
-                              style={{
-                                width: '32px', height: '32px', borderRadius: '8px', border: '1px solid var(--n-border)',
-                                background: 'var(--n-surface)', color: '#3b82f6', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer'
-                              }}
-                            >
-                              <i className="bi bi-key-fill"></i>
-                            </button>
-                            <ActionButton
-                              action="delete"
-                              onClick={() => { setDeleteItemId(u.id); setDeleteItemData(u); setShowDeleteSheet(true); }}
-                            />
-                          </ActionGroup>
-                        )}
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
-            )
-          })
+          /* ===== LIST VIEW (Mobile) ===== */
+          <>
+            <MobileList label="Daftar pengguna">
+              {paginatedUsers.map(u => {
+                const roleLabel = (u.role || 'GURU').split(',').map(r => r.trim()).filter(Boolean).join(' · ')
+                return (
+                  <MobileListItem
+                    key={u.id}
+                    title={u.nama_lengkap || u.nama}
+                    seed={u.username || u.nama}
+                    avatarSrc={u.photoUrl ? getProxiedImageUrl(u.photoUrl) : undefined}
+                    icon="person-fill"
+                    subtitle={<>@{u.username}{u.nip ? ` · ${u.nip}` : ''} · {roleLabel}</>}
+                    badge={!u.aktif ? <span className="mui-badge isDanger">Nonaktif</span> : undefined}
+                    onClick={() => setSheetUser(u)}
+                  />
+                )
+              })}
+            </MobileList>
+            <Pagination
+              currentPage={page}
+              totalPages={totalPages}
+              limit={pageSize}
+              totalItems={filteredUsers.length}
+              onPageChange={setPage}
+              onLimitChange={setPageSize}
+              itemLabel="pengguna"
+            />
+          </>
         )}
       </div>
 
@@ -880,6 +894,88 @@ export default function UserDataTab({ user }: { user?: User }) {
           </ModalFooter>
         </Modal>
       )}
+
+      {/* Mobile Detail Sheet — opens when a MobileListItem is tapped */}
+      {sheetUser && (
+        <MobileSheet
+          title={sheetUser.nama_lengkap || sheetUser.nama}
+          subtitle={`@${sheetUser.username}`}
+          leading={
+            <MobileAvatar
+              name={sheetUser.nama_lengkap || sheetUser.nama}
+              seed={sheetUser.username || sheetUser.nama}
+              src={sheetUser.photoUrl ? getProxiedImageUrl(sheetUser.photoUrl) : undefined}
+            />
+          }
+          onClose={() => setSheetUser(null)}
+          footer={isAdmin ? (
+            <>
+              <Button
+                variant="secondary"
+                leftIcon={<i className="bi bi-pencil-fill" />}
+                onClick={() => { const u = sheetUser; setSheetUser(null); handleEdit(u) }}
+              >
+                Edit
+              </Button>
+              <Button
+                variant="secondary"
+                leftIcon={<i className="bi bi-key-fill" />}
+                onClick={() => { const u = sheetUser; setSheetUser(null); setResetItem(u); setShowResetSheet(true) }}
+              >
+                Reset
+              </Button>
+              <Button
+                variant="danger"
+                icon="delete"
+                onClick={() => { const u = sheetUser; setSheetUser(null); setDeleteItemId(u.id); setDeleteItemData(u); setShowDeleteSheet(true) }}
+              >
+                Hapus
+              </Button>
+            </>
+          ) : undefined}
+        >
+          <MobileKV label="NIP/NISN" mono>{sheetUser.nip || '-'}</MobileKV>
+          <MobileKV label="Role">
+            {(sheetUser.role || 'GURU').split(',').map(r => r.trim()).filter(Boolean).map(r => {
+              const rc = getRoleBadgeColor(r)
+              return (
+                <span key={r} className="udt-role-badge" style={{ background: rc.bg, color: rc.fg, borderColor: rc.border, marginRight: 4 }}>
+                  <i className="bi bi-shield-fill"></i>{r}
+                </span>
+              )
+            })}
+          </MobileKV>
+          {sheetUser.divisi && <MobileKV label="Divisi">{sheetUser.divisi}</MobileKV>}
+          {sheetUser.email && <MobileKV label="Email">{sheetUser.email}</MobileKV>}
+          <MobileKV label="Status">
+            <label
+              className={`udt-status-toggle ${toggling === sheetUser.id || !isAdmin ? 'is-disabled' : ''}`}
+              onClick={(e) => {
+                e.preventDefault();
+                if (isAdmin && toggling !== sheetUser.id) {
+                  handleToggleStatus(sheetUser);
+                  setSheetUser(prev => prev ? { ...prev, aktif: !prev.aktif } : null);
+                }
+              }}
+            >
+              <input
+                type="checkbox"
+                style={{ display: 'none' }}
+                checked={sheetUser.aktif}
+                readOnly
+                disabled={toggling === sheetUser.id || !isAdmin}
+              />
+              <div className="udt-status-toggle__switch"></div>
+              <span className="udt-status-toggle__label">
+                {toggling === sheetUser.id ? '...' : (sheetUser.aktif ? 'Aktif' : 'Nonaktif')}
+              </span>
+            </label>
+          </MobileKV>
+        </MobileSheet>
+      )}
+
+      {/* Mobile FAB: Tambah User — registers as BottomNav center button */}
+      {isAdmin && <MobileFab label="Tambah User" icon="plus-lg" onClick={handleAdd} />}
 
       <UserModal
         isOpen={isAdding || !!editingUser}

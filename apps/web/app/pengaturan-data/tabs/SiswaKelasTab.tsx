@@ -1108,9 +1108,8 @@ export default function SiswaKelasTab(_props: { user?: unknown }) {
                 aria-expanded={showActionMenu}
                 title="Lainnya"
                 style={{ minWidth: 40, padding: '0 12px' }}
-              >
-                <i className="bi bi-three-dots" />
-              </Button>
+                leftIcon={<i className="bi bi-three-dots" />}
+              />
               {showActionMenu && (
                 <div className="sk__moreMenu" role="menu">
                   {canImport && (

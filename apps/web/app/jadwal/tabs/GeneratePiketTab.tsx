@@ -988,9 +988,8 @@ export default function GeneratePiketTab({ bolehKelola }: GeneratePiketTabProps)
                                 aria-expanded={showMoreMenu}
                                 title="Lainnya"
                                 style={{ minWidth: 40, padding: '0 12px' }}
-                            >
-                                <i className="bi bi-three-dots" />
-                            </Button>
+                                leftIcon={<i className="bi bi-three-dots" />}
+                            />
                             {showMoreMenu && (
                                 <div className="sk__moreMenu" role="menu">
                                     <button type="button" role="menuitem" className="sk__menuItemMobileOnly" onClick={() => { setShowMoreMenu(false); openAdd() }}>

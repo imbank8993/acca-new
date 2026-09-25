@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import Pagination from '@/components/ui/Pagination';
+import { useState, useEffect, useMemo } from 'react';
 import { getCurrentUser } from '@/lib/auth-client';
 import Swal from 'sweetalert2';
 import Select from 'react-select';
@@ -37,6 +38,8 @@ export default function GuruAsuhTabKlaim({ user: propUser }: GuruAsuhTabKlaimPro
     const [tahunAjaran, setTahunAjaran] = useState('');
     const [filterKelas, setFilterKelas] = useState('');
     const [searchQuery, setSearchQuery] = useState('');
+    const [page, setPage] = useState(1);
+    const [pageSize, setPageSize] = useState(10);
     const [kelasList, setKelasList] = useState<string[]>([]);
     const [list, setList] = useState<GuruAsuh[]>([]);
     const [loading, setLoading] = useState(true);
@@ -115,6 +118,12 @@ export default function GuruAsuhTabKlaim({ user: propUser }: GuruAsuhTabKlaimPro
         }
         return true;
     });
+
+    const totalPages = Math.ceil(filteredList.length / pageSize);
+    const paginatedList = useMemo(() => {
+        const start = (page - 1) * pageSize;
+        return filteredList.slice(start, start + pageSize);
+    }, [filteredList, page, pageSize]);
 
     const showMsg = (type: 'success' | 'error', text: string) => {
         setToast({ type, text });
@@ -313,9 +322,9 @@ export default function GuruAsuhTabKlaim({ user: propUser }: GuruAsuhTabKlaimPro
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {filteredList.map((item, idx) => (
+                                    {paginatedList.map((item, idx) => (
                                         <tr key={item.id}>
-                                            <td className="gakl__tdNum">{idx + 1}</td>
+                                            <td className="gakl__tdNum">{((page - 1) * pageSize) + idx + 1}</td>
                                             <td><div className="gakl__studentName">{item.nama_siswa}</div></td>
                                             <td><span className="gakl__kelasBadge">{item.kelas}</span></td>
                                             <td className="gakl__tdNisn">{item.nisn_siswa}</td>
@@ -332,7 +341,7 @@ export default function GuruAsuhTabKlaim({ user: propUser }: GuruAsuhTabKlaimPro
                         </div>
 
                         <div className="gakl__cards">
-                            {filteredList.map((item) => (
+                            {paginatedList.map((item) => (
                                 <div key={item.id} className="gakl__card">
                                     <div className="gakl__cardAvatar">{item.nama_siswa[0]}</div>
                                     <div className="gakl__cardInfo">
@@ -349,6 +358,7 @@ export default function GuruAsuhTabKlaim({ user: propUser }: GuruAsuhTabKlaimPro
                                 </div>
                             ))}
                         </div>
+                        <Pagination currentPage={page} totalPages={totalPages} limit={pageSize} totalItems={filteredList.length} onPageChange={setPage} onLimitChange={setPageSize} itemLabel="siswa" />
                     </>
                 )}
             </div>

@@ -748,8 +748,14 @@ export default function PembayaranPage({ user: propUser }: PembayaranPageProps =
                                             </td>
                                             <td>
                                         <div className="gap-actions-cell">
-                                            {sub.pdf_url && isSafeHttpUrl(sub.pdf_url) && (
-                                                <a href={sub.pdf_url} target="_blank" rel="noreferrer noopener" className="gap-btn-icon gap-btn-icon--info" title="Lihat PDF">
+                                            {(sub.pdf_url || sub.id) && (
+                                                <a
+                                                    href={sub.pdf_url && isSafeHttpUrl(sub.pdf_url) ? sub.pdf_url : `/api/guru-asuh/laporan-submission/pdf?submissionId=${sub.id}`}
+                                                    target="_blank"
+                                                    rel="noreferrer noopener"
+                                                    className="gap-btn-icon gap-btn-icon--info"
+                                                    title="Lihat PDF"
+                                                >
                                                     <i className="bi bi-file-earmark-pdf" />
                                                 </a>
                                             )}

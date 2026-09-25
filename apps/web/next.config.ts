@@ -125,11 +125,20 @@ const nextConfig: NextConfig = {
         ]
       },
       {
-        // HTML pages: vary by cookie so proxies don't serve one user's page to another
+        // HTML pages: prevent intermediate proxies from caching dynamic HTML and stale chunk references
         source: '/:path*',
         headers: [
           { key: 'Content-Security-Policy', value: "frame-ancestors 'self' https://icgowa.sch.id/acca-v2/ http://localhost:3000 http://localhost:3001 http://localhost:3006 http://localhost:3007 http://localhost:3008 https://*.icgowa.sch.id" },
           { key: 'Vary', value: 'Cookie' },
+          { key: 'Cache-Control', value: 'no-store, no-cache, must-revalidate, proxy-revalidate' },
+          { key: 'Pragma', value: 'no-cache' },
+        ]
+      },
+      {
+        // Next.js hashed static assets: immutable cache (overrides /:path* for _next/static)
+        source: '/_next/static/:path*',
+        headers: [
+          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
         ]
       }
     ]

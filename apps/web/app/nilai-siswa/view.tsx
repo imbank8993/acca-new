@@ -1,4 +1,5 @@
 'use client';
+import Pagination from '@/components/ui/Pagination';
 import MaintenanceBanner from '@/components/MaintenanceBanner';
 import { Spinner } from '@/components/ui/Spinner';
 import DetailHeader, { DetailHeaderSelect } from '@/components/ui/DetailHeader';
@@ -116,71 +117,6 @@ function ErrorView({ message, onRetry }: { message: string; onRetry: () => void 
     );
 }
 
-function Pagination({
-    currentPage,
-    totalPages,
-    onPageChange
-}: {
-    currentPage: number;
-    totalPages: number;
-    onPageChange: (page: number) => void;
-}) {
-    if (totalPages <= 1) return null;
-
-    const getPageNumbers = () => {
-        const pages: (number | string)[] = [];
-        if (totalPages <= 7) {
-            for (let i = 1; i <= totalPages; i++) pages.push(i);
-        } else {
-            pages.push(1);
-            if (currentPage > 3) pages.push('...');
-            for (let i = Math.max(2, currentPage - 1); i <= Math.min(totalPages - 1, currentPage + 1); i++) {
-                pages.push(i);
-            }
-            if (currentPage < totalPages - 2) pages.push('...');
-            pages.push(totalPages);
-        }
-        return pages;
-    };
-
-    return (
-        <div className="nilai-page__pagination">
-            <button
-                onClick={() => onPageChange(Math.max(1, currentPage - 1))}
-                disabled={currentPage === 1}
-                className="nilai-page__page-btn nilai-page__page-btn--nav"
-            >
-                <svg className="nilai-page__page-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                </svg>
-            </button>
-
-            {getPageNumbers().map((page, idx) =>
-                page === '...' ? (
-                    <span key={`ellipsis-${idx}`} className="nilai-page__page-ellipsis">...</span>
-                ) : (
-                    <button
-                        key={page}
-                        onClick={() => onPageChange(page as number)}
-                        className={`nilai-page__page-btn ${currentPage === page ? 'nilai-page__page-btn--active' : ''}`}
-                    >
-                        {page}
-                    </button>
-                )
-            )}
-
-            <button
-                onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
-                disabled={currentPage === totalPages}
-                className="nilai-page__page-btn nilai-page__page-btn--nav"
-            >
-                <svg className="nilai-page__page-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-            </button>
-        </div>
-    );
-}
 
 // --- Main Page Component ---
 function NilaiSiswaPage() {
@@ -688,7 +624,7 @@ function NilaiSiswaPage() {
                         )}
                     </div>
 
-                    <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
+                    <Pagination currentPage={currentPage} totalPages={totalPages} limit={ITEMS_PER_PAGE} totalItems={filteredStudents.length} onPageChange={setCurrentPage} itemLabel="siswa" />
                 </div>
             </div>
             </div>

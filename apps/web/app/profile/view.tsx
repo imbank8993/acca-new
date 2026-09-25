@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useRef, useCallback } from 'react'
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { Spinner } from '@/components/ui/Spinner'
 import DatePicker from '@/components/ui/DatePicker'
 import { createPortal } from 'react-dom'
@@ -15,6 +15,7 @@ import Select from 'react-select'
 import { getActiveAcademicYear, getActiveSettings } from '@/lib/settings-client'
 import { clearUserCache } from '@/lib/auth-client'
 import { ActionButton, ActionGroup } from '@/components/ui/ActionButtons'
+import Tab, { type TabItem } from '@/components/ui/Tab'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -154,6 +155,56 @@ export default function ProfilePage({ user, onRefreshUser }: ProfilePageProps) {
         alamat: '', asal_sekolah: ''
     })
     const [savingSiswa, setSavingSiswa] = useState(false)
+
+    // Tabs configuration for universal Tab component
+    const tabs = useMemo<TabItem<string>[]>(() => {
+        const list: TabItem<string>[] = [
+            {
+                key: 'akun',
+                label: 'Akun & Keamanan',
+                icon: 'person-gear',
+            },
+        ]
+        if (guruData || siswaData) {
+            list.push({
+                key: 'data-diri',
+                label: guruData ? 'Data Kepegawaian' : 'Biodata Siswa',
+                icon: 'person-vcard',
+            })
+        }
+        return list
+    }, [guruData, siswaData])
+
+    // Formatted role information: primary roles and remaining others
+    const { primaryRoles, remainingRolesCount, remainingRolesTooltip } = useMemo(() => {
+        const rawRoles = (user?.roles || []).map((r: string) => r.replace(/_/g, ' '))
+        const mainRoles: string[] = []
+        const otherRoles: string[] = []
+
+        rawRoles.forEach((role: string) => {
+            const upper = role.toUpperCase()
+            if (upper === 'GURU' || upper === 'ADMIN') {
+                mainRoles.push(role)
+            } else {
+                otherRoles.push(role)
+            }
+        })
+
+        if (mainRoles.length === 0 && rawRoles.length > 0) {
+            mainRoles.push(...rawRoles.slice(0, 2))
+            otherRoles.push(...rawRoles.slice(2))
+        }
+
+        if (mainRoles.length === 0) {
+            mainRoles.push(isGuru ? 'Guru' : isSiswa ? 'Siswa' : 'Pengguna')
+        }
+
+        return {
+            primaryRoles: mainRoles,
+            remainingRolesCount: otherRoles.length,
+            remainingRolesTooltip: otherRoles.join(', ')
+        }
+    }, [user?.roles, isGuru, isSiswa])
 
     // Rekening (stored in master_guru columns)
     const [rekeningList, setRekeningList] = useState<Rekening[]>([])
@@ -591,61 +642,58 @@ export default function ProfilePage({ user, onRefreshUser }: ProfilePageProps) {
                 </div>
             , document.body)}
 
-            {/* Standalone Profile Header Banner */}
-            <div className="profile-top-banner">
-                <div className="banner-main-group">
-                    <div className="banner-avatar-wrap">
-                        <div className="banner-avatar-ring">
-                            <div className="banner-avatar">
-                                {uploading ? (
-                                    <div className="banner-loader"><Spinner size={18} color="#ffffff" /></div>
-                                ) : formData.photoUrl ? (
-                                    <img src={getProxiedImageUrl(formData.photoUrl)} alt="Avatar" />
-                                ) : (
-                                    <i className="bi bi-person-circle"></i>
-                                )}
-                            </div>
-                        </div>
-                    </div>
-                    <div className="banner-text">
-                        <h2 className="banner-name">{user.nama || 'Pengguna'}</h2>
-                        <div className="banner-meta">
-                            <span className="meta-item" style={{ fontWeight: 700, fontSize: '1.1rem', color: '#fff' }}>{user.nip || 'N/A'}</span>
-                            <span className="meta-divider"></span>
-                            <span className="meta-item" style={{ opacity: 0.7 }}>@{user.username || '-'}</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div className="banner-tags">
-                    {(user.roles || []).map((role: string, i: number) => (
-                        <span key={i} className="banner-tag">{role}</span>
-                    ))}
-                    {user.divisi && (
-                        <span className="banner-tag banner-tag--divisi">{user.divisi}</span>
-                    )}
-                </div>
+            {/* Universal Tabs Navigation (Tanpa Banner) */}
+            <div className="profile-tabs-wrapper">
+                <Tab
+                    tabs={tabs}
+                    activeTab={activeTab}
+                    onChange={setActiveTab}
+                    ariaLabel="Navigasi Profil"
+                    variant="slider"
+                />
             </div>
 
-            {/* Standalone Glass Card for Tab Contents */}
+            {/* Standalone Card for Tab Contents */}
             <div className="profile-card premium-glass-card">
-
-                {/* Modern Tab Navigation */}
-                <div className="profile-nav-tabs">
-                    <button className={`nav-tab ${activeTab === 'akun' ? 'active' : ''}`} onClick={() => setActiveTab('akun')}>
-                        <span>Akun & Keamanan</span>
-                    </button>
-                    {(guruData || siswaData) && (
-                        <button className={`nav-tab ${activeTab === 'data-diri' ? 'active' : ''}`} onClick={() => setActiveTab('data-diri')}>
-                            <span>Data Diri</span>
-                        </button>
-                    )}
-
-                </div>
 
                 {/* ── Tab: Akun & Keamanan ── */}
                 {activeTab === 'akun' && (
                     <form onSubmit={handleSubmitAccount} className="profile-tab-content">
+
+                        {/* Simple & Clean Identity Strip */}
+                        <div className="ps-identity-bar">
+                            <div className="pib-avatar-ring">
+                                <div className="pib-avatar">
+                                    {uploading ? (
+                                        <div className="pib-avatar-loading"><Spinner size={16} color="var(--n-primary)" /></div>
+                                    ) : formData.photoUrl ? (
+                                        <img src={getProxiedImageUrl(formData.photoUrl)} alt="Avatar" />
+                                    ) : (
+                                        <i className="bi bi-person-fill"></i>
+                                    )}
+                                </div>
+                            </div>
+                            <div className="pib-info">
+                                <div className="pib-name-row">
+                                    <h2 className="pib-name">{user.nama || user.username || 'Pengguna'}</h2>
+                                </div>
+                                <div className="pib-meta">
+                                    <span className="pib-meta-item">
+                                        NIP: <strong>{user.nip || '-'}</strong>
+                                    </span>
+                                </div>
+                                <div className="pib-roles-row">
+                                    {primaryRoles.map((role, idx) => (
+                                        <span key={idx} className="pib-badge role">{role}</span>
+                                    ))}
+                                    {remainingRolesCount > 0 && (
+                                        <span className="pib-badge more" title={remainingRolesTooltip}>
+                                            +{remainingRolesCount} lainnya
+                                        </span>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
 
                         {/* Layout Grid */}
                         <div className="ps-glass-grid">
@@ -855,18 +903,20 @@ export default function ProfilePage({ user, onRefreshUser }: ProfilePageProps) {
                                             <div className="ps-section-info"><h3>Informasi Kepegawaian</h3></div>
                                         </div>
                                         <div className="ps-section-body">
-                                            <div className="ps-identity-grid">
-                                                <div className="ps-id-card">
-                                                    <span className="ps-id-label">Nama Lengkap</span>
-                                                    <span className="ps-id-value">{guruData?.nama_lengkap || '-'}</span>
+                                            <div className="ps-kepegawaian-summary">
+                                                <div className="ps-ks-item">
+                                                    <span className="ps-ks-label">Nama Lengkap</span>
+                                                    <span className="ps-ks-val">{guruData?.nama_lengkap || '-'}</span>
                                                 </div>
-                                                <div className="ps-id-card">
-                                                    <span className="ps-id-label">NIP</span>
-                                                    <span className="ps-id-value">{guruData?.nip || '-'}</span>
+                                                <div className="ps-ks-divider" />
+                                                <div className="ps-ks-item">
+                                                    <span className="ps-ks-label">NIP</span>
+                                                    <span className="ps-ks-val font-mono">{guruData?.nip || '-'}</span>
                                                 </div>
-                                                <div className="ps-id-card">
-                                                    <span className="ps-id-label">Pangkat / Golongan</span>
-                                                    <span className="ps-id-value">{[guruData?.pangkat, guruData?.golongan].filter(Boolean).join(' / ') || '-'}</span>
+                                                <div className="ps-ks-divider" />
+                                                <div className="ps-ks-item">
+                                                    <span className="ps-ks-label">Pangkat / Golongan</span>
+                                                    <span className="ps-ks-val">{[guruData?.pangkat, guruData?.golongan].filter(Boolean).join(' / ') || '-'}</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -1221,86 +1271,159 @@ export default function ProfilePage({ user, onRefreshUser }: ProfilePageProps) {
 
 
             <style jsx>{`
-    /* PROFIL SAYA - Minimalist Premium Design */
+    /* PROFIL SAYA - Modern Minimalist Design */
     .profile-container, .profile-container *, .profile-container *::before, .profile-container *::after { box-sizing: border-box; }
-    .profile-container { padding: 0; display: flex; flex-direction: column; align-items: center; gap: 16px; width: 100%; max-width: 100%; min-height: 80vh; overflow-x: hidden; }
-    .premium-glass-card { background: var(--n-card); width: 100%; max-width: 1100px; border-radius: 16px; border: 1px solid var(--n-border); overflow: hidden; animation: psFadeUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-    @keyframes psFadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
-
-    /* ════════════════════════════════
-       PROFILE HEADER — Blue Magenta Dashboard Style
-    ════════════════════════════════ */
-    .profile-top-banner {
-        width: 100%;
-        max-width: 1100px;
-        background: var(--banner-bg, var(--banner-bg, linear-gradient(135deg, var(--n-primary) 0%, #c2185b 100%)));
-        padding: 24px 36px;
-        border-radius: 24px;
-        border: none;
-        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+    .profile-container {
+        padding: 4px 0 32px;
         display: flex;
         flex-direction: column;
-        gap: 16px;
-        color: white;
-        position: relative;
-        overflow: hidden;
+        align-items: stretch;
+        gap: 12px;
+        width: 100%;
+        max-width: 1100px;
+        margin: 0 auto;
+        min-height: 80vh;
     }
-    .banner-main-group {
+
+    .profile-tabs-wrapper {
+        width: 100%;
+        display: flex;
+        justify-content: flex-start;
+    }
+
+    .premium-glass-card {
+        background: var(--n-card);
+        width: 100%;
+        max-width: 1100px;
+        border-radius: 16px;
+        border: 1px solid var(--n-border);
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+        overflow: hidden;
+        animation: psFadeUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+    @keyframes psFadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* ════════════════════════════════
+       SIMPLE & CLEAN IDENTITY BAR
+    ════════════════════════════════ */
+    .ps-identity-bar {
+        background: var(--n-bg);
+        border: 1px solid var(--n-border);
+        border-radius: 12px;
+        padding: 12px 18px;
+        margin-bottom: 6px;
         display: flex;
         align-items: center;
-        gap: 20px;
-        z-index: 2;
+        gap: 14px;
+        transition: all 0.2s ease;
     }
-    .profile-top-banner::before {
-        content: '';
+    .pib-avatar-ring {
+        width: 58px;
+        height: 58px;
+        border-radius: 14px;
+        border: 1.5px solid var(--n-border);
+        background: var(--n-card);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+        flex-shrink: 0;
+        position: relative;
+    }
+    .pib-avatar {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.6rem;
+        color: var(--n-muted);
+    }
+    .pib-avatar img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+    .pib-avatar-loading {
         position: absolute;
-        top: -30%;
-        right: -5%;
-        width: 220px;
-        height: 220px;
-        background: radial-gradient(circle, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0) 70%);
-        pointer-events: none;
-        filter: blur(30px);
+        inset: 0;
+        background: rgba(255, 255, 255, 0.7);
+        display: flex;
+        align-items: center;
+        justify-content: center;
     }
-    .profile-top-banner::after {
-        content: '';
-        position: absolute;
-        bottom: -25%;
-        left: -4%;
-        width: 180px;
-        height: 180px;
-        background: radial-gradient(circle, rgba(194, 24, 91, 0.3) 0%, rgba(194, 24, 91, 0) 70%);
-        pointer-events: none;
-        filter: blur(25px);
+    .pib-info {
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+        min-width: 0;
+        flex: 1;
+        justify-content: center;
     }
-    .banner-avatar-area { position: relative; flex-shrink: 0; z-index: 2; }
-    .banner-avatar-ring {
-        width: 72px; height: 72px; border-radius: 18px;
-        border: 2.5px solid rgba(255, 255, 255, 0.3);
-        overflow: hidden; display: flex; align-items: center; justify-content: center;
-        background: rgba(255, 255, 255, 0.1);
-        backdrop-filter: blur(10px);
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+    .pib-name-row {
+        display: flex;
+        align-items: center;
     }
-    .banner-avatar { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 1.9rem; color: rgba(255, 255, 255, 0.7); background: transparent; }
-    .banner-avatar img { width: 100%; height: 100%; object-fit: cover; }
-    .banner-text { flex: 1; min-width: 180px; z-index: 2; }
-    .banner-name { margin: 0 0 5px; font-size: 1.4rem; font-weight: 800; color: white; letter-spacing: -0.02em; line-height: 1.2; }
-    .banner-meta { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; font-size: 0.8rem; color: rgba(255, 255, 255, 0.75); flex-wrap: wrap; }
-    .meta-item { display: flex; align-items: center; gap: 5px; }
-    .meta-item.divider { opacity: 0.35; margin: 0; }
-    .banner-tags { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; }
-    .banner-tag { padding: 3px 9px; border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 7px; font-size: 0.65rem; font-weight: 700; color: rgba(255, 255, 255, 0.75); text-transform: uppercase; letter-spacing: 0.04em; display: flex; align-items: center; gap: 4px; transition: all 0.2s; backdrop-filter: blur(6px); }
-    .banner-tag:hover { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.35); color: white; }
-    .banner-tag.divisi { background: rgba(255, 255, 255, 0.12); border-color: rgba(255, 255, 255, 0.3); color: white; }
-    .banner-status { flex-shrink: 0; z-index: 2; display: flex; align-items: center; gap: 10px; margin-left: auto; }
-    .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #4ade80; box-shadow: 0 0 0 3px rgba(74, 222, 128, 0.15); }
-    .status-label { font-size: 0.72rem; font-weight: 700; color: rgba(255, 255, 255, 0.85); }
-
-    /* Tab Navigation */
-    .profile-nav-tabs { display: flex; gap: 0; padding: 0 36px; background: var(--n-bg); border-bottom: 1px solid var(--n-border); }
-    .nav-tab { padding: 14px 18px; border: none; background: transparent; color: var(--n-muted); font-weight: 600; font-size: 0.85rem; cursor: pointer; transition: color 0.2s; display: flex; align-items: center; gap: 6px; border-bottom: 2px solid transparent; margin-bottom: -1px; white-space: nowrap; }
-    .nav-tab:hover { color: var(--n-ink); }
+    .pib-name {
+        margin: 0;
+        font-size: 1.08rem;
+        font-weight: 700;
+        color: var(--n-ink);
+        letter-spacing: -0.01em;
+        line-height: 1.25;
+    }
+    .pib-meta {
+        display: flex;
+        align-items: center;
+        font-size: 0.78rem;
+        color: var(--n-muted);
+        line-height: 1.3;
+    }
+    .pib-meta-item strong {
+        color: var(--n-ink);
+        font-weight: 600;
+        margin-left: 2px;
+    }
+    .pib-roles-row {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        flex-wrap: wrap;
+        margin-top: 2px;
+    }
+    .pib-badge {
+        padding: 2.5px 8px;
+        border-radius: 6px;
+        font-size: 0.65rem;
+        font-weight: 700;
+        letter-spacing: 0.02em;
+        line-height: 1.3;
+        display: inline-flex;
+        align-items: center;
+    }
+    .pib-badge.role {
+        background: rgba(48, 131, 255, 0.08);
+        color: var(--n-primary, #3083FF);
+        border: 1px solid rgba(48, 131, 255, 0.2);
+    }
+    .pib-badge.more {
+        background: var(--n-border);
+        color: var(--n-muted);
+        cursor: help;
+    }
+    .pib-meta-item {
+        display: inline-flex;
+        align-items: center;
+    }
+    .pib-meta-item strong {
+        color: var(--n-ink);
+        font-weight: 600;
+        margin-left: 3px;
+    }
+    .pib-sep {
+        color: var(--n-border);
+        font-size: 0.7rem;
+    }
     .nav-tab.active { color: var(--n-primary); border-bottom-color: var(--n-primary); font-weight: 700; }
     .nav-badge { background: var(--n-primary); color: white; font-size: 0.6rem; font-weight: 800; padding: 2px 6px; border-radius: 20px; line-height: 1.4; }
 
@@ -1370,11 +1493,47 @@ export default function ProfilePage({ user, onRefreshUser }: ProfilePageProps) {
     .ps-gen-copy { padding: 0 10px; height: 32px; border-radius: 7px; border: none; background: var(--n-primary); color: white; font-size: 0.68rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 4px; flex-shrink: 0; transition: all 0.2s; }
     .ps-gen-copy:hover { background: var(--n-primary-light); }
 
-    /* Identity Cards */
-    .ps-identity-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 9px; width: 100%; max-width: 100%; }
-    .ps-id-card { background: var(--n-card); border: 1px solid var(--n-border); border-left: 3px solid var(--n-primary); padding: 12px 14px; border-radius: 9px; display: flex; flex-direction: column; gap: 2px; width: 100%; max-width: 100%; box-sizing: border-box; overflow: hidden; }
-    .ps-id-label { font-size: 0.58rem; font-weight: 800; color: var(--n-muted); text-transform: uppercase; letter-spacing: 0.05em; }
-    .ps-id-value { font-size: 0.85rem; font-weight: 700; color: var(--n-ink); word-break: break-word; overflow-wrap: anywhere; }
+    /* Kepegawaian Summary Strip */
+    .ps-kepegawaian-summary {
+        background: var(--n-bg);
+        border: 1px solid var(--n-border);
+        border-radius: 12px;
+        padding: 12px 18px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        width: 100%;
+        box-sizing: border-box;
+    }
+    .ps-ks-item {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        flex: 1;
+        min-width: 0;
+    }
+    .ps-ks-divider {
+        width: 1px;
+        height: 28px;
+        background: var(--n-border);
+        flex-shrink: 0;
+    }
+    .ps-ks-label {
+        font-size: 0.65rem;
+        font-weight: 700;
+        color: var(--n-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+    }
+    .ps-ks-val {
+        font-size: 0.92rem;
+        font-weight: 700;
+        color: var(--n-ink);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
 
     /* ════════════════════════════════
        BANK / REKENING — Table Layout & Mobile Cards
@@ -1680,20 +1839,22 @@ export default function ProfilePage({ user, onRefreshUser }: ProfilePageProps) {
     :global(.dark) .ps-modal-overlay { background: rgba(0,0,0,0.85); }
     :global(.dark) .camera-modal { background: rgba(0,0,0,0.88); }
     :global(.dark) .crop-overlay { background: rgba(0,0,0,0.90); }
+    :global(.dark) .ps-identity-bar { background: #000000 !important; border: 1.5px solid rgba(26, 115, 232, 0.4) !important; }
+    :global(.dark) .pib-avatar-ring { background: #000000 !important; border-color: rgba(26, 115, 232, 0.5) !important; }
+    :global(.dark) .pib-name { color: #f1f5f9 !important; }
+    :global(.dark) .pib-badge.more { background: rgba(255, 255, 255, 0.1) !important; color: #94a3b8 !important; }
+    :global(.dark) .pib-sep { color: rgba(255, 255, 255, 0.2) !important; }
+    :global(.dark) .ps-kepegawaian-summary { background: #000000 !important; border: 1.5px solid rgba(26, 115, 232, 0.4) !important; }
+    :global(.dark) .ps-ks-divider { background: rgba(26, 115, 232, 0.25) !important; }
+    :global(.dark) .ps-ks-val { color: #f1f5f9 !important; }
 
     /* Responsive */
     @media (max-width: 900px) {
         .ps-glass-grid, .ps-form-columns, .ps-identity-grid { display: flex !important; flex-direction: column !important; gap: 14px !important; width: 100% !important; min-width: 0 !important; }
-        .banner-content { flex-direction: column; text-align: left; gap: 14px; }
-        .banner-avatar-area { margin: 0; }
-        .banner-status { margin-left: 0; }
         .ps-glass-footer { flex-direction: column; }
         .ps-footer-note { max-width: 100%; }
         .ps-btn-submit-premium { width: 100%; justify-content: center; }
-        .profile-nav-tabs { overflow-x: auto; padding: 0 20px; }
-        .nav-tab { padding: 12px 12px; font-size: 0.82rem; }
-        .profile-tab-content { padding: 20px 20px; }
-        .ps-tab-content { padding: 20px 20px; }
+        .profile-tab-content, .ps-tab-content { padding: 18px 16px; }
         .ps-aa-filters { flex-direction: column; }
         .ps-filter-select, .ps-aa-filters .ps-filter-select { width: 100%; min-width: unset; }
         .ps-aa-stats { flex-direction: row; }
@@ -1703,62 +1864,50 @@ export default function ProfilePage({ user, onRefreshUser }: ProfilePageProps) {
         .ps-aa-cards-wrap { display: flex; }
     }
     @media (max-width: 640px) {
-        .profile-container { padding: 0; overflow-x: hidden; width: 100%; max-width: 100%; }
-        .profile-top-banner {
-            padding: 16px 14px 18px;
-            border-radius: 18px;
-            gap: 14px;
-            width: 100%;
-            max-width: 100%;
-        }
+        .profile-container { padding: 0 0 24px; overflow-x: hidden; width: 100%; max-width: 100%; }
         .premium-glass-card {
-            border-radius: 16px;
+            border-radius: 14px;
             width: 100%;
             max-width: 100%;
         }
-        .banner-main-group {
-            display: flex;
+        .ps-identity-bar {
+            padding: 10px 12px;
+            gap: 10px;
+        }
+        .ps-kepegawaian-summary {
+            flex-direction: column;
+            align-items: stretch;
+            gap: 10px;
+            padding: 12px 14px;
+        }
+        .ps-ks-divider {
+            width: 100%;
+            height: 1px;
+        }
+        .ps-ks-item {
+            flex-direction: row;
+            justify-content: space-between;
             align-items: center;
+        }
+        .ps-ks-val {
+            text-align: right;
+            font-size: 0.88rem;
+        }
+        .pib-avatar-group {
             gap: 12px;
             width: 100%;
         }
-        .banner-avatar-ring {
-            width: 58px;
-            height: 58px;
+        .pib-avatar-ring {
+            width: 52px;
+            height: 52px;
             border-radius: 14px;
-            flex-shrink: 0;
         }
-        .banner-text {
-            flex: 1;
-            min-width: 0;
+        .pib-name {
+            font-size: 1.05rem;
         }
-        .banner-name {
-            font-size: 1.1rem;
-            margin-bottom: 3px;
-            word-break: break-word;
-        }
-        .banner-meta {
-            font-size: 0.78rem;
-            gap: 6px;
-            margin-bottom: 0;
-        }
-        .banner-tags {
-            width: 100%;
-            display: flex;
-            flex-wrap: wrap;
-            gap: 6px;
-            padding-top: 10px;
-            border-top: 1px solid rgba(255, 255, 255, 0.15);
-        }
-        :global(.dark) .banner-tags {
-            border-top-color: rgba(26, 115, 232, 0.25);
-        }
-        .banner-tag {
-            padding: 4px 9px;
-            border-radius: 8px;
-            font-size: 0.65rem;
-            font-weight: 700;
-            letter-spacing: 0.03em;
+        .pib-meta {
+            gap: 8px;
+            font-size: 0.72rem;
         }
         .profile-tab-content, .ps-tab-content {
             padding: 14px 10px;

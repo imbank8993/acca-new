@@ -1,4 +1,5 @@
 'use client';
+import Pagination from '@/components/ui/Pagination';
 
 import { useState, useEffect, useMemo } from 'react';
 import Swal from 'sweetalert2';
@@ -73,7 +74,9 @@ export default function TahunAjaranTab({ user }: { user?: any }) {
     const [list, setList] = useState<TahunAjaran[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
-    const [statusFilter, setStatusFilter] = useState('semua');
+    const [statusFilter, setStatusFilter] = useState('semua')
+    const [page, setPage] = useState(1)
+    const [pageSize, setPageSize] = useState(10);
     const [showModal, setShowModal] = useState(false);
     const [newTahun, setNewTahun] = useState('');
     const [newSemester, setNewSemester] = useState('Ganjil');
@@ -242,6 +245,8 @@ export default function TahunAjaranTab({ user }: { user?: any }) {
         }
     };
 
+    useEffect(() => { setPage(1); }, [searchTerm, statusFilter]);
+
     const filteredList = useMemo(() => {
         return list.filter(item => {
             const matchSearch = !searchTerm ||
@@ -259,6 +264,12 @@ export default function TahunAjaranTab({ user }: { user?: any }) {
 
     const namaLengkap = (item: TahunAjaran) =>
         `${item.tahun_ajaran} · ${capitalize(item.semester)}`;
+
+    const totalPages = Math.ceil(filteredList.length / pageSize);
+    const paginatedList = useMemo(() => {
+        const start = (page - 1) * pageSize;
+        return filteredList.slice(start, start + pageSize);
+    }, [filteredList, page, pageSize]);
 
     /* ------------------------------- Mobile ------------------------------- */
 
@@ -280,7 +291,7 @@ export default function TahunAjaranTab({ user }: { user?: any }) {
                 />
             ) : (
                 <MobileList label="Daftar tahun ajaran">
-                    {filteredList.map(item => {
+                    {paginatedList.map(item => {
                         const berjalan = sedangBerjalan(item, now)
                         return (
                             <MobileListItem
@@ -302,6 +313,15 @@ export default function TahunAjaranTab({ user }: { user?: any }) {
                     })}
                 </MobileList>
             )}
+            <Pagination
+                currentPage={page}
+                totalPages={totalPages}
+                limit={pageSize}
+                totalItems={filteredList.length}
+                onPageChange={setPage}
+                onLimitChange={setPageSize}
+                itemLabel="tahun ajaran"
+            />
         </>
     )
 
@@ -356,9 +376,9 @@ export default function TahunAjaranTab({ user }: { user?: any }) {
                         ) : filteredList.length === 0 ? (
                             <tr><td colSpan={isAdmin ? 5 : 4} className="sk__empty sk__muted">Belum ada data tahun ajaran.</td></tr>
                         ) : (
-                            filteredList.map((item, idx) => (
+                            paginatedList.map((item, idx) => (
                                 <tr key={item.id}>
-                                    <td className="tCenter">{idx + 1}</td>
+                                    <td className="tCenter">{((page - 1) * pageSize) + idx + 1}</td>
                                     <td className="font-bold text-blue-600">{item.tahun_ajaran}</td>
                                     <td className="tCenter">
                                         <span className={`sk__semesterBadge ${item.semester.toLowerCase()}`}>
@@ -389,6 +409,15 @@ export default function TahunAjaranTab({ user }: { user?: any }) {
                     </tbody>
                 </table>
             </div>
+            <Pagination
+                currentPage={page}
+                totalPages={totalPages}
+                limit={pageSize}
+                totalItems={filteredList.length}
+                onPageChange={setPage}
+                onLimitChange={setPageSize}
+                itemLabel="tahun ajaran"
+            />
         </>
     )
 

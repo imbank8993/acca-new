@@ -33,5 +33,9 @@ jobs:
             echo "🧹 Bersihkan image lama..."
             docker image prune -f
 
+            echo "🧹 Bersihkan Nginx Proxy Cache & reload Nginx..."
+            rm -rf /www/server/nginx/proxy_cache_dir/* 2>/dev/null || true
+            nginx -s reload 2>/dev/null || systemctl reload nginx 2>/dev/null || true
+
             echo "✅ Deploy selesai!"
             docker compose ps

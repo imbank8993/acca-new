@@ -62,7 +62,7 @@ function DokumentasiTab({ reports, loading, isAdminOrOpJurnal }: { reports: Pike
     const [searchDoc, setSearchDoc] = useState('');
     const [filterDateDoc, setFilterDateDoc] = useState('');
     const [currentDocPage, setCurrentDocPage] = useState(1);
-    const [itemsPerDocPage, setItemsPerDocPage] = useState(12);
+    const [itemsPerDocPage, setItemsPerDocPage] = useState(10);
     const [lightboxMeta, setLightboxMeta] = useState<{ url: string; kelas: string; guru: string; tanggal: string; guruPiket: string } | null>(null);
 
     // Flatten all dokumentasi items from reports
