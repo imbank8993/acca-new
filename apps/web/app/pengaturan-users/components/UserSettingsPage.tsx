@@ -138,9 +138,9 @@ export default function UserSettingsPage({ initialTab, user }: { initialTab?: st
           gap: 12px;
         }
 
-        /* Dark mode - Pitch Black & Electric Blue Standard */
+        /* Dark mode - Dark Navy & Electric Blue Standard */
         :global(.dark) .us-header {
-          background: #000000 !important;
+          background: #0b1329 !important;
           border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
           border-radius: 16px !important;
           box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5) !important;

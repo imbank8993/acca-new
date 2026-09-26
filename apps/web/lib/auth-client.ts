@@ -88,8 +88,12 @@ export async function getCurrentUser(): Promise<User | null> {
         }
 
         return user;
-    } catch (err) {
-        console.error('[auth-client] Failed to fetch /api/auth/me:', err);
+    } catch (err: any) {
+        if (err?.name === 'TypeError' && err?.message === 'Failed to fetch') {
+            console.debug('[auth-client] Network error while fetching /api/auth/me (offline or server recompiling)');
+        } else {
+            console.error('[auth-client] Failed to fetch /api/auth/me:', err);
+        }
         return null;
     }
 }

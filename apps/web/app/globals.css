@@ -707,13 +707,13 @@ select:not(.kh-input) {
 /* Global Form Resets for Dark Mode */
 .dark .form-input:not(.ck-form-input):not(.gap-select):not(.ig-form-control):not(.sv-input):not(.kl-input),
 .dark .form-select:not(.ck-form-input):not(.gap-select):not(.pk__select):not(.ig-filter-select):not(.sv-select):not(.kl-select):not(.kl-selectStat):not(.ps-select),
-.dark select:not(.ck-form-input):not(.ck-filter-select):not(.gap-select):not(.bk-field select):not(.bk-form select):not(.pk__select):not(.ig-filter-select):not(.ig-form-control):not(.sv-select):not(.sv-select-dark):not(.kl-select):not(.um__select):not(.uk-ta-dropdown):not(.ig-input):not(.ig-select):not(.kl-selectStat):not(.nl__adminFilterSelect):not(.udt-role-filter__select):not(.ps-select):not(.gak__taSelect):not(.hsm__taSelect):not(.wkj-select-group select):not(.wka-select-group select):not(.wkn-filter-group select):not(.wkm-filter-group select):not(.wke-select-group select):not(.ftb-input):not(.kh-input),
+.dark select:not(.ck-form-input):not(.ck-filter-select):not(.gap-select):not(.bk-field select):not(.bk-form select):not(.pk__select):not(.ig-filter-select):not(.ig-form-control):not(.sv-select):not(.sv-select-dark):not(.kl-select):not(.um__select):not(.uk-ta-dropdown):not(.ig-input):not(.ig-select):not(.kl-selectStat):not(.nl__adminFilterSelect):not(.udt-role-filter__select):not(.ps-select):not(.gak__taSelect):not(.hsm__taSelect):not(.wkj-select-group select):not(.wka-select-group select):not(.wkn-filter-group select):not(.wkm-filter-group select):not(.wke-select-group select):not(.ftb-input):not(.kh-input):not(.dh-select),
 .dark input[type="text"]:not([role="combobox"]):not(.sidebar-search-input):not(.pm-search-input):not(.mc-search input):not(.ck-form-input):not(.gap-search-wrap input):not(.bk-field input):not(.piket-toolbar input):not(.doc-toolbar input):not(.pk input):not(.ig-form-control):not(.ig-search-input):not(.sv-input):not(.kl-input):not(.kl-search):not(.um__input):not(.um__mobileScoreInput):not(.kl-inputTable):not(.ig-input):not(.ptt-search__input):not(.dr__searchMainInput):not(.dr__searchBox input):not(.search-wrap input):not(.wkn-search input):not(.wkm-search input):not(.wke-search input):not(.ftb-input):not(.kh-input):not(.mui-input):not(.sk__pendidikanRow input),
 
 .dark input[type="date"]:not(.ck-form-input):not(.bk-field input):not(.pk__dateInput):not(.ig-form-control):not(.sv-input):not(.kl-input):not(.ig-input),
 .dark input[type="number"]:not(.ck-form-input):not(.gap-select):not(.ig-form-control):not(.sv-input):not(.kl-input):not(.um__mobileScoreInput):not(.kl-inputTable):not(.ig-input),
 .dark textarea:not(.ck-form-input):not(.bk-form textarea):not(.pk__textarea):not(.ig-form-control):not(.sv-textarea):not(.ig-textarea):not(.ig-input) {
-  background-color: #000000 !important;
+  background-color: #0b1329 !important;
   border-color: rgba(59, 130, 246, 0.4) !important;
   color: #f1f5f9 !important;
 }
@@ -739,7 +739,7 @@ select:not(.kh-input) {
 
 /* Custom Native Select Arrow for Dark Mode */
 .dark .form-select:not(.ck-form-input):not(.ck-filter-select):not(.gap-select):not(.bk-field select):not(.bk-form select):not(.pk__select):not(.ig-filter-select):not(.sv-select):not(.kl-select):not(.kl-selectStat):not(.nl__adminFilterSelect):not(.ps-select),
-.dark select:not(.ck-form-input):not(.ck-filter-select):not(.gap-select):not(.bk-field select):not(.bk-form select):not(.pk__select):not(.ig-filter-select):not(.ig-form-control):not(.sv-select):not(.sv-select-dark):not(.kl-select):not(.um__select):not(.uk-ta-dropdown):not(.kl-selectStat):not(.nl__adminFilterSelect):not(.udt-role-filter__select):not(.ps-select):not(.gak__taSelect):not(.wkj-select-group select):not(.wka-select-group select):not(.wkn-filter-group select):not(.wkm-filter-group select):not(.wke-select-group select):not(.ftb-input):not(.kh-input):not(.uisel-input) {
+.dark select:not(.ck-form-input):not(.ck-filter-select):not(.gap-select):not(.bk-field select):not(.bk-form select):not(.pk__select):not(.ig-filter-select):not(.ig-form-control):not(.sv-select):not(.sv-select-dark):not(.kl-select):not(.um__select):not(.uk-ta-dropdown):not(.kl-selectStat):not(.nl__adminFilterSelect):not(.udt-role-filter__select):not(.ps-select):not(.gak__taSelect):not(.wkj-select-group select):not(.wka-select-group select):not(.wkn-filter-group select):not(.wkm-filter-group select):not(.wke-select-group select):not(.ftb-input):not(.kh-input):not(.uisel-input):not(.dh-select) {
   appearance: none !important;
   -webkit-appearance: none !important;
   background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiM2MGE1ZmEiIHN0cm9rZS13aWR0aD0iMi41IiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiPjxwb2x5bGluZSBwb2ludHM9IjYgOSAxMiAxNSAxOCA5Ij48L3BvbHlsaW5lPjwvc3ZnPg==") !important;
@@ -6318,30 +6318,89 @@ html.dark body .swal2-popup button.swal2-styled.swal2-confirm.swal-btn-danger:ho
   }
 
   .kehadiran-page__stats-grid {
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 6px !important;
+    margin-bottom: 12px !important;
   }
 
   .kehadiran-page__stat-card {
-    padding: 14px;
-    flex-direction: column;
-    align-items: flex-start;
-    text-align: left;
-    gap: 10px;
+    padding: 8px 4px !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    text-align: center !important;
+    gap: 3px !important;
+    border-radius: 12px !important;
+    min-width: 0 !important;
+    height: 100% !important;
   }
 
   .kehadiran-page__stat-icon {
-    width: 40px;
-    height: 40px;
-    font-size: 1.1rem;
+    width: 28px !important;
+    height: 28px !important;
+    border-radius: 8px !important;
+    margin: 0 auto 2px !important;
+  }
+
+  .kehadiran-page__stat-svg {
+    width: 14px !important;
+    height: 14px !important;
+  }
+
+  .kehadiran-page__stat-body {
+    width: 100% !important;
+    text-align: center !important;
+    min-width: 0 !important;
+  }
+
+  .kehadiran-page__stat-label {
+    font-size: 0.6rem !important;
+    font-weight: 700 !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    max-width: 100% !important;
+    letter-spacing: -0.01em !important;
+    margin-bottom: 1px !important;
   }
 
   .kehadiran-page__stat-value {
-    font-size: 1.1rem;
+    font-size: 1.05rem !important;
+    font-weight: 800 !important;
+    line-height: 1.1 !important;
+    margin: 1px 0 !important;
+  }
+
+  .kehadiran-page__stat-sub {
+    font-size: 0.58rem !important;
+    line-height: 1.1 !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    max-width: 100% !important;
+    margin-top: 1px !important;
+    display: block !important;
   }
 
   .kehadiran-page__mobile-cards {
-    display: flex;
+    display: flex !important;
+    flex-direction: column !important;
+    padding: 0 !important;
+    gap: 10px !important;
+    width: 100% !important;
+  }
+
+  .kehadiran-page__mobile-card {
+    width: 100% !important;
+    padding: 12px 14px !important;
+    border-radius: 14px !important;
+    margin: 0 !important;
+    box-sizing: border-box !important;
+    gap: 8px !important;
+  }
+
+  .kehadiran-page__mobile-card-meta {
+    display: none !important;
   }
 }
 /* =========================================================
@@ -6788,7 +6847,7 @@ html.dark .office-notice {
 .dark .waktu__toolbar,
 .dark .ekskul__toolbar,
 .dark .md__toolbar {
-  background: #000000 !important;
+  background: #0b1329 !important;
   border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
   border-radius: 18px !important;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5) !important;
@@ -6805,7 +6864,7 @@ html.dark .office-notice {
 .dark .ekskul__table,
 .dark .ds-table,
 .dark .md__table {
-  background: #000000 !important;
+  background: #0b1329 !important;
   color: #e2e8f0 !important;
 }
 
@@ -6819,7 +6878,7 @@ html.dark .office-notice {
 .dark .ekskul__table th,
 .dark .ds-table th,
 .dark .md__table th {
-  background: #000000 !important;
+  background: #0b1329 !important;
   color: #94a3b8 !important;
   border-bottom: 1.5px solid rgba(59, 130, 246, 0.35) !important;
 }
@@ -6834,7 +6893,7 @@ html.dark .office-notice {
 .dark .ekskul__table td,
 .dark .ds-table td,
 .dark .md__table td {
-  background: #000000 !important;
+  background: #0b1329 !important;
   color: #e2e8f0 !important;
   border-bottom: 1px solid rgba(59, 130, 246, 0.2) !important;
 }
@@ -7265,7 +7324,7 @@ table.sk__table td {
 }
 
 .dark .sk__tableWrap {
-  background: #000000 !important;
+  background: #0b1329 !important;
   border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
   border-radius: 18px !important;
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.6) !important;
@@ -7273,12 +7332,12 @@ table.sk__table td {
 }
 
 .dark .sk__table {
-  background: #000000 !important;
+  background: #0b1329 !important;
   border: none !important;
 }
 
 .dark .sk__table thead th {
-  background: #000000 !important;
+  background: #0b1329 !important;
   color: #94a3b8 !important;
   border-bottom: 1.5px solid rgba(26, 115, 232, 0.4) !important;
   font-size: 0.68rem !important;
@@ -7288,7 +7347,7 @@ table.sk__table td {
 }
 
 .dark .sk__table tbody td {
-  background: #000000 !important;
+  background: #0b1329 !important;
   color: #e2e8f0 !important;
   border-bottom: 1px solid rgba(26, 115, 232, 0.15) !important;
   font-size: 0.88rem !important;
@@ -7304,14 +7363,14 @@ table.sk__table td {
 
 /* Grouped table header row */
 .dark .sk__group {
-  background: #000000 !important;
+  background: #0b1329 !important;
   border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5) !important;
 }
 
 .dark .sk__groupHead,
 .dark .sk__groupHeader {
-  background: #000000 !important;
+  background: #0b1329 !important;
   border-bottom: 1.5px solid rgba(26, 115, 232, 0.4) !important;
 }
 
@@ -7890,19 +7949,19 @@ table.sk__table td {
 }
 
 
-.dark .est__btn { background: #000000 !important; border: 1.5px solid rgba(26,115,232,0.5) !important; color: #e2e8f0 !important; border-radius: 12px !important; }
+.dark .est__btn { background: #0b1329 !important; border: 1.5px solid rgba(26,115,232,0.5) !important; color: #e2e8f0 !important; border-radius: 12px !important; }
 .dark .est__btnPrimary { background: #1a73e8 !important; border: 1.5px solid #3b82f6 !important; color: #ffffff !important; box-shadow: 0 0 14px rgba(26,115,232,0.5) !important; }
-.dark .est__btnGhost { background: #000000 !important; border: 1.5px solid rgba(26,115,232,0.4) !important; color: #e2e8f0 !important; }
+.dark .est__btnGhost { background: #0b1329 !important; border: 1.5px solid rgba(26,115,232,0.4) !important; color: #e2e8f0 !important; }
 .dark .est__btnDanger { background: #ef4444 !important; border: 1.5px solid #f87171 !important; color: #ffffff !important; }
 
 .dark .est__tableWrap {
-  background: #000000 !important;
+  background: #0b1329 !important;
   border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
   border-radius: 18px !important;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5) !important;
 }
-.dark .est__table th { background: #000000 !important; color: #94a3b8 !important; border-bottom: 1.5px solid rgba(26,115,232,0.4) !important; }
-.dark .est__table td { background: #000000 !important; color: #e2e8f0 !important; border-bottom: 1px solid rgba(26,115,232,0.15) !important; }
+.dark .est__table th { background: #0b1329 !important; color: #94a3b8 !important; border-bottom: 1.5px solid rgba(26,115,232,0.4) !important; }
+.dark .est__table td { background: #0b1329 !important; color: #e2e8f0 !important; border-bottom: 1px solid rgba(26,115,232,0.15) !important; }
 .dark .est__table tbody tr:hover td { background: rgba(26,115,232,0.06) !important; }
 
 .dark .est__badge.isOn { background: rgba(14,165,233,0.15) !important; color: #38bdf8 !important; }
@@ -7913,7 +7972,7 @@ table.sk__table td {
 .dark .est__iconBtn.danger { background: rgba(244,63,94,0.1) !important; border-color: rgba(244,63,94,0.35) !important; color: #fb7185 !important; }
 .dark .est__iconBtn.danger:hover { background: #ef4444 !important; border-color: #ef4444 !important; color: #ffffff !important; }
 
-.dark .est__group { background: #000000 !important; border: 1.8px solid rgba(26,115,232,0.75) !important; }
+.dark .est__group { background: #0b1329 !important; border: 1.8px solid rgba(26,115,232,0.75) !important; }
 .dark .est__groupHeader { background: rgba(26,115,232,0.06) !important; border-bottom: 1.5px solid rgba(26,115,232,0.3) !important; }
 .dark .est__groupTitle { color: #e2e8f0 !important; }
 .dark .est__groupTitle i { color: #38bdf8 !important; }
@@ -7926,19 +7985,19 @@ table.sk__table td {
 .dark .est__siswaId { color: #94a3b8 !important; }
 .dark .est__siswaCardBottom { border-top-color: rgba(26,115,232,0.2) !important; }
 
-.dark .est__modal { background: #000000 !important; border: 1.8px solid rgba(26,115,232,0.75) !important; box-shadow: 0 20px 60px rgba(0,0,0,0.95) !important; }
-.dark .est__modalHead { background: #000000 !important; border-bottom: 1px solid rgba(37, 99, 235, 0.4) !important; }
+.dark .est__modal { background: #0b1329 !important; border: 1.8px solid rgba(26,115,232,0.75) !important; box-shadow: 0 20px 60px rgba(0,0,0,0.95) !important; }
+.dark .est__modalHead { background: #0b1329 !important; border-bottom: 1px solid rgba(37, 99, 235, 0.4) !important; }
 .dark .est__modalHead h3 { color: #ffffff !important; }
 .dark .est__modalClose { background: rgba(26,115,232,0.08) !important; border: 1px solid rgba(26,115,232,0.35) !important; color: #94a3b8 !important; }
-.dark .est__modalBody { background: #000000 !important; }
-.dark .est__modalFoot { background: #000000 !important; border-top: 1px solid rgba(37, 99, 235, 0.4) !important; }
+.dark .est__modalBody { background: #0b1329 !important; }
+.dark .est__modalFoot { background: #0b1329 !important; border-top: 1px solid rgba(37, 99, 235, 0.4) !important; }
 .dark .est__formGroup label { color: #94a3b8 !important; }
 
 /* ==========================================================
    RELASI ORANG TUA TAB (ors-) — PITCH BLACK + NEON BLUE
    ========================================================== */
 
-.dark .ors-stat { background: #000000 !important; border: 1.8px solid rgba(26,115,232,0.75) !important; box-shadow: 0 4px 16px rgba(0,0,0,0.5) !important; }
+.dark .ors-stat { background: #0b1329 !important; border: 1.8px solid rgba(26,115,232,0.75) !important; box-shadow: 0 4px 16px rgba(0,0,0,0.5) !important; }
 .dark .ors-statValue { color: #e2e8f0 !important; }
 .dark .ors-statLabel { color: #94a3b8 !important; }
 
@@ -7965,7 +8024,7 @@ table.sk__table td {
   min-height: 40px !important;
   max-height: 40px !important;
   box-sizing: border-box !important;
-  background: #000000 !important;
+  background: #0b1329 !important;
   border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
   border-radius: 12px !important;
   color: #ffffff !important;
@@ -7979,7 +8038,7 @@ table.sk__table td {
   min-height: 40px !important;
   max-height: 40px !important;
   box-sizing: border-box !important;
-  background-color: #000000 !important;
+  background-color: #0b1329 !important;
   border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
   border-radius: 12px !important;
   color: #ffffff !important;
@@ -7995,10 +8054,10 @@ table.sk__table td {
 
 .dark .ors-btnAdd { background: #1a73e8 !important; border: 1.5px solid #3b82f6 !important; color: #ffffff !important; box-shadow: 0 0 14px rgba(26,115,232,0.5) !important; }
 
-.dark .ors-card { background: #000000 !important; border: 1.8px solid rgba(26,115,232,0.75) !important; box-shadow: 0 4px 20px rgba(0,0,0,0.5) !important; }
+.dark .ors-card { background: #0b1329 !important; border: 1.8px solid rgba(26,115,232,0.75) !important; box-shadow: 0 4px 20px rgba(0,0,0,0.5) !important; }
 
-.dark .ors-table th { background: #000000 !important; color: #94a3b8 !important; border-bottom: 1.5px solid rgba(26,115,232,0.4) !important; }
-.dark .ors-table td { background: #000000 !important; color: #e2e8f0 !important; border-bottom: 1px solid rgba(26,115,232,0.15) !important; }
+.dark .ors-table th { background: #0b1329 !important; color: #94a3b8 !important; border-bottom: 1.5px solid rgba(26,115,232,0.4) !important; }
+.dark .ors-table td { background: #0b1329 !important; color: #e2e8f0 !important; border-bottom: 1px solid rgba(26,115,232,0.15) !important; }
 .dark .ors-table tr:hover td { background: rgba(26,115,232,0.06) !important; }
 
 .dark .ors-ortuNama { color: #e2e8f0 !important; }
@@ -8011,18 +8070,18 @@ table.sk__table td {
 .dark .ors-iconBtn.isDanger { background: rgba(244,63,94,0.08) !important; border-color: rgba(244,63,94,0.35) !important; color: #fb7185 !important; }
 .dark .ors-iconBtn.isDanger:hover { background: #ef4444 !important; border-color: #ef4444 !important; color: #ffffff !important; }
 
-.dark .ors-modal { background: #000000 !important; border: 1.8px solid rgba(26,115,232,0.75) !important; box-shadow: 0 20px 60px rgba(0,0,0,0.95) !important; }
-.dark .ors-modalHead { background: #000000 !important; border-bottom: 1px solid rgba(37, 99, 235, 0.4) !important; }
+.dark .ors-modal { background: #0b1329 !important; border: 1.8px solid rgba(26,115,232,0.75) !important; box-shadow: 0 20px 60px rgba(0,0,0,0.95) !important; }
+.dark .ors-modalHead { background: #0b1329 !important; border-bottom: 1px solid rgba(37, 99, 235, 0.4) !important; }
 .dark .ors-modalHead h2 { color: #ffffff !important; }
 .dark .ors-close { color: #94a3b8 !important; }
-.dark .ors-modalBody { background: #000000 !important; }
-.dark .ors-modalFoot { background: #000000 !important; border-top: 1px solid rgba(37, 99, 235, 0.4) !important; }
+.dark .ors-modalBody { background: #0b1329 !important; }
+.dark .ors-modalFoot { background: #0b1329 !important; border-top: 1px solid rgba(37, 99, 235, 0.4) !important; }
 .dark .ors-label { color: #94a3b8 !important; }
 
-.dark .ors-combo input { background: #000000 !important; border: 1.5px solid rgba(26,115,232,0.5) !important; color: #ffffff !important; border-radius: 10px !important; }
+.dark .ors-combo input { background: #0b1329 !important; border: 1.5px solid rgba(26,115,232,0.5) !important; color: #ffffff !important; border-radius: 10px !important; }
 .dark .ors-combo input:focus { border-color: #1a73e8 !important; }
 
-.dark .ors-dropdown { background: #000000 !important; border: 1.5px solid rgba(26,115,232,0.6) !important; box-shadow: 0 8px 24px rgba(0,0,0,0.8), 0 0 16px rgba(26,115,232,0.2) !important; }
+.dark .ors-dropdown { background: #0b1329 !important; border: 1.5px solid rgba(26,115,232,0.6) !important; box-shadow: 0 8px 24px rgba(0,0,0,0.8), 0 0 16px rgba(26,115,232,0.2) !important; }
 .dark .ors-dropdown button { background: transparent !important; color: #e2e8f0 !important; }
 .dark .ors-dropdown button:hover:not(:disabled) { background: rgba(26,115,232,0.1) !important; }
 .dark .ors-dropdown button span { color: #94a3b8 !important; }
@@ -8035,10 +8094,10 @@ table.sk__table td {
 .dark .ors-radio { background: rgba(26,115,232,0.04) !important; border-color: rgba(26,115,232,0.35) !important; color: #94a3b8 !important; }
 .dark .ors-radio.isActive { border-color: #1a73e8 !important; background: rgba(26,115,232,0.15) !important; color: #60a5fa !important; box-shadow: 0 0 8px rgba(26,115,232,0.3) !important; }
 
-.dark .ors-btnGhost { background: #000000 !important; border: 1.5px solid rgba(26,115,232,0.4) !important; color: #e2e8f0 !important; }
+.dark .ors-btnGhost { background: #0b1329 !important; border: 1.5px solid rgba(26,115,232,0.4) !important; color: #e2e8f0 !important; }
 .dark .ors-btnPrimary { background: #1a73e8 !important; border: 1.5px solid #3b82f6 !important; color: #ffffff !important; box-shadow: 0 0 14px rgba(26,115,232,0.5) !important; }
 
-.dark .ors-mCard { background: #000000 !important; border: 1.8px solid rgba(26,115,232,0.75) !important; }
+.dark .ors-mCard { background: #0b1329 !important; border: 1.8px solid rgba(26,115,232,0.75) !important; }
 .dark .ors-mCardHeader { border-bottom-color: rgba(26,115,232,0.3) !important; }
 .dark .ors-mCardFooter { border-top-color: rgba(26,115,232,0.3) !important; }
 
@@ -8300,3 +8359,18 @@ html.dark body .db__agenda-dot-marker {
   color: #94a3b8 !important;
 }
 
+
+/* ── Ketidakhadiran Page Wrap Gap ─────────────────────────── */
+.kh-page-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+  min-width: 0;
+}
+
+@media (max-width: 767.98px) {
+  .kh-page-wrap {
+    gap: 14px;
+  }
+}

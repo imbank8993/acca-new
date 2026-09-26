@@ -1459,10 +1459,10 @@ export default function RoleManagementTab() {
         /* =========================================================
            DARK MODE STANDARD (PITCH BLACK & ELECTRIC BLUE)
            ========================================================= */
-        :global(.dark) .dr__toolbar,
+         :global(.dark) .dr__toolbar,
         :global(.dark) .dr__tableWrapper,
         :global(.dark) .dr__card {
-          background: #000000 !important;
+          background: #0b1329 !important;
           border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
           border-radius: 16px !important;
           box-shadow: 0 4px 20px rgba(0,0,0,0.6) !important;
@@ -1474,7 +1474,7 @@ export default function RoleManagementTab() {
           color: #94a3b8 !important;
         }
         :global(.dark) .dr__table td {
-          background: #000000 !important;
+          background: #0b1329 !important;
           border-bottom: 1px solid rgba(26, 115, 232, 0.2) !important;
           color: #cbd5e1 !important;
         }
@@ -1485,7 +1485,7 @@ export default function RoleManagementTab() {
         :global(.dark) .dr__formGroup input,
         :global(.dark) .dr__searchBox,
         :global(.dark) .dr__select {
-          background: #000000 !important;
+          background: #0b1329 !important;
           border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
           border-radius: 12px !important;
           color: #e2e8f0 !important;
@@ -1493,7 +1493,7 @@ export default function RoleManagementTab() {
 
         /* Detail Modal Dark Mode */
         :global(.dark) .dr__detailHero {
-          background: linear-gradient(135deg, rgba(26, 115, 232, 0.12) 0%, rgba(0, 0, 0, 0.9) 100%) !important;
+          background: linear-gradient(135deg, rgba(26, 115, 232, 0.12) 0%, rgba(11, 19, 41, 0.9) 100%) !important;
           border: 1.8px solid rgba(26, 115, 232, 0.6) !important;
         }
         :global(.dark) .dr__heroIcon {
@@ -1519,7 +1519,7 @@ export default function RoleManagementTab() {
         }
         
         :global(.dark) .dr__statCard {
-          background: #000000 !important;
+          background: #0b1329 !important;
           border: 1px solid rgba(37, 99, 235, 0.4) !important;
         }
         :global(.dark) .dr__statCardLbl {
@@ -1534,7 +1534,7 @@ export default function RoleManagementTab() {
 
         :global(.dark) .dr__detailCategorySelectWrap .dr__detailSelect,
         :global(.dark) .dr__detailSearchBox {
-          background: #000000 !important;
+          background: #0b1329 !important;
           border-color: rgba(26, 115, 232, 0.5) !important;
           color: #f1f5f9 !important;
         }
@@ -1545,7 +1545,7 @@ export default function RoleManagementTab() {
           color: #60a5fa !important;
         }
         :global(.dark) .dr__btnMiniToggle {
-          background: #000000 !important;
+          background: #0b1329 !important;
           border-color: rgba(26, 115, 232, 0.4) !important;
           color: #93c5fd !important;
         }
@@ -1555,7 +1555,7 @@ export default function RoleManagementTab() {
         }
 
         :global(.dark) .dr__groupAccordion {
-          background: #000000 !important;
+          background: #0b1329 !important;
           border: 1.5px solid rgba(26, 115, 232, 0.45) !important;
         }
         :global(.dark) .dr__groupHeaderBtn {
@@ -1578,7 +1578,7 @@ export default function RoleManagementTab() {
         }
 
         :global(.dark) .dr__groupPagesList {
-          background: #000000 !important;
+          background: #0b1329 !important;
         }
         :global(.dark) .dr__pageItemCard {
           border-bottom-color: rgba(26, 115, 232, 0.18) !important;
@@ -1599,7 +1599,7 @@ export default function RoleManagementTab() {
         }
 
         :global(.dark) .dr__footerActionLink {
-          background: #000000 !important;
+          background: #0b1329 !important;
           border-color: rgba(26, 115, 232, 0.5) !important;
           color: #60a5fa !important;
         }
@@ -1609,14 +1609,14 @@ export default function RoleManagementTab() {
         }
 
         :global(.dark) .dr__intelPanel {
-          background: #000000 !important;
+          background: #0b1329 !important;
           border-color: rgba(26, 115, 232, 0.5) !important;
         }
         :global(.dark) .dr__intelStatItem,
         :global(.dark) .dr__intelGroup,
         :global(.dark) .dr__intelPageCard,
         :global(.dark) .dr__intelEmpty {
-          background: #000000 !important;
+          background: #0b1329 !important;
           border-color: rgba(26, 115, 232, 0.35) !important;
         }
         :global(.dark) .dr__intelGroupTitle {
@@ -1639,7 +1639,7 @@ export default function RoleManagementTab() {
         }
 
         :global(.dark) .dr__btn--outline {
-          background: #000000 !important;
+          background: #0b1329 !important;
           border-color: rgba(26, 115, 232, 0.4) !important;
           color: #60a5fa !important;
         }
@@ -1654,7 +1654,7 @@ export default function RoleManagementTab() {
         }
 
         :global(.dark) .dr__userItem {
-          background: #000000 !important;
+          background: #0b1329 !important;
           border-color: rgba(26, 115, 232, 0.3) !important;
         }
         :global(.dark) .dr__userItem--has .dr__userAvatar {

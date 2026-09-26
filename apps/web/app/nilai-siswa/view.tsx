@@ -2,7 +2,7 @@
 import Pagination from '@/components/ui/Pagination';
 import MaintenanceBanner from '@/components/MaintenanceBanner';
 import { Spinner } from '@/components/ui/Spinner';
-import DetailHeader, { DetailHeaderSelect } from '@/components/ui/DetailHeader';
+import DetailHeader from '@/components/ui/DetailHeader';
 import FilterToolbar, { FilterSearch, FilterSelect } from '@/components/ui/FilterToolbar';
 import Button from '@/components/ui/Button';
 import { ActionButton } from '@/components/ui/ActionButtons';
@@ -37,6 +37,7 @@ interface NilaiItem {
     updated_at: string;
     nama_guru: string;
     topik?: string | null;
+    kkm?: number;
 }
 
 interface SiswaInfo {
@@ -135,8 +136,10 @@ function NilaiSiswaPage() {
     const [apresiasi, setApresiasi] = useState<ApresiasiItem[]>([]);
     const [selectedTahunAjaran, setSelectedTahunAjaran] = useState('');
     const [selectedSemester, setSelectedSemester] = useState('');
+    const [selectedMapel, setSelectedMapel] = useState('');
     const [availableTahunAjaran, setAvailableTahunAjaran] = useState<string[]>([]);
     const [availableSemester, setAvailableSemester] = useState<string[]>([]);
+    const [kkmMap, setKkmMap] = useState<Record<string, number>>({});
 
     // Student selector state
     const [allStudents, setAllStudents] = useState<StudentWithKelas[]>([]);
@@ -205,7 +208,7 @@ function NilaiSiswaPage() {
         });
     }, [data, selectedTahunAjaran, selectedSemester]);
 
-    /** Disaring mengikuti pemilih tahun ajaran & semester yang sama dengan tabel nilai. */
+    /** Disaring mengikuti pemilih tahun ajaran, semester, dan mapel yang sama dengan tabel nilai. */
     const currentApresiasi = useMemo(() => {
         // selectedSemester berisi angka dalam bentuk string ("1"/"2") — kunci
         // grouped dibuat dengan String(r.semester) di app/api/nilai/siswa/route.ts.
@@ -214,9 +217,10 @@ function NilaiSiswaPage() {
         return apresiasi.filter(a => {
             if (selectedTahunAjaran && a.tahun_ajaran && a.tahun_ajaran !== selectedTahunAjaran) return false;
             if (semNum !== null && a.semester !== null && a.semester !== semNum) return false;
+            if (selectedMapel && a.mapel && a.mapel !== selectedMapel) return false;
             return true;
         });
-    }, [apresiasi, selectedTahunAjaran, selectedSemester]);
+    }, [apresiasi, selectedTahunAjaran, selectedSemester, selectedMapel]);
 
     const groupedByMapel = useMemo(() => {
         const grouped: Record<string, NilaiItem[]> = {};
@@ -228,20 +232,32 @@ function NilaiSiswaPage() {
         return grouped;
     }, [currentItems]);
 
-    const mapelList = useMemo(() => Object.keys(groupedByMapel).sort(), [groupedByMapel]);
+    /** Daftar seluruh mapel yang ada pada tahun ajaran & semester terpilih */
+    const availableMapel = useMemo(() => Object.keys(groupedByMapel).sort(), [groupedByMapel]);
+
+    /** Daftar mapel yang ditampilkan setelah disaring pemilih mapel */
+    const displayedMapelList = useMemo(() => {
+        if (!selectedMapel) return availableMapel;
+        return availableMapel.filter(m => m === selectedMapel);
+    }, [availableMapel, selectedMapel]);
+
+    const displayedItems = useMemo(() => {
+        if (!selectedMapel) return currentItems;
+        return currentItems.filter(i => i.mapel === selectedMapel);
+    }, [currentItems, selectedMapel]);
 
     const stats = useMemo(() => {
-        const validItems = currentItems.filter(i => i.nilai !== null);
+        const validItems = displayedItems.filter(i => i.nilai !== null);
         const avg = validItems.length > 0
             ? validItems.reduce((sum, i) => sum + (i.nilai || 0), 0) / validItems.length
             : null;
         return {
-            total: currentItems.length,
-            mapel: mapelList.length,
+            total: displayedItems.length,
+            mapel: displayedMapelList.length,
             avg,
-            kelas: [...new Set(currentItems.map(i => i.kelas))].join(', ') || '-'
+            kelas: [...new Set(displayedItems.map(i => i.kelas))].join(', ') || '-'
         };
-    }, [currentItems, mapelList]);
+    }, [displayedItems, displayedMapelList]);
 
     // --- Callbacks ---
     const checkAuth = useCallback(async () => {
@@ -352,13 +368,33 @@ function NilaiSiswaPage() {
             if (!json.ok) throw new Error(json.error || 'Gagal memuat data nilai');
 
             setData(json.data || null);
+
+            // Ekstrak KKM konfigurasi guru jika ada
+            const kkmDict: Record<string, number> = {};
+            if (Array.isArray((json as any).bobot)) {
+                (json as any).bobot.forEach((b: any) => {
+                    const cfg = b.bobot_config;
+                    if (b.mapel && cfg && typeof cfg.kkm === 'number' && cfg.kkm > 0) {
+                        kkmDict[b.mapel] = Number(cfg.kkm);
+                    }
+                });
+            }
+            if (Array.isArray(json.data?.all)) {
+                json.data.all.forEach((item: any) => {
+                    if (item.mapel && item.kkm && !kkmDict[item.mapel]) {
+                        kkmDict[item.mapel] = Number(item.kkm);
+                    }
+                });
+            }
+            setKkmMap(kkmDict);
+
             if (json.data?.grouped) {
                 // Pilihan tahun ajaran HANYA yang aktif di master_tahun_ajaran —
                 // tahun nonaktif tidak ditawarkan. Fallback ke tahun yang punya
                 // data hanya bila tidak ada TA aktif sama sekali.
                 const activeYears = await getActiveTahunAjaranList();
                 const dataYears = Object.keys(json.data.grouped);
-                const tahunList = [...new Set(activeYears.length > 0 ? activeYears : dataYears)]
+                const tahunList = [...new Set<string>(activeYears.length > 0 ? activeYears : dataYears)]
                     .sort((a, b) => b.localeCompare(a));
                 setAvailableTahunAjaran(tahunList);
                 if (tahunList.length > 0) setSelectedTahunAjaran(tahunList[0]);
@@ -399,6 +435,8 @@ function NilaiSiswaPage() {
         setFilterKelas('');
         setFilterTahunAjaran('');
         setSearchQuery('');
+        setSelectedMapel('');
+        setKkmMap({});
         setCurrentPage(1);
     }, []);
 
@@ -418,6 +456,13 @@ function NilaiSiswaPage() {
         }
     }, [data, selectedTahunAjaran]);
 
+    // Reset filter mapel jika mapel terpilih tidak ada pada data baru
+    useEffect(() => {
+        if (selectedMapel && !availableMapel.includes(selectedMapel)) {
+            setSelectedMapel('');
+        }
+    }, [availableMapel, selectedMapel]);
+
     // Reset page when filters change
     useEffect(() => { setCurrentPage(1); }, [filterKelas, filterTahunAjaran, searchQuery]);
 
@@ -429,10 +474,22 @@ function NilaiSiswaPage() {
         return s;
     };
 
-    const getNilaiBadge = (nilai: number | null, kkm = 75) => {
-        if (nilai === null) return { bg: 'nilai-page__nilai-badge--none', label: '-' };
-        if (nilai >= kkm) return { bg: 'nilai-page__nilai-badge--tuntas', label: String(nilai) };
-        return { bg: 'nilai-page__nilai-badge--remedial', label: String(nilai) };
+    const getNilaiBadge = (nilai: number | null | undefined, kkm = 75) => {
+        if (nilai === null || nilai === undefined) return { cls: 'nilai-page__nilai-badge--none', label: '-' };
+        const val = Number(nilai);
+        const highThreshold = Math.max(kkm + 10, 85);
+        if (val < kkm) return { cls: 'nilai-page__nilai-badge--merah', label: String(val) };
+        if (val < highThreshold) return { cls: 'nilai-page__nilai-badge--orange', label: String(val) };
+        return { cls: 'nilai-page__nilai-badge--biru', label: String(val) };
+    };
+
+    const getAvgBadgeCls = (avg: number | null | undefined, kkm = 75) => {
+        if (avg === null || avg === undefined) return 'nilai-page__avg-badge--none';
+        const val = Number(avg);
+        const highThreshold = Math.max(kkm + 10, 85);
+        if (val < kkm) return 'nilai-page__avg-badge--merah';
+        if (val < highThreshold) return 'nilai-page__avg-badge--orange';
+        return 'nilai-page__avg-badge--biru';
     };
 
     const getJenisBadge = (jenis: string) => {
@@ -635,38 +692,50 @@ function NilaiSiswaPage() {
     return (
         <div className="nilai-page">
             <div className="nilai-page__inner">
-                {/* Detail Header with Back Button and Integrated Tahun Ajaran & Semester Selectors */}
+                {/* Detail Header with Back Button */}
                 <DetailHeader
                     onBack={isAdmin && !(isOrangTua && allStudents.length <= 1) ? handleResetSelection : undefined}
                     name={data?.siswa?.nama_lengkap || selectedStudent?.nama || 'Siswa'}
                     meta={`NISN ${data?.siswa?.nisn || (isAdmin ? selectedNisn : user?.nip)}${data?.kelas?.[0]?.kelas ? ` - ${data.kelas[0].kelas}` : ''}`}
-                >
-                    {availableTahunAjaran.length > 0 && (
-                        <DetailHeaderSelect
-                            icon="calendar-event"
-                            value={selectedTahunAjaran}
-                            onChange={(e) => setSelectedTahunAjaran(e.target.value)}
-                        >
-                            {availableTahunAjaran.map((ta) => (
-                                <option key={ta} value={ta}>{ta}</option>
-                            ))}
-                        </DetailHeaderSelect>
-                    )}
-                    {availableSemester.length > 0 && (
-                        <DetailHeaderSelect
-                            icon="journal-bookmark"
-                            value={selectedSemester}
-                            onChange={(e) => setSelectedSemester(e.target.value)}
-                        >
-                            {availableSemester.map((sem) => (
-                                <option key={sem} value={sem}>{getSemesterLabel(sem)}</option>
-                            ))}
-                        </DetailHeaderSelect>
-                    )}
-                </DetailHeader>
+                />
 
                 {/* Content */}
                 <div className="nilai-page__content">
+                    {/* Filters Toolbar */}
+                    {(availableTahunAjaran.length > 0 || availableSemester.length > 0 || availableMapel.length > 0) && (
+                        <FilterToolbar className="nilai-page__filter-toolbar">
+                            {availableTahunAjaran.length > 0 && (
+                                <FilterSelect
+                                    label="Tahun Ajaran"
+                                    icon="mortarboard"
+                                    value={selectedTahunAjaran}
+                                    onChange={setSelectedTahunAjaran}
+                                    options={availableTahunAjaran.map((ta) => ({ value: ta, label: ta }))}
+                                />
+                            )}
+                            {availableSemester.length > 0 && (
+                                <FilterSelect
+                                    label="Semester"
+                                    icon="journal-bookmark"
+                                    value={selectedSemester}
+                                    onChange={setSelectedSemester}
+                                    options={availableSemester.map((sem) => ({ value: sem, label: getSemesterLabel(sem) }))}
+                                />
+                            )}
+                            {availableMapel.length > 0 && (
+                                <FilterSelect
+                                    label="Mapel"
+                                    icon="book"
+                                    value={selectedMapel}
+                                    onChange={setSelectedMapel}
+                                    options={[
+                                        { value: '', label: 'Semua Mapel' },
+                                        ...availableMapel.map((m) => ({ value: m, label: m }))
+                                    ]}
+                                />
+                            )}
+                        </FilterToolbar>
+                    )}
                     {/* Stats Cards */}
                     <div className="nilai-page__stats-grid">
                         {[
@@ -690,13 +759,13 @@ function NilaiSiswaPage() {
                     </div>
 
                     {/* Grades */}
-                    {mapelList.length === 0 ? (
+                    {displayedMapelList.length === 0 ? (
                         <div className="nilai-page__card nilai-page__empty-state">
                             <h3 className="nilai-page__empty-title">Belum ada data</h3>
                         </div>
                     ) : (
                     <div className="nilai-page__mapel-list">
-                        {mapelList.map((mapel) => {
+                        {displayedMapelList.map((mapel) => {
                             const items = groupedByMapel[mapel];
                             const itemsWithInfo = items.map(i => ({
                                 ...i,
@@ -774,6 +843,8 @@ function NilaiSiswaPage() {
                                 }
                             }
 
+                            const mapelKkm = items.find(i => i.kkm)?.kkm || kkmMap[mapel] || 75;
+
                             const avg = items.filter(i => i.nilai !== null).length > 0
                                 ? items.reduce((sum, i) => sum + (i.nilai || 0), 0) / items.filter(i => i.nilai !== null).length
                                 : null;
@@ -788,12 +859,12 @@ function NilaiSiswaPage() {
                                                 </svg>
                                             </div>
                                             <div className="nilai-page__mapel-info">
-                                                <h3 className="nilai-page__mapel-title">{mapel}</h3>
-                                                <p className="nilai-page__mapel-guru" style={{ fontSize: '0.85rem', color: 'var(--n-muted)', marginTop: '2px', fontWeight: 500 }}>{Array.from(new Set(items.map(i => i.nama_guru).filter(Boolean))).join(', ')}</p>
+                                                <h3 className="nilai-page__mapel-title" style={{ fontWeight: 500 }}>{mapel}</h3>
+                                                <p className="nilai-page__mapel-guru" style={{ fontSize: '0.75rem', color: 'var(--n-muted)', marginTop: '2px', fontWeight: 500 }}>{Array.from(new Set(items.map(i => i.nama_guru).filter(Boolean))).join(', ')}</p>
                                             </div>
                                         </div>
                                         {avg !== null && (
-                                            <div className={`nilai-page__avg-badge ${avg >= 75 ? 'nilai-page__avg-badge--tuntas' : 'nilai-page__avg-badge--remedial'}`}>
+                                            <div className={`nilai-page__avg-badge ${getAvgBadgeCls(avg, mapelKkm)}`}>
                                                 <svg className="nilai-page__avg-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                                                 </svg>
@@ -816,7 +887,8 @@ function NilaiSiswaPage() {
                                                 <tbody>
                                                     {tableRows.map((item, idx) => {
                                                         const jenis = getJenisBadge(item.jenis);
-                                                        const nilai = getNilaiBadge(item.nilai);
+                                                        const itemKkm = item.kkm || mapelKkm;
+                                                        const nilai = getNilaiBadge(item.nilai, itemKkm);
                                                         return (
                                                             <tr key={item.id || idx} className="nilai-page__tr">
                                                                 {item.rowSpan > 0 && (
@@ -844,7 +916,7 @@ function NilaiSiswaPage() {
                                                                     {item.info.sumGroup !== 'PAS' ? item.info.actualTopic : '-'}
                                                                 </td>
                                                                 <td className="nilai-page__td nilai-page__td--right">
-                                                                    <span className={`nilai-page__nilai-badge ${nilai.bg}`}>{nilai.label}</span>
+                                                                    <span className={`nilai-page__nilai-badge ${nilai.cls}`}>{nilai.label}</span>
                                                                 </td>
                                                             </tr>
                                                         );
@@ -856,7 +928,8 @@ function NilaiSiswaPage() {
                                         {/* Mobile Cards */}
                                         <div className="nilai-page__mobile-cards" style={{ gap: '10px' }}>
                                             {tableRows.map((item, idx) => {
-                                                const nilai = getNilaiBadge(item.nilai);
+                                                const itemKkm = item.kkm || mapelKkm;
+                                                const nilai = getNilaiBadge(item.nilai, itemKkm);
                                                 const isSumGroup = item.info.sumGroup !== '-' && item.info.sumGroup !== 'PAS';
                                                 
                                                 return (
@@ -900,7 +973,7 @@ function NilaiSiswaPage() {
                                                                         </span>
                                                                     )}
                                                                 </div>
-                                                                <span className={`nilai-page__nilai-badge ${nilai.bg}`}>
+                                                                <span className={`nilai-page__nilai-badge ${nilai.cls}`}>
                                                                     {nilai.label}
                                                                 </span>
                                                             </div>

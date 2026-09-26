@@ -78,7 +78,7 @@ export default function KetidakhadiranPage(props: { user?: any }) {
     }, [allowedKeys, mainTab, setMainTab, defaultTab]);
 
     return (
-        <>
+        <div className="kh-page-wrap">
             <Tab
                 tabs={availableTabs}
                 activeTab={allowedKeys.includes(mainTab) ? mainTab : defaultTab}
@@ -99,6 +99,6 @@ export default function KetidakhadiranPage(props: { user?: any }) {
             ) : (
                 <KehadiranSiswaTab />
             )}
-        </>
+        </div>
     );
 }

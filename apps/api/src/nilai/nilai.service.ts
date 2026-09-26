@@ -762,14 +762,40 @@ export class NilaiService {
       }
     }
 
+    const bobotRows = nipSet.size > 0 ? await this.prisma.nilai_bobot.findMany({
+      where: { nip: { in: Array.from(nipSet) } },
+      select: { nip: true, kelas: true, mapel: true, semester: true, tahun_ajaran: true, bobot_config: true },
+    }) : [];
+
+    const bobotKkmMap = new Map<string, number>();
+    for (const b of bobotRows) {
+      const cfg = b.bobot_config as any;
+      if (cfg && typeof cfg.kkm === 'number' && cfg.kkm > 0) {
+        const k1 = `${b.nip}_${b.kelas}_${b.mapel}_${b.semester}_${b.tahun_ajaran}`;
+        const k2 = `${b.kelas}_${b.mapel}_${b.semester}_${b.tahun_ajaran}`;
+        const k3 = `${b.mapel}_${b.semester}`;
+        const k4 = `${b.mapel}`;
+        bobotKkmMap.set(k1, cfg.kkm);
+        if (!bobotKkmMap.has(k2)) bobotKkmMap.set(k2, cfg.kkm);
+        if (!bobotKkmMap.has(k3)) bobotKkmMap.set(k3, cfg.kkm);
+        if (!bobotKkmMap.has(k4)) bobotKkmMap.set(k4, cfg.kkm);
+      }
+    }
+
     const enriched = data.map((r) => {
       const k1 = `${r.nip}_${r.kelas}_${r.mapel}_${r.semester}_${r.tahun_ajaran}_${r.jenis}_${r.materi_tp}_${r.tagihan}`;
       const k2 = `${r.nip}_${r.kelas}_${r.mapel}_${r.semester}_${r.tahun_ajaran}_${r.jenis}_${r.materi_tp}_`;
       const topik = tagihanMap.get(k1) || tagihanMap.get(k2) || null;
+      const kkm = bobotKkmMap.get(`${r.nip}_${r.kelas}_${r.mapel}_${r.semester}_${r.tahun_ajaran}`)
+        || bobotKkmMap.get(`${r.kelas}_${r.mapel}_${r.semester}_${r.tahun_ajaran}`)
+        || bobotKkmMap.get(`${r.mapel}_${r.semester}`)
+        || bobotKkmMap.get(`${r.mapel}`)
+        || 75;
       return {
         ...r,
         nama_guru: guruMap.get(r.nip) || r.nip,
         topik,
+        kkm,
       };
     });
 

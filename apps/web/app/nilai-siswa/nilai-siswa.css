@@ -49,13 +49,13 @@
 
 .nilai-page__mapel-title {
   font-size: 1.05rem;
-  font-weight: 800;
+  font-weight: 500 !important;
   color: #0f172a;
   line-height: 1.25;
 }
 
 .nilai-page__mapel-guru {
-  font-size: 0.825rem;
+  font-size: 0.75rem;
   color: #64748b;
   font-weight: 500;
 }
@@ -64,19 +64,44 @@
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
-  padding: 0.25rem 0.5rem;
-  font-size: 1rem;
+  padding: 0.3rem 0.75rem;
+  border-radius: 10px;
+  font-size: 0.95rem;
   font-weight: 800;
-  color: #0f172a;
-  background: transparent !important;
-  border: none !important;
   box-shadow: none !important;
+}
+
+.nilai-page__avg-badge--merah {
+  background: rgba(239, 68, 68, 0.12) !important;
+  color: #dc2626 !important;
+  border: 1px solid rgba(239, 68, 68, 0.35) !important;
+}
+.nilai-page__avg-badge--merah .nilai-page__avg-icon {
+  color: #dc2626 !important;
+}
+
+.nilai-page__avg-badge--orange {
+  background: rgba(245, 158, 11, 0.12) !important;
+  color: #d97706 !important;
+  border: 1px solid rgba(245, 158, 11, 0.35) !important;
+}
+.nilai-page__avg-badge--orange .nilai-page__avg-icon {
+  color: #d97706 !important;
+}
+
+.nilai-page__avg-badge--biru {
+  background: rgba(37, 99, 235, 0.12) !important;
+  color: #1d4ed8 !important;
+  border: 1px solid rgba(37, 99, 235, 0.35) !important;
+}
+.nilai-page__avg-badge--biru .nilai-page__avg-icon {
+  color: #1d4ed8 !important;
 }
 
 .nilai-page__avg-icon {
   width: 18px;
   height: 18px;
-  color: #0f172a;
+  color: inherit;
 }
 
 /* ── Body & Tabel ────────────────────────────────────────── */
@@ -176,16 +201,47 @@
   font-size: 0.925rem !important;
 }
 
-/* Clean score display (like 60 in image 2) */
+/* Nilai score badge dengan indikator KKM */
 .nilai-page__nilai-badge {
-  background: transparent !important;
-  border: none !important;
-  box-shadow: none !important;
-  color: #0f172a !important;
-  font-size: 0.925rem !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-width: 44px !important;
+  padding: 0.28rem 0.65rem !important;
+  border-radius: 8px !important;
+  font-size: 0.875rem !important;
   font-weight: 800 !important;
-  padding: 0 !important;
-  min-width: auto !important;
+  line-height: 1 !important;
+  text-align: center !important;
+  box-shadow: none !important;
+}
+
+/* Di bawah KKM: Merah */
+.nilai-page__nilai-badge--merah {
+  background: rgba(239, 68, 68, 0.12) !important;
+  color: #dc2626 !important;
+  border: 1px solid rgba(239, 68, 68, 0.35) !important;
+}
+
+/* Di atas KKM: Orange */
+.nilai-page__nilai-badge--orange {
+  background: rgba(245, 158, 11, 0.12) !important;
+  color: #d97706 !important;
+  border: 1px solid rgba(245, 158, 11, 0.35) !important;
+}
+
+/* Nilai Tinggi: Biru Utama */
+.nilai-page__nilai-badge--biru {
+  background: rgba(37, 99, 235, 0.12) !important;
+  color: #1d4ed8 !important;
+  border: 1px solid rgba(37, 99, 235, 0.35) !important;
+}
+
+/* Nilai Kosong (-) */
+.nilai-page__nilai-badge--none {
+  background: rgba(148, 163, 184, 0.1) !important;
+  color: #94a3b8 !important;
+  border: 1px solid transparent !important;
 }
 
 /* Jenis Penilaian Badges (UH, PAS, etc.) */
@@ -250,7 +306,7 @@
 
 .nilai-page__apresiasi-mapel {
   font-size: 0.875rem;
-  font-weight: 800;
+  font-weight: 500 !important;
   color: #0f172a;
 }
 
@@ -295,7 +351,7 @@
 .dark .nilai-page__table-container,
 .dark .nilai-page__legend,
 .dark .nilai-page__apresiasi {
-  background: #000000 !important;
+  background: #0b1329 !important;
   border: 2.2px solid rgba(26, 115, 232, 0.85) !important;
   border-radius: 20px !important;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6) !important;
@@ -306,13 +362,37 @@
   border-bottom: 2px solid rgba(26, 115, 232, 0.5) !important;
 }
 
-.dark .nilai-page__mapel-title { color: #ffffff !important; }
+.dark .nilai-page__mapel-title { color: #ffffff !important; font-weight: 500 !important; }
 .dark .nilai-page__mapel-guru { color: #94a3b8 !important; }
 .dark .nilai-page__mapel-icon { background: #1d6bf3 !important; }
 .dark .nilai-page__mapel-icon-svg { color: #ffffff !important; }
 
-.dark .nilai-page__avg-badge { color: #ffffff !important; }
-.dark .nilai-page__avg-icon { color: #60a5fa !important; }
+.dark .nilai-page__avg-badge--merah {
+  background: rgba(239, 68, 68, 0.2) !important;
+  color: #f87171 !important;
+  border: 1px solid rgba(239, 68, 68, 0.5) !important;
+}
+.dark .nilai-page__avg-badge--merah .nilai-page__avg-icon {
+  color: #f87171 !important;
+}
+
+.dark .nilai-page__avg-badge--orange {
+  background: rgba(245, 158, 11, 0.2) !important;
+  color: #fbbf24 !important;
+  border: 1px solid rgba(245, 158, 11, 0.5) !important;
+}
+.dark .nilai-page__avg-badge--orange .nilai-page__avg-icon {
+  color: #fbbf24 !important;
+}
+
+.dark .nilai-page__avg-badge--biru {
+  background: rgba(29, 107, 243, 0.22) !important;
+  color: #60a5fa !important;
+  border: 1px solid rgba(26, 115, 232, 0.6) !important;
+}
+.dark .nilai-page__avg-badge--biru .nilai-page__avg-icon {
+  color: #60a5fa !important;
+}
 
 .dark .nilai-page__table thead tr {
   background: rgba(26, 115, 232, 0.18) !important;
@@ -324,18 +404,39 @@
 
 .dark .nilai-page__td,
 .dark .nilai-page__td--right {
+  background: #0b1329 !important;
   color: #ffffff !important;
   border-bottom-color: rgba(26, 115, 232, 0.2) !important;
 }
 
 .dark .nilai-page__td--muted { color: #94a3b8 !important; }
 .dark .nilai-page__td--sumatif {
-  background: #000000 !important;
+  background: #0b1329 !important;
   color: #ffffff !important;
 }
 
-.dark .nilai-page__nilai-badge {
-  color: #ffffff !important;
+.dark .nilai-page__nilai-badge--merah {
+  background: rgba(239, 68, 68, 0.2) !important;
+  color: #f87171 !important;
+  border: 1px solid rgba(239, 68, 68, 0.5) !important;
+}
+
+.dark .nilai-page__nilai-badge--orange {
+  background: rgba(245, 158, 11, 0.2) !important;
+  color: #fbbf24 !important;
+  border: 1px solid rgba(245, 158, 11, 0.5) !important;
+}
+
+.dark .nilai-page__nilai-badge--biru {
+  background: rgba(29, 107, 243, 0.22) !important;
+  color: #60a5fa !important;
+  border: 1px solid rgba(26, 115, 232, 0.6) !important;
+}
+
+.dark .nilai-page__nilai-badge--none {
+  background: rgba(148, 163, 184, 0.12) !important;
+  color: #64748b !important;
+  border: 1px solid transparent !important;
 }
 
 .dark .nilai-page__jenis-badge--pas   { background: rgba(29, 107, 243, 0.28) !important; color: #93c5fd !important; }
@@ -348,7 +449,7 @@
   background: rgba(255, 255, 255, 0.04) !important;
   border: 1px solid rgba(37, 99, 235, 0.4) !important;
 }
-.dark .nilai-page__apresiasi-mapel,
+.dark .nilai-page__apresiasi-mapel { color: #e2e8f0 !important; font-weight: 500 !important; }
 .dark .nilai-page__apresiasi-total { color: #e2e8f0 !important; }
 .dark .nilai-page__apresiasi-judul { color: #cbd5e1 !important; }
 .dark .nilai-page__apresiasi-meta { color: #94a3b8 !important; }
@@ -360,7 +461,7 @@
 
 /* ── Stat Card & Inputs Dark Mode ────────────────────── */
 .dark .nilai-page__stat-card {
-  background: #000000 !important;
+  background: #0b1329 !important;
   border: 2.2px solid rgba(26, 115, 232, 0.85) !important;
   border-radius: 14px !important;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5) !important;
@@ -375,7 +476,7 @@
 
 .dark .nilai-page__input,
 .dark .nilai-page__select {
-  background: #000000 !important;
+  background: #0b1329 !important;
   border: 2.2px solid rgba(26, 115, 232, 0.85) !important;
   border-radius: 12px !important;
   color: #ffffff !important;

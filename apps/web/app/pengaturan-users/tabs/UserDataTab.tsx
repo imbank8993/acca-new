@@ -2149,7 +2149,7 @@ export default function UserDataTab({ user }: { user?: User }) {
         :global(.dark) .udt-card,
         :global(.dark) .udt-sheet,
         :global(.dark) .udt-empty {
-          background: #000000 !important;
+          background: #0b1329 !important;
           border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
           border-radius: 16px !important;
           box-shadow: 0 4px 20px rgba(0,0,0,0.6) !important;
@@ -2171,7 +2171,7 @@ export default function UserDataTab({ user }: { user?: User }) {
         }
         :global(.dark) .udt-search,
         :global(.dark) .udt-role-filter {
-          background: #000000 !important;
+          background: #0b1329 !important;
           border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
           border-radius: 12px !important;
           color: #e2e8f0 !important;
@@ -2217,7 +2217,7 @@ export default function UserDataTab({ user }: { user?: User }) {
           color: #94a3b8 !important;
         }
         :global(.dark) .udt-table td {
-          background: #000000 !important;
+          background: #0b1329 !important;
           border-bottom: 1px solid rgba(26, 115, 232, 0.2) !important;
           color: #cbd5e1 !important;
         }
@@ -2251,7 +2251,7 @@ export default function UserDataTab({ user }: { user?: User }) {
           border: 1px solid rgba(239, 68, 68, 0.4) !important;
         }
         :global(.dark) .udt-iconBtn {
-          background: #000000 !important;
+          background: #0b1329 !important;
           border: 1.5px solid rgba(26, 115, 232, 0.4) !important;
           color: #60a5fa !important;
         }
@@ -2260,7 +2260,7 @@ export default function UserDataTab({ user }: { user?: User }) {
           color: #ffffff !important;
         }
         :global(.dark) .udt-iconBtn--danger {
-          background: #000000 !important;
+          background: #0b1329 !important;
           border: 1.5px solid rgba(239, 68, 68, 0.4) !important;
           color: #f87171 !important;
         }
@@ -2279,7 +2279,7 @@ export default function UserDataTab({ user }: { user?: User }) {
           color: #60a5fa !important;
         }
         :global(.dark) .udt-sheet__preview {
-          background: #000000 !important;
+          background: #0b1329 !important;
           border: 1px solid rgba(37, 99, 235, 0.4) !important;
         }
         :global(.dark) .udt-preview-avatar {
@@ -2304,12 +2304,12 @@ export default function UserDataTab({ user }: { user?: User }) {
           color: #60a5fa !important;
         }
         :global(.dark) .udt-sheet__pwbox code {
-          background: #000000 !important;
+          background: #0b1329 !important;
           border: 1px solid rgba(37, 99, 235, 0.4) !important;
           color: #93c5fd !important;
         }
         :global(.dark) .udt-btn--ghost {
-          background: #000000 !important;
+          background: #0b1329 !important;
           border: 1.5px solid rgba(26, 115, 232, 0.4) !important;
           color: #94a3b8 !important;
         }
@@ -2324,7 +2324,7 @@ export default function UserDataTab({ user }: { user?: User }) {
           box-shadow: 0 4px 16px rgba(239, 68, 68, 0.45) !important;
         }
         :global(.dark) .udt-sheet__foot {
-          background: #000000 !important;
+          background: #0b1329 !important;
           border-top-color: rgba(26, 115, 232, 0.4) !important;
         }
         /* ===== END DARK MODE STANDARD ===== */

@@ -24,7 +24,7 @@
 
 .dark {
   /* Google One AI Dark Mode Palette */
-  --sidebar-bg: #000000;
+  --sidebar-bg: #0b1329;
   --sidebar-text: #94a3b8;
   --sidebar-text-active: #e2e8f0;
   --sidebar-accent: #1a73e8;
@@ -86,7 +86,7 @@
 }
 
 .dark .sidebar {
-  background: #000000;
+  background: #0b1329;
   border: none !important;
   border-right: 1px solid var(--sidebar-border) !important;
   box-shadow: none !important;
@@ -528,7 +528,7 @@
 
 .sidebar.collapsed .menu-btn { position: relative; }
 
-.dark .menu-badge-dot { box-shadow: 0 0 0 2px #000; }
+.dark .menu-badge-dot { box-shadow: 0 0 0 2px #0b1329; }
 
 /* Hormati preferensi "kurangi animasi": tanpa itu badge berdenyut halus
    saat baru muncul supaya perubahan angka tidak lolos dari perhatian. */
@@ -809,7 +809,7 @@
 .dark .sso-cbt-btn {
   border-color: #3b82f6;
   color: #60a5fa;
-  background: #000000;
+  background: #0b1329;
 }
 
 .dark .sso-cbt-btn .btn-icon {
@@ -951,7 +951,7 @@
 }
 
 .dark .sidebar-search-box {
-  background: var(--sidebar-bg, #000000) !important;
+  background: var(--sidebar-bg, #0b1329) !important;
   border: 1px solid rgba(59, 130, 246, 0.45) !important;
   box-shadow: none !important;
 }
@@ -991,7 +991,7 @@
 }
 
 .dark .search-kbd {
-  background: #000000 !important;
+  background: #0b1329 !important;
   color: #94a3b8 !important;
   border-color: rgba(37, 99, 235, 0.3) !important;
 }

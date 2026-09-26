@@ -368,7 +368,7 @@ export default function MenuLayoutTab() {
         /* ===== DARK MODE STANDARD ===== */
         :global(.dark) .ml__group,
         :global(.dark) .ml__pool {
-          background: #000000 !important;
+          background: #0b1329 !important;
           border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
           border-radius: 14px !important;
           box-shadow: 0 4px 20px rgba(0,0,0,0.6) !important;
@@ -385,7 +385,7 @@ export default function MenuLayoutTab() {
         }
         :global(.dark) .ml__page,
         :global(.dark) .ml__chip {
-          background: #000000 !important;
+          background: #0b1329 !important;
           border: 1.5px solid rgba(26, 115, 232, 0.4) !important;
         }
         :global(.dark) .ml__btn--primary {

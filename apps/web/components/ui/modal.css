@@ -832,7 +832,7 @@
 .dark .mdl-field__control input,
 .dark .mdl-field__control select,
 .dark .mdl-field__control textarea {
-  background: #000000 !important;
+  background: #0b1329 !important;
   border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
   border-radius: 12px !important;
   color: #ffffff !important;
@@ -851,7 +851,7 @@
 /* ------------------------------ Dark mode -------------------------------- */
 
 .dark .mdl-panel {
-  background: #000000 !important;
+  background: #0b1329 !important;
   border: 1.8px solid rgba(26, 115, 232, 0.75);
   border-radius: 20px;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.95);
@@ -863,7 +863,7 @@
 .dark .mdl-panel--edit { border-color: #38bdf8; }
 
 .dark .mdl-panel--delete {
-  background: #000000 !important;
+  background: #0b1329 !important;
   border: 1px solid rgba(220, 38, 38, 0.35) !important;
   border-radius: 20px !important;
   box-shadow: 0 25px 70px rgba(0, 0, 0, 0.8) !important;
@@ -926,7 +926,7 @@
 }
 
 .dark .mdl-head {
-  background: #000000;
+  background: #0b1329;
   border-bottom: 1px solid rgba(59, 130, 246, 0.35);
 }
 
@@ -966,14 +966,14 @@
   color: #f87171 !important;
 }
 
-.dark .mdl-body { background: #000000; }
+.dark .mdl-body { background: #0b1329; }
 
 /* !important wajib di sini: aturan dasar .mdl-foot menulis
    `background: #ffffff !important`, dan !important mengalahkan deklarasi biasa
    berapa pun spesifisitasnya. Tanpa ini aturan di bawah tidak pernah berlaku —
    footer SETIAP modal di app tetap putih di dark mode. */
 .dark .mdl-foot {
-  background: #000000 !important;
+  background: #0b1329 !important;
   border-top: 1.5px solid rgba(59, 130, 246, 0.35) !important;
 }
 
@@ -999,7 +999,7 @@
   color: #94a3b8 !important;
 }
 .dark .sk__dateList {
-  background: #000000 !important;
+  background: #0b1329 !important;
   border: 1.5px solid rgba(26, 115, 232, 0.4) !important;
 }
 .dark .sk__dateItem {
@@ -1155,7 +1155,7 @@
   .dark .mdl-panel--md,
   .dark .mdl-panel--lg,
   .dark .mdl-panel--xl {
-    background: #000000 !important;
+    background: #0b1329 !important;
     border-top: 1px solid rgba(37, 99, 235, 0.4) !important;
     border-left: none !important;
     border-right: none !important;
@@ -1456,7 +1456,7 @@
 .dark .md__field select,
 .dark .md__field textarea,
 .dark .sk__pendidikanRow input {
-  background: #000000 !important;
+  background: #0b1329 !important;
   border: 1.5px solid rgba(59, 130, 246, 0.4) !important;
   color: #ffffff !important;
   border-radius: 12px !important;
@@ -1504,7 +1504,7 @@
 }
 
 .dark .sk__readInput {
-  background: #000000 !important;
+  background: #0b1329 !important;
   border: 1.5px solid rgba(59, 130, 246, 0.4) !important;
   color: #ffffff !important;
 }
@@ -1844,7 +1844,7 @@
 }
 
 .dark .sk__field [class*="-control"] {
-  background: #000000 !important;
+  background: #0b1329 !important;
   border: 1.5px solid rgba(59, 130, 246, 0.4) !important;
   color: #ffffff !important;
 }

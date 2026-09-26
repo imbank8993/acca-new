@@ -116,6 +116,9 @@ export function KehadiranSiswaTab() {
     const [currentPage, setCurrentPage] = useState(1);
     const [currentPageRiwayat, setCurrentPageRiwayat] = useState(1);
     const [detailTahunAjaran, setDetailTahunAjaran] = useState('');
+    const [filterJenis, setFilterJenis] = useState('');
+    const [filterStatus, setFilterStatus] = useState('');
+    const [searchRiwayat, setSearchRiwayat] = useState('');
     const [activeYearsList, setActiveYearsList] = useState<string[]>([]);
 
     const [allStudents, setAllStudents] = useState<StudentWithKelas[]>([]);
@@ -160,12 +163,6 @@ export function KehadiranSiswaTab() {
         return filteredStudents.slice(startIndex, startIndex + ITEMS_PER_PAGE);
     }, [filteredStudents, currentPage]);
 
-    const filteredRiwayat = useMemo(() => {
-        const rows = data?.riwayat || [];
-        if (!detailTahunAjaran || detailTahunAjaran === 'ALL') return rows;
-        return rows.filter(r => tahunAjaranFromDate(r.tgl_mulai) === detailTahunAjaran);
-    }, [data, detailTahunAjaran]);
-
     const detailTahunOptions = useMemo(() => {
         if (activeYearsList.length > 0) {
             return [...activeYearsList].sort((a, b) => b.localeCompare(a));
@@ -178,9 +175,47 @@ export function KehadiranSiswaTab() {
         return Array.from(set).sort((a, b) => b.localeCompare(a));
     }, [activeYearsList, data]);
 
+    const availableStatusOptions = useMemo(() => {
+        const set = new Set<string>();
+        (data?.riwayat || []).forEach(r => {
+            if (r.status) set.add(r.status.toUpperCase());
+        });
+        return Array.from(set).sort();
+    }, [data]);
+
+    const statsForYear = useMemo(() => {
+        let rows = data?.riwayat || [];
+        if (detailTahunAjaran && detailTahunAjaran !== 'ALL') {
+            rows = rows.filter(r => tahunAjaranFromDate(r.tgl_mulai) === detailTahunAjaran);
+        }
+        return rows;
+    }, [data, detailTahunAjaran]);
+
+    const filteredRiwayat = useMemo(() => {
+        let rows = data?.riwayat || [];
+        if (detailTahunAjaran && detailTahunAjaran !== 'ALL') {
+            rows = rows.filter(r => tahunAjaranFromDate(r.tgl_mulai) === detailTahunAjaran);
+        }
+        if (filterJenis) {
+            rows = rows.filter(r => r.jenis?.toUpperCase() === filterJenis.toUpperCase());
+        }
+        if (filterStatus) {
+            rows = rows.filter(r => r.status?.toUpperCase() === filterStatus.toUpperCase());
+        }
+        if (searchRiwayat) {
+            const q = searchRiwayat.toLowerCase().trim();
+            rows = rows.filter(r =>
+                (r.keterangan || '').toLowerCase().includes(q) ||
+                (r.status || '').toLowerCase().includes(q) ||
+                (r.jenis || '').toLowerCase().includes(q)
+            );
+        }
+        return rows;
+    }, [data, detailTahunAjaran, filterJenis, filterStatus, searchRiwayat]);
+
     const filteredStats = useMemo<KehadiranStats>(() => {
-        const izin = filteredRiwayat.filter(r => r.jenis === 'IZIN');
-        const sakit = filteredRiwayat.filter(r => r.jenis === 'SAKIT');
+        const izin = statsForYear.filter(r => r.jenis === 'IZIN');
+        const sakit = statsForYear.filter(r => r.jenis === 'SAKIT');
         const sumJp = (rows: RiwayatItem[]) => rows.reduce((acc, r) => acc + (r.jumlah_jp || 0), 0);
         const sumHariK = (rows: RiwayatItem[]) => rows.reduce((acc, r) => acc + (r.hari_kalender || calcHariKalender(r.tgl_mulai, r.tgl_selesai)), 0);
         
@@ -199,7 +234,7 @@ export function KehadiranSiswaTab() {
             total_hari: jpToHari(izinJp + sakitJp),
             total_jp: izinJp + sakitJp,
         };
-    }, [filteredRiwayat]);
+    }, [statsForYear]);
 
     const RIWAYAT_PER_PAGE = 10;
     const totalRiwayatPages = Math.ceil(filteredRiwayat.length / RIWAYAT_PER_PAGE);
@@ -354,6 +389,9 @@ export function KehadiranSiswaTab() {
         setFilterKelas('');
         setFilterTahunAjaran(activeYearsList[0] || '');
         setSearchQuery('');
+        setFilterJenis('');
+        setFilterStatus('');
+        setSearchRiwayat('');
         setCurrentPage(1);
         setCurrentPageRiwayat(1);
     }, [activeYearsList]);
@@ -373,7 +411,7 @@ export function KehadiranSiswaTab() {
     }, []);
 
     useEffect(() => { setCurrentPage(1); }, [filterKelas, filterTahunAjaran, searchQuery]);
-    useEffect(() => { setCurrentPageRiwayat(1); }, [selectedNisn, detailTahunAjaran]);
+    useEffect(() => { setCurrentPageRiwayat(1); }, [selectedNisn, detailTahunAjaran, filterJenis, filterStatus, searchRiwayat]);
 
     const formatDate = (dateStr: string) => {
         if (!dateStr) return '-';
@@ -535,23 +573,84 @@ export function KehadiranSiswaTab() {
                     backLabel="Kembali ke Daftar Siswa"
                     name={data?.siswa?.nama || 'Siswa'}
                     meta={`NISN ${data?.siswa?.nisn || user?.nip} - ${data?.siswa?.kelas || '-'}`}
-                >
-                    {(data?.riwayat?.length || 0) > 0 && (
-                        <DetailHeaderSelect
-                            icon="mortarboard"
-                            value={detailTahunAjaran || 'ALL'}
-                            onChange={(e) => setDetailTahunAjaran(e.target.value)}
-                        >
-                            <option value="ALL">Semua Tahun</option>
-                            {detailTahunOptions.map(ta => (
-                                <option key={ta} value={ta}>{ta}</option>
-                            ))}
-                        </DetailHeaderSelect>
-                    )}
-                </DetailHeader>
+                />
 
                 <div className="kehadiran-page__content">
+                    {/* Filters Toolbar */}
+                    <FilterToolbar className="kehadiran-page__filter-toolbar">
+                        <FilterSearch
+                            label="Cari Keterangan"
+                            value={searchRiwayat}
+                            onChange={setSearchRiwayat}
+                            placeholder="Cari keluhan atau alasan..."
+                            grow={2}
+                        />
+                        {detailTahunOptions.length > 0 && (
+                            <FilterSelect
+                                label="Tahun Ajaran"
+                                icon="mortarboard"
+                                value={detailTahunAjaran || 'ALL'}
+                                onChange={setDetailTahunAjaran}
+                                options={[
+                                    { value: 'ALL', label: 'Semua Tahun' },
+                                    ...detailTahunOptions.map(ta => ({ value: ta, label: ta }))
+                                ]}
+                            />
+                        )}
+                        <FilterSelect
+                            label="Jenis"
+                            icon="card-checklist"
+                            value={filterJenis}
+                            onChange={setFilterJenis}
+                            options={[
+                                { value: '', label: 'Semua Jenis' },
+                                { value: 'IZIN', label: 'Izin' },
+                                { value: 'SAKIT', label: 'Sakit' },
+                                { value: 'ALPA', label: 'Alpa' },
+                            ]}
+                        />
+                        <FilterSelect
+                            label="Status"
+                            icon="activity"
+                            value={filterStatus}
+                            onChange={setFilterStatus}
+                            options={[
+                                { value: '', label: 'Semua Status' },
+                                ...(availableStatusOptions.length > 0
+                                    ? availableStatusOptions.map(st => ({
+                                        value: st,
+                                        label: st.charAt(0).toUpperCase() + st.slice(1).toLowerCase()
+                                    }))
+                                    : [
+                                        { value: 'RINGAN', label: 'Ringan' },
+                                        { value: 'SEDANG', label: 'Sedang' },
+                                        { value: 'BERAT', label: 'Berat' },
+                                        { value: 'MADRASAH', label: 'Madrasah' },
+                                        { value: 'PERSONAL', label: 'Personal' },
+                                        { value: 'KONTROL', label: 'Kontrol' },
+                                    ]
+                                )
+                            ]}
+                        />
+                    </FilterToolbar>
+
                     <div className="kehadiran-page__stats-grid">
+                        <div className="kehadiran-page__stat-card">
+                            <div className="kehadiran-page__stat-icon kehadiran-page__stat--blue">
+                                <svg className="kehadiran-page__stat-svg kehadiran-page__stat-color--blue" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+                                </svg>
+                            </div>
+                            <div className="kehadiran-page__stat-body">
+                                <p className="kehadiran-page__stat-label">Total Riwayat</p>
+                                <p className="kehadiran-page__stat-value">
+                                    {filteredRiwayat.length} records
+                                    <span className="kehadiran-page__stat-sub">
+                                        {stats?.total_hari || 0} hari ({stats?.total_jp || 0} JP)
+                                    </span>
+                                </p>
+                            </div>
+                        </div>
                         <div className="kehadiran-page__stat-card">
                             <div className="kehadiran-page__stat-icon kehadiran-page__stat--green">
                                 <svg className="kehadiran-page__stat-svg kehadiran-page__stat-color--green" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -562,7 +661,7 @@ export function KehadiranSiswaTab() {
                                 <p className="kehadiran-page__stat-label">Total Izin</p>
                                 <p className="kehadiran-page__stat-value">
                                     {stats?.total_izin_hari_kalender || 0} hari
-                                    <span className="block text-sm font-bold opacity-80 mt-1">
+                                    <span className="kehadiran-page__stat-sub">
                                         {renderJpWithDays(stats?.total_izin_jp || 0)}
                                     </span>
                                 </p>
@@ -578,7 +677,7 @@ export function KehadiranSiswaTab() {
                                 <p className="kehadiran-page__stat-label">Total Sakit</p>
                                 <p className="kehadiran-page__stat-value">
                                     {stats?.total_sakit_hari_kalender || 0} hari
-                                    <span className="block text-sm font-bold opacity-80 mt-1">
+                                    <span className="kehadiran-page__stat-sub">
                                         {renderJpWithDays(stats?.total_sakit_jp || 0)}
                                     </span>
                                 </p>
@@ -591,68 +690,73 @@ export function KehadiranSiswaTab() {
                             <h3 className="kehadiran-page__empty-title">Belum ada data</h3>
                         </div>
                     ) : (
-                        <div className="kehadiran-page__card">
-                            <div className="kehadiran-page__table-header">
-                                <h3 className="kehadiran-page__table-title">Riwayat Ketidakhadiran</h3>
-                                <span className="kehadiran-page__table-count">{filteredRiwayat.length} records</span>
-                            </div>
-                            <div className="kehadiran-page__table-wrap">
-                                <table className="kehadiran-page__table">
-                                    <thead>
-                                        <tr>
-                                            <th className="kehadiran-page__th">Jenis</th>
-                                            <th className="kehadiran-page__th">Periode</th>
-                                            <th className="kehadiran-page__th">Durasi</th>
-                                            <th className="kehadiran-page__th">Status</th>
-                                            <th className="kehadiran-page__th">Keterangan</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {paginatedRiwayat.map((item, idx) => {
-                                            const jenis = getJenisBadge(item.jenis);
-                                            const status = getStatusBadge(item.status);
-                                            const durasi = item.display_durasi;
-                                            return (
-                                                <tr key={item.id || idx} className="kehadiran-page__tr">
-                                                    <td className="kehadiran-page__td">
-                                                        <span className={getBadgeClass(jenis.type)}>{jenis.label}</span>
-                                                    </td>
-                                                    <td className="kehadiran-page__td">
-                                                        <span className="kehadiran-page__td-date">{getPeriode(item.tgl_mulai, item.tgl_selesai)}</span>
-                                                    </td>
-                                                    <td className="kehadiran-page__td">
-                                                        <span className="kehadiran-page__td-durasi">{durasi}</span>
-                                                    </td>
-                                                    <td className="kehadiran-page__td">
-                                                        <span className={getBadgeClass(status.type)}>{status.label}</span>
-                                                    </td>
-                                                    <td className="kehadiran-page__td kehadiran-page__td--muted">
-                                                        {item.keterangan || '-'}
-                                                    </td>
-                                                </tr>
-                                            );
-                                        })}
-                                    </tbody>
-                                </table>
+                        <>
+                            {/* Desktop Table View */}
+                            <div className="kehadiran-page__card kehadiran-page__table-container">
+                                <div className="kehadiran-page__table-wrap" style={{ padding: '1.125rem 1.35rem 1.25rem' }}>
+                                    <table className="kehadiran-page__table">
+                                        <thead>
+                                            <tr>
+                                                <th className="kehadiran-page__th">Jenis</th>
+                                                <th className="kehadiran-page__th">Periode</th>
+                                                <th className="kehadiran-page__th">Durasi</th>
+                                                <th className="kehadiran-page__th">Status</th>
+                                                <th className="kehadiran-page__th">Keterangan</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {paginatedRiwayat.map((item, idx) => {
+                                                const jenis = getJenisBadge(item.jenis);
+                                                const status = getStatusBadge(item.status);
+                                                const durasi = item.display_durasi;
+                                                return (
+                                                    <tr key={item.id || idx} className="kehadiran-page__tr">
+                                                        <td className="kehadiran-page__td">
+                                                            <span className={getBadgeClass(jenis.type)}>{jenis.label}</span>
+                                                        </td>
+                                                        <td className="kehadiran-page__td">
+                                                            <span className="kehadiran-page__td-date">{getPeriode(item.tgl_mulai, item.tgl_selesai)}</span>
+                                                        </td>
+                                                        <td className="kehadiran-page__td">
+                                                            <span className="kehadiran-page__td-durasi">{durasi}</span>
+                                                        </td>
+                                                        <td className="kehadiran-page__td">
+                                                            <span className={getBadgeClass(status.type)}>{status.label}</span>
+                                                        </td>
+                                                        <td className="kehadiran-page__td kehadiran-page__td--muted">
+                                                            {item.keterangan || '-'}
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })}
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
 
+                            {/* Mobile Card List View */}
                             <div className="kehadiran-page__mobile-cards">
                                 {paginatedRiwayat.map((item, idx) => {
                                     const jenis = getJenisBadge(item.jenis);
                                     const status = getStatusBadge(item.status);
-                                    const durasi = item.display_durasi;
+                                    const isIzin = item.jenis === 'IZIN';
+                                    const isSakit = item.jenis === 'SAKIT';
+                                    const borderLeftColor = isIzin ? '#10b981' : isSakit ? '#f59e0b' : '#ef4444';
                                     return (
-                                        <div key={item.id || idx} className="kehadiran-page__mobile-card">
+                                        <div
+                                            key={item.id || idx}
+                                            className="kehadiran-page__mobile-card"
+                                            style={{
+                                                borderLeft: `4px solid ${borderLeftColor}`,
+                                                paddingLeft: '14px'
+                                            }}
+                                        >
                                             <div className="kehadiran-page__mobile-card-header">
                                                 <span className={getBadgeClass(jenis.type)}>{jenis.label}</span>
                                                 <span className={getBadgeClass(status.type)}>{status.label}</span>
                                             </div>
                                             <div className="kehadiran-page__mobile-card-body">
                                                 <p className="kehadiran-page__mobile-card-date">{getPeriode(item.tgl_mulai, item.tgl_selesai)}</p>
-                                                <p className="kehadiran-page__mobile-card-meta">
-                                                    <i className="bi bi-clock-history mr-1"></i>
-                                                    {durasi}
-                                                </p>
                                                 <p className="kehadiran-page__mobile-card-desc">
                                                     {item.keterangan || 'Tidak ada keterangan'}
                                                 </p>
@@ -661,7 +765,7 @@ export function KehadiranSiswaTab() {
                                     );
                                 })}
                             </div>
-                        </div>
+                        </>
                     )}
 
                     {totalRiwayatPages > 1 && (

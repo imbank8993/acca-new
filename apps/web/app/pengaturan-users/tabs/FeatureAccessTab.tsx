@@ -819,7 +819,7 @@ export default function FeatureAccessTab() {
                 :global(.dark) .fa-card,
                 :global(.dark) .fa-card-head,
                 :global(.dark) .fa-card-foot {
-                    background: #000000 !important;
+                    background: #0b1329 !important;
                     border-color: rgba(59, 130, 246, 0.35) !important;
                 }
                 :global(.dark) .fa-title-group h2,

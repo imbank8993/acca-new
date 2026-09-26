@@ -473,7 +473,7 @@ export default function UserModal({
           color: #ffffff !important;
         }
         :global(.dark .react-select__control) {
-          background-color: #000000 !important;
+          background-color: #0b1329 !important;
           border: 1.5px solid rgba(26, 115, 232, 0.75) !important;
           color: #ffffff !important;
         }

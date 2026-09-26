@@ -79,12 +79,14 @@ interface BobotConfig {
     ratioHarian: { kuis: number; tugas: number; uh: number; };
     ratioRapor: { sums: number; pas: number; };
     sumCount: number;
+    kkm?: number;
 }
 
 const DEFAULT_BOBOT: BobotConfig = {
     ratioHarian: { kuis: 1, tugas: 1, uh: 2 },
     ratioRapor: { sums: 3, pas: 2 },
-    sumCount: 4
+    sumCount: 4,
+    kkm: 75,
 };
 
 export default function NilaiPage() {
@@ -2229,6 +2231,21 @@ export default function NilaiPage() {
                                         </div>
                                     </>
                                 )}
+
+                                <div className="nl__formGroup mb-4 pt-4 border-t border-slate-200">
+                                    <label className="nl__formLabel font-semibold">KKM Mata Pelajaran (Kriteria Ketuntasan Minimal)</label>
+                                    <div className="flex items-center gap-3 mt-1.5">
+                                        <input
+                                            type="number"
+                                            min={50}
+                                            max={100}
+                                            className="nl__formInput w-28 text-center font-bold text-base"
+                                            value={bobot.kkm ?? 75}
+                                            onChange={e => setBobot({ ...bobot, kkm: parseInt(e.target.value) || 75 })}
+                                        />
+                                        <span className="text-xs text-slate-500">Standar nilai ketuntasan (default: 75)</span>
+                                    </div>
+                                </div>
 
                                 <div className="nl__formActions">
                                     <button className="nl__btn nl__btnSecondary" onClick={() => setShowConfigModal(false)}>Batal</button>
