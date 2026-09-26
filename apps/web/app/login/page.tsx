@@ -42,12 +42,16 @@ function LoginContent() {
   const [forgotError, setForgotError] = useState('')
 
   const [showRegisterModal, setShowRegisterModal] = useState(false)
+  const [regTab, setRegTab] = useState<'siswa' | 'pegawai' | 'orangtua'>('siswa')
   const [regName, setRegName] = useState('')
   const [regStatus, setRegStatus] = useState('Ayah')
   const [regEmail, setRegEmail] = useState('')
   const [regPassword, setRegPassword] = useState('')
   const [regPassword2, setRegPassword2] = useState('')
   const [regNisn, setRegNisn] = useState('')
+  const [regNip, setRegNip] = useState('')
+  const [regDigitHp, setRegDigitHp] = useState('')
+  const [regUsername, setRegUsername] = useState('')
   const [regTanggalLahir, setRegTanggalLahir] = useState('')
   const [regLoading, setRegLoading] = useState(false)
   const [regError, setRegError] = useState('')
@@ -214,6 +218,118 @@ function LoginContent() {
     }
   }
 
+  const resetRegisterForm = () => {
+    setRegError('')
+    setRegSuccess('')
+    setRegPassword('')
+    setRegPassword2('')
+    setRegNisn('')
+    setRegNip('')
+    setRegDigitHp('')
+    setRegUsername('')
+    setRegEmail('')
+    setRegName('')
+    setRegTanggalLahir('')
+  }
+
+  const handleRegisterStudent = async (e: FormEvent) => {
+    e.preventDefault()
+    setRegError('')
+    setRegSuccess('')
+    if (regPassword !== regPassword2) {
+      setRegError('Konfirmasi kata sandi tidak cocok. Silakan ulangi.')
+      return
+    }
+    if (!regTanggalLahir) {
+      setRegError('Tanggal lahir siswa wajib diisi.')
+      return
+    }
+    if (!regEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(regEmail.trim())) {
+      setRegError('Alamat email aktif wajib diisi dengan format yang benar.')
+      return
+    }
+    setRegLoading(true)
+    try {
+      const res = await fetch('/api/auth/register-student', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          nisn: regNisn.trim(),
+          tanggal_lahir: regTanggalLahir,
+          email: regEmail.trim(),
+          password: regPassword,
+        }),
+      })
+      const data = await res.json()
+      if (data.ok) {
+        setRegSuccess(data.message || 'Akun siswa berhasil diaktifkan!')
+        setTimeout(() => {
+          setShowRegisterModal(false)
+          setUsername(data.username || regNisn)
+          setPassword('')
+        }, 3000)
+      } else {
+        setRegError(data.error || 'Gagal mengaktifkan akun siswa')
+      }
+    } catch {
+      setRegError('Terjadi kesalahan jaringan')
+    } finally {
+      setRegLoading(false)
+    }
+  }
+
+  const handleRegisterStaff = async (e: FormEvent) => {
+    e.preventDefault()
+    setRegError('')
+    setRegSuccess('')
+    if (regPassword !== regPassword2) {
+      setRegError('Konfirmasi kata sandi tidak cocok. Silakan ulangi.')
+      return
+    }
+    if (!regTanggalLahir) {
+      setRegError('Tanggal lahir wajib diisi.')
+      return
+    }
+    if (/\s/.test(regUsername.trim())) {
+      setRegError('Username tidak boleh mengandung spasi.')
+      return
+    }
+    if (!regEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(regEmail.trim())) {
+      setRegError('Alamat email aktif wajib diisi dengan format yang benar.')
+      return
+    }
+    setRegLoading(true)
+    try {
+      const res = await fetch('/api/auth/register-staff', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          nip: regNip.trim(),
+          tanggal_lahir: regTanggalLahir,
+          digit_hp: regDigitHp.trim(),
+          username: regUsername.trim(),
+          email: regEmail.trim(),
+          password: regPassword,
+        }),
+      })
+      const data = await res.json()
+      if (data.ok) {
+        setRegSuccess(data.message || 'Akun pegawai berhasil diaktifkan!')
+        setTimeout(() => {
+          setShowRegisterModal(false)
+          setUsername(data.username || regUsername)
+          setPassword('')
+        }, 3000)
+      } else {
+        setRegError(data.error || 'Gagal mengaktifkan akun pegawai')
+      }
+    } catch {
+      setRegError('Terjadi kesalahan jaringan')
+    } finally {
+      setRegLoading(false)
+    }
+  }
+
   const handleRegisterParent = async (e: FormEvent) => {
     e.preventDefault()
     setRegError('')
@@ -224,6 +340,10 @@ function LoginContent() {
     }
     if (!regTanggalLahir) {
       setRegError('Tanggal Lahir Siswa wajib diisi.')
+      return
+    }
+    if (!regEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(regEmail.trim())) {
+      setRegError('Alamat email aktif wajib diisi dengan format yang benar.')
       return
     }
     setRegLoading(true)
@@ -402,7 +522,7 @@ function LoginContent() {
               <div style={{ textAlign: 'center', marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 <button type="button" className="lp-forgot-link" onClick={() => setShowForgotModal(true)}>Lupa Password?</button>
                 <div style={{ fontSize: '0.85rem', color: '#64748b' }}>
-                  Belum punya akun? <button type="button" className="lp-forgot-link" style={{ fontSize: '0.85rem', fontWeight: 600, display: 'inline' }} onClick={() => { setRegError(''); setRegSuccess(''); setRegPassword(''); setRegPassword2(''); setShowRegisterModal(true) }}>Daftar di sini</button>
+                  Belum punya akun? <button type="button" className="lp-forgot-link" style={{ fontSize: '0.85rem', fontWeight: 600, display: 'inline' }} onClick={() => { resetRegisterForm(); setShowRegisterModal(true) }}>Daftar / Aktivasi di sini</button>
                 </div>
               </div>
             </form>
@@ -474,14 +594,14 @@ function LoginContent() {
         </form>
       </Modal>
 
-      {/* ── Register Parent Modal ── */}
+      {/* ── Register / Activation Modal ── */}
       {showRegisterModal && (
         <div className="lp-modal-overlay" onClick={() => setShowRegisterModal(false)}>
           <div className="lp-modal-content lp-register-modal" onClick={e => e.stopPropagation()}>
             <div className="lp-reg-header">
               <div>
-                <h3>Pendaftaran Akun Orang Tua</h3>
-                <p>Pantau perkembangan akademik anak Anda secara langsung.</p>
+                <h3>Pendaftaran & Aktivasi Akun</h3>
+                <p>Aktifkan akun mandiri untuk Siswa, Pegawai (Guru/Tendik), atau Orang Tua.</p>
               </div>
               <button className="lp-reg-close" onClick={() => setShowRegisterModal(false)}>
                 <i className="bi bi-x-lg" />
@@ -489,107 +609,405 @@ function LoginContent() {
             </div>
             <div className="lp-modal-body lp-reg-body">
               {regSuccess ? (
-                <div style={{ padding: '16px', background: '#dcfce7', color: '#166534', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <i className="bi bi-check-circle-fill" style={{ fontSize: '1.2rem' }} />
-                  <span>{regSuccess}</span>
+                <div style={{ padding: '18px', background: '#dcfce7', color: '#166534', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <i className="bi bi-check-circle-fill" style={{ fontSize: '1.4rem', flexShrink: 0 }} />
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: '0.95rem' }}>Berhasil!</div>
+                    <div style={{ fontSize: '0.85rem' }}>{regSuccess} Halaman ini akan otomatis beralih ke form masuk...</div>
+                  </div>
                 </div>
               ) : (
-                <form onSubmit={handleRegisterParent}>
-                  <p className="lp-reg-section"><i className="bi bi-person-fill" /> Data Orang Tua</p>
-                  <div className="lp-reg-grid">
-                    <div className="lp-field">
-                      <label htmlFor="regName">Nama Lengkap</label>
-                      <div className="lp-input-wrap">
-                        <i className="bi bi-person lp-icon-field" />
-                        <input type="text" id="regName" value={regName} onChange={e => setRegName(e.target.value)} required disabled={regLoading} placeholder="Nama orang tua" />
-                      </div>
-                    </div>
-
-                    <div className="lp-field">
-                      <label>Status Keluarga</label>
-                      <InlineSelect
-                        className="lp-reg-select"
-                        value={regStatus}
-                        onChange={setRegStatus}
-                        disabled={regLoading}
-                        height="42px"
-                        minWidth="100%"
-                        options={[
-                          { value: 'Ayah', label: 'Ayah' },
-                          { value: 'Ibu', label: 'Ibu' },
-                          { value: 'Wali', label: 'Wali' },
-                        ]}
-                      />
-                    </div>
-
-                    <div className="lp-field lp-reg-full">
-                      <label htmlFor="regEmail">Email (Username Login)</label>
-                      <div className="lp-input-wrap">
-                        <i className="bi bi-envelope lp-icon-field" />
-                        <input type="email" id="regEmail" value={regEmail} onChange={e => setRegEmail(e.target.value)} required disabled={regLoading} placeholder="contoh@email.com" />
-                      </div>
-                    </div>
-
-                    <div className="lp-field">
-                      <label htmlFor="regPassword">Kata Sandi</label>
-                      <div className="lp-input-wrap">
-                        <i className="bi bi-lock lp-icon-field" />
-                        <input type="password" id="regPassword" value={regPassword} onChange={e => setRegPassword(e.target.value)} required disabled={regLoading} minLength={6} placeholder="Min. 6 karakter" />
-                      </div>
-                    </div>
-
-                    <div className="lp-field">
-                      <label htmlFor="regPassword2">Ulangi Kata Sandi</label>
-                      <div className="lp-input-wrap">
-                        <i className="bi bi-shield-lock lp-icon-field" />
-                        <input type="password" id="regPassword2" value={regPassword2} onChange={e => setRegPassword2(e.target.value)} required disabled={regLoading} minLength={6} placeholder="Ketik ulang sandi" />
-                      </div>
-                    </div>
+                <>
+                  <div className="lp-reg-tabs">
+                    <button
+                      type="button"
+                      className={`lp-reg-tab ${regTab === 'siswa' ? 'active' : ''}`}
+                      onClick={() => { setRegTab('siswa'); resetRegisterForm(); }}
+                      disabled={regLoading}
+                    >
+                      <i className="bi bi-mortarboard-fill" /> Siswa
+                    </button>
+                    <button
+                      type="button"
+                      className={`lp-reg-tab ${regTab === 'pegawai' ? 'active' : ''}`}
+                      onClick={() => { setRegTab('pegawai'); resetRegisterForm(); }}
+                      disabled={regLoading}
+                    >
+                      <i className="bi bi-person-badge-fill" /> Pegawai (Guru/TU)
+                    </button>
+                    <button
+                      type="button"
+                      className={`lp-reg-tab ${regTab === 'orangtua' ? 'active' : ''}`}
+                      onClick={() => { setRegTab('orangtua'); resetRegisterForm(); }}
+                      disabled={regLoading}
+                    >
+                      <i className="bi bi-people-fill" /> Orang Tua
+                    </button>
                   </div>
 
-                  {regPassword2 && regPassword !== regPassword2 && (
-                    <p className="lp-reg-mismatch"><i className="bi bi-exclamation-circle" /> Kata sandi belum sama</p>
+                  {regTab === 'siswa' && (
+                    <form onSubmit={handleRegisterStudent}>
+                      <p className="lp-reg-section"><i className="bi bi-mortarboard-fill" /> Verifikasi Data Siswa</p>
+                      <div className="lp-reg-grid">
+                        <div className="lp-field">
+                          <label htmlFor="regStudentNisn">NISN Siswa <span className="lp-req">*</span></label>
+                          <div className="lp-input-wrap">
+                            <i className="bi bi-person-badge lp-icon-field" />
+                            <input
+                              type="text"
+                              id="regStudentNisn"
+                              value={regNisn}
+                              onChange={e => setRegNisn(e.target.value)}
+                              required
+                              disabled={regLoading}
+                              placeholder="NISN terdaftar"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="lp-field">
+                          <label htmlFor="regStudentTanggalLahir">Tanggal Lahir Siswa <span className="lp-req">*</span></label>
+                          <div className="lp-input-wrap">
+                            <DatePicker
+                              id="regStudentTanggalLahir"
+                              value={regTanggalLahir}
+                              onChange={setRegTanggalLahir}
+                              required
+                              disabled={regLoading}
+                            />
+                          </div>
+                        </div>
+
+                        <div className="lp-field lp-reg-full">
+                          <label htmlFor="regStudentEmail">Alamat Email Aktif <span className="lp-req">*</span></label>
+                          <div className="lp-input-wrap">
+                            <i className="bi bi-envelope lp-icon-field" />
+                            <input
+                              type="email"
+                              id="regStudentEmail"
+                              value={regEmail}
+                              onChange={e => setRegEmail(e.target.value)}
+                              required
+                              disabled={regLoading}
+                              placeholder="contoh@gmail.com (untuk notifikasi & pemulihan akun)"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="lp-field">
+                          <label htmlFor="regStudentPassword">Kata Sandi Baru <span className="lp-req">*</span></label>
+                          <div className="lp-input-wrap">
+                            <i className="bi bi-lock lp-icon-field" />
+                            <input
+                              type="password"
+                              id="regStudentPassword"
+                              value={regPassword}
+                              onChange={e => setRegPassword(e.target.value)}
+                              required
+                              disabled={regLoading}
+                              minLength={6}
+                              placeholder="Min. 6 karakter"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="lp-field">
+                          <label htmlFor="regStudentPassword2">Ulangi Kata Sandi <span className="lp-req">*</span></label>
+                          <div className="lp-input-wrap">
+                            <i className="bi bi-shield-lock lp-icon-field" />
+                            <input
+                              type="password"
+                              id="regStudentPassword2"
+                              value={regPassword2}
+                              onChange={e => setRegPassword2(e.target.value)}
+                              required
+                              disabled={regLoading}
+                              minLength={6}
+                              placeholder="Ketik ulang sandi"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {regPassword2 && regPassword !== regPassword2 && (
+                        <p className="lp-reg-mismatch"><i className="bi bi-exclamation-circle" /> Kata sandi belum sama</p>
+                      )}
+
+                      {regError && (
+                        <div className="lp-error" style={{ fontSize: '0.85rem', padding: '10px', marginTop: '14px' }}>
+                          <i className="bi bi-x-circle-fill" />
+                          <span>{regError}</span>
+                        </div>
+                      )}
+
+                      <button type="submit" className="lp-btn" disabled={regLoading} style={{ marginTop: '18px' }}>
+                        {regLoading ? (
+                          <>
+                            <span className="lp-spin" />
+                            Memproses...
+                          </>
+                        ) : (
+                          <>
+                            <i className="bi bi-check2-circle" />
+                            Aktivasi Akun Siswa
+                          </>
+                        )}
+                      </button>
+                    </form>
                   )}
 
-                  <p className="lp-reg-section" style={{ marginTop: '16px' }}><i className="bi bi-mortarboard-fill" /> Verifikasi Data Anak</p>
-                  <div className="lp-reg-grid">
-                    <div className="lp-field">
-                      <label htmlFor="regNisn">NISN Siswa</label>
-                      <div className="lp-input-wrap">
-                        <i className="bi bi-person-badge lp-icon-field" />
-                        <input type="text" id="regNisn" value={regNisn} onChange={e => setRegNisn(e.target.value)} required disabled={regLoading} placeholder="NISN" />
-                      </div>
-                    </div>
+                  {regTab === 'pegawai' && (
+                    <form onSubmit={handleRegisterStaff}>
+                      <p className="lp-reg-section"><i className="bi bi-person-badge-fill" /> Verifikasi Identitas Pegawai (Guru / Tendik)</p>
+                      <div className="lp-reg-grid">
+                        <div className="lp-field">
+                          <label htmlFor="regStaffNip">NIP / Identitas Pegawai <span className="lp-req">*</span></label>
+                          <div className="lp-input-wrap">
+                            <i className="bi bi-person-badge lp-icon-field" />
+                            <input
+                              type="text"
+                              id="regStaffNip"
+                              value={regNip}
+                              onChange={e => setRegNip(e.target.value)}
+                              required
+                              disabled={regLoading}
+                              placeholder="NIP / nomor induk pegawai"
+                            />
+                          </div>
+                        </div>
 
-                    <div className="lp-field">
-                      <label htmlFor="regTanggalLahir">Tanggal Lahir Siswa</label>
-                      <div className="lp-input-wrap">
-                        <DatePicker id="regTanggalLahir" value={regTanggalLahir} onChange={setRegTanggalLahir} required disabled={regLoading} />
-                      </div>
-                    </div>
-                  </div>
+                        <div className="lp-field">
+                          <label htmlFor="regStaffTanggalLahir">Tanggal Lahir Pegawai <span className="lp-req">*</span></label>
+                          <div className="lp-input-wrap">
+                            <DatePicker
+                              id="regStaffTanggalLahir"
+                              value={regTanggalLahir}
+                              onChange={setRegTanggalLahir}
+                              required
+                              disabled={regLoading}
+                            />
+                          </div>
+                        </div>
 
-                  {regError && (
-                    <div className="lp-error" style={{ fontSize: '0.85rem', padding: '10px', marginTop: '14px' }}>
-                      <i className="bi bi-x-circle-fill" />
-                      <span>{regError}</span>
-                    </div>
+                        <div className="lp-field">
+                          <label htmlFor="regStaffDigitHp">4 Digit Terakhir No. HP <span className="lp-req">*</span></label>
+                          <div className="lp-input-wrap">
+                            <i className="bi bi-telephone lp-icon-field" />
+                            <input
+                              type="text"
+                              id="regStaffDigitHp"
+                              value={regDigitHp}
+                              onChange={e => setRegDigitHp(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                              required
+                              maxLength={4}
+                              disabled={regLoading}
+                              placeholder="Contoh: 1234"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="lp-field">
+                          <label htmlFor="regStaffUsername">Username Login Baru <span className="lp-req">*</span></label>
+                          <div className="lp-input-wrap">
+                            <i className="bi bi-person lp-icon-field" />
+                            <input
+                              type="text"
+                              id="regStaffUsername"
+                              value={regUsername}
+                              onChange={e => setRegUsername(e.target.value.trim())}
+                              required
+                              disabled={regLoading}
+                              placeholder="Username (tanpa spasi)"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="lp-field lp-reg-full">
+                          <label htmlFor="regStaffEmail">Alamat Email Aktif <span className="lp-req">*</span></label>
+                          <div className="lp-input-wrap">
+                            <i className="bi bi-envelope lp-icon-field" />
+                            <input
+                              type="email"
+                              id="regStaffEmail"
+                              value={regEmail}
+                              onChange={e => setRegEmail(e.target.value)}
+                              required
+                              disabled={regLoading}
+                              placeholder="email@sekolah.sch.id atau email aktif"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="lp-field">
+                          <label htmlFor="regStaffPassword">Kata Sandi Baru <span className="lp-req">*</span></label>
+                          <div className="lp-input-wrap">
+                            <i className="bi bi-lock lp-icon-field" />
+                            <input
+                              type="password"
+                              id="regStaffPassword"
+                              value={regPassword}
+                              onChange={e => setRegPassword(e.target.value)}
+                              required
+                              disabled={regLoading}
+                              minLength={6}
+                              placeholder="Min. 6 karakter"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="lp-field">
+                          <label htmlFor="regStaffPassword2">Ulangi Kata Sandi <span className="lp-req">*</span></label>
+                          <div className="lp-input-wrap">
+                            <i className="bi bi-shield-lock lp-icon-field" />
+                            <input
+                              type="password"
+                              id="regStaffPassword2"
+                              value={regPassword2}
+                              onChange={e => setRegPassword2(e.target.value)}
+                              required
+                              disabled={regLoading}
+                              minLength={6}
+                              placeholder="Ketik ulang sandi"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      <p style={{ fontSize: '0.74rem', color: '#64748b', marginTop: '10px', lineHeight: 1.45 }}>
+                        <i className="bi bi-shield-check" style={{ marginRight: '4px', color: 'var(--n-primary)' }} />
+                        Demi keamanan, <strong>NIP</strong>, <strong>Tanggal Lahir</strong>, dan <strong>Nomor HP</strong> wajib cocok dengan data kepegawaian madrasah. Jika data Anda belum terdaftar lengkap, hubungi Tata Usaha (TU).
+                      </p>
+                      <p style={{ fontSize: '0.74rem', color: '#64748b', marginTop: '4px', lineHeight: 1.45 }}>
+                        <i className="bi bi-info-circle" style={{ marginRight: '4px' }} />
+                        Role akun (<strong>GURU</strong> atau <strong>TU</strong>) akan disematkan secara otomatis oleh sistem.
+                      </p>
+
+                      {regPassword2 && regPassword !== regPassword2 && (
+                        <p className="lp-reg-mismatch"><i className="bi bi-exclamation-circle" /> Kata sandi belum sama</p>
+                      )}
+
+                      {regError && (
+                        <div className="lp-error" style={{ fontSize: '0.85rem', padding: '10px', marginTop: '14px' }}>
+                          <i className="bi bi-x-circle-fill" />
+                          <span>{regError}</span>
+                        </div>
+                      )}
+
+                      <button type="submit" className="lp-btn" disabled={regLoading} style={{ marginTop: '18px' }}>
+                        {regLoading ? (
+                          <>
+                            <span className="lp-spin" />
+                            Memproses...
+                          </>
+                        ) : (
+                          <>
+                            <i className="bi bi-check2-circle" />
+                            Aktivasi Akun Pegawai
+                          </>
+                        )}
+                      </button>
+                    </form>
                   )}
 
-                  <button type="submit" className="lp-btn" disabled={regLoading} style={{ marginTop: '18px' }}>
-                    {regLoading ? (
-                      <>
-                        <span className="lp-spin" />
-                        Memproses...
-                      </>
-                    ) : (
-                      <>
-                        <i className="bi bi-person-plus-fill" />
-                        Daftar & Klaim Anak
-                      </>
-                    )}
-                  </button>
-                </form>
+                  {regTab === 'orangtua' && (
+                    <form onSubmit={handleRegisterParent}>
+                      <p className="lp-reg-section"><i className="bi bi-person-fill" /> Data Orang Tua</p>
+                      <div className="lp-reg-grid">
+                        <div className="lp-field">
+                          <label htmlFor="regParentName">Nama Lengkap <span className="lp-req">*</span></label>
+                          <div className="lp-input-wrap">
+                            <i className="bi bi-person lp-icon-field" />
+                            <input type="text" id="regParentName" value={regName} onChange={e => setRegName(e.target.value)} required disabled={regLoading} placeholder="Nama orang tua" />
+                          </div>
+                        </div>
+
+                        <div className="lp-field">
+                          <label>Status Keluarga <span className="lp-req">*</span></label>
+                          <InlineSelect
+                            className="lp-reg-select"
+                            value={regStatus}
+                            onChange={setRegStatus}
+                            disabled={regLoading}
+                            height="42px"
+                            minWidth="100%"
+                            options={[
+                              { value: 'Ayah', label: 'Ayah' },
+                              { value: 'Ibu', label: 'Ibu' },
+                              { value: 'Wali', label: 'Wali' },
+                            ]}
+                          />
+                        </div>
+
+                        <div className="lp-field lp-reg-full">
+                          <label htmlFor="regParentEmail">Email Aktif <span className="lp-req">*</span></label>
+                          <div className="lp-input-wrap">
+                            <i className="bi bi-envelope lp-icon-field" />
+                            <input type="email" id="regParentEmail" value={regEmail} onChange={e => setRegEmail(e.target.value)} required disabled={regLoading} placeholder="contoh@email.com" />
+                          </div>
+                        </div>
+
+                        <div className="lp-field">
+                          <label htmlFor="regParentPassword">Kata Sandi <span className="lp-req">*</span></label>
+                          <div className="lp-input-wrap">
+                            <i className="bi bi-lock lp-icon-field" />
+                            <input type="password" id="regParentPassword" value={regPassword} onChange={e => setRegPassword(e.target.value)} required disabled={regLoading} minLength={6} placeholder="Min. 6 karakter" />
+                          </div>
+                        </div>
+
+                        <div className="lp-field">
+                          <label htmlFor="regParentPassword2">Ulangi Kata Sandi <span className="lp-req">*</span></label>
+                          <div className="lp-input-wrap">
+                            <i className="bi bi-shield-lock lp-icon-field" />
+                            <input type="password" id="regParentPassword2" value={regPassword2} onChange={e => setRegPassword2(e.target.value)} required disabled={regLoading} minLength={6} placeholder="Ketik ulang sandi" />
+                          </div>
+                        </div>
+                      </div>
+
+                      {regPassword2 && regPassword !== regPassword2 && (
+                        <p className="lp-reg-mismatch"><i className="bi bi-exclamation-circle" /> Kata sandi belum sama</p>
+                      )}
+
+                      <p className="lp-reg-section" style={{ marginTop: '16px' }}><i className="bi bi-mortarboard-fill" /> Verifikasi Data Anak</p>
+                      <div className="lp-reg-grid">
+                        <div className="lp-field">
+                          <label htmlFor="regParentNisn">NISN Siswa <span className="lp-req">*</span></label>
+                          <div className="lp-input-wrap">
+                            <i className="bi bi-person-badge lp-icon-field" />
+                            <input type="text" id="regParentNisn" value={regNisn} onChange={e => setRegNisn(e.target.value)} required disabled={regLoading} placeholder="NISN" />
+                          </div>
+                        </div>
+
+                        <div className="lp-field">
+                          <label htmlFor="regParentTanggalLahir">Tanggal Lahir Siswa <span className="lp-req">*</span></label>
+                          <div className="lp-input-wrap">
+                            <DatePicker id="regParentTanggalLahir" value={regTanggalLahir} onChange={setRegTanggalLahir} required disabled={regLoading} />
+                          </div>
+                        </div>
+                      </div>
+
+                      {regError && (
+                        <div className="lp-error" style={{ fontSize: '0.85rem', padding: '10px', marginTop: '14px' }}>
+                          <i className="bi bi-x-circle-fill" />
+                          <span>{regError}</span>
+                        </div>
+                      )}
+
+                      <button type="submit" className="lp-btn" disabled={regLoading} style={{ marginTop: '18px' }}>
+                        {regLoading ? (
+                          <>
+                            <span className="lp-spin" />
+                            Memproses...
+                          </>
+                        ) : (
+                          <>
+                            <i className="bi bi-person-plus-fill" />
+                            Daftar & Klaim Anak
+                          </>
+                        )}
+                      </button>
+                    </form>
+                  )}
+                </>
               )}
             </div>
           </div>
@@ -822,6 +1240,42 @@ function LoginContent() {
         .lp-reg-body {
           overflow-y: auto;
           padding: 18px 24px 22px;
+        }
+        .lp-reg-tabs {
+          display: flex;
+          background: #f1f5f9;
+          padding: 4px;
+          border-radius: 12px;
+          gap: 4px;
+          margin-bottom: 16px;
+        }
+        .lp-reg-tab {
+          flex: 1;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 6px;
+          padding: 8px 8px;
+          border-radius: 8px;
+          border: none;
+          background: transparent;
+          color: #64748b;
+          font-size: 0.78rem;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+        .lp-reg-tab:hover:not(:disabled) {
+          color: #0f172a;
+        }
+        .lp-reg-tab.active {
+          background: #ffffff;
+          color: var(--n-primary);
+          box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+        }
+        .lp-reg-tab:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
         }
         .lp-reg-section {
           display: flex;
@@ -1121,11 +1575,21 @@ function LoginContent() {
         }
 
         .lp-field label {
-          font-size: 0.78rem;
-          font-weight: 750;
+          font-size: 0.7rem;
+          font-weight: 650;
           color: #475569;
           text-transform: uppercase;
-          letter-spacing: 0.7px;
+          letter-spacing: 0.5px;
+          display: flex;
+          align-items: center;
+          gap: 3px;
+        }
+
+        .lp-req {
+          color: #ef4444;
+          font-weight: 700;
+          font-size: 0.85rem;
+          line-height: 1;
         }
 
         .lp-input-wrap {
@@ -1427,6 +1891,7 @@ function LoginContent() {
         }
         .dark .lp-card-head p { color: #94a3b8; }
         .dark .lp-field label { color: #cbd5e1; }
+        .dark .lp-req { color: #f87171; }
         .dark .lp-input-wrap input {
           background: #000000 !important;
           border-color: rgba(37, 99, 235, 0.4) !important;
@@ -1507,6 +1972,22 @@ function LoginContent() {
         .dark .lp-reg-select select.uisel-input:focus {
           border-color: #1a73e8 !important;
           box-shadow: 0 0 0 4px rgba(26, 115, 232, 0.15) !important;
+        }
+        .dark .lp-reg-tabs {
+          background: rgba(15, 23, 42, 0.8);
+          border: 1px solid rgba(37, 99, 235, 0.3);
+        }
+        .dark .lp-reg-tab {
+          color: #94a3b8;
+        }
+        .dark .lp-reg-tab:hover:not(:disabled) {
+          color: #f8fafc;
+        }
+        .dark .lp-reg-tab.active {
+          background: rgba(37, 99, 235, 0.25);
+          color: #60a5fa;
+          border: 1px solid rgba(96, 165, 250, 0.4);
+          box-shadow: 0 0 12px rgba(37, 99, 235, 0.3);
         }
         .dark .lp-reg-mismatch { color: #fb7185; }
 

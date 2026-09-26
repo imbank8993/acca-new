@@ -18,19 +18,22 @@ import { MobileSheet, MobileKV } from '@/components/mobile/MobileSheet'
 import { MobileAvatar } from '@/components/mobile/MobileList'
 import { getProxiedImageUrl } from '@/lib/image-utils'
 
-function getInitials(name: string) {
-    return name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase()
+function getInitials(name?: string | null) {
+    const str = String(name || '').trim()
+    if (!str) return 'U'
+    return str.split(' ').filter(Boolean).map(n => n[0]).slice(0, 2).join('').toUpperCase()
 }
 
-function getAvatarColor(name: string) {
+function getAvatarColor(name?: string | null) {
     const colors = [
         ['#dbeafe', '#1d4ed8'], ['#fce7f3', '#be185d'], ['#d1fae5', '#065f46'],
         ['#fef3c7', '#92400e'], ['#eff6ff', '#00287a'], ['#ffedd5', '#9a3412'],
         ['#cffafe', '#0e7490'], ['#eff6ff', '#1e40af'], ['#fee2e2', '#991b1b'],
         ['#ecfdf5', '#065f46']
     ]
+    const str = String(name || 'User')
     let hash = 0
-    for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash)
+    for (let i = 0; i < str.length; i++) hash = str.charCodeAt(i) + ((hash << 5) - hash)
     return colors[Math.abs(hash) % colors.length]
 }
 
@@ -76,7 +79,7 @@ export default function UserDataTab({ user }: { user?: User }) {
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [importing, setImporting] = useState(false)
-  const [toggling, setToggling] = useState<number | null>(null)
+  const [toggling, setToggling] = useState<string | number | null>(null)
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
   const [editingUser, setEditingUser] = useState<User | null>(null)
   const [isAdding, setIsAdding] = useState(false)
@@ -108,7 +111,7 @@ export default function UserDataTab({ user }: { user?: User }) {
   const [resetItem, setResetItem] = useState<User | null>(null)
   const [deleting, setDeleting] = useState(false)
   const [resetting, setResetting] = useState(false)
-  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set())
+  const [selectedIds, setSelectedIds] = useState<Set<string | number>>(new Set())
 
   const { registerModal } = useModalBlur()
 
@@ -171,7 +174,10 @@ export default function UserDataTab({ user }: { user?: User }) {
     const roles = new Set<string>()
     users.forEach(u => {
       const uRole = (u.role || 'GURU').toUpperCase()
-      uRole.split(',').forEach(r => roles.add(r.trim()))
+      uRole.split(/[,|]/).forEach(r => {
+        const trimmed = r.trim()
+        if (trimmed) roles.add(trimmed)
+      })
     })
     return Array.from(roles).sort()
   }, [users])
@@ -182,25 +188,35 @@ export default function UserDataTab({ user }: { user?: User }) {
     else if (filter === 'inactive') filtered = filtered.filter(u => !u.aktif)
     if (roleFilter !== 'all') {
       filtered = filtered.filter(u => {
-        const uRoles = (u.role || 'GURU').toUpperCase().split(',').map(r => r.trim())
+        const uRoles = (u.role || 'GURU').toUpperCase().split(/[,|]/).map(r => r.trim()).filter(Boolean)
         return uRoles.includes(roleFilter)
       })
     }
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase()
       filtered = filtered.filter(u =>
-        u.nama.toLowerCase().includes(q) ||
+        (u.nama && u.nama.toLowerCase().includes(q)) ||
         (u.nama_lengkap && u.nama_lengkap.toLowerCase().includes(q)) ||
-        u.username.toLowerCase().includes(q) ||
-        u.nip.toLowerCase().includes(q)
+        (u.username && u.username.toLowerCase().includes(q)) ||
+        (u.nip && u.nip.toLowerCase().includes(q))
       )
     }
     return filtered
   }, [users, filter, roleFilter, searchQuery])
 
-  useEffect(() => { setPage(1); }, [filter, roleFilter, searchQuery]);
+  useEffect(() => {
+    setPage(1);
+    setSelectedIds(new Set());
+  }, [filter, roleFilter, searchQuery, pageSize]);
 
   const totalPages = Math.ceil(filteredUsers.length / pageSize);
+
+  useEffect(() => {
+    if (totalPages > 0 && page > totalPages) {
+      setPage(totalPages);
+    }
+  }, [page, totalPages]);
+
   const paginatedUsers = useMemo(() => {
     const start = (page - 1) * pageSize;
     return filteredUsers.slice(start, start + pageSize);
@@ -225,7 +241,7 @@ export default function UserDataTab({ user }: { user?: User }) {
   const selectedCount = selectedIds.size
   const allDisplayedSelected = filteredUsers.length > 0 && filteredUsers.every(u => selectedIds.has(u.id))
 
-  const toggleSelect = (id: number) => {
+  const toggleSelect = (id: string | number) => {
     setSelectedIds(prev => {
       const next = new Set(prev)
       if (next.has(id)) next.delete(id)
@@ -294,7 +310,7 @@ export default function UserDataTab({ user }: { user?: User }) {
       const roleB = (b.role || 'GURU').toUpperCase()
       if (roleA < roleB) return -1
       if (roleA > roleB) return 1
-      return a.nama.localeCompare(b.nama, 'id')
+      return (a.nama || '').localeCompare(b.nama || '', 'id')
     })
 
     const allRows = sorted.map((u, i) => ({
@@ -304,6 +320,7 @@ export default function UserDataTab({ user }: { user?: User }) {
       'Nama': u.nama,
       'Divisi': u.divisi || '-',
       'Role': u.role || 'GURU',
+      'Email': u.email || '-',
       'Status': u.aktif ? 'Aktif' : 'Nonaktif',
       // `auth_id` DIKELUARKAN dari ekspor. Ia pengenal internal yang menautkan ke
       // tabel kredensial `auth_users`, tidak ditampilkan di layar mana pun, dan
@@ -366,15 +383,35 @@ export default function UserDataTab({ user }: { user?: User }) {
       try {
         const wb = XLSX.read(evt.target?.result, { type: 'binary' })
         const data = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]) as any[]
-        const usersToImport = data.map(row => ({
-          username: String(row['username'] || row['Username'] || ''),
-          nip: String(row['nip'] || row['NIP'] || ''),
-          nama: String(row['nama'] || row['Nama'] || row['Nama Lengkap'] || ''),
-          divisi: String(row['divisi'] || row['Divisi'] || ''),
-          role: String(row['role'] || row['Role'] || 'GURU'),
-          aktif: ['Y', 'TRUE', 'YA', '1', 'ACTIVE'].includes(String(row['aktif'] || 'Y').toUpperCase()),
-          password: String(row['password'] || row['Password'] || ''),
-        })).filter(u => u.username && u.nama)
+        const usersToImport = data.map(row => {
+          const rawAktif = row['aktif'] ?? row['Aktif'] ?? row['status'] ?? row['Status'];
+          let isAktif = true;
+          if (rawAktif !== undefined && rawAktif !== null && String(rawAktif).trim() !== '') {
+            const strAktif = String(rawAktif).trim().toUpperCase();
+            if (['N', 'FALSE', 'TIDAK', '0', 'INACTIVE', 'NONAKTIF', 'NON AKTIF'].includes(strAktif)) {
+              isAktif = false;
+            } else {
+              isAktif = ['Y', 'TRUE', 'YA', '1', 'ACTIVE', 'AKTIF'].includes(strAktif);
+            }
+          }
+          const rawNip = String(row['nip'] || row['NIP'] || '').trim();
+          const cleanNip = rawNip === '-' ? '' : rawNip;
+          const rawDivisi = String(row['divisi'] || row['Divisi'] || '').trim();
+          const cleanDivisi = rawDivisi === '-' ? '' : rawDivisi;
+          const rawEmail = String(row['email'] || row['Email'] || '').trim();
+          const cleanEmail = rawEmail === '-' ? '' : rawEmail;
+
+          return {
+            username: String(row['username'] || row['Username'] || '').trim(),
+            nip: cleanNip,
+            nama: String(row['nama'] || row['Nama'] || row['Nama Lengkap'] || '').trim(),
+            divisi: cleanDivisi,
+            email: cleanEmail,
+            role: String(row['role'] || row['Role'] || 'GURU').trim(),
+            aktif: isAktif,
+            password: String(row['password'] || row['Password'] || '').trim(),
+          }
+        }).filter(u => u.username && u.nama)
 
         if (usersToImport.length === 0) {
           Swal.fire('Error', 'Tidak ada data valid', 'error')
@@ -430,6 +467,7 @@ export default function UserDataTab({ user }: { user?: User }) {
 
   const handleResetPassword = (u: User) => {
     setResetItem(u)
+    setShowResetSheet(true)
   }
 
   const confirmResetPassword = async () => {
@@ -442,6 +480,7 @@ export default function UserDataTab({ user }: { user?: User }) {
         body: JSON.stringify({ user_id: resetItem.id })
       })
       const data = await res.json()
+      setShowResetSheet(false)
       if (data.ok) {
         // Password sementara kini ACAK per akun, jadi nilainya harus dibaca dari
         // respons — bukan ditulis tetap di layar. Ini satu-satunya kesempatan
@@ -459,9 +498,12 @@ export default function UserDataTab({ user }: { user?: User }) {
         })
         setResetItem(null)
       } else {
+        setResetItem(null)
         Swal.fire('Gagal', pesanGalat(data), 'error')
       }
     } catch {
+      setShowResetSheet(false)
+      setResetItem(null)
       Swal.fire('Error', 'Koneksi gagal', 'error')
     } finally {
       setResetting(false)
@@ -469,10 +511,22 @@ export default function UserDataTab({ user }: { user?: User }) {
   }
 
   const handleToggleStatus = async (u: User) => {
+    if (String(u.id) === String(user?.id)) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Perhatian',
+        text: 'Anda tidak dapat menonaktifkan akun sendiri.',
+        timer: 2000,
+        showConfirmButton: false,
+      })
+      return
+    }
+
     const newStatus = !u.aktif
     
-    // Optimistic UI update
-    setUsers(prev => prev.map(user => user.id === u.id ? { ...user, aktif: newStatus } : user))
+    // Optimistic UI update for both table and mobile sheet
+    setUsers(prev => prev.map(item => item.id === u.id ? { ...item, aktif: newStatus } : item))
+    setSheetUser(prev => prev && prev.id === u.id ? { ...prev, aktif: newStatus } : prev)
     setToggling(u.id)
     
     try {
@@ -486,12 +540,14 @@ export default function UserDataTab({ user }: { user?: User }) {
         setMessage({ type: 'success', text: `${u.nama_lengkap || u.nama} sekarang ${newStatus ? 'Aktif' : 'Nonaktif'}` })
       } else {
         // Revert on error
-        setUsers(prev => prev.map(user => user.id === u.id ? { ...user, aktif: !newStatus } : user))
+        setUsers(prev => prev.map(item => item.id === u.id ? { ...item, aktif: !newStatus } : item))
+        setSheetUser(prev => prev && prev.id === u.id ? { ...prev, aktif: !newStatus } : prev)
         setMessage({ type: 'error', text: pesanGalat(data) })
       }
     } catch {
       // Revert on error
-      setUsers(prev => prev.map(user => user.id === u.id ? { ...user, aktif: !newStatus } : user))
+      setUsers(prev => prev.map(item => item.id === u.id ? { ...item, aktif: !newStatus } : item))
+      setSheetUser(prev => prev && prev.id === u.id ? { ...prev, aktif: !newStatus } : prev)
       setMessage({ type: 'error', text: 'Koneksi gagal' })
     } finally {
       setToggling(null)
@@ -501,6 +557,7 @@ export default function UserDataTab({ user }: { user?: User }) {
   const handleDelete = (u: User) => {
     setDeleteItemId(u.id)
     setDeleteItemData(u)
+    setShowDeleteSheet(true)
   }
 
   const confirmDelete = async () => {
@@ -509,15 +566,19 @@ export default function UserDataTab({ user }: { user?: User }) {
     try {
       const res = await fetch(`/api/admin/users/${deleteItemId}`, { method: 'DELETE' })
       const data = await res.json()
+      setShowDeleteSheet(false)
+      setDeleteItemId(null)
+      setDeleteItemData(null)
       if (data.ok) {
         Swal.fire({ icon: 'success', title: 'Terhapus!', text: data.message, timer: 1500, showConfirmButton: false })
-        setDeleteItemId(null)
-        setDeleteItemData(null)
         fetchUsers()
       } else {
         Swal.fire('Gagal', pesanGalat(data), 'error')
       }
     } catch {
+      setShowDeleteSheet(false)
+      setDeleteItemId(null)
+      setDeleteItemData(null)
       Swal.fire('Error', 'Koneksi gagal', 'error')
     } finally {
       setDeleting(false)
@@ -686,6 +747,7 @@ export default function UserDataTab({ user }: { user?: User }) {
                 </thead>
                 <tbody>
                   {paginatedUsers.map((u, idx) => {
+                    const isSelf = String(u.id) === String(user?.id)
                     const [ab, af] = getAvatarColor(u.nama_lengkap || u.nama)
                     const roleColors = getRoleBadgeColor(u.role || 'GURU')
                     return (
@@ -718,7 +780,7 @@ export default function UserDataTab({ user }: { user?: User }) {
                         </td>
                         <td className="udt-td--role">
                           <div className="udt-role-badges">
-                            {(u.role || 'GURU').split(',').map(r => r.trim()).filter(Boolean).map(r => {
+                            {(u.role || 'GURU').split(/[,|]/).map(r => r.trim()).filter(Boolean).map(r => {
                               const rc = getRoleBadgeColor(r)
                               return (
                                 <span key={r} className="udt-role-badge" style={{ background: rc.bg, color: rc.fg, borderColor: rc.border }}>
@@ -730,22 +792,33 @@ export default function UserDataTab({ user }: { user?: User }) {
                         </td>
                         <td>
                           <label 
-                            className={`udt-status-toggle ${toggling === u.id || !isAdmin ? 'is-disabled' : ''}`}
+                            className={`udt-status-toggle ${toggling !== null && String(toggling) === String(u.id) || !isAdmin || isSelf ? 'is-disabled' : ''}`}
                             onClick={(e) => {
                               e.preventDefault();
-                              if (isAdmin && toggling !== u.id) handleToggleStatus(u);
+                              if (isSelf) {
+                                Swal.fire({
+                                  icon: 'warning',
+                                  title: 'Perhatian',
+                                  text: 'Anda tidak dapat menonaktifkan akun sendiri.',
+                                  timer: 2000,
+                                  showConfirmButton: false,
+                                });
+                                return;
+                              }
+                              if (isAdmin && (toggling === null || String(toggling) !== String(u.id))) handleToggleStatus(u);
                             }}
+                            title={isSelf ? 'Tidak bisa menonaktifkan akun sendiri' : undefined}
                           >
                             <input
                               type="checkbox"
                               style={{ display: 'none' }}
                               checked={u.aktif}
                               readOnly
-                              disabled={toggling === u.id || !isAdmin}
+                              disabled={(toggling !== null && String(toggling) === String(u.id)) || !isAdmin || isSelf}
                             />
                             <div className="udt-status-toggle__switch"></div>
                             <span className="udt-status-toggle__label">
-                              {toggling === u.id ? '...' : (u.aktif ? 'Aktif' : 'Nonaktif')}
+                              {toggling !== null && String(toggling) === String(u.id) ? '...' : (u.aktif ? 'Aktif' : 'Nonaktif')}
                             </span>
                           </label>
                         </td>
@@ -758,7 +831,7 @@ export default function UserDataTab({ user }: { user?: User }) {
                               />
                               <button
                                 className="udt-iconBtn udt-iconBtn--key"
-                                onClick={() => { setResetItem(u); setShowResetSheet(true); }}
+                                onClick={() => handleResetPassword(u)}
                                 title="Reset Password"
                                 style={{
                                   width: '32px', height: '32px', borderRadius: '8px', border: '1px solid var(--n-border)',
@@ -767,10 +840,12 @@ export default function UserDataTab({ user }: { user?: User }) {
                               >
                                 <i className="bi bi-key-fill"></i>
                               </button>
-                              <ActionButton
-                                action="delete"
-                                onClick={() => { setDeleteItemId(u.id); setDeleteItemData(u); setShowDeleteSheet(true); }}
-                              />
+                              {!isSelf && (
+                                <ActionButton
+                                  action="delete"
+                                  onClick={() => handleDelete(u)}
+                                />
+                              )}
                             </ActionGroup>
                           </td>
                         )}
@@ -795,7 +870,7 @@ export default function UserDataTab({ user }: { user?: User }) {
           <>
             <MobileList label="Daftar pengguna">
               {paginatedUsers.map(u => {
-                const roleLabel = (u.role || 'GURU').split(',').map(r => r.trim()).filter(Boolean).join(' · ')
+                const roleLabel = (u.role || 'GURU').split(/[,|]/).map(r => r.trim()).filter(Boolean).join(' · ')
                 return (
                   <MobileListItem
                     key={u.id}
@@ -884,6 +959,14 @@ export default function UserDataTab({ user }: { user?: User }) {
             icon="trash3"
             onClose={() => { setShowDeleteSheet(false); setDeleteItemId(null); setDeleteItemData(null); }}
           />
+          <ModalBody>
+            <div style={{ padding: '4px 0', fontSize: '0.9rem', color: 'var(--n-text)', lineHeight: 1.5 }}>
+              Apakah Anda yakin ingin menghapus akun <strong>@{deleteItemData.username}</strong> ({deleteItemData.nama_lengkap || deleteItemData.nama})?
+              <div style={{ marginTop: '8px', fontSize: '0.8rem', color: 'var(--n-muted)' }}>
+                Kredensial login, foto profil, dan seluruh akses terkait akun ini akan dihapus secara permanen.
+              </div>
+            </div>
+          </ModalBody>
           <ModalFooter>
             <Button variant="cancel" onClick={() => { setShowDeleteSheet(false); setDeleteItemId(null); setDeleteItemData(null); }}>
               Batal
@@ -896,83 +979,98 @@ export default function UserDataTab({ user }: { user?: User }) {
       )}
 
       {/* Mobile Detail Sheet — opens when a MobileListItem is tapped */}
-      {sheetUser && (
-        <MobileSheet
-          title={sheetUser.nama_lengkap || sheetUser.nama}
-          subtitle={`@${sheetUser.username}`}
-          leading={
-            <MobileAvatar
-              name={sheetUser.nama_lengkap || sheetUser.nama}
-              seed={sheetUser.username || sheetUser.nama}
-              src={sheetUser.photoUrl ? getProxiedImageUrl(sheetUser.photoUrl) : undefined}
-            />
-          }
-          onClose={() => setSheetUser(null)}
-          footer={isAdmin ? (
-            <>
-              <Button
-                variant="secondary"
-                leftIcon={<i className="bi bi-pencil-fill" />}
-                onClick={() => { const u = sheetUser; setSheetUser(null); handleEdit(u) }}
-              >
-                Edit
-              </Button>
-              <Button
-                variant="secondary"
-                leftIcon={<i className="bi bi-key-fill" />}
-                onClick={() => { const u = sheetUser; setSheetUser(null); setResetItem(u); setShowResetSheet(true) }}
-              >
-                Reset
-              </Button>
-              <Button
-                variant="danger"
-                icon="delete"
-                onClick={() => { const u = sheetUser; setSheetUser(null); setDeleteItemId(u.id); setDeleteItemData(u); setShowDeleteSheet(true) }}
-              >
-                Hapus
-              </Button>
-            </>
-          ) : undefined}
-        >
-          <MobileKV label="NIP/NISN" mono>{sheetUser.nip || '-'}</MobileKV>
-          <MobileKV label="Role">
-            {(sheetUser.role || 'GURU').split(',').map(r => r.trim()).filter(Boolean).map(r => {
-              const rc = getRoleBadgeColor(r)
-              return (
-                <span key={r} className="udt-role-badge" style={{ background: rc.bg, color: rc.fg, borderColor: rc.border, marginRight: 4 }}>
-                  <i className="bi bi-shield-fill"></i>{r}
-                </span>
-              )
-            })}
-          </MobileKV>
-          {sheetUser.divisi && <MobileKV label="Divisi">{sheetUser.divisi}</MobileKV>}
-          {sheetUser.email && <MobileKV label="Email">{sheetUser.email}</MobileKV>}
-          <MobileKV label="Status">
-            <label
-              className={`udt-status-toggle ${toggling === sheetUser.id || !isAdmin ? 'is-disabled' : ''}`}
-              onClick={(e) => {
-                e.preventDefault();
-                if (isAdmin && toggling !== sheetUser.id) {
-                  handleToggleStatus(sheetUser);
-                  setSheetUser(prev => prev ? { ...prev, aktif: !prev.aktif } : null);
-                }
-              }}
-            >
-              <input
-                type="checkbox"
-                style={{ display: 'none' }}
-                checked={sheetUser.aktif}
-                readOnly
-                disabled={toggling === sheetUser.id || !isAdmin}
+      {sheetUser && (() => {
+        const isSelfSheet = String(sheetUser.id) === String(user?.id);
+        return (
+          <MobileSheet
+            title={sheetUser.nama_lengkap || sheetUser.nama}
+            subtitle={`@${sheetUser.username}`}
+            leading={
+              <MobileAvatar
+                name={sheetUser.nama_lengkap || sheetUser.nama}
+                seed={sheetUser.username || sheetUser.nama}
+                src={sheetUser.photoUrl ? getProxiedImageUrl(sheetUser.photoUrl) : undefined}
               />
-              <div className="udt-status-toggle__switch"></div>
-              <span className="udt-status-toggle__label">
-                {toggling === sheetUser.id ? '...' : (sheetUser.aktif ? 'Aktif' : 'Nonaktif')}
-              </span>
-            </label>
-          </MobileKV>
-        </MobileSheet>
-      )}
+            }
+            onClose={() => setSheetUser(null)}
+            footer={isAdmin ? (
+              <>
+                <Button
+                  variant="secondary"
+                  leftIcon={<i className="bi bi-pencil-fill" />}
+                  onClick={() => { const u = sheetUser; setSheetUser(null); handleEdit(u) }}
+                >
+                  Edit
+                </Button>
+                <Button
+                  variant="secondary"
+                  leftIcon={<i className="bi bi-key-fill" />}
+                  onClick={() => { const u = sheetUser; setSheetUser(null); handleResetPassword(u); }}
+                >
+                  Reset
+                </Button>
+                {!isSelfSheet && (
+                  <Button
+                    variant="danger"
+                    icon="delete"
+                    onClick={() => { const u = sheetUser; setSheetUser(null); handleDelete(u); }}
+                  >
+                    Hapus
+                  </Button>
+                )}
+              </>
+            ) : undefined}
+          >
+            <MobileKV label="NIP/NISN" mono>{sheetUser.nip || '-'}</MobileKV>
+            <MobileKV label="Role">
+              {(sheetUser.role || 'GURU').split(/[,|]/).map(r => r.trim()).filter(Boolean).map(r => {
+                const rc = getRoleBadgeColor(r)
+                return (
+                  <span key={r} className="udt-role-badge" style={{ background: rc.bg, color: rc.fg, borderColor: rc.border, marginRight: 4 }}>
+                    <i className="bi bi-shield-fill"></i>{r}
+                  </span>
+                )
+              })}
+            </MobileKV>
+            {sheetUser.divisi && <MobileKV label="Divisi">{sheetUser.divisi}</MobileKV>}
+            {sheetUser.email && <MobileKV label="Email">{sheetUser.email}</MobileKV>}
+            <MobileKV label="Status">
+              <label
+                className={`udt-status-toggle ${toggling !== null && String(toggling) === String(sheetUser.id) || !isAdmin || isSelfSheet ? 'is-disabled' : ''}`}
+                onClick={(e) => {
+                  e.preventDefault();
+                  if (isSelfSheet) {
+                    Swal.fire({
+                      icon: 'warning',
+                      title: 'Perhatian',
+                      text: 'Anda tidak dapat menonaktifkan akun sendiri.',
+                      timer: 2000,
+                      showConfirmButton: false,
+                    });
+                    return;
+                  }
+                  if (isAdmin && (toggling === null || String(toggling) !== String(sheetUser.id))) {
+                    handleToggleStatus(sheetUser);
+                  }
+                }}
+                title={isSelfSheet ? 'Tidak bisa menonaktifkan akun sendiri' : undefined}
+              >
+                <input
+                  type="checkbox"
+                  style={{ display: 'none' }}
+                  checked={sheetUser.aktif}
+                  readOnly
+                  disabled={(toggling !== null && String(toggling) === String(sheetUser.id)) || !isAdmin || isSelfSheet}
+                />
+                <div className="udt-status-toggle__switch"></div>
+                <span className="udt-status-toggle__label">
+                  {toggling !== null && String(toggling) === String(sheetUser.id) ? '...' : (sheetUser.aktif ? 'Aktif' : 'Nonaktif')}
+                </span>
+              </label>
+            </MobileKV>
+          </MobileSheet>
+        );
+      })()}
 
       {/* Mobile FAB: Tambah User — registers as BottomNav center button */}
       {isAdmin && <MobileFab label="Tambah User" icon="plus-lg" onClick={handleAdd} />}

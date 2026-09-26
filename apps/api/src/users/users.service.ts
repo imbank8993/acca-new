@@ -18,6 +18,7 @@ export interface CreateUserInput {
   email?: string;
   role?: string;
   password?: string;
+  aktif?: boolean;
 }
 
 export interface UpdateUserInput {
@@ -96,17 +97,31 @@ export class UsersService {
   async create(input: CreateUserInput) {
     const username = input.username?.trim();
     const nip = input.nip?.trim() || null;
+    const emailInput = input.email?.trim() || null;
     if (!username || !input.nama) {
       throw new BadRequestException('Username dan Nama wajib diisi');
     }
 
     // NIP opsional: akun orang tua mendaftar dengan email saja.
+    const orConditions: any[] = [{ username: { equals: username, mode: 'insensitive' } }];
+    if (nip) orConditions.push({ nip });
+    if (emailInput) orConditions.push({ email: { equals: emailInput, mode: 'insensitive' } });
+
     const existing = await this.prisma.public_users.findFirst({
-      where: { OR: [{ username }, ...(nip ? [{ nip }] : [])] },
-      select: { id: true },
+      where: { OR: orConditions },
+      select: { id: true, username: true, nip: true, email: true },
     });
     if (existing) {
-      throw new BadRequestException('Username atau NIP sudah terdaftar');
+      if (existing.username?.toLowerCase() === username.toLowerCase()) {
+        throw new BadRequestException('Username sudah terdaftar');
+      }
+      if (nip && existing.nip === nip) {
+        throw new BadRequestException('NIP sudah terdaftar');
+      }
+      if (emailInput && existing.email?.toLowerCase() === emailInput.toLowerCase()) {
+        throw new BadRequestException('Email sudah terdaftar');
+      }
+      throw new BadRequestException('Username, NIP, atau Email sudah terdaftar');
     }
 
     const role = await this.normalkanRole(input.role || 'GURU');
@@ -139,22 +154,31 @@ export class UsersService {
       },
     });
 
-    const user = await this.prisma.public_users.create({
-      data: {
-        username,
-        nip,
-        nama: input.nama,
-        nama_lengkap: input.nama_lengkap || input.nama,
-        divisi: input.divisi || '',
-        email: input.email?.trim() || null,
-        role,
-        auth_id: authId,
-        aktif: true,
-        created_at: now,
-      },
-    });
+    try {
+      const user = await this.prisma.public_users.create({
+        data: {
+          username,
+          nip,
+          nama: input.nama,
+          nama_lengkap: input.nama_lengkap || input.nama,
+          divisi: input.divisi || '',
+          email: input.email?.trim() || null,
+          role,
+          auth_id: authId,
+          aktif: input.aktif !== undefined ? Boolean(input.aktif) : true,
+          created_at: now,
+        },
+      });
 
-    return this.serialize(user);
+      return this.serialize(user);
+    } catch (e: any) {
+      if (e?.code === 'P2002') {
+        const target = e?.meta?.target;
+        const fieldName = Array.isArray(target) ? target.join(', ') : 'Username atau Email';
+        throw new BadRequestException(`${fieldName} sudah terdaftar`);
+      }
+      throw e;
+    }
   }
 
   /**
@@ -261,10 +285,48 @@ export class UsersService {
     const roleTernormal =
       input.role !== undefined ? await this.normalkanRole(input.role) : undefined;
 
+    // Validasi duplikasi username, NIP, atau email sebelum update
+    const usernameInput = input.username?.trim();
+    const nipInput = input.nip !== undefined ? (input.nip?.trim() || null) : undefined;
+    const emailInput = input.email !== undefined ? (input.email?.trim() || null) : undefined;
+
+    const orConditions: any[] = [];
+    if (usernameInput && usernameInput.toLowerCase() !== user.username?.toLowerCase()) {
+      orConditions.push({ username: { equals: usernameInput, mode: 'insensitive' } });
+    }
+    if (nipInput && nipInput !== user.nip) {
+      orConditions.push({ nip: nipInput });
+    }
+    if (emailInput && emailInput.toLowerCase() !== user.email?.toLowerCase()) {
+      orConditions.push({ email: { equals: emailInput, mode: 'insensitive' } });
+    }
+
+    if (orConditions.length > 0) {
+      const existing = await this.prisma.public_users.findFirst({
+        where: {
+          OR: orConditions,
+          NOT: { id: BigInt(id) },
+        },
+        select: { id: true, username: true, nip: true, email: true },
+      });
+
+      if (existing) {
+        if (usernameInput && existing.username?.toLowerCase() === usernameInput.toLowerCase()) {
+          throw new BadRequestException('Username sudah digunakan oleh akun lain');
+        }
+        if (nipInput && existing.nip === nipInput) {
+          throw new BadRequestException('NIP sudah digunakan oleh akun lain');
+        }
+        if (emailInput && existing.email?.toLowerCase() === emailInput.toLowerCase()) {
+          throw new BadRequestException('Email sudah digunakan oleh akun lain');
+        }
+        throw new BadRequestException('Username, NIP, atau Email sudah digunakan');
+      }
+    }
+
     const data: Record<string, any> = {};
     for (const key of [
       'username',
-      'nip',
       'nama',
       'nama_lengkap',
       'divisi',
@@ -274,12 +336,24 @@ export class UsersService {
     ] as const) {
       if (input[key] !== undefined) data[key] = input[key];
     }
+    if (usernameInput !== undefined) data.username = usernameInput;
+    if (nipInput !== undefined) data.nip = nipInput;
     if (roleTernormal !== undefined) data.role = roleTernormal;
-    if (input.email !== undefined) data.email = input.email?.trim() || null;
+    if (emailInput !== undefined) data.email = emailInput;
 
-    const updated = Object.keys(data).length
-      ? await this.prisma.public_users.update({ where: { id: BigInt(id) }, data })
-      : user;
+    let updated = user;
+    if (Object.keys(data).length > 0) {
+      try {
+        updated = await this.prisma.public_users.update({ where: { id: BigInt(id) }, data });
+      } catch (e: any) {
+        if (e?.code === 'P2002') {
+          const target = e?.meta?.target;
+          const fieldName = Array.isArray(target) ? target.join(', ') : 'Username atau Email';
+          throw new BadRequestException(`${fieldName} sudah digunakan`);
+        }
+        throw e;
+      }
+    }
 
     if (user.auth_id) {
       const authData: Record<string, any> = { updated_at: new Date() };
@@ -508,9 +582,18 @@ export class UsersService {
     }
     await this.assertAdminTidakHabis(BigInt(id), false);
 
-    await this.prisma.public_users.delete({ where: { id: BigInt(id) } });
-    if (target.auth_id) {
-      await this.prisma.auth_users.delete({ where: { id: target.auth_id } });
+    try {
+      await this.prisma.public_users.delete({ where: { id: BigInt(id) } });
+      if (target.auth_id) {
+        await this.prisma.auth_users.delete({ where: { id: target.auth_id } });
+      }
+    } catch (e: any) {
+      if (e?.code === 'P2003') {
+        throw new BadRequestException(
+          `Pengguna "${target.username}" tidak dapat dihapus karena memiliki riwayat data terkait (transaksi keuangan, klinik, persetujuan, atau log). Nonaktifkan status akun ini sebagai gantinya.`,
+        );
+      }
+      throw e;
     }
 
     return { fotoProfil: target.foto_profil, username: target.username };
@@ -591,9 +674,7 @@ export class UsersService {
     // 1 & 2. Verifikasi siswa + aturan kuota/duplikasi klaim — logikanya milik
     // OrangtuaService supaya sama persis dengan jalur "tambah anak" dan
     // penautan oleh admin.
-    // `samarkanAlasan: true` — endpoint ini terbuka tanpa token, jadi pesan
-    // galatnya tidak boleh membedakan "NISN tidak ada" dari "tanggal lahir salah".
-    await this.orangtuaService.verifySiswa(nisn, tanggal_lahir_siswa, true);
+    await this.orangtuaService.verifySiswa(nisn, tanggal_lahir_siswa, false);
     await this.orangtuaService.assertClaimAllowed(nisn, status_keluarga);
 
     // 3. Pakai akun yang ada, atau buat baru
@@ -645,6 +726,285 @@ export class UsersService {
     await this.orangtuaService.createClaim(userId, nisn, status_keluarga);
 
     return { message: 'Pendaftaran dan klaim siswa berhasil.' };
+  }
+
+  /**
+   * Pendaftaran mandiri siswa:
+   * Memverifikasi NISN + tanggal lahir di master_siswa (aktif = true).
+   * Menolak jika NISN atau email sudah terdaftar.
+   * Membuat akun dengan role 'SISWA', username = nisn, nip = nisn.
+   */
+  async registerStudent(input: {
+    nisn: string;
+    tanggal_lahir: string;
+    email: string;
+    password: string;
+  }) {
+    const nisn = input.nisn?.trim();
+    const tanggalLahir = input.tanggal_lahir?.trim();
+    const email = input.email?.trim().toLowerCase();
+    const password = input.password;
+
+    if (!nisn || !tanggalLahir || !email || !password) {
+      throw new BadRequestException('Semua kolom wajib diisi');
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      throw new BadRequestException('Format email tidak valid (contoh: siswa@domain.com)');
+    }
+    if (email.endsWith('@acca.local')) {
+      throw new BadRequestException('Gunakan alamat email aktif Anda yang sebenarnya');
+    }
+    if (password.length < 6) {
+      throw new BadRequestException('Kata sandi minimal 6 karakter');
+    }
+
+    // 1. Cek apakah NISN sudah memiliki akun di public_users
+    const akunEksis = await this.prisma.public_users.findFirst({
+      where: {
+        OR: [
+          { nip: nisn },
+          { username: { equals: nisn, mode: 'insensitive' } },
+        ],
+      },
+      select: { id: true, username: true },
+    });
+
+    if (akunEksis) {
+      throw new BadRequestException(
+        `Akun dengan NISN ${nisn} sudah ada. Silakan login atau gunakan menu Lupa Password jika lupa kata sandi.`,
+      );
+    }
+
+    // 2. Cek apakah email sudah terpakai akun lain
+    const emailEksis = await this.prisma.public_users.findFirst({
+      where: { email: { equals: email, mode: 'insensitive' } },
+      select: { id: true },
+    });
+    if (emailEksis) {
+      throw new BadRequestException(`Alamat email '${email}' sudah digunakan oleh akun lain.`);
+    }
+
+    // 3. Verifikasi ke master_siswa
+    const siswa = await this.prisma.master_siswa.findFirst({
+      where: { nisn },
+      select: { nisn: true, nama_lengkap: true, tanggal_lahir: true, aktif: true },
+    });
+
+    if (!siswa) {
+      throw new BadRequestException(`NISN ${nisn} tidak ditemukan di database master siswa madrasah.`);
+    }
+
+    if (!siswa.aktif) {
+      throw new BadRequestException(`Data siswa dengan NISN ${nisn} berstatus nonaktif di database sekolah.`);
+    }
+
+    if (!siswa.tanggal_lahir) {
+      throw new BadRequestException(
+        `Tanggal lahir untuk NISN ${nisn} belum tercatat di database madrasah. Silakan hubungi operator madrasah.`,
+      );
+    }
+
+    const tglDb = siswa.tanggal_lahir.toISOString().slice(0, 10);
+    if (tglDb !== tanggalLahir) {
+      throw new BadRequestException('Tanggal Lahir salah atau tidak sesuai dengan database madrasah.');
+    }
+
+    // 4. Buat akun Siswa
+    const namaSiswa = siswa.nama_lengkap || nisn;
+    const created = await this.create({
+      username: nisn,
+      nip: nisn,
+      nama: namaSiswa,
+      nama_lengkap: namaSiswa,
+      email,
+      role: 'SISWA',
+      password,
+      aktif: true,
+    });
+
+    // 5. Kirim audit notifikasi internal
+    await this.prisma.notifications.create({
+      data: {
+        type: 'user_baru',
+        title: 'Aktivasi Akun Siswa Mandiri',
+        message: `Siswa ${namaSiswa} (NISN: ${nisn}) berhasil mengaktifkan akun secara mandiri.`,
+        link: '/dashboard?page=PengaturanUsers',
+        is_active: true,
+      },
+    }).catch(() => null);
+
+    return {
+      message: 'Akun siswa berhasil diaktifkan. Silakan login menggunakan NISN atau email Anda.',
+      username: nisn,
+      nama: namaSiswa,
+    };
+  }
+
+  /**
+   * Pendaftaran mandiri pegawai (Guru & Tendik):
+   * Memverifikasi NIP + tanggal lahir (atau NIP 18-digit) + 4 digit no HP di master_guru (aktif = true).
+   * Menentukan role secara otomatis: jenis_pegawai === 'TENDIK' -> 'TU', lainnya -> 'GURU'.
+   * Menolak jika NIP, username, atau email sudah terdaftar.
+   */
+  async registerStaff(input: {
+    nip: string;
+    tanggal_lahir: string;
+    digit_hp: string;
+    username: string;
+    email: string;
+    password: string;
+  }) {
+    const nip = input.nip?.trim();
+    const tanggalLahir = input.tanggal_lahir?.trim();
+    const digitHp = input.digit_hp?.trim();
+    const username = input.username?.trim();
+    const email = input.email?.trim().toLowerCase();
+    const password = input.password;
+
+    if (!nip || !tanggalLahir || !digitHp || !username || !email || !password) {
+      throw new BadRequestException('Semua kolom wajib diisi');
+    }
+    if (/\s/.test(username)) {
+      throw new BadRequestException('Username tidak boleh mengandung spasi');
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      throw new BadRequestException('Format email tidak valid (contoh: pegawai@domain.com)');
+    }
+    if (email.endsWith('@acca.local')) {
+      throw new BadRequestException('Gunakan alamat email aktif Anda yang sebenarnya');
+    }
+    if (password.length < 6) {
+      throw new BadRequestException('Kata sandi minimal 6 karakter');
+    }
+
+    // 1. Cek apakah NIP ini sudah punya akun di public_users
+    const akunEksis = await this.prisma.public_users.findFirst({
+      where: { nip },
+      select: { id: true, username: true },
+    });
+
+    if (akunEksis) {
+      throw new BadRequestException(
+        `Akun dengan NIP ${nip} sudah ada. Silakan login atau gunakan menu Lupa Password jika Anda lupa kata sandi.`,
+      );
+    }
+
+    // 2. Cek apakah username atau email sudah digunakan
+    const duplikat = await this.prisma.public_users.findFirst({
+      where: {
+        OR: [
+          { username: { equals: username, mode: 'insensitive' } },
+          { email: { equals: email, mode: 'insensitive' } },
+        ],
+      },
+      select: { username: true, email: true },
+    });
+
+    if (duplikat) {
+      if (duplikat.username?.toLowerCase() === username.toLowerCase()) {
+        throw new BadRequestException(`Username '${username}' sudah digunakan oleh akun lain.`);
+      }
+      throw new BadRequestException(`Alamat email '${email}' sudah digunakan oleh akun lain.`);
+    }
+
+    // 3. Verifikasi ke master_guru
+    const pegawai = await this.prisma.master_guru.findFirst({
+      where: { nip },
+      select: {
+        nip: true,
+        nama_lengkap: true,
+        tanggal_lahir: true,
+        no_hp: true,
+        jenis_pegawai: true,
+        aktif: true,
+      },
+    });
+
+    if (!pegawai) {
+      throw new BadRequestException(`NIP ${nip} tidak ditemukan di database master kepegawaian.`);
+    }
+
+    if (!pegawai.aktif) {
+      throw new BadRequestException(`Pegawai dengan NIP ${nip} berstatus nonaktif di database kepegawaian.`);
+    }
+
+    // Verifikasi Tanggal Lahir (Wajib terdaftar dan cocok)
+    let tglDb: string | null = null;
+    if (pegawai.tanggal_lahir) {
+      tglDb = pegawai.tanggal_lahir.toISOString().slice(0, 10);
+    } else if (/^(19|20)\d{6}/.test(pegawai.nip) && pegawai.nip.length >= 8) {
+      const y = pegawai.nip.slice(0, 4);
+      const m = pegawai.nip.slice(4, 6);
+      const d = pegawai.nip.slice(6, 8);
+      tglDb = `${y}-${m}-${d}`;
+    }
+
+    if (!tglDb) {
+      throw new BadRequestException(
+        `Tanggal lahir untuk NIP ${nip} belum tercatat di data kepegawaian madrasah. Silakan hubungi Tata Usaha (TU) untuk melengkapinya.`,
+      );
+    }
+
+    if (tglDb !== tanggalLahir) {
+      throw new BadRequestException('Tanggal Lahir salah atau tidak sesuai dengan database kepegawaian.');
+    }
+
+    // Verifikasi Nomor HP: Wajib tercatat di master_guru dan wajib cocok
+    if (!pegawai.no_hp || !pegawai.no_hp.trim()) {
+      throw new BadRequestException(
+        `Nomor HP untuk NIP ${nip} belum tercatat di data kepegawaian madrasah. Silakan hubungi Tata Usaha (TU) untuk melengkapinya.`,
+      );
+    }
+
+    const noHpClean = String(pegawai.no_hp).replace(/\D/g, '');
+    const inputHpClean = digitHp.replace(/\D/g, '');
+    if (!inputHpClean || noHpClean.slice(-4) !== inputHpClean.slice(-4)) {
+      throw new BadRequestException('Nomor HP tidak sesuai dengan database (4 digit terakhir tidak cocok).');
+    }
+
+    // 4. PENENTUAN ROLE OTOMATIS:
+    // Jika jenis_pegawai === 'TENDIK' -> Role 'TU'
+    // Selain itu -> Role 'GURU'
+    const jenis = (pegawai.jenis_pegawai || 'GURU').toUpperCase().trim();
+    const roleAkun = jenis === 'TENDIK' ? 'TU' : 'GURU';
+
+    // 5. Buat akun Pegawai
+    const created = await this.create({
+      username,
+      nip,
+      nama: pegawai.nama_lengkap,
+      nama_lengkap: pegawai.nama_lengkap,
+      email,
+      role: roleAkun,
+      password,
+      aktif: true,
+    });
+
+    // Backfill tanggal lahir ke master_guru jika sebelumnya kosong (diekstrak dari NIP PNS 18 digit)
+    if (!pegawai.tanggal_lahir && tglDb) {
+      await this.prisma.master_guru.update({
+        where: { nip },
+        data: { tanggal_lahir: new Date(`${tglDb}T00:00:00Z`) },
+      }).catch(() => null);
+    }
+
+    // 6. Kirim audit notifikasi internal
+    await this.prisma.notifications.create({
+      data: {
+        type: 'user_baru',
+        title: `Aktivasi Akun ${roleAkun === 'TU' ? 'Tendik' : 'Guru'} Mandiri`,
+        message: `${pegawai.nama_lengkap} (@${username}) telah mengaktifkan akun mandiri sebagai ${roleAkun}.`,
+        link: '/dashboard?page=PengaturanUsers',
+        is_active: true,
+      },
+    }).catch(() => null);
+
+    return {
+      message: `Akun ${roleAkun === 'TU' ? 'Tendik (TU)' : 'Guru'} berhasil diaktifkan. Silakan login menggunakan username atau email Anda.`,
+      username,
+      nama: pegawai.nama_lengkap,
+      role: roleAkun,
+    };
   }
 
   /**

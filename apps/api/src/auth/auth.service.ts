@@ -576,8 +576,9 @@ export class AuthService {
       select: { role: true },
     });
     const roles = (caller?.role || '')
-      .split(',')
-      .map((r) => r.trim().toUpperCase());
+      .split(/[,|]/)
+      .map((r) => r.trim().toUpperCase())
+      .filter(Boolean);
     if (!roles.includes('ADMIN') && !roles.includes('ADMINISTRATOR')) {
       throw new ForbiddenException('Hanya admin yang bisa mereset password');
     }

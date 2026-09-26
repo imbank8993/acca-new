@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import type { User } from '@/lib/types'
 import Select from 'react-select'
+import Swal from 'sweetalert2'
 import { Modal, ModalHeader, ModalBody, ModalFooter } from '@/components/ui/Modal'
 import Button from '@/components/ui/Button'
 
@@ -83,11 +84,11 @@ export default function UserModal({
         if (editingUser) {
             const currentRoles = (editingUser.role || '').split(/[,|]/).map((r: string) => r.trim().toUpperCase()).filter(Boolean)
             setFormData({
-                username: editingUser.username,
-                nip: editingUser.nip,
-                nama_lengkap: editingUser.nama_lengkap || editingUser.nama,
-                nama: editingUser.nama,
-                divisi: editingUser.divisi,
+                username: editingUser.username || '',
+                nip: editingUser.nip || '',
+                nama_lengkap: editingUser.nama_lengkap || editingUser.nama || '',
+                nama: editingUser.nama || '',
+                divisi: editingUser.divisi || '',
                 email: editingUser.email || '',
                 role: editingUser.role || '',
                 password: '' // Kosongkan saat edit
@@ -111,20 +112,50 @@ export default function UserModal({
     if (!isOpen) return null
 
     const handleFormSubmit = () => {
+        const username = formData.username.trim()
+        const nama = formData.nama.trim() || formData.nama_lengkap.trim()
+        const rawNip = formData.nip.trim()
+        const nip = rawNip === '-' ? '' : rawNip
+        const rawDivisi = formData.divisi.trim()
+        const divisi = rawDivisi === '-' ? '' : rawDivisi
+        const email = formData.email.trim()
+
+        if (!username) {
+            Swal.fire({ icon: 'warning', title: 'Validasi', text: 'Username wajib diisi!' })
+            return
+        }
+        if (/\s/.test(username)) {
+            Swal.fire({ icon: 'warning', title: 'Validasi', text: 'Username tidak boleh mengandung spasi!' })
+            return
+        }
+        if (!nama) {
+            Swal.fire({ icon: 'warning', title: 'Validasi', text: 'Nama Lengkap atau Nama Ringkas wajib diisi!' })
+            return
+        }
+        if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            Swal.fire({ icon: 'warning', title: 'Validasi', text: 'Format email tidak valid (contoh: user@sekolah.sch.id)!' })
+            return
+        }
         if (!editingUser && (!formData.password || formData.password.length < 6)) {
-            alert('Password baru minimal harus 6 karakter!');
-            return;
+            Swal.fire({ icon: 'warning', title: 'Validasi', text: 'Password baru minimal harus 6 karakter!' })
+            return
         }
         if (editingUser && formData.password !== '' && formData.password.length < 6) {
-            alert('Password minimal harus 6 karakter!');
-            return;
+            Swal.fire({ icon: 'warning', title: 'Validasi', text: 'Password minimal harus 6 karakter!' })
+            return
         }
         if (selectedRoles.length === 0) {
-            alert('Pilih minimal satu role!');
-            return;
+            Swal.fire({ icon: 'warning', title: 'Validasi', text: 'Pilih minimal satu role!' })
+            return
         }
         const dataToSave = {
             ...formData,
+            username,
+            nama,
+            nama_lengkap: formData.nama_lengkap.trim() || nama,
+            nip,
+            divisi,
+            email,
             role: selectedRoles.join(',')
         }
         onSave(dataToSave);
@@ -254,6 +285,7 @@ export default function UserModal({
                                 <div className="role-select-box">
                                     <Select
                                         isMulti
+                                        value={[]}
                                         options={unselectedRoleOptions}
                                         placeholder="Pilih role untuk ditambahkan..."
                                         noOptionsMessage={() => "Semua role sudah terpilih"}

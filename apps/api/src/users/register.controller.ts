@@ -39,4 +39,36 @@ export class RegisterController {
   ) {
     return { ok: true, ...(await this.usersService.registerParent(body)) };
   }
+
+  @Post('student')
+  @Throttle({ default: { limit: 5, ttl: 600000 } })
+  @ApiOperation({ summary: 'Aktivasi mandiri akun siswa' })
+  async registerStudent(
+    @Body()
+    body: {
+      nisn: string;
+      tanggal_lahir: string;
+      email: string;
+      password: string;
+    },
+  ) {
+    return { ok: true, ...(await this.usersService.registerStudent(body)) };
+  }
+
+  @Post('staff')
+  @Throttle({ default: { limit: 5, ttl: 600000 } })
+  @ApiOperation({ summary: 'Aktivasi mandiri akun pegawai (Guru / Tendik)' })
+  async registerStaff(
+    @Body()
+    body: {
+      nip: string;
+      tanggal_lahir: string;
+      digit_hp: string;
+      username: string;
+      email: string;
+      password: string;
+    },
+  ) {
+    return { ok: true, ...(await this.usersService.registerStaff(body)) };
+  }
 }
