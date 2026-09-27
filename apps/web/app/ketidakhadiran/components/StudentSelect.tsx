@@ -1,7 +1,9 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { getActiveSettings } from '@/lib/settings-client';
+import { InlineSelect, InlineSelectOption } from '@/components/ui/InlineSelect';
+import SearchableSelect, { Option } from '@/components/ui/SearchableSelect';
 
 interface Siswa {
     id: number;
@@ -23,26 +25,12 @@ export default function StudentSelect({ onSelectionChange, selectedNisns }: Stud
     // Active Period State
     const [activePeriod, setActivePeriod] = useState<{ tahun_ajaran: string, semester: string } | null>(null);
 
-    // Search state
-    const [query, setQuery] = useState('');
+    // Search / Students state
     const [results, setResults] = useState<Siswa[]>([]);
     const [loading, setLoading] = useState(false);
     const [selectedStudents, setSelectedStudents] = useState<Siswa[]>([]);
-    const [showDropdown, setShowDropdown] = useState(false);
+    const [dropUp, setDropUp] = useState(false);
     const wrapperRef = useRef<HTMLDivElement>(null);
-
-    // Close dropdown when clicking outside
-    useEffect(() => {
-        function handleClickOutside(event: MouseEvent) {
-            if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
-                setShowDropdown(false);
-            }
-        }
-        document.addEventListener("mousedown", handleClickOutside);
-        return () => {
-            document.removeEventListener("mousedown", handleClickOutside);
-        };
-    }, [wrapperRef]);
 
     // Init: Fetch active period, classes and initial student details
     useEffect(() => {
@@ -56,9 +44,6 @@ export default function StudentSelect({ onSelectionChange, selectedNisns }: Stud
     useEffect(() => {
         if (selectedNisns.length === 0) {
             setSelectedStudents([]);
-            setQuery('');
-            setResults([]);
-            setShowDropdown(false);
             setSelectedClass('');
         }
     }, [selectedNisns.length]);
@@ -67,11 +52,10 @@ export default function StudentSelect({ onSelectionChange, selectedNisns }: Stud
         const settings = await getActiveSettings();
         if (settings) {
             setActivePeriod(settings);
-            // We'll call fetchClasses inside searchSiswa or here after state set
-            // For safety, let's just make fetchClasses aware of settings
             fetchClasses(settings.tahun_ajaran, settings.semester);
         } else {
             fetchClasses();
+            searchSiswa();
         }
     };
 
@@ -112,20 +96,18 @@ export default function StudentSelect({ onSelectionChange, selectedNisns }: Stud
         }
     };
 
-    // Trigger search when Query OR Class OR activePeriod changes
+    // Trigger fetch when Class or activePeriod changes
     useEffect(() => {
-        const timeout = setTimeout(() => {
+        if (activePeriod) {
             searchSiswa();
-        }, 300);
-        return () => clearTimeout(timeout);
-    }, [query, selectedClass, activePeriod]);
+        }
+    }, [selectedClass, activePeriod]);
 
     const searchSiswa = async () => {
         setLoading(true);
         try {
             const params = new URLSearchParams();
             if (selectedClass) params.set('kelas', selectedClass);
-            if (query) params.set('q', query);
             if (activePeriod) {
                 if (activePeriod.tahun_ajaran) params.set('tahun_ajaran', activePeriod.tahun_ajaran);
                 if (activePeriod.semester) params.set('semester', activePeriod.semester);
@@ -149,7 +131,7 @@ export default function StudentSelect({ onSelectionChange, selectedNisns }: Stud
                     id: s.id || idx + 1,
                     nisn: s.nisn,
                     nama_siswa: s.nama_siswa || s.nama || s.nisn,
-                    kelas: s.kelas,
+                    kelas: s.kelas || '-',
                 })));
             }
         } catch (error) {
@@ -159,23 +141,21 @@ export default function StudentSelect({ onSelectionChange, selectedNisns }: Stud
         }
     };
 
-    const [dropUp, setDropUp] = useState(false);
-
     // Smart direction detection: find largest available space (Above vs Below)
     const calculateDirection = () => {
         if (wrapperRef.current) {
             const rect = wrapperRef.current.getBoundingClientRect();
             const spaceBelow = window.innerHeight - rect.bottom;
             const spaceAbove = rect.top;
-            setDropUp(spaceBelow < 240 && spaceAbove > spaceBelow);
+            setDropUp(spaceBelow < 280 && spaceAbove > spaceBelow);
         }
     };
 
     useEffect(() => {
-        if (showDropdown) {
-            calculateDirection();
-        }
-    }, [showDropdown]);
+        calculateDirection();
+        window.addEventListener('resize', calculateDirection);
+        return () => window.removeEventListener('resize', calculateDirection);
+    }, []);
 
     const notifyChange = (newNisns: string[], newStudents: Siswa[]) => {
         const classMap: Record<string, string> = {};
@@ -185,20 +165,48 @@ export default function StudentSelect({ onSelectionChange, selectedNisns }: Stud
         onSelectionChange(newNisns, classMap);
     };
 
-    const handleSelect = (siswa: Siswa) => {
-        if (selectedNisns.includes(siswa.nisn)) {
-            // Uncheck
-            const newNisns = selectedNisns.filter(n => n !== siswa.nisn);
-            const newStudents = selectedStudents.filter(s => s.nisn !== siswa.nisn);
-            setSelectedStudents(newStudents);
-            notifyChange(newNisns, newStudents);
-        } else {
-            // Check
-            const newNisns = [...selectedNisns, siswa.nisn];
-            const newStudents = [...selectedStudents, siswa];
-            setSelectedStudents(newStudents);
-            notifyChange(newNisns, newStudents);
-        }
+    // Map to lookup Siswa object by nisn
+    const knownStudentsMap = useMemo(() => {
+        const map = new Map<string, Siswa>();
+        results.forEach(s => map.set(s.nisn, s));
+        selectedStudents.forEach(s => map.set(s.nisn, s));
+        return map;
+    }, [results, selectedStudents]);
+
+    const studentOptions: Option[] = useMemo(() => {
+        const studentMap = new Map<string, Siswa>();
+        results.forEach(s => studentMap.set(s.nisn, s));
+        // Pastikan siswa yang sudah terpilih tetap ada di opsi agar badge dan ringkasan tidak hilang
+        selectedStudents.forEach(s => {
+            if (!studentMap.has(s.nisn)) {
+                studentMap.set(s.nisn, s);
+            }
+        });
+        return Array.from(studentMap.values()).map(s => ({
+            value: s.nisn,
+            label: s.nama_siswa,
+            subLabel: s.kelas && s.kelas !== '-' ? `${s.nisn} • ${s.kelas}` : s.nisn
+        }));
+    }, [results, selectedStudents]);
+
+    const classOptions: InlineSelectOption[] = useMemo(() => [
+        { value: '', label: 'Semua Kelas' },
+        ...availableClasses.map(cls => ({ value: cls, label: cls }))
+    ], [availableClasses]);
+
+    const handleSelectionChange = (newNisns: string[]) => {
+        const newStudents: Siswa[] = newNisns.map(nisn => {
+            const found = knownStudentsMap.get(nisn);
+            if (found) return found;
+            return {
+                id: 0,
+                nisn,
+                nama_siswa: nisn,
+                kelas: '-'
+            };
+        });
+        setSelectedStudents(newStudents);
+        notifyChange(newNisns, newStudents);
     };
 
     const removeStudent = (nisn: string) => {
@@ -208,90 +216,55 @@ export default function StudentSelect({ onSelectionChange, selectedNisns }: Stud
         notifyChange(newNisns, newStudents);
     };
 
-    const toggleDropdown = (e: React.MouseEvent) => {
-        // Prevent toggle if clicking specifically on the input (let input focus handle it or stay open)
-        if ((e.target as HTMLElement).tagName === 'INPUT') {
-            if (!showDropdown) setShowDropdown(true);
-            return;
-        }
-        setShowDropdown(!showDropdown);
-        if (!showDropdown) searchSiswa(); // Refresh list on open
-    };
-
     return (
         <div className="student-select-wrapper" ref={wrapperRef}>
-
-            {/* 1. Class Filter & Trigger */}
             <div className="control-row">
-                <select
-                    className="form-select class-select"
-                    value={selectedClass}
-                    onChange={(e) => {
-                        setSelectedClass(e.target.value);
-                        setShowDropdown(true); // Auto open results when class changes
-                    }}
-                >
-                    <option value="">Semua Kelas</option>
-                    {availableClasses.map(cls => (
-                        <option key={cls} value={cls}>{cls}</option>
-                    ))}
-                </select>
-
-                <div className="search-trigger" onClick={toggleDropdown}>
-                    <input
-                        type="text"
-                        placeholder={selectedClass ? `Cari siswa di ${selectedClass}...` : "Cari nama / NISN..."}
-                        value={query}
-                        onChange={(e) => setQuery(e.target.value)}
-                        className="trigger-input"
-                        onClick={(e) => {
-                            e.stopPropagation(); // Stop bubble to wrapper
-                            if (!showDropdown) setShowDropdown(true);
+                <div className="class-select-wrap">
+                    <InlineSelect
+                        value={selectedClass}
+                        onChange={(val) => {
+                            setSelectedClass(val);
+                            calculateDirection();
                         }}
+                        options={classOptions}
+                        minWidth="100%"
+                        height="38px"
                     />
-                    <div className="trigger-icon">
-                        {loading ? <div className="spinner-xs"></div> : <i className="bi bi-chevron-down"></i>}
-                    </div>
+                </div>
+
+                <div className="student-search-wrap" onClick={calculateDirection}>
+                    <SearchableSelect
+                        options={studentOptions}
+                        value={selectedNisns}
+                        onChange={(vals) => {
+                            const newNisns = Array.isArray(vals) ? vals.map(String) : [String(vals)];
+                            handleSelectionChange(newNisns);
+                        }}
+                        placeholder={loading ? 'Memuat data siswa...' : (selectedClass ? `Cari siswa di ${selectedClass}...` : 'Cari nama / NISN...')}
+                        disabled={loading && studentOptions.length === 0}
+                        multiple={true}
+                        itemLabel="siswa"
+                        placement={dropUp ? 'top' : 'bottom'}
+                    />
                 </div>
             </div>
 
-            {/* 2. Dropdown List */}
-            {showDropdown && (
-                <div className={`student-dropdown ${dropUp ? 'drop-up' : 'drop-down'}`}>
-                    {results.length === 0 ? (
-                        <div className="empty-state">Tidak ada data ditemukan</div>
-                    ) : (
-                        results.map(siswa => {
-                            const isSelected = selectedNisns.includes(siswa.nisn);
-                            return (
-                                <div
-                                    key={siswa.id}
-                                    className={`student-option ${isSelected ? 'selected' : ''}`}
-                                    onClick={() => handleSelect(siswa)}
-                                >
-                                    <div className={`checkbox-custom ${isSelected ? 'checked' : ''}`}>
-                                        {isSelected && <i className="bi bi-check"></i>}
-                                    </div>
-                                    <div className="student-info">
-                                        <div className="student-name">{siswa.nama_siswa}</div>
-                                        <div className="student-meta">{siswa.nisn} • {siswa.kelas}</div>
-                                    </div>
-                                </div>
-                            );
-                        })
-                    )}
-                </div>
-            )}
-
-            {/* 3. Selected Chips (Below) */}
+            {/* Selected Chips */}
             {selectedStudents.length > 0 && (
                 <div className="selected-list">
                     <div className="selected-label">Terpilih: {selectedStudents.length} Siswa</div>
                     <div className="chips-grid">
                         {selectedStudents.map(s => (
-                            <div key={s.id} className="student-chip">
+                            <div key={s.nisn} className="student-chip">
                                 <span>{s.nama_siswa}</span>
-                                <button onClick={() => removeStudent(s.nisn)} className="remove-chip">×</button>
+                                <button
+                                    type="button"
+                                    onClick={() => removeStudent(s.nisn)}
+                                    className="remove-chip"
+                                    title="Hapus"
+                                >
+                                    ×
+                                </button>
                             </div>
                         ))}
                     </div>
@@ -299,224 +272,95 @@ export default function StudentSelect({ onSelectionChange, selectedNisns }: Stud
             )}
 
             <style jsx>{`
-        .student-select-wrapper {
-          position: relative;
-          color: var(--n-text);
-        }
+                .student-select-wrapper {
+                    position: relative;
+                    width: 100%;
+                }
 
-        .control-row {
-          display: flex;
-          gap: 10px;
-        }
+                .control-row {
+                    display: flex;
+                    gap: 10px;
+                    align-items: center;
+                    width: 100%;
+                }
 
-        .class-select {
-          width: 140px;
-          flex-shrink: 0;
-          border: 1px solid var(--n-border);
-          border-radius: 8px;
-          font-size: 0.9rem;
-          color: var(--n-text);
-          background-color: var(--n-surface);
-          cursor: pointer;
-        }
+                .class-select-wrap {
+                    width: 150px;
+                    flex-shrink: 0;
+                }
 
-        .search-trigger {
-          flex: 1;
-          display: flex;
-          align-items: center;
-          border: 1px solid var(--n-border);
-          border-radius: 8px;
-          padding: 0 12px;
-          background-color: var(--n-surface);
-          cursor: pointer;
-          transition: all 0.2s;
-        }
+                .student-search-wrap {
+                    flex: 1;
+                    min-width: 0;
+                }
 
-        .search-trigger:hover, .search-trigger:focus-within {
-          border-color: #3aa6ff;
-          box-shadow: 0 0 0 2px rgba(58, 166, 255, 0.1);
-        }
+                .selected-list {
+                    margin-top: 10px;
+                }
 
-        .trigger-input {
-          flex: 1;
-          border: none;
-          outline: none;
-          padding: 10px 0;
-          font-size: 0.9rem;
-          color: var(--n-text);
-          background: transparent;
-        }
+                .selected-label {
+                    font-size: 0.70rem;
+                    font-weight: 700;
+                    color: var(--n-muted, #64748b);
+                    margin-bottom: 6px;
+                    text-transform: uppercase;
+                    letter-spacing: 0.05em;
+                }
 
-        .trigger-input::placeholder {
-           color: var(--n-muted);
-        }
+                .chips-grid {
+                    display: flex;
+                    flex-wrap: wrap;
+                    gap: 8px;
+                }
 
-        .trigger-icon {
-          color: var(--n-muted);
-          font-size: 0.75rem;
-          margin-left: 8px;
-          display: flex;
-          align-items: center;
-        }
+                .student-chip {
+                    display: inline-flex;
+                    align-items: center;
+                    background: #e0f2fe;
+                    color: #0369a1;
+                    padding: 4px 10px;
+                    border-radius: 6px;
+                    font-size: 0.85rem;
+                    font-weight: 500;
+                }
 
-        .student-dropdown {
-          position: absolute;
-          left: 0;
-          right: 0;
-          background: var(--n-card, #ffffff);
-          border: 1px solid var(--n-border, #cbd5e1);
-          border-radius: 12px;
-          box-shadow: 0 20px 40px -5px rgba(0, 0, 0, 0.25), 0 8px 16px -4px rgba(0, 0, 0, 0.12);
-          max-height: 230px;
-          overflow-y: auto;
-          z-index: 9999;
-        }
+                :global(.dark) .student-chip {
+                    background: rgba(14, 165, 233, 0.2);
+                    color: #38bdf8;
+                    border: 1px solid rgba(56, 189, 248, 0.3);
+                }
 
-        .student-dropdown.drop-up {
-          bottom: 100%;
-          margin-bottom: 6px;
-        }
+                .remove-chip {
+                    background: none;
+                    border: none;
+                    color: #0369a1;
+                    margin-left: 6px;
+                    cursor: pointer;
+                    font-size: 1.1rem;
+                    line-height: 1;
+                    opacity: 0.6;
+                    padding: 0;
+                }
 
-        .student-dropdown.drop-down {
-          top: 100%;
-          margin-top: 6px;
-        }
+                .remove-chip:hover {
+                    opacity: 1;
+                }
 
-        .student-option {
-          display: flex;
-          align-items: center;
-          padding: 10px 14px;
-          border-bottom: 1px solid var(--n-border);
-          cursor: pointer;
-          transition: background 0.1s;
-        }
+                :global(.dark) .remove-chip {
+                    color: #38bdf8;
+                }
 
-        .student-option:hover {
-          background: var(--n-soft);
-        }
-
-        .student-option.selected {
-          background: #eff6ff;
-        }
-
-        .checkbox-custom {
-          width: 20px;
-          height: 20px;
-          border: 2px solid #cbd5e1;
-          border-radius: 6px;
-          margin-right: 12px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 16px;
-          color: white;
-          transition: all 0.2s;
-          background: var(--n-card);
-        }
-
-        .checkbox-custom.checked {
-          background: #3aa6ff;
-          border-color: #3aa6ff;
-        }
-
-        .student-info { 
-           flex: 1;
-        }
-
-        .student-name {
-          font-weight: 600;
-          font-size: 0.9rem;
-          color: var(--n-text);
-        }
-
-        .student-meta {
-          font-size: 0.75rem;
-          color: var(--n-muted);
-        }
-
-        .empty-state {
-          padding: 20px;
-          text-align: center;
-          color: var(--n-muted);
-          font-size: 0.9rem;
-        }
-
-        .selected-list {
-          margin-top: 12px;
-        }
-
-        .selected-label {
-          font-size: 0.75rem;
-          font-weight: 700;
-          color: var(--n-muted);
-          margin-bottom: 6px;
-          text-transform: uppercase;
-          letter-spacing: 0.05em;
-        }
-
-        .chips-grid {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 8px;
-        }
-
-        .student-chip {
-          display: inline-flex;
-          align-items: center;
-          background: #e0f2fe;
-          color: #0369a1;
-          padding: 4px 10px;
-          border-radius: 6px;
-          font-size: 0.85rem;
-          font-weight: 500;
-        }
-
-        .remove-chip {
-          background: none;
-          border: none;
-          color: #0369a1;
-          margin-left: 6px;
-          cursor: pointer;
-          font-size: 1.1rem;
-          line-height: 1;
-          opacity: 0.6;
-          padding: 0;
-        }
-        
-        .remove-chip:hover {
-            opacity: 1;
-        }
-
-        .spinner-xs {
-          width: 14px;
-          height: 14px;
-          border: 2px solid #cbd5e1;
-          border-top-color: #3aa6ff;
-          border-radius: 50%;
-          animation: spin 0.8s linear infinite;
-        }
-        
-        @keyframes spin {
-          to { transform: rotate(360deg); }
-        }
-
-        @media (max-width: 480px) {
-          .control-row {
-            flex-direction: column;
-            gap: 6px;
-          }
-          .class-select {
-            width: 100%;
-          }
-          .search-trigger {
-            padding: 0 10px;
-          }
-          .student-dropdown {
-            left: 0;
-            right: 0;
-          }
-        }
-      `}</style>
+                @media (max-width: 540px) {
+                    .control-row {
+                        flex-direction: column;
+                        gap: 8px;
+                        align-items: stretch;
+                    }
+                    .class-select-wrap {
+                        width: 100%;
+                    }
+                }
+            `}</style>
         </div>
     );
 }

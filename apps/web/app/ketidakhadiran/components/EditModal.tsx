@@ -5,6 +5,7 @@ import Swal from "sweetalert2";
 import DatePicker from '@/components/ui/DatePicker';
 import { Button } from '@/components/ui/Button';
 import { Modal, ModalHeader, ModalBody, ModalFooter } from '@/components/ui/Modal';
+import { InlineSelect, InlineSelectOption } from '@/components/ui/InlineSelect';
 
 interface JamOption {
   jam_ke: number;
@@ -256,6 +257,23 @@ export default function EditModal({ isOpen, onClose, onSuccess, data, canDo, isA
     }
   };
 
+  const jenisOptions: InlineSelectOption[] = [
+    { value: 'IZIN', label: 'IZIN' },
+    { value: 'SAKIT', label: 'SAKIT' },
+  ];
+
+  const statusOptions: InlineSelectOption[] = isIzin
+    ? [
+        { value: 'MADRASAH', label: 'Madrasah' },
+        { value: 'PERSONAL', label: 'Personal' },
+      ]
+    : [
+        { value: 'Ringan', label: 'Ringan' },
+        { value: 'Sedang', label: 'Sedang' },
+        { value: 'Berat', label: 'Berat' },
+        { value: 'Kontrol', label: 'Kontrol' },
+      ];
+
   return (
     <Modal onClose={onClose} size="lg">
       <ModalHeader
@@ -271,24 +289,20 @@ export default function EditModal({ isOpen, onClose, onSuccess, data, canDo, isA
             {/* Jenis + Status */}
             <div className="kh-grid-2">
               <div className="kh-field">
-                <label className="kh-label">Jenis Absen</label>
+                <label className="kh-label">Jenis Ketidakhadiran</label>
                 {isAdmin ? (
-                  <div className="kh-control">
-                    <select
-                      value={jenis}
-                      onChange={(e) => {
-                        const newJenis = e.target.value as 'IZIN' | 'SAKIT';
-                        setJenis(newJenis);
-                        if (newJenis === 'IZIN') setStatus('MADRASAH');
-                        else setStatus('Ringan');
-                      }}
-                      className="kh-input"
-                    >
-                      <option value="IZIN">IZIN</option>
-                      <option value="SAKIT">SAKIT</option>
-                    </select>
-                    <i className="bi bi-caret-down-fill kh-icon-right"></i>
-                  </div>
+                  <InlineSelect
+                    value={jenis}
+                    onChange={(val) => {
+                      const newJenis = val as 'IZIN' | 'SAKIT';
+                      setJenis(newJenis);
+                      if (newJenis === 'IZIN') setStatus('MADRASAH');
+                      else setStatus('Ringan');
+                    }}
+                    options={jenisOptions}
+                    minWidth="100%"
+                    height="38px"
+                  />
                 ) : (
                   <div className={`kh-badge ${isIzin ? 'kh-badge--izin' : 'kh-badge--sakit'}`} style={{ marginBottom: 0 }}>
                     <div className="kh-badge__icon">
@@ -305,24 +319,13 @@ export default function EditModal({ isOpen, onClose, onSuccess, data, canDo, isA
               {/* Status */}
               <div className="kh-field">
                 <label className="kh-label">Status</label>
-                <div className="kh-control">
-                  <select value={status} onChange={(e) => setStatus(e.target.value)} className="kh-input">
-                    {isIzin ? (
-                      <>
-                        <option value="MADRASAH">Madrasah</option>
-                        <option value="PERSONAL">Personal</option>
-                      </>
-                    ) : (
-                      <>
-                        <option value="Ringan">Ringan</option>
-                        <option value="Sedang">Sedang</option>
-                        <option value="Berat">Berat</option>
-                        <option value="Kontrol">Kontrol</option>
-                      </>
-                    )}
-                  </select>
-                  <i className="bi bi-caret-down-fill kh-icon-right"></i>
-                </div>
+                <InlineSelect
+                  value={status}
+                  onChange={(val) => setStatus(val)}
+                  options={statusOptions}
+                  minWidth="100%"
+                  height="38px"
+                />
               </div>
             </div>
 
@@ -330,7 +333,7 @@ export default function EditModal({ isOpen, onClose, onSuccess, data, canDo, isA
             <div className="kh-grid-2">
               {/* Date Range - Single Input Field */}
               <div className="kh-field">
-                <label className="kh-label">Tanggal Ketidakhadiran</label>
+                <label className="kh-label">Tanggal</label>
                 <DatePicker
                   className="kh-input"
                   value={tglMulai}
@@ -360,18 +363,28 @@ export default function EditModal({ isOpen, onClose, onSuccess, data, canDo, isA
 
               {/* Waktu Ketidakhadiran */}
               <div className="kh-field">
-                <label className="kh-label">Waktu Ketidakhadiran</label>
+                <label className="kh-label">Waktu</label>
 
-                <div className="kh-jam-range">
-                  <div style={{ flex: 1 }}>
-                    <div className="kh-jam-range__label">Mulai Pukul</div>
-                    <input type="time" className="kh-input" value={waktuMulai} onChange={(e) => handleWaktuChange(e.target.value, waktuSelesai)} />
-                  </div>
-                  <span className="kh-jam-range__sep">—</span>
-                  <div style={{ flex: 1 }}>
-                    <div className="kh-jam-range__label">Selesai Pukul</div>
-                    <input type="time" className="kh-input" value={waktuSelesai} onChange={(e) => handleWaktuChange(waktuMulai, e.target.value)} />
-                  </div>
+                <div className="kh-time-range">
+                  <label className="kh-time-unit">
+                    <span className="kh-time-tag">Mulai</span>
+                    <input
+                      type="time"
+                      className="kh-time-input"
+                      value={waktuMulai}
+                      onChange={(e) => handleWaktuChange(e.target.value, waktuSelesai)}
+                    />
+                  </label>
+                  <span className="kh-time-sep">—</span>
+                  <label className="kh-time-unit">
+                    <span className="kh-time-tag">Selesai</span>
+                    <input
+                      type="time"
+                      className="kh-time-input"
+                      value={waktuSelesai}
+                      onChange={(e) => handleWaktuChange(waktuMulai, e.target.value)}
+                    />
+                  </label>
                 </div>
 
                 {/* Tipe Rentang Multi-Hari (Berulang vs Kontinu) */}

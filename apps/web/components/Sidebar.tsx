@@ -228,7 +228,6 @@ export default function Sidebar({
   const [hoveredIdx, setHoveredIdx] = useState<number | null>(null)
   const [cbtLoading, setCbtLoading] = useState(false)
   const [pinned, setPinned] = useState<string[]>([])
-  const [search, setSearch] = useState('')
   // null = struktur menu belum diketahui (masih dimuat). Sengaja TIDAK diisi
   // taksonomi bawaan: sidebar lebih baik menampilkan placeholder sebentar
   // daripada daftar menu cadangan yang tidak pernah disusun di "Susun Menu".
@@ -237,7 +236,6 @@ export default function Sidebar({
   const [roleFlat, setRoleFlat] = useState<Record<string, string[]>>({})
 
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null)
-  const searchRef = useRef<HTMLInputElement | null>(null)
   const isAnyModalOpen = useDetectModalOpen()
 
   const hasCbtAccess = user.pagesArray?.includes('cbt-app') || user.roles?.includes('ADMIN')
@@ -390,37 +388,6 @@ export default function Sidebar({
     }
   }, [accessibleIds, user?.auth_id]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Search (Ctrl/Cmd+K) ──
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
-        e.preventDefault()
-        if (isCollapsed) onCollapse()
-        setTimeout(() => searchRef.current?.focus(), 50)
-      } else if (e.key === 'Escape' && document.activeElement === searchRef.current) {
-        setSearch('')
-        searchRef.current?.blur()
-      }
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [isCollapsed, onCollapse])
-
-  const searchResults = useMemo(() => {
-    const q = search.trim().toLowerCase()
-    if (!q) return []
-    const seen = new Set<string>()
-    const res: { id: string; label: string }[] = []
-    accessibleIds.forEach(id => {
-      const label = labelOf(id)
-      if ((label.toLowerCase().includes(q) || id.toLowerCase().includes(q)) && !seen.has(id)) {
-        seen.add(id)
-        res.push({ id, label })
-      }
-    })
-    return res.sort((a, b) => a.label.localeCompare(b.label))
-  }, [search, accessibleIds, labelOf])
-
   const pinnedItems = useMemo(
     () => pinned.filter(id => accessibleIds.has(id)).map(id => ({ id, label: labelOf(id) })),
     [pinned, accessibleIds, labelOf]
@@ -462,7 +429,6 @@ export default function Sidebar({
 
   const go = (page: string) => {
     onNavigate(page)
-    setSearch('')
     if (typeof window !== 'undefined' && window.innerWidth < 992) onToggle()
   }
 
@@ -508,8 +474,6 @@ export default function Sidebar({
     }
   }
 
-  const searching = !isCollapsed && search.trim().length > 0
-
   return (
     <>
       <div className={`sidebar-overlay ${isOpen ? 'show' : ''}`} onClick={onToggle}></div>
@@ -537,125 +501,74 @@ export default function Sidebar({
           </div>
         </div>
 
-        <div className="sidebar-nav-fixed">
-          {/* SSO App Links — CBT + ACCA TOOLS side by side (only if user has access to at least one) */}
-          {(hasCbtAccess || hasToolsAccess) && <div className="sso-cbt-container">
-            {hasCbtAccess && (
-              <button
-                onClick={openCbt}
-                disabled={cbtLoading}
-                className="sso-cbt-btn"
-                title="Buka Aplikasi CBT"
-                aria-busy={cbtLoading}
-              >
-                <i className={`fa-solid ${cbtLoading ? 'fa-spinner fa-spin' : 'fa-file-waveform'} btn-icon`}></i>
-                {!isCollapsed && <span className="btn-label">{cbtLoading ? 'Membuka…' : 'CBT'}</span>}
-              </button>
-            )}
-            {hasToolsAccess && (
-              <a
-                href="/api/sso/tools"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="sso-cbt-btn"
-                title="Buka ACCA TOOLS"
-              >
-                <i className="fa-solid fa-toolbox btn-icon"></i>
-                {!isCollapsed && <span className="btn-label">TOOLS</span>}
-              </a>
-            )}
-          </div>}
-
-          {/* ── SEARCH ── */}
-          {!isCollapsed && (
-            <div className="sidebar-search-box">
-              <i className="fa-solid fa-magnifying-glass"></i>
-              <input
-                ref={searchRef}
-                type="text"
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-                placeholder="Cari menu…"
-                aria-label="Cari menu"
-                className="sidebar-search-input"
-              />
-              {search && (
-                <button className="search-clear" onClick={() => setSearch('')} aria-label="Hapus pencarian">
-                  <i className="fa-solid fa-xmark"></i>
+        {/* SSO App Links — CBT + ACCA TOOLS side by side (only if user has access to at least one) */}
+        {(hasCbtAccess || hasToolsAccess) && (
+          <div className="sidebar-nav-fixed">
+            <div className="sso-cbt-container">
+              {hasCbtAccess && (
+                <button
+                  onClick={openCbt}
+                  disabled={cbtLoading}
+                  className="sso-cbt-btn"
+                  title="Buka Aplikasi CBT"
+                  aria-busy={cbtLoading}
+                >
+                  <i className={`fa-solid ${cbtLoading ? 'fa-spinner fa-spin' : 'fa-file-waveform'} btn-icon`}></i>
+                  {!isCollapsed && <span className="btn-label">{cbtLoading ? 'Membuka…' : 'CBT'}</span>}
                 </button>
               )}
+              {hasToolsAccess && (
+                <a
+                  href="/api/sso/tools"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="sso-cbt-btn"
+                  title="Buka ACCA TOOLS"
+                >
+                  <i className="fa-solid fa-toolbox btn-icon"></i>
+                  {!isCollapsed && <span className="btn-label">TOOLS</span>}
+                </a>
+              )}
             </div>
-          )}
-        </div>
+          </div>
+        )}
 
         <nav className="sidebar-nav">
-          {/* ── SEARCH RESULTS ── */}
-          {searching ? (
-            <div className="search-results">
-              {searchResults.length === 0 ? (
-                <div className="search-empty">Tidak ada menu yang cocok</div>
-              ) : (
-                searchResults.map(r => (
-                  <div key={r.id} className="submenu-row">
-                    <button
-                      className={`submenu-btn ${r.id === currentPage ? 'active' : ''}`}
-                      onClick={() => go(r.id)}
-                      onMouseEnter={() => onPrefetch?.(r.id)}
-                      onFocus={() => onPrefetch?.(r.id)}
-                    >
-                      <i className={`fa-solid ${getMenuIcon(r.id, r.label)} menu-icon`} style={{ marginRight: 10, fontSize: '0.95rem' }}></i>
-                      <span className="menu-label"><MenuName label={r.label} n={badgeOf(r.id)} /></span>
-                    </button>
-                    <button
-                      className={`pin-star ${pinned.includes(r.id) ? 'active' : ''}`}
-                      title={pinned.includes(r.id) ? 'Lepas dari pinned' : 'Sematkan'}
-                      aria-label={pinned.includes(r.id) ? 'Lepas dari pinned' : 'Sematkan'}
-                      onClick={e => { e.stopPropagation(); togglePin(r.id) }}
-                    >
-                      <i className="fa-solid fa-star"></i>
-                    </button>
-                  </div>
-                ))
-              )}
-            </div>
-          ) : (
+          {/* ── PINNED ── */}
+          {!isCollapsed && pinnedItems.length > 0 && (
             <>
-              {/* ── PINNED ── */}
-              {!isCollapsed && pinnedItems.length > 0 && (
-                <>
-                  <div className="nav-section-label">Disematkan</div>
-                  {pinnedItems.map(p => (
-                    <div key={p.id} className="submenu-row pinned-row">
-                      <button
-                        className={`submenu-btn pinned-btn ${p.id === currentPage ? 'active' : ''}`}
-                        onClick={() => go(p.id)}
-                        onMouseEnter={() => onPrefetch?.(p.id)}
-                        onFocus={() => onPrefetch?.(p.id)}
-                      >
-                        <i
-                          className={`fa-solid ${getMenuIcon(p.id, p.label)} pinned-ico pin-ico active`}
-                          title="Lepas dari pinned"
-                          aria-label="Lepas dari pinned"
-                          role="button"
-                          onClick={e => { e.stopPropagation(); togglePin(p.id) }}
-                        ></i>
-                        <span className="menu-label"><MenuName label={p.label} n={badgeOf(p.id)} /></span>
-                      </button>
-                    </div>
-                  ))}
-                  <div className="nav-divider"></div>
-                  <div className="nav-section-label">Menu Utama</div>
-                </>
-              )}
-
-
-              {/* ── GROUPS ── */}
-              {menuGroups === null && (
-                <div className="menu-skeleton" aria-hidden="true">
-                  {[0, 1, 2, 3, 4, 5].map(i => <div key={i} className="menu-skeleton-row"></div>)}
+              <div className="nav-section-label">Disematkan</div>
+              {pinnedItems.map(p => (
+                <div key={p.id} className="submenu-row pinned-row">
+                  <button
+                    className={`submenu-btn pinned-btn ${p.id === currentPage ? 'active' : ''}`}
+                    onClick={() => go(p.id)}
+                    onMouseEnter={() => onPrefetch?.(p.id)}
+                    onFocus={() => onPrefetch?.(p.id)}
+                  >
+                    <i
+                      className={`fa-solid ${getMenuIcon(p.id, p.label)} pinned-ico pin-ico active`}
+                      title="Lepas dari pinned"
+                      aria-label="Lepas dari pinned"
+                      role="button"
+                      onClick={e => { e.stopPropagation(); togglePin(p.id) }}
+                    ></i>
+                    <span className="menu-label"><MenuName label={p.label} n={badgeOf(p.id)} /></span>
+                  </button>
                 </div>
-              )}
-              {groups.map((g, index) => {
+              ))}
+              <div className="nav-divider"></div>
+              <div className="nav-section-label">Menu Utama</div>
+            </>
+          )}
+
+          {/* ── GROUPS ── */}
+          {menuGroups === null && (
+            <div className="menu-skeleton" aria-hidden="true">
+              {[0, 1, 2, 3, 4, 5].map(i => <div key={i} className="menu-skeleton-row"></div>)}
+            </div>
+          )}
+          {groups.map((g, index) => {
                 const isActive = g.children.some(c => c.id === currentPage)
                 const expanded = expandedGroups.includes(g.key)
 
@@ -774,8 +687,6 @@ export default function Sidebar({
                   </div>
                 )
               })}
-            </>
-          )}
         </nav>
       </aside>
     </>

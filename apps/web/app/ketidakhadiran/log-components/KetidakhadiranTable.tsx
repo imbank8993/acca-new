@@ -21,6 +21,7 @@ export interface KetidakhadiranRow {
     is_time_specific: boolean;
     periode: string;
     kelas_chip?: string;
+    foto_profil?: string | null;
 }
 
 interface KetidakhadiranTableProps {

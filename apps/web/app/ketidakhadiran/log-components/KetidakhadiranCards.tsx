@@ -3,6 +3,7 @@
 import React from 'react';
 import { KetidakhadiranRow } from './KetidakhadiranTable';
 import { ActionButton } from '@/components/ui/ActionButtons';
+import { getProxiedImageUrl } from '@/lib/image-utils';
 
 interface KetidakhadiranCardsProps {
     rows: KetidakhadiranRow[];
@@ -83,7 +84,13 @@ export default function KetidakhadiranCards({ rows, hideKeterangan = false, onVi
                     {/* Header */}
                     <div className="kc__head">
                         <div className="kc__guru">
-                            <div className="kc__avatar">{r.nama?.charAt(0) || '?'}</div>
+                            <div className="kc__avatar">
+                                {r.foto_profil ? (
+                                    <img src={getProxiedImageUrl(r.foto_profil)} alt="" className="kc__avatar-img" />
+                                ) : (
+                                    r.nama?.charAt(0) || '?'
+                                )}
+                            </div>
                             <div className="kc__info">
                                 <div className="kc__nama">{r.nama}</div>
                                 <div className="kc__nisn">{r.nisn}</div>
@@ -175,6 +182,10 @@ export default function KetidakhadiranCards({ rows, hideKeterangan = false, onVi
                     background: linear-gradient(135deg, var(--n-primary), #60a5fa);
                     color: white; font-weight: 800; font-size: 0.85rem;
                     display: flex; align-items: center; justify-content: center;
+                    overflow: hidden;
+                }
+                .kc__avatar-img {
+                    width: 100%; height: 100%; object-fit: cover; border-radius: 10px;
                 }
                 .kc__nama { font-weight: 700; color: var(--n-ink); font-size: 0.83rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
                 .kc__nisn { font-size: 0.68rem; color: var(--n-muted); font-family: monospace; margin-top: 1px; }

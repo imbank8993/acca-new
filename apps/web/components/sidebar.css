@@ -301,7 +301,11 @@
   }
 
   .sidebar-nav {
-    padding: 0 12px calc(20px + env(safe-area-inset-bottom)) !important;
+    padding: 12px 12px calc(20px + env(safe-area-inset-bottom)) !important;
+  }
+
+  .sidebar:not(.collapsed) .sidebar-nav-fixed + .sidebar-nav {
+    padding-top: 4px !important;
   }
 }
 
@@ -357,7 +361,7 @@
   /* Hide toggle on collapsed to keep it clean like the UI image */
 }
 
-/* Nav header — CBT/TOOLS + Search: diam di tempat, tidak ikut scroll bareng daftar menu */
+/* Nav header — CBT/TOOLS: diam di tempat, tidak ikut scroll bareng daftar menu */
 .sidebar-nav-fixed {
   padding: 12px 16px 0;
   flex-shrink: 0;
@@ -369,11 +373,15 @@
 
 /* Nav area */
 .sidebar-nav {
-  padding: 0 16px 20px;
+  padding: 12px 16px 20px;
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
   scrollbar-width: thin;
+}
+
+.sidebar:not(.collapsed) .sidebar-nav-fixed + .sidebar-nav {
+  padding-top: 4px;
 }
 .sidebar-nav::-webkit-scrollbar {
   width: 4px;

@@ -6,6 +6,7 @@ import Swal from 'sweetalert2';
 import DatePicker from '@/components/ui/DatePicker';
 import { Button } from '@/components/ui/Button';
 import { Modal, ModalHeader, ModalBody, ModalFooter } from '@/components/ui/Modal';
+import { InlineSelect, InlineSelectOption } from '@/components/ui/InlineSelect';
 
 interface JamOption {
   jam_ke: number;
@@ -372,11 +373,33 @@ export default function AddModal({ isOpen, onClose, onSuccess, canDo, allowedTyp
     return `Mencakup Jam Pelajaran ${jm} s/d ${js}`;
   };
 
+  const jenisOptions: InlineSelectOption[] = [];
+  if (allowedTypes?.IZIN || canDo('ketidakhadiran.izin', 'manage')) {
+    jenisOptions.push({ value: 'IZIN', label: 'IZIN' });
+  }
+  if (allowedTypes?.SAKIT || canDo('ketidakhadiran.sakit', 'manage')) {
+    jenisOptions.push({ value: 'SAKIT', label: 'SAKIT' });
+  }
+  if (jenisOptions.length === 0) {
+    jenisOptions.push({ value: jenis, label: jenis });
+  }
+
+  const statusOptions: InlineSelectOption[] = isIzin
+    ? [
+        { value: 'MADRASAH', label: 'Madrasah' },
+        { value: 'PERSONAL', label: 'Personal' },
+      ]
+    : [
+        { value: 'Ringan', label: 'Ringan' },
+        { value: 'Sedang', label: 'Sedang' },
+        { value: 'Berat', label: 'Berat' },
+        { value: 'Kontrol', label: 'Kontrol' },
+      ];
+
   return (
     <Modal onClose={onClose} size="lg">
       <ModalHeader
         title="Tambah Data Ketidakhadiran"
-        subtitle={`Input data ${allowedOnly ? (allowedOnly === 'IZIN' ? 'izin' : 'sakit') : 'izin atau sakit'} siswa`}
         icon="calendar-plus"
         onClose={onClose}
       />
@@ -387,21 +410,19 @@ export default function AddModal({ isOpen, onClose, onSuccess, canDo, allowedTyp
             {/* Jenis + Status */}
             <div className="kh-grid-2">
               <div className="kh-field">
-                <label className="kh-label">Jenis Absen</label>
-                <div className="kh-control">
-                  <select value={jenis}
-                    onChange={(e) => {
-                      const nj = e.target.value as 'IZIN' | 'SAKIT';
-                      setJenis(nj);
-                      if (nj === 'IZIN') setStatus('MADRASAH'); else setStatus('Ringan');
-                    }}
-                    className="kh-input" disabled={!canManageBoth || !!allowedOnly}
-                  >
-                    {(allowedTypes?.IZIN || canDo('ketidakhadiran.izin', 'manage')) && <option value="IZIN">IZIN</option>}
-                    {(allowedTypes?.SAKIT || canDo('ketidakhadiran.sakit', 'manage')) && <option value="SAKIT">SAKIT</option>}
-                  </select>
-                  <i className="bi bi-caret-down-fill kh-icon-right"></i>
-                </div>
+                <label className="kh-label">Jenis Ketidakhadiran</label>
+                <InlineSelect
+                  value={jenis}
+                  onChange={(val) => {
+                    const nj = val as 'IZIN' | 'SAKIT';
+                    setJenis(nj);
+                    if (nj === 'IZIN') setStatus('MADRASAH'); else setStatus('Ringan');
+                  }}
+                  options={jenisOptions}
+                  disabled={!canManageBoth || !!allowedOnly}
+                  minWidth="100%"
+                  height="38px"
+                />
                 {allowedOnly && (
                   <p className="kh-hint" style={{ color: '#3083FF', marginTop: '4px' }}>
                     <i className="bi bi-info-circle" style={{ marginRight: '4px' }} />
@@ -411,15 +432,13 @@ export default function AddModal({ isOpen, onClose, onSuccess, canDo, allowedTyp
               </div>
               <div className="kh-field">
                 <label className="kh-label">Status</label>
-                <div className="kh-control">
-                  <select value={status} onChange={(e) => setStatus(e.target.value)} className="kh-input">
-                    {isIzin
-                      ? <><option value="MADRASAH">Madrasah</option><option value="PERSONAL">Personal</option></>
-                      : <><option value="Ringan">Ringan</option><option value="Sedang">Sedang</option><option value="Berat">Berat</option><option value="Kontrol">Kontrol</option></>
-                    }
-                  </select>
-                  <i className="bi bi-caret-down-fill kh-icon-right"></i>
-                </div>
+                <InlineSelect
+                  value={status}
+                  onChange={(val) => setStatus(val)}
+                  options={statusOptions}
+                  minWidth="100%"
+                  height="38px"
+                />
               </div>
             </div>
 
@@ -427,7 +446,7 @@ export default function AddModal({ isOpen, onClose, onSuccess, canDo, allowedTyp
             <div className="kh-grid-2">
               {/* Date Range - Single Input Field */}
               <div className="kh-field">
-                <label className="kh-label">Tanggal Ketidakhadiran</label>
+                <label className="kh-label">Tanggal</label>
                 <DatePicker
                   className="kh-input"
                   value={tglMulai}
@@ -457,18 +476,28 @@ export default function AddModal({ isOpen, onClose, onSuccess, canDo, allowedTyp
 
               {/* Waktu Ketidakhadiran */}
               <div className="kh-field">
-                <label className="kh-label">Waktu Ketidakhadiran</label>
+                <label className="kh-label">Waktu</label>
 
-                <div className="kh-jam-range">
-                  <div style={{ flex: 1 }}>
-                    <div className="kh-jam-range__label">Mulai Pukul</div>
-                    <input type="time" className="kh-input" value={waktuMulai} onChange={(e) => handleWaktuChange(e.target.value, waktuSelesai)} />
-                  </div>
-                  <span className="kh-jam-range__sep">—</span>
-                  <div style={{ flex: 1 }}>
-                    <div className="kh-jam-range__label">Selesai Pukul</div>
-                    <input type="time" className="kh-input" value={waktuSelesai} onChange={(e) => handleWaktuChange(waktuMulai, e.target.value)} />
-                  </div>
+                <div className="kh-time-range">
+                  <label className="kh-time-unit">
+                    <span className="kh-time-tag">Mulai</span>
+                    <input
+                      type="time"
+                      className="kh-time-input"
+                      value={waktuMulai}
+                      onChange={(e) => handleWaktuChange(e.target.value, waktuSelesai)}
+                    />
+                  </label>
+                  <span className="kh-time-sep">—</span>
+                  <label className="kh-time-unit">
+                    <span className="kh-time-tag">Selesai</span>
+                    <input
+                      type="time"
+                      className="kh-time-input"
+                      value={waktuSelesai}
+                      onChange={(e) => handleWaktuChange(waktuMulai, e.target.value)}
+                    />
+                  </label>
                 </div>
 
                 {/* Tipe Rentang Multi-Hari (Berulang vs Kontinu) */}
@@ -507,7 +536,7 @@ export default function AddModal({ isOpen, onClose, onSuccess, canDo, allowedTyp
             <div className="kh-grid-2" style={{ marginTop: '-4px' }}>
               {/* Keterangan */}
               <div className="kh-field" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-                <label className="kh-label">{isIzin ? 'Keterangan Izin' : 'Keterangan / Diagnosa'}</label>
+                <label className="kh-label">Keterangan</label>
                 {isIzin && <p className="kh-hint" style={{ marginBottom: 4 }}>Gunakan <b>|</b> untuk memisahkan</p>}
                 <textarea
                   className="kh-input kh-textarea"

@@ -6,7 +6,6 @@ import Select, { type StylesConfig, type SingleValue, type MultiValue } from 're
 import { MENU_GROUPS, PAGE_LABELS, type MenuGroupDef } from '@/lib/sidebar-menu'
 import { formatRoleDisplay } from '@/lib/auth'
 import { canAccessPage } from '@/lib/page-requirements'
-import { FilterToolbar, FilterActions } from '@/components/ui/FilterToolbar'
 import Button from '@/components/ui/Button'
 import { Modal, ModalHeader, ModalBody, ModalFooter } from '@/components/ui/Modal'
 import { useModalBlur } from '@/components/ModalBlurProvider'
@@ -14,7 +13,6 @@ import { Spinner } from '@/components/ui/Spinner'
 import type { ThemeMode } from '@/lib/theme-roles'
 
 const ADMIN_ROLES = new Set(['ADMIN', 'ADMINISTRATOR'])
-const PRIMARY_ROLES = ['ADMIN', 'GURU', 'SISWA', 'WALI', 'ORANG_TUA', 'KAMAD', 'WALI_KELAS']
 
 // Serialize the editable state (pages + flat groups) into a stable string so we
 // can detect unsaved changes regardless of Set iteration order.
@@ -43,6 +41,7 @@ export default function RolePageAccessTab() {
   const [initial, setInitial] = useState<string>('') // serialized snapshot to detect changes
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [pageSearch, setPageSearch] = useState('')
 
   // Role Theme Mode Map (Role -> 'ALL' | 'LIGHT' | 'DARK')
   const [roleThemeMap, setRoleThemeMap] = useState<Record<string, ThemeMode>>({})
@@ -103,18 +102,6 @@ export default function RolePageAccessTab() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  /**
-   * Pemuatan akses role GAGAL — penyimpanan harus ditahan.
-   *
-   * Dulu kegagalan diperlakukan sebagai "role ini tidak punya halaman": `pageIds`
-   * disetel ke himpunan KOSONG. Layar lalu menampilkan semua kotak tidak
-   * tercentang, tampak seperti keadaan yang sah, dan `save()` mengirim
-   * `pageIds: []` apa adanya — mencabut SELURUH menu role itu dalam satu klik.
-   * Untuk role seperti TAMU (31 halaman) atau GURU, satu gangguan jaringan sesaat
-   * cukup untuk menghapus seluruh pemetaannya.
-   *
-   * Bahaya yang sama sudah disadari dan dicegah di MenuLayoutTab; di sini belum.
-   */
   const [gagalMuatAkses, setGagalMuatAkses] = useState(false)
 
   useEffect(() => {
@@ -157,12 +144,9 @@ export default function RolePageAccessTab() {
     [pageIds, flatGroups, initial, isThemeDirty]
   )
 
-  // A page can be granted in the menu (role_pages) yet the role has NO functional
-  // access inside it (PAGE_ROLE_REQUIREMENTS.allowedRoles). ADMIN always bypasses.
   const roleLacksAccess = (pageId: string) =>
     !!selectedRole && !ADMIN_ROLES.has(selectedRole.toUpperCase()) && !canAccessPage([selectedRole], pageId)
 
-  // Count of currently-granted pages where the role lacks in-page access.
   const warnCount = useMemo(
     () => [...pageIds].filter(p => !ADMIN_ROLES.has(selectedRole.toUpperCase()) && !canAccessPage([selectedRole], p)).length,
     [pageIds, selectedRole]
@@ -207,7 +191,7 @@ export default function RolePageAccessTab() {
     if (gagalMuatAkses) {
       Swal.fire(
         'Tidak bisa menyimpan',
-        'Akses halaman role ini gagal dimuat, jadi yang tampil di layar belum tentu sama dengan yang tersimpan. Muat ulang halaman lebih dulu — menyimpan sekarang berisiko menghapus akses yang sudah ada.',
+        'Akses halaman role ini gagal dimuat. Muat ulang halaman lebih dulu.',
         'warning',
       )
       return
@@ -239,11 +223,13 @@ export default function RolePageAccessTab() {
 
       setInitial(snapshot(pageIds, flatGroups))
       setInitialRoleThemeMap({ ...roleThemeMap })
-      Swal.fire(
-        'Berhasil',
-        `Akses halaman & preferensi tema untuk role ${formatRoleDisplay(selectedRole)} disimpan. Berlaku setelah user login berikutnya.`,
-        'success'
-      )
+      Swal.fire({
+        icon: 'success',
+        title: 'Tersimpan',
+        text: `Akses halaman & tema role ${formatRoleDisplay(selectedRole)} berhasil disimpan.`,
+        timer: 2000,
+        showConfirmButton: false
+      })
     } catch (e: unknown) {
       const errMsg = e instanceof Error ? e.message : 'Gagal menyimpan data'
       Swal.fire('Error', errMsg, 'error')
@@ -255,7 +241,7 @@ export default function RolePageAccessTab() {
   // Handle Bulk Theme Mode Application
   const handleApplyBulkTheme = async () => {
     if (bulkSelectedRoles.length === 0) {
-      Swal.fire('Peringatan', 'Silakan pilih minimal satu role untuk menerapkan mode.', 'warning')
+      Swal.fire('Peringatan', 'Pilih minimal satu role.', 'warning')
       return
     }
 
@@ -275,12 +261,12 @@ export default function RolePageAccessTab() {
       setShowBulkModal(false)
       setBulkSelectedRoles([])
 
-      const modeTitle = bulkTargetMode === 'ALL' ? 'Semua Mode (Bebas)' : bulkTargetMode === 'DARK' ? 'Hanya Mode Gelap' : 'Hanya Mode Terang'
+      const modeTitle = bulkTargetMode === 'ALL' ? 'Semua Mode' : bulkTargetMode === 'DARK' ? 'Mode Dark' : 'Mode Light'
       Swal.fire({
         icon: 'success',
-        title: 'Berhasil Diterapkan!',
-        text: `Mode "${modeTitle}" berhasil diterapkan ke ${bulkSelectedRoles.length} role.`,
-        timer: 2500,
+        title: 'Berhasil',
+        text: `Mode "${modeTitle}" diterapkan ke ${bulkSelectedRoles.length} role.`,
+        timer: 2000,
         showConfirmButton: false
       })
     } catch (e: unknown) {
@@ -324,29 +310,59 @@ export default function RolePageAccessTab() {
   const currentRoleIsAdmin = ADMIN_ROLES.has(currentRoleUpper)
   const currentRoleMode: ThemeMode = currentRoleIsAdmin ? 'ALL' : (roleThemeMap[currentRoleUpper] || 'LIGHT')
 
+  // Filter groups by pageSearch
+  const filteredGroups = useMemo(() => {
+    if (!pageSearch.trim()) return groups
+    const q = pageSearch.toLowerCase().trim()
+    return groups
+      .map(g => {
+        const groupMatches = g.label.toLowerCase().includes(q)
+        const matchedPages = g.pages.filter(p => {
+          const l = effectiveLabel(p).toLowerCase()
+          return l.includes(q) || p.toLowerCase().includes(q)
+        })
+        if (!groupMatches && matchedPages.length === 0) return null
+        return {
+          ...g,
+          pages: matchedPages.length > 0 ? matchedPages : g.pages
+        }
+      })
+      .filter(Boolean) as MenuGroupDef[]
+  }, [groups, pageSearch, labels])
+
   // react-select custom styling
   const customSelectStyles: StylesConfig<RoleSelectOption, boolean> = {
     control: (base, state) => ({
       ...base,
-      minHeight: '40px',
-      borderRadius: '10px',
-      borderColor: state.isFocused ? '#2563eb' : 'var(--n-border, #cbd5e1)',
+      minHeight: '38px',
+      height: '38px',
+      borderRadius: '8px',
+      borderColor: state.isFocused ? '#3083FF' : 'var(--n-border, #cbd5e1)',
       backgroundColor: 'var(--n-card, #ffffff)',
-      boxShadow: state.isFocused ? '0 0 0 2px rgba(37, 99, 235, 0.2)' : 'none',
+      boxShadow: state.isFocused ? '0 0 0 3px rgba(48, 131, 255, 0.15)' : 'none',
       '&:hover': {
-        borderColor: '#2563eb'
+        borderColor: '#3083FF'
       },
-      fontSize: '0.85rem',
+      fontSize: '0.84rem',
       fontWeight: '600'
+    }),
+    valueContainer: base => ({
+      ...base,
+      height: '38px',
+      padding: '0 10px'
+    }),
+    indicatorsContainer: base => ({
+      ...base,
+      height: '38px'
     }),
     option: (base, state) => ({
       ...base,
       fontSize: '0.82rem',
       fontWeight: '600',
       backgroundColor: state.isSelected
-        ? '#2563eb'
+        ? '#3083FF'
         : state.isFocused
-        ? 'rgba(37, 99, 235, 0.1)'
+        ? 'rgba(48, 131, 255, 0.1)'
         : 'transparent',
       color: state.isSelected ? '#ffffff' : 'var(--n-ink, #0f172a)',
       cursor: 'pointer'
@@ -354,7 +370,7 @@ export default function RolePageAccessTab() {
     singleValue: base => ({
       ...base,
       color: 'var(--n-ink, #0f172a)',
-      fontWeight: '600'
+      fontWeight: '700'
     }),
     menu: base => ({
       ...base,
@@ -368,255 +384,249 @@ export default function RolePageAccessTab() {
 
   return (
     <div className="rpa">
-      <div className="rpa__intro">
-        <h2>Akses Halaman per Role</h2>
-        <p>Pilih halaman yang muncul di menu untuk setiap role. Pengaturan menu ini terpisah dari hak akses ke isi halaman.</p>
-      </div>
-
-      <div className="rpa__headerBar">
-        <div className="rpa__headerLeft">
-          <div className="rpa__dropdownArea">
-            <label className="rpa__fieldLabel">
-              Role yang diatur
-            </label>
-            <div className="rpa__selectBox">
-              <Select<RoleSelectOption, false>
-                value={roleSelectOptions.find(o => o.value === selectedRole) || null}
-                onChange={(opt: SingleValue<RoleSelectOption>) => opt && setSelectedRole(opt.value)}
-                options={roleSelectOptions}
-                placeholder="Cari role..."
-                isSearchable
-                styles={customSelectStyles}
-                classNamePrefix="rpa-select"
-                formatOptionLabel={(option: RoleSelectOption) => (
-                  <div className="rpa__optionRow">
-                    <span className="rpa__optionName">{formatRoleDisplay(option.value)}</span>
-                    <div className="rpa__optionMeta">
-                      <span className="rpa__optionCount">{option.count || 0} user</span>
-                      <span className={`rpa__optionMode ${(option.mode || 'light').toLowerCase()}`}>
-                        {option.mode === 'ALL' ? '🌗 Semua' : option.mode === 'DARK' ? '🌙 Dark' : '☀️ Light'}
-                      </span>
-                    </div>
+      {/* ── 1. UNIFIED STUDIO CONTROL BAR ── */}
+      <div className="rpa__studioBar">
+        {/* Role Selector & Quick Chips */}
+        <div className="rpa__roleArea">
+          <div className="rpa__selectBox">
+            <Select<RoleSelectOption, false>
+              value={roleSelectOptions.find(o => o.value === selectedRole) || null}
+              onChange={(opt: SingleValue<RoleSelectOption>) => opt && setSelectedRole(opt.value)}
+              options={roleSelectOptions}
+              placeholder="Pilih role..."
+              isSearchable
+              styles={customSelectStyles}
+              classNamePrefix="rpa-select"
+              formatOptionLabel={(option: RoleSelectOption) => (
+                <div className="rpa__optionRow">
+                  <span className="rpa__optionName">{formatRoleDisplay(option.value)}</span>
+                  <div className="rpa__optionMeta">
+                    <span className="rpa__optionCount">{option.count || 0} user</span>
+                    <span className={`rpa__optionMode ${(option.mode || 'light').toLowerCase()}`}>
+                      {option.mode === 'ALL' ? '🌗' : option.mode === 'DARK' ? '🌙' : '☀️'}
+                    </span>
                   </div>
-                )}
-              />
-            </div>
-          </div>
-
-          <div className="rpa__quickPills">
-            {PRIMARY_ROLES.some(pr => roles.includes(pr)) && (
-              <span className="rpa__quickTitle">Pilih cepat</span>
-            )}
-            {PRIMARY_ROLES.filter(pr => roles.includes(pr)).map(pr => (
-              <button
-                key={pr}
-                type="button"
-                className={`rpa__quickPill ${selectedRole === pr ? 'active' : ''}`}
-                onClick={() => setSelectedRole(pr)}
-                aria-pressed={selectedRole === pr}
-              >
-                {formatRoleDisplay(pr)}
-                <span className="rpa__quickCount">{userCountByRole[pr] || 0}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="rpa__headerRight">
-          <button
-            type="button"
-            className="rpa__bulkActionBtn"
-            onClick={() => setShowBulkModal(true)}
-            title="Terapkan pengaturan tema ke beberapa role sekaligus"
-          >
-            <i className="bi bi-sliders2"></i>
-            <span>Atur Tema Massal</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Tanpa pemberitahuan ini, daftar yang gagal dimuat tampak seperti role
-          tanpa akses — dan itulah yang memancing admin menekan Simpan. */}
-      {gagalMuatAkses && !loading && (
-        <div
-          className="rpa__loadError"
-          style={{
-            display: 'flex', gap: '0.5rem', alignItems: 'center',
-            padding: '0.75rem 1rem', marginBottom: '0.75rem', borderRadius: 8,
-            border: '1px solid var(--n-warning, #f59e0b)', fontSize: '0.875rem',
-          }}
-        >
-          <i className="bi bi-exclamation-triangle-fill" style={{ color: 'var(--n-warning, #f59e0b)' }}></i>
-          <span>
-            Akses halaman untuk role ini gagal dimuat, jadi daftar di bawah belum mencerminkan
-            data tersimpan. Penyimpanan dinonaktifkan — muat ulang halaman untuk mencoba lagi.
-          </span>
-        </div>
-      )}
-
-      {/* ── TOOLBAR ── */}
-      <FilterToolbar>
-        <div className="rpa__toolbarInfo">
-          <span className="rpa__count">
-            <b>{formatRoleDisplay(selectedRole)}</b> • {totalSelected} dari {totalPages} halaman menu dipilih
-          </span>
-          {warnCount > 0 && (
-            <span
-              className="rpa__warn"
-              title="Halaman ini muncul di menu, tetapi role tidak terdaftar di akses fungsional halaman (PAGE_ROLE_REQUIREMENTS) — isinya bisa kosong/terbatas."
-            >
-              <i className="bi bi-exclamation-triangle-fill"></i> {warnCount} halaman tanpa akses fungsional
-            </span>
-          )}
-        </div>
-        <FilterActions>
-          <Button
-            variant="primary"
-            icon="save"
-            onClick={save}
-            disabled={!dirty || saving || !selectedRole || gagalMuatAkses}
-            isLoading={saving}
-          >
-            Simpan Perubahan
-          </Button>
-        </FilterActions>
-      </FilterToolbar>
-
-      {/* ── ACTIVE ROLE THEME SETTING CARD (3 SEGMENTED CHOICES) ── */}
-      {selectedRole && (
-        <section className="rpa__section">
-          <div className="rpa__sectionIntro">
-            <h3>Preferensi Tema</h3>
-            <p>Atur mode terang atau gelap yang dapat digunakan oleh pengguna dengan role ini.</p>
-          </div>
-          <div className="rpa__themeCard">
-            <div className="rpa__themeCardLeft">
-              <div className={`rpa__themeIcon ${currentRoleMode.toLowerCase()}`}>
-                <i className={currentRoleMode === 'ALL' ? 'bi bi-circle-half' : currentRoleMode === 'DARK' ? 'bi bi-moon-stars-fill' : 'bi bi-sun-fill'}></i>
-              </div>
-              <div className="rpa__themeInfo">
-                <div className="rpa__themeTitle">
-                  Mode Tampilan <b>{formatRoleDisplay(selectedRole)}</b>
                 </div>
-              </div>
-            </div>
+              )}
+            />
+          </div>
+        </div>
 
-            <div className="rpa__themeCardRight">
+        {/* Theme Segmented Control & Actions */}
+        <div className="rpa__rightControl">
+          {/* Theme Mode Segmented Pill */}
+          {selectedRole && (
+            <div className="rpa__themeWrap">
               {currentRoleIsAdmin ? (
-                <span className="rpa__themeBadge locked">
-                  <i className="bi bi-shield-check"></i> Admin Selalu Semua Mode
+                <span className="rpa__adminThemeBadge" title="Admin dapat menggunakan semua mode">
+                  <i className="bi bi-shield-check"></i> Mode Bebas
                 </span>
               ) : (
-                <div className="rpa__segmentedGroup" role="group" aria-label="Pilihan mode tema">
+                <div className="rpa__segGroup" role="group" aria-label="Mode Tema">
                   <button
                     type="button"
                     className={`rpa__segBtn ${currentRoleMode === 'ALL' ? 'active all' : ''}`}
                     onClick={() => setModeForRole(selectedRole, 'ALL')}
+                    title="User bebas memilih tema terang / gelap"
                   >
                     <i className="bi bi-circle-half"></i>
-                    <span>Semua Mode</span>
+                    <span>Semua</span>
                   </button>
                   <button
                     type="button"
                     className={`rpa__segBtn ${currentRoleMode === 'LIGHT' ? 'active light' : ''}`}
                     onClick={() => setModeForRole(selectedRole, 'LIGHT')}
+                    title="Kunci ke Mode Terang"
                   >
                     <i className="bi bi-sun-fill"></i>
-                    <span>Mode Light</span>
+                    <span>Terang</span>
                   </button>
                   <button
                     type="button"
                     className={`rpa__segBtn ${currentRoleMode === 'DARK' ? 'active dark' : ''}`}
                     onClick={() => setModeForRole(selectedRole, 'DARK')}
+                    title="Kunci ke Mode Gelap"
                   >
                     <i className="bi bi-moon-stars-fill"></i>
-                    <span>Mode Dark</span>
+                    <span>Gelap</span>
                   </button>
                 </div>
               )}
+
+              <button
+                type="button"
+                className="rpa__bulkIconBtn"
+                onClick={() => setShowBulkModal(true)}
+                title="Atur tema massal untuk banyak role"
+              >
+                <i className="bi bi-sliders"></i>
+              </button>
             </div>
+          )}
+
+          {/* Save Action */}
+          <div className="rpa__saveWrap">
+            <Button
+              variant="primary"
+              icon="save"
+              onClick={save}
+              disabled={!dirty || saving || !selectedRole || gagalMuatAkses}
+              isLoading={saving}
+            >
+              Simpan
+            </Button>
+            {dirty && <span className="rpa__dirtyPulse" title="Ada perubahan belum tersimpan"></span>}
           </div>
-        </section>
+        </div>
+      </div>
+
+      {/* Error Banner */}
+      {gagalMuatAkses && !loading && (
+        <div className="rpa__errorAlert">
+          <i className="bi bi-exclamation-triangle-fill"></i>
+          <span>Akses halaman role ini gagal dimuat. Penyimpanan dinonaktifkan untuk mencegah terhapusnya menu tersimpan. Muat ulang halaman untuk mencoba lagi.</span>
+        </div>
       )}
 
-      {/* ── GROUPED PAGE CHECKLIST ── */}
+      {/* ── 2. SUB-BAR: SEARCH & STATS ── */}
+      <div className="rpa__subBar">
+        <div className="rpa__searchBox">
+          <i className="bi bi-search rpa__searchIcon"></i>
+          <input
+            type="text"
+            className="rpa__searchInput"
+            placeholder="Cari nama halaman..."
+            value={pageSearch}
+            onChange={e => setPageSearch(e.target.value)}
+          />
+          {pageSearch && (
+            <button
+              type="button"
+              className="rpa__searchClear"
+              onClick={() => setPageSearch('')}
+              title="Bersihkan pencarian"
+            >
+              <i className="bi bi-x-circle-fill"></i>
+            </button>
+          )}
+        </div>
+
+        <div className="rpa__statsArea">
+          <span className="rpa__statBadge">
+            <i className="bi bi-check2-square"></i>
+            <span><b>{totalSelected}</b> / {totalPages} halaman aktif</span>
+          </span>
+
+          {warnCount > 0 && (
+            <span
+              className="rpa__warnBadge"
+              title="Halaman muncul di menu tapi role belum memiliki hak akses fungsional di halaman terkait."
+            >
+              <i className="bi bi-exclamation-triangle-fill"></i>
+              <span>{warnCount} terbatas</span>
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* ── 3. GROUPED PAGE CHECKLIST ── */}
       {loading ? (
         <div className="rpa__loading">
           <Spinner variant="trace" />
         </div>
+      ) : filteredGroups.length === 0 ? (
+        <div className="rpa__emptySearch">
+          <i className="bi bi-search"></i>
+          <span>Tidak ada halaman yang cocok dengan &quot;{pageSearch}&quot;</span>
+        </div>
       ) : (
-        <section className="rpa__section">
-          <div className="rpa__sectionIntro">
-            <h3>Halaman di Menu</h3>
-            <p>
-              Centang halaman agar muncul di menu role. “Pilih semua” mengubah akses menu satu grup;
-              “Tampilan grup/rata” hanya mengatur susunannya.
-            </p>
-          </div>
-          <div className="rpa__groups">
-            {groups.map(group => {
-              const allOn = group.pages.length > 0 && group.pages.every(p => pageIds.has(p))
-              const someOn = group.pages.some(p => pageIds.has(p))
-              const isFlat = flatGroups.has(group.key)
-              const selectedInGroup = group.pages.filter(page => pageIds.has(page)).length
-              return (
-                <div key={group.key} className="rpa__group">
-                  <div className="rpa__groupHead">
+        <div className="rpa__groups">
+          {filteredGroups.map(group => {
+            const allOn = group.pages.length > 0 && group.pages.every(p => pageIds.has(p))
+            const someOn = group.pages.some(p => pageIds.has(p))
+            const isFlat = flatGroups.has(group.key)
+            const selectedInGroup = group.pages.filter(page => pageIds.has(page)).length
+
+            return (
+              <div key={group.key} className="rpa__groupCard">
+                {/* Header Grup */}
+                <div className="rpa__groupHeader">
+                  <div className="rpa__groupTitleWrap">
                     <span className="rpa__groupTitle">
-                      <i className={`fa-solid ${group.icon}`}></i> {group.label}
-                      <span className="rpa__groupCount">{selectedInGroup}/{group.pages.length} dipilih</span>
+                      <i className={`fa-solid ${group.icon} rpa__groupIcon`}></i>
+                      <span>{group.label}</span>
                     </span>
-                    <div className="rpa__groupBtns">
-                      <button
-                        type="button"
-                        className={`rpa__flatToggle ${isFlat ? 'flat' : ''}`}
-                        onClick={() => toggleFlat(group.key)}
-                        title={isFlat
-                          ? 'Halaman grup ini tampil rata (tanpa header grup) di sidebar role ini'
-                          : 'Halaman grup ini tampil berkelompok di bawah header grup'}
-                        aria-pressed={isFlat}
-                      >
-                        <i className={`bi ${isFlat ? 'bi-list' : 'bi-collection'}`}></i>
-                        {isFlat ? 'Tampilan rata' : 'Tampilan grup'}
-                      </button>
-                      <button
-                        type="button"
-                        className={`rpa__groupToggle ${someOn ? 'on' : ''}`}
-                        onClick={() => toggleGroup(group.pages, allOn)}
-                      >
-                        {allOn ? 'Hapus pilihan' : 'Pilih semua'}
-                      </button>
-                    </div>
+                    <span className={`rpa__groupBadge ${selectedInGroup > 0 ? 'hasSelected' : ''}`}>
+                      {selectedInGroup}/{group.pages.length}
+                    </span>
                   </div>
-                  <div className="rpa__pages">
-                    {group.pages.map(p => {
-                      const lacks = roleLacksAccess(p)
-                      return (
-                        <label
-                          key={p}
-                          className={`rpa__page ${pageIds.has(p) ? 'selected' : ''} ${lacks ? 'warn' : ''}`}
-                          title={`ID halaman: ${p}`}
-                        >
-                          <input type="checkbox" checked={pageIds.has(p)} onChange={() => togglePage(p)} />
-                          <span className="rpa__pageLabel">{effectiveLabel(p)}</span>
-                          {lacks && (
-                            <i
-                              className="bi bi-exclamation-triangle-fill rpa__pageWarn"
-                              title={`Role ${formatRoleDisplay(selectedRole)} tidak terdaftar di akses fungsional halaman ini. Menu akan muncul tapi isinya bisa kosong/terbatas.`}
-                            ></i>
-                          )}
-                        </label>
-                      )
-                    })}
+
+                  <div className="rpa__groupActions">
+                    {/* Toggle Tampilan Flat / Grup */}
+                    <button
+                      type="button"
+                      className={`rpa__actionBtn ${isFlat ? 'isFlat' : ''}`}
+                      onClick={() => toggleFlat(group.key)}
+                      title={isFlat ? 'Halaman grup ini tampil rata di sidebar' : 'Halaman grup ini tampil berkelompok di sidebar'}
+                    >
+                      <i className={`bi ${isFlat ? 'bi-list' : 'bi-folder2'}`}></i>
+                      <span>{isFlat ? 'Rata' : 'Grup'}</span>
+                    </button>
+
+                    {/* Toggle Pilih Semua */}
+                    <button
+                      type="button"
+                      className={`rpa__actionBtn ${allOn ? 'allOn' : someOn ? 'someOn' : ''}`}
+                      onClick={() => toggleGroup(group.pages, allOn)}
+                      title={allOn ? 'Hapus semua pilihan di grup ini' : 'Pilih semua halaman di grup ini'}
+                    >
+                      <i className={`bi ${allOn ? 'bi-dash-square' : 'bi-check-square'}`}></i>
+                      <span>{allOn ? 'Batal' : 'Semua'}</span>
+                    </button>
                   </div>
                 </div>
-              )
-            })}
-          </div>
-        </section>
+
+                {/* Grid Halaman Tile */}
+                <div className="rpa__pagesGrid">
+                  {group.pages.map(p => {
+                    const isSelected = pageIds.has(p)
+                    const lacks = roleLacksAccess(p)
+
+                    return (
+                      <label
+                        key={p}
+                        className={`rpa__tile ${isSelected ? 'isSelected' : ''} ${lacks ? 'isWarn' : ''}`}
+                        title={lacks ? `ID: ${p} (Role belum memiliki hak fungsional pada halaman ini)` : `ID: ${p}`}
+                      >
+                        <input
+                          type="checkbox"
+                          className="rpa__hiddenCheck"
+                          checked={isSelected}
+                          onChange={() => togglePage(p)}
+                        />
+                        <span className={`rpa__checkMark ${isSelected ? 'checked' : ''}`}>
+                          {isSelected && <i className="bi bi-check-lg"></i>}
+                        </span>
+
+                        <span className="rpa__tileLabel">{effectiveLabel(p)}</span>
+
+                        {lacks && (
+                          <i
+                            className="bi bi-exclamation-circle-fill rpa__tileWarn"
+                            title="Halaman muncul di menu, tapi izin akses fungsional role ini belum diatur."
+                          ></i>
+                        )}
+                      </label>
+                    )
+                  })}
+                </div>
+              </div>
+            )
+          })}
+        </div>
       )}
 
-      {/* ── MODAL ATUR MODE MASSAL (BULK THEME ASSIGNMENT) ── */}
+      {/* ── 4. MODAL ATUR TEMA MASSAL ── */}
       {showBulkModal && (
         <Modal size="lg" onClose={() => setShowBulkModal(false)} labelledBy="bulk-theme-modal-title">
           <ModalHeader
@@ -627,10 +637,9 @@ export default function RolePageAccessTab() {
           />
           <ModalBody>
             <div className="rpa__bulkBody">
-              {/* 1. Target Mode Selection Cards */}
               <div className="rpa__bulkSection">
                 <label className="rpa__bulkSectionTitle">
-                  <span className="step-num">1</span> Pilih Mode:
+                  <span className="step-num">1</span> Pilih Mode Tampilan:
                 </label>
                 <div className="rpa__modeCards">
                   <div
@@ -656,7 +665,7 @@ export default function RolePageAccessTab() {
                       <i className="bi bi-sun-fill"></i>
                     </div>
                     <div className="rpa__modeCardContent">
-                      <div className="rpa__modeCardName">Mode Light</div>
+                      <div className="rpa__modeCardName">Mode Terang</div>
                     </div>
                     <div className="rpa__modeCardRadio">
                       <input type="radio" name="bulkMode" checked={bulkTargetMode === 'LIGHT'} readOnly />
@@ -671,7 +680,7 @@ export default function RolePageAccessTab() {
                       <i className="bi bi-moon-stars-fill"></i>
                     </div>
                     <div className="rpa__modeCardContent">
-                      <div className="rpa__modeCardName">Mode Dark</div>
+                      <div className="rpa__modeCardName">Mode Gelap</div>
                     </div>
                     <div className="rpa__modeCardRadio">
                       <input type="radio" name="bulkMode" checked={bulkTargetMode === 'DARK'} readOnly />
@@ -680,11 +689,10 @@ export default function RolePageAccessTab() {
                 </div>
               </div>
 
-              {/* 2. Target Roles Multi-Select Dropdown */}
               <div className="rpa__bulkSection">
                 <div className="rpa__bulkSectionHead">
                   <label className="rpa__bulkSectionTitle">
-                    <span className="step-num">2</span> Pilih Role Target:
+                    <span className="step-num">2</span> Terapkan ke Role:
                   </label>
                   <div className="rpa__bulkShortcuts">
                     <button
@@ -692,28 +700,14 @@ export default function RolePageAccessTab() {
                       className="rpa__shortcutBtn"
                       onClick={() => setBulkSelectedRoles(nonAdminRoleOptions.map(o => o.value))}
                     >
-                      Semua Non-Admin
-                    </button>
-                    <button
-                      type="button"
-                      className="rpa__shortcutBtn"
-                      onClick={() => setBulkSelectedRoles(nonAdminRoleOptions.filter(o => ['GURU', 'WALI_KELAS', 'GURU_ASUH', 'WKM_AKADEMIK', 'WKM_KESISWAAN', 'WKM_KEASRAMAAN', 'KAMAD'].includes(o.value.toUpperCase())).map(o => o.value))}
-                    >
-                      Pendidik & Staff
-                    </button>
-                    <button
-                      type="button"
-                      className="rpa__shortcutBtn"
-                      onClick={() => setBulkSelectedRoles(nonAdminRoleOptions.filter(o => ['SISWA', 'ORANG_TUA', 'WALI', 'PENGURUS_KELAS'].includes(o.value.toUpperCase())).map(o => o.value))}
-                    >
-                      Siswa & Wali
+                      Pilih Semua ({nonAdminRoleOptions.length})
                     </button>
                     <button
                       type="button"
                       className="rpa__shortcutBtn reset"
                       onClick={() => setBulkSelectedRoles([])}
                     >
-                      Kosongkan
+                      Reset
                     </button>
                   </div>
                 </div>
@@ -750,380 +744,506 @@ export default function RolePageAccessTab() {
         </Modal>
       )}
 
+      {/* ── CSS STYLING (OPTION 1 — UNIFIED STUDIO) ── */}
       <style jsx>{`
-        .rpa { display: flex; flex-direction: column; gap: 14px; }
-
-        .rpa__intro,
-        .rpa__sectionIntro {
+        .rpa {
           display: flex;
           flex-direction: column;
-          gap: 4px;
-        }
-        .rpa__intro h2,
-        .rpa__sectionIntro h3 {
-          margin: 0;
-          color: var(--n-ink, #0f172a);
-          font-size: 1rem;
-          font-weight: 750;
-        }
-        .rpa__intro p,
-        .rpa__sectionIntro p {
-          margin: 0;
-          color: var(--n-muted, #64748b);
-          font-size: 0.82rem;
-          line-height: 1.5;
-        }
-        .rpa__section {
-          display: flex;
-          flex-direction: column;
-          gap: 10px;
+          gap: 12px;
         }
 
-        .rpa__headerBar {
+        /* ── 1. UNIFIED STUDIO BAR ── */
+        .rpa__studioBar {
           display: flex;
           align-items: center;
           justify-content: space-between;
-          gap: 16px;
+          gap: 12px;
           background: var(--n-card, #ffffff);
-          border: 1.5px solid var(--n-border, #e2e8f0);
-          border-radius: 14px;
-          padding: 10px 16px;
-          box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+          border: 1px solid var(--n-border, #cbd5e1);
+          border-radius: 12px;
+          padding: 8px 12px;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
           flex-wrap: wrap;
         }
 
-        .rpa__headerLeft {
-          display: flex;
-          align-items: center;
-          gap: 16px;
-          flex: 1;
-          min-width: 0;
-          flex-wrap: wrap;
-        }
-
-        .rpa__dropdownArea {
+        .rpa__roleArea {
           display: flex;
           align-items: center;
           gap: 10px;
-          min-width: 280px;
-          flex: 1;
-          max-width: 400px;
         }
-
-        .rpa__fieldLabel {
-          font-size: 0.82rem;
-          font-weight: 700;
-          color: var(--n-ink, #0f172a);
-          white-space: nowrap;
-          display: flex;
-          align-items: center;
-          gap: 6px;
-        }
-        .rpa__fieldLabel i { color: #2563eb; }
 
         .rpa__selectBox {
-          flex: 1;
-          min-width: 0;
+          width: 260px;
+          min-width: 220px;
+          flex-shrink: 0;
         }
 
         .rpa__optionRow {
           display: flex;
           align-items: center;
           justify-content: space-between;
-          gap: 10px;
           width: 100%;
+          gap: 8px;
         }
-
         .rpa__optionName {
           font-weight: 700;
           font-size: 0.82rem;
         }
-
         .rpa__optionMeta {
           display: flex;
           align-items: center;
           gap: 6px;
         }
-
         .rpa__optionCount {
-          font-size: 0.72rem;
-          background: rgba(0,0,0,0.08);
-          padding: 1px 6px;
-          border-radius: 4px;
-        }
-
-        .rpa__optionMode {
-          font-size: 0.68rem;
-          font-weight: 700;
-          padding: 1px 6px;
-          border-radius: 4px;
-        }
-        .rpa__optionMode.all { background: #dbeafe; color: #1d4ed8; }
-        .rpa__optionMode.light { background: #fef3c7; color: #b45309; }
-        .rpa__optionMode.dark { background: #e2e8f0; color: #334155; }
-
-        .rpa__quickPills {
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          flex-wrap: wrap;
-        }
-
-        .rpa__quickTitle {
-          font-size: 0.76rem;
-          font-weight: 700;
-          color: var(--n-muted, #64748b);
-          margin-right: 2px;
-        }
-
-        .rpa__quickPill {
-          display: inline-flex;
-          align-items: center;
-          gap: 5px;
-          padding: 6px 12px;
-          border-radius: 8px;
-          border: 1.2px solid var(--n-border, #cbd5e1);
-          background: var(--n-card, #ffffff);
-          font-size: 0.78rem;
-          font-weight: 700;
-          color: var(--n-muted, #475569);
-          cursor: pointer;
-          transition: all 0.15s;
-        }
-        .rpa__quickPill:hover {
-          border-color: #2563eb;
-          color: #2563eb;
-          transform: translateY(-1px);
-        }
-        .rpa__quickPill.active {
-          background: linear-gradient(135deg, #1d6bf3 0%, #3083ff 100%);
-          color: #ffffff;
-          border-color: transparent;
-          box-shadow: 0 3px 10px rgba(0, 56, 168, 0.25);
-        }
-
-        .rpa__quickCount {
-          font-size: 0.68rem;
+          font-size: 0.70rem;
           background: rgba(0, 0, 0, 0.08);
           padding: 1px 5px;
           border-radius: 4px;
         }
-        .rpa__quickPill.active .rpa__quickCount {
-          background: rgba(255, 255, 255, 0.25);
+        .rpa__optionMode {
+          font-size: 0.72rem;
         }
 
-        .rpa__headerRight {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-        }
-
-        .rpa__bulkActionBtn {
-          display: inline-flex;
-          align-items: center;
-          gap: 8px;
-          padding: 8px 16px;
-          border-radius: 10px;
-          background: linear-gradient(135deg, #4f46e5 0%, #3730a3 100%);
-          color: #ffffff;
-          border: none;
-          font-size: 0.82rem;
-          font-weight: 700;
-          cursor: pointer;
-          transition: all 0.18s;
-          box-shadow: 0 2px 8px rgba(79, 70, 229, 0.25);
-        }
-        .rpa__bulkActionBtn:hover {
-          filter: brightness(1.1);
-          transform: translateY(-1px);
-          box-shadow: 0 4px 12px rgba(79, 70, 229, 0.35);
-        }
-
-        /* ── TOOLBAR AREA ── */
-        .rpa__toolbarInfo {
+        .rpa__rightControl {
           display: flex;
           align-items: center;
           gap: 12px;
-          flex-wrap: wrap;
-        }
-        .rpa__count { font-size: 0.85rem; color: var(--n-muted, #64748b); }
-        .rpa__count b { color: var(--n-primary, #2563eb); }
-        .rpa__warn {
-          display: inline-flex; align-items: center; gap: 6px; font-size: 0.78rem; font-weight: 700;
-          color: #b45309; background: #fef3c7; border: 1px solid #fcd34d;
-          padding: 4px 10px; border-radius: 999px; cursor: help;
-        }
-
-        /* ── ACTIVE ROLE THEME CARD (SEGMENTED 3-CHOICE) ── */
-        .rpa__themeCard {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 16px;
-          background: var(--n-card, #ffffff);
-          border: 1.5px solid var(--n-border, #e2e8f0);
-          border-radius: 14px;
-          padding: 10px 16px;
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-          flex-wrap: wrap;
-        }
-        .rpa__themeCardLeft {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          min-width: 0;
-          flex: 1;
-        }
-        .rpa__themeIcon {
-          width: 36px;
-          height: 36px;
-          border-radius: 10px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 1.15rem;
           flex-shrink: 0;
         }
-        .rpa__themeIcon.all { background: #eff6ff; color: #2563eb; border: 1.5px solid #bfdbfe; }
-        .rpa__themeIcon.light { background: #fefce8; color: #d97706; border: 1.5px solid #fde68a; }
-        .rpa__themeIcon.dark { background: #0f172a; color: #93c5fd; border: 1.5px solid #334155; }
 
-        .rpa__themeInfo {
+        .rpa__themeWrap {
           display: flex;
-          flex-direction: column;
-          gap: 2px;
-        }
-        .rpa__themeTitle {
-          font-size: 0.88rem;
-          font-weight: 700;
-          color: var(--n-ink, #0f172a);
-        }
-
-        .rpa__themeCardRight {
-          flex-shrink: 0;
-        }
-        .rpa__themeBadge.locked {
-          display: inline-flex;
           align-items: center;
           gap: 6px;
-          padding: 7px 16px;
-          border-radius: 999px;
-          font-size: 0.8rem;
-          font-weight: 700;
-          background: #ecfdf5;
-          color: #059669;
-          border: 1px solid #a7f3d0;
         }
 
-        /* Segmented Buttons */
-        .rpa__segmentedGroup {
+        .rpa__adminThemeBadge {
           display: inline-flex;
-          background: var(--n-soft, #f1f5f9);
-          padding: 4px;
-          border-radius: 12px;
-          gap: 4px;
-          border: 1px solid var(--n-border, #cbd5e1);
+          align-items: center;
+          gap: 5px;
+          font-size: 0.75rem;
+          font-weight: 700;
+          color: #059669;
+          background: #ecfdf5;
+          border: 1px solid #a7f3d0;
+          padding: 4px 10px;
+          border-radius: 8px;
         }
+
+        .rpa__segGroup {
+          display: inline-flex;
+          align-items: center;
+          background: var(--n-soft, #f1f5f9);
+          border: 1px solid var(--n-border, #cbd5e1);
+          border-radius: 8px;
+          padding: 2px;
+          gap: 2px;
+        }
+
         .rpa__segBtn {
           display: inline-flex;
           align-items: center;
-          gap: 6px;
-          padding: 7px 14px;
-          border-radius: 8px;
+          gap: 4px;
+          padding: 4px 9px;
           border: none;
           background: transparent;
-          font-size: 0.8rem;
+          border-radius: 6px;
+          font-size: 0.74rem;
           font-weight: 700;
           color: var(--n-muted, #64748b);
           cursor: pointer;
-          transition: all 0.15s;
+          transition: all 0.12s ease;
         }
         .rpa__segBtn:hover:not(.active) {
           color: var(--n-ink, #0f172a);
           background: rgba(0, 0, 0, 0.04);
         }
         .rpa__segBtn.active.all {
-          background: #2563eb;
+          background: #3083FF;
           color: #ffffff;
-          box-shadow: 0 2px 6px rgba(37, 99, 235, 0.3);
+          box-shadow: 0 1px 4px rgba(48, 131, 255, 0.25);
         }
         .rpa__segBtn.active.light {
           background: #d97706;
           color: #ffffff;
-          box-shadow: 0 2px 6px rgba(217, 119, 6, 0.3);
+          box-shadow: 0 1px 4px rgba(217, 119, 6, 0.25);
         }
         .rpa__segBtn.active.dark {
           background: #1e293b;
           color: #93c5fd;
-          box-shadow: 0 2px 6px rgba(15, 23, 42, 0.3);
+          box-shadow: 0 1px 4px rgba(15, 23, 42, 0.25);
         }
 
-        /* ── PAGE GROUPS ── */
+        .rpa__bulkIconBtn {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          width: 32px;
+          height: 32px;
+          border-radius: 8px;
+          border: 1px solid var(--n-border, #cbd5e1);
+          background: var(--n-card, #ffffff);
+          color: var(--n-muted, #64748b);
+          cursor: pointer;
+          font-size: 0.85rem;
+          transition: all 0.15s ease;
+        }
+        .rpa__bulkIconBtn:hover {
+          color: #3083FF;
+          border-color: #3083FF;
+          background: rgba(48, 131, 255, 0.06);
+        }
+
+        .rpa__saveWrap {
+          position: relative;
+          display: inline-flex;
+          align-items: center;
+        }
+
+        .rpa__dirtyPulse {
+          position: absolute;
+          top: -3px;
+          right: -3px;
+          width: 9px;
+          height: 9px;
+          border-radius: 50%;
+          background: #ef4444;
+          box-shadow: 0 0 0 2px #ffffff;
+          animation: pulse 1.8s infinite;
+        }
+
+        @keyframes pulse {
+          0%, 100% { transform: scale(1); opacity: 1; }
+          50% { transform: scale(1.3); opacity: 0.7; }
+        }
+
+        .rpa__errorAlert {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          padding: 8px 12px;
+          border-radius: 8px;
+          border: 1px solid var(--n-warning, #f59e0b);
+          background: #fffbeb;
+          color: #b45309;
+          font-size: 0.8rem;
+          font-weight: 600;
+        }
+
+        /* ── 2. SUB-BAR: SEARCH & STATS ── */
+        .rpa__subBar {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+          flex-wrap: wrap;
+        }
+
+        .rpa__searchBox {
+          position: relative;
+          display: flex;
+          align-items: center;
+          width: 280px;
+        }
+
+        .rpa__searchIcon {
+          position: absolute;
+          left: 10px;
+          color: var(--n-muted, #94a3b8);
+          font-size: 0.8rem;
+          pointer-events: none;
+        }
+
+        .rpa__searchInput {
+          width: 100%;
+          height: 34px;
+          padding: 0 28px 0 32px;
+          border-radius: 8px;
+          border: 1px solid var(--n-border, #cbd5e1);
+          background: var(--n-card, #ffffff);
+          color: var(--n-ink, #0f172a);
+          font-size: 0.82rem;
+          font-weight: 500;
+          outline: none;
+          transition: border-color 0.15s ease, box-shadow 0.15s ease;
+        }
+        .rpa__searchInput:focus {
+          border-color: #3083FF;
+          box-shadow: 0 0 0 2px rgba(48, 131, 255, 0.15);
+        }
+
+        .rpa__searchClear {
+          position: absolute;
+          right: 8px;
+          background: none;
+          border: none;
+          color: var(--n-muted, #94a3b8);
+          cursor: pointer;
+          padding: 0;
+          font-size: 0.85rem;
+          line-height: 1;
+        }
+        .rpa__searchClear:hover {
+          color: #ef4444;
+        }
+
+        .rpa__statsArea {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+
+        .rpa__statBadge {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          font-size: 0.78rem;
+          color: var(--n-muted, #64748b);
+          background: var(--n-card, #ffffff);
+          border: 1px solid var(--n-border, #cbd5e1);
+          padding: 4px 10px;
+          border-radius: 8px;
+        }
+        .rpa__statBadge b {
+          color: #3083FF;
+        }
+
+        .rpa__warnBadge {
+          display: inline-flex;
+          align-items: center;
+          gap: 5px;
+          font-size: 0.75rem;
+          font-weight: 700;
+          color: #b45309;
+          background: #fef3c7;
+          border: 1px solid #fcd34d;
+          padding: 4px 9px;
+          border-radius: 8px;
+        }
+
+        /* ── 3. GROUPED PAGE CHECKLIST ── */
         .rpa__loading {
           display: flex;
           align-items: center;
           justify-content: center;
           padding: 60px 20px;
-          min-height: 240px;
+          min-height: 200px;
           width: 100%;
         }
-        .rpa__groups { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; }
-        .rpa__group { background: var(--n-card, #ffffff); border: 1px solid var(--n-border, #e2e8f0); border-radius: 14px; overflow: hidden; }
-        .rpa__groupHead {
-          display: flex; align-items: center; justify-content: space-between;
-          gap: 10px; flex-wrap: wrap;
-          padding: 12px 14px; border-bottom: 1px solid var(--n-border, #e2e8f0); background: var(--n-soft, #f8fafc);
-        }
-        .rpa__groupTitle { font-size: 0.85rem; font-weight: 700; color: var(--n-ink, #0f172a); display: flex; align-items: center; gap: 8px; min-width: 0; }
-        .rpa__groupTitle i { color: #2563eb; font-size: 0.8rem; flex-shrink: 0; }
-        .rpa__groupCount {
-          flex-shrink: 0;
-          padding: 2px 7px;
-          border-radius: 999px;
+
+        .rpa__emptySearch {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          padding: 40px 20px;
+          gap: 8px;
+          color: var(--n-muted, #64748b);
+          font-size: 0.85rem;
           background: var(--n-card, #ffffff);
-          border: 1px solid var(--n-border, #e2e8f0);
+          border: 1px dashed var(--n-border, #cbd5e1);
+          border-radius: 12px;
+        }
+        .rpa__emptySearch i {
+          font-size: 1.5rem;
+          opacity: 0.5;
+        }
+
+        .rpa__groups {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
+          gap: 12px;
+        }
+
+        .rpa__groupCard {
+          background: var(--n-card, #ffffff);
+          border: 1px solid var(--n-border, #cbd5e1);
+          border-radius: 12px;
+          overflow: hidden;
+          display: flex;
+          flex-direction: column;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+          transition: border-color 0.15s ease, box-shadow 0.15s ease;
+        }
+        .rpa__groupCard:hover {
+          border-color: #93c5fd;
+        }
+
+        .rpa__groupHeader {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 8px 12px;
+          background: var(--n-soft, #f8fafc);
+          border-bottom: 1px solid var(--n-border, #e2e8f0);
+          gap: 8px;
+        }
+
+        .rpa__groupTitleWrap {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          min-width: 0;
+          flex: 1;
+        }
+
+        .rpa__groupTitle {
+          font-size: 0.82rem;
+          font-weight: 700;
+          color: var(--n-ink, #0f172a);
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+
+        .rpa__groupIcon {
+          color: #3083FF;
+          font-size: 0.80rem;
+          flex-shrink: 0;
+        }
+
+        .rpa__groupBadge {
+          font-size: 0.68rem;
+          font-weight: 700;
+          padding: 1px 6px;
+          border-radius: 6px;
+          background: var(--n-card, #ffffff);
+          border: 1px solid var(--n-border, #cbd5e1);
+          color: var(--n-muted, #64748b);
+          flex-shrink: 0;
+        }
+        .rpa__groupBadge.hasSelected {
+          background: #eff6ff;
+          border-color: #bfdbfe;
+          color: #1d4ed8;
+        }
+
+        .rpa__groupActions {
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          flex-shrink: 0;
+        }
+
+        .rpa__actionBtn {
+          display: inline-flex;
+          align-items: center;
+          gap: 3px;
+          padding: 3px 7px;
+          border-radius: 6px;
+          border: 1px solid var(--n-border, #cbd5e1);
+          background: var(--n-card, #ffffff);
           color: var(--n-muted, #64748b);
           font-size: 0.68rem;
           font-weight: 700;
+          cursor: pointer;
+          transition: all 0.12s ease;
         }
-        .rpa__groupBtns { display: flex; align-items: center; gap: 6px; flex-shrink: 0; flex-wrap: wrap; }
-        .rpa__groupToggle {
-          font-size: 0.7rem; font-weight: 700; border: 1px solid var(--n-border, #cbd5e1); background: var(--n-card, #ffffff);
-          color: var(--n-muted, #64748b); padding: 4px 10px; border-radius: 8px; cursor: pointer;
+        .rpa__actionBtn:hover {
+          color: #3083FF;
+          border-color: #3083FF;
         }
-        .rpa__groupToggle:hover { border-color: #2563eb; color: #2563eb; }
-        .rpa__groupToggle.on { color: #2563eb; }
-        .rpa__flatToggle {
-          display: inline-flex; align-items: center; gap: 4px;
-          font-size: 0.7rem; font-weight: 700; border: 1px solid var(--n-border, #cbd5e1); background: var(--n-card, #ffffff);
-          color: var(--n-muted, #64748b); padding: 4px 9px; border-radius: 8px; cursor: pointer; transition: all 0.15s;
+        .rpa__actionBtn.isFlat {
+          background: #3083FF;
+          color: #ffffff;
+          border-color: #3083FF;
         }
-        .rpa__flatToggle:hover { border-color: #2563eb; color: #2563eb; }
-        .rpa__flatToggle.flat { background: #2563eb; color: #fff; border-color: transparent; }
-        .rpa__pages { display: flex; flex-direction: column; gap: 2px; padding: 8px; }
-        .rpa__page {
-          display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 9px;
-          cursor: pointer; transition: all 0.12s; border: 1.5px solid transparent;
+        .rpa__actionBtn.allOn {
+          color: #ef4444;
+          border-color: #fca5a5;
+          background: #fef2f2;
         }
-        .rpa__page:hover { background: var(--n-soft, #f1f5f9); }
-        .rpa__page.selected { background: rgba(0,56,168,0.06); }
-        .rpa__page.warn.selected { background: rgba(217,119,6,0.10); }
-        .rpa__page input { width: 16px; height: 16px; accent-color: #2563eb; flex-shrink: 0; }
-        .rpa__pageLabel { flex: 1; font-size: 0.82rem; font-weight: 600; color: var(--n-ink, #0f172a); }
-        .rpa__pageWarn { color: #d97706; font-size: 0.8rem; flex-shrink: 0; cursor: help; }
-        .rpa__pageId { font-size: 0.66rem; color: var(--n-muted, #64748b); font-family: monospace; }
+        .rpa__actionBtn.someOn {
+          color: #3083FF;
+        }
 
-        /* ── BULK MODAL STYLING ── */
+        /* Pages Grid */
+        .rpa__pagesGrid {
+          padding: 6px;
+          display: flex;
+          flex-direction: column;
+          gap: 3px;
+        }
+
+        .rpa__tile {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          padding: 6px 8px;
+          border-radius: 8px;
+          cursor: pointer;
+          border: 1px solid transparent;
+          background: transparent;
+          transition: all 0.12s ease;
+          user-select: none;
+        }
+        .rpa__tile:hover {
+          background: var(--n-soft, #f1f5f9);
+        }
+        .rpa__tile.isSelected {
+          background: rgba(48, 131, 255, 0.08);
+          border-color: rgba(48, 131, 255, 0.3);
+        }
+        .rpa__tile.isWarn.isSelected {
+          background: rgba(217, 119, 6, 0.10);
+          border-color: rgba(217, 119, 6, 0.35);
+        }
+
+        .rpa__hiddenCheck {
+          display: none;
+        }
+
+        .rpa__checkMark {
+          width: 16px;
+          height: 16px;
+          border-radius: 5px;
+          border: 1.5px solid var(--n-border, #94a3b8);
+          background: var(--n-card, #ffffff);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+          transition: all 0.15s ease;
+        }
+        .rpa__checkMark.checked {
+          background: #3083FF;
+          border-color: #3083FF;
+          color: #ffffff;
+          font-size: 0.75rem;
+        }
+
+        .rpa__tileLabel {
+          flex: 1;
+          font-size: 0.80rem;
+          font-weight: 600;
+          color: var(--n-ink, #0f172a);
+          line-height: 1.3;
+        }
+        .rpa__tile.isSelected .rpa__tileLabel {
+          color: var(--n-primary, #1d4ed8);
+          font-weight: 700;
+        }
+
+        .rpa__tileWarn {
+          color: #d97706;
+          font-size: 0.75rem;
+          flex-shrink: 0;
+        }
+
+        /* ── 4. BULK MODAL ── */
         .rpa__bulkBody {
           display: flex;
           flex-direction: column;
           gap: 16px;
-          padding: 6px 0;
+          padding: 4px 0;
         }
         .rpa__bulkSection {
           display: flex;
           flex-direction: column;
-          gap: 10px;
+          gap: 8px;
         }
         .rpa__bulkSectionHead {
           display: flex;
@@ -1133,46 +1253,44 @@ export default function RolePageAccessTab() {
           gap: 8px;
         }
         .rpa__bulkSectionTitle {
-          font-size: 0.88rem;
+          font-size: 0.85rem;
           font-weight: 700;
           color: var(--n-ink, #0f172a);
           display: flex;
           align-items: center;
-          gap: 8px;
+          gap: 6px;
         }
         .rpa__bulkSectionTitle .step-num {
           display: inline-flex;
           align-items: center;
           justify-content: center;
-          width: 22px;
-          height: 22px;
+          width: 20px;
+          height: 20px;
           border-radius: 50%;
-          background: #2563eb;
+          background: #3083FF;
           color: white;
-          font-size: 0.75rem;
+          font-size: 0.70rem;
           font-weight: 800;
         }
 
         .rpa__bulkShortcuts {
           display: flex;
           gap: 6px;
-          flex-wrap: wrap;
         }
         .rpa__shortcutBtn {
-          font-size: 0.72rem;
+          font-size: 0.70rem;
           font-weight: 700;
-          padding: 4px 8px;
+          padding: 3px 8px;
           border-radius: 6px;
           background: var(--n-soft, #f1f5f9);
           border: 1px solid var(--n-border, #cbd5e1);
           color: var(--n-muted, #475569);
           cursor: pointer;
-          transition: all 0.15s;
         }
         .rpa__shortcutBtn:hover {
-          background: #2563eb;
+          background: #3083FF;
           color: white;
-          border-color: #2563eb;
+          border-color: #3083FF;
         }
         .rpa__shortcutBtn.reset:hover {
           background: #ef4444;
@@ -1182,300 +1300,155 @@ export default function RolePageAccessTab() {
 
         .rpa__modeCards {
           display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-          gap: 10px;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 8px;
         }
         .rpa__modeCard {
           display: flex;
           align-items: center;
-          gap: 10px;
-          padding: 10px 14px;
-          border-radius: 12px;
-          border: 2px solid var(--n-border, #e2e8f0);
+          gap: 8px;
+          padding: 8px 12px;
+          border-radius: 10px;
+          border: 1.5px solid var(--n-border, #e2e8f0);
           background: var(--n-card, #ffffff);
           cursor: pointer;
-          transition: all 0.18s;
+          transition: all 0.15s ease;
         }
         .rpa__modeCard:hover {
           border-color: #93c5fd;
-          transform: translateY(-1px);
         }
         .rpa__modeCard.selected {
-          border-color: #2563eb;
-          background: rgba(37, 99, 235, 0.05);
-          box-shadow: 0 4px 12px rgba(37, 99, 235, 0.15);
+          border-color: #3083FF;
+          background: rgba(48, 131, 255, 0.05);
         }
-
         .rpa__modeCardIcon {
-          width: 32px;
-          height: 32px;
-          border-radius: 8px;
+          width: 28px;
+          height: 28px;
+          border-radius: 7px;
           display: flex;
           align-items: center;
           justify-content: center;
-          font-size: 1.05rem;
+          font-size: 0.95rem;
           flex-shrink: 0;
         }
         .rpa__modeCardIcon.all { background: #dbeafe; color: #1d4ed8; }
         .rpa__modeCardIcon.light { background: #fefce8; color: #b45309; }
         .rpa__modeCardIcon.dark { background: #1e293b; color: #93c5fd; }
-
-        .rpa__modeCardContent {
-          flex: 1;
-          min-width: 0;
-        }
         .rpa__modeCardName {
-          font-size: 0.84rem;
+          font-size: 0.80rem;
           font-weight: 700;
           color: var(--n-ink, #0f172a);
+          flex: 1;
         }
         .rpa__modeCardRadio input {
-          width: 16px;
-          height: 16px;
-          accent-color: #2563eb;
-          cursor: pointer;
+          width: 14px;
+          height: 14px;
+          accent-color: #3083FF;
         }
 
-        /* ── DARK MODE STANDARD ── */
-        :global(.dark) .rpa__headerBar,
-        :global(.dark) .rpa__themeCard,
-        :global(.dark) .rpa__group {
+        /* ── DARK MODE ── */
+        :global(.dark) .rpa__studioBar,
+        :global(.dark) .rpa__groupCard,
+        :global(.dark) .rpa__statBadge,
+        :global(.dark) .rpa__searchInput {
           background: #0b1329 !important;
-          border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
-          border-radius: 14px !important;
-          box-shadow: 0 4px 20px rgba(0,0,0,0.6) !important;
-        }
-        :global(.dark) .rpa__fieldLabel,
-        :global(.dark) .rpa__intro h2,
-        :global(.dark) .rpa__sectionIntro h3,
-        :global(.dark) .rpa__themeTitle,
-        :global(.dark) .rpa__groupTitle,
-        :global(.dark) .rpa__pageLabel,
-        :global(.dark) .rpa__bulkSectionTitle,
-        :global(.dark) .rpa__modeCardName {
+          border-color: rgba(26, 115, 232, 0.4) !important;
           color: #e2e8f0 !important;
         }
 
-        :global(.dark) .rpa__quickPill {
-          background: #0b1329 !important;
-          border: 1.5px solid rgba(26, 115, 232, 0.4) !important;
+        :global(.dark) .rpa__groupHeader {
+          background: rgba(15, 23, 42, 0.6) !important;
+          border-bottom-color: rgba(26, 115, 232, 0.3) !important;
+        }
+
+        :global(.dark) .rpa__groupTitle {
+          color: #f8fafc !important;
+        }
+
+        :global(.dark) .rpa__groupBadge {
+          background: #0f172a !important;
+          border-color: rgba(26, 115, 232, 0.3) !important;
+          color: #94a3b8 !important;
+        }
+        :global(.dark) .rpa__groupBadge.hasSelected {
+          background: rgba(48, 131, 255, 0.2) !important;
           color: #60a5fa !important;
         }
-        :global(.dark) .rpa__quickPill.active {
-          background: linear-gradient(135deg, #1d6bf3 0%, #3083ff 100%) !important;
-          color: #ffffff !important;
-          border-color: #3b82f6 !important;
-        }
 
-        :global(.dark) .rpa__segmentedGroup {
+        :global(.dark) .rpa__actionBtn {
           background: #0f172a !important;
-          border-color: rgba(26, 115, 232, 0.4) !important;
-        }
-        :global(.dark) .rpa__segBtn {
-          color: #94a3b8 !important;
-        }
-
-        :global(.dark) .rpa__groupHead {
-          background: linear-gradient(135deg, rgba(26, 115, 232, 0.15), rgba(0, 40, 122, 0.25)) !important;
-          border-bottom: 1.5px solid rgba(26, 115, 232, 0.4) !important;
-        }
-        :global(.dark) .rpa__page:hover { background: rgba(26, 115, 232, 0.1) !important; }
-        :global(.dark) .rpa__page.selected { background: rgba(26, 115, 232, 0.2) !important; }
-
-        :global(.dark) .rpa__modeCard {
-          background: #0b0f19 !important;
           border-color: rgba(26, 115, 232, 0.3) !important;
-        }
-        :global(.dark) .rpa__modeCard.selected {
-          border-color: #3b82f6 !important;
-          background: rgba(37, 99, 235, 0.15) !important;
-        }
-        :global(.dark) .rpa__shortcutBtn {
-          background: #0f172a !important;
-          border-color: rgba(26, 115, 232, 0.4) !important;
           color: #94a3b8 !important;
         }
-        :global(.dark) .rpa__themeBadge.locked {
-          background: rgba(16, 185, 129, 0.15) !important;
-          color: #34d399 !important;
-          border-color: rgba(16, 185, 129, 0.4) !important;
+
+        :global(.dark) .rpa__tile:hover {
+          background: rgba(26, 115, 232, 0.1) !important;
+        }
+        :global(.dark) .rpa__tile.isSelected {
+          background: rgba(48, 131, 255, 0.16) !important;
+          border-color: rgba(48, 131, 255, 0.4) !important;
+        }
+        :global(.dark) .rpa__tileLabel {
+          color: #cbd5e1 !important;
+        }
+        :global(.dark) .rpa__tile.isSelected .rpa__tileLabel {
+          color: #60a5fa !important;
+        }
+        :global(.dark) .rpa__checkMark {
+          background: #0f172a !important;
+          border-color: #64748b !important;
+        }
+        :global(.dark) .rpa__checkMark.checked {
+          background: #3083FF !important;
+          border-color: #3083FF !important;
         }
 
-        /* ── MOBILE RESPONSIVE OPTIMIZATIONS ── */
+        :global(.dark) .rpa__segGroup {
+          background: #0f172a !important;
+          border-color: rgba(26, 115, 232, 0.4) !important;
+        }
+        :global(.dark) .rpa__bulkIconBtn {
+          background: #0b1329 !important;
+          border-color: rgba(26, 115, 232, 0.4) !important;
+        }
+
+        /* ── RESPONSIVE MOBILE ── */
         @media (max-width: 768px) {
-          .rpa {
-            gap: 10px;
-          }
-
-          /* Header Bar Mobile */
-          .rpa__headerBar {
-            flex-direction: column;
-            align-items: stretch;
-            gap: 12px;
-            padding: 12px;
-          }
-
-          .rpa__headerLeft {
+          .rpa__studioBar {
             flex-direction: column;
             align-items: stretch;
             gap: 10px;
-            width: 100%;
           }
-
-          .rpa__dropdownArea {
-            min-width: 0;
-            max-width: none;
-            width: 100%;
+          .rpa__roleArea {
             flex-direction: column;
             align-items: stretch;
-            gap: 6px;
+            width: 100%;
           }
-
-          .rpa__fieldLabel {
-            font-size: 0.8rem;
-          }
-
           .rpa__selectBox {
             width: 100%;
           }
-
-          /* Horizontal scrollable pills on mobile (no more stacking) */
-          .rpa__quickPills {
+          .rpa__rightControl {
             width: 100%;
-            overflow-x: auto;
-            flex-wrap: nowrap;
-            padding-bottom: 6px;
-            -webkit-overflow-scrolling: touch;
-            scrollbar-width: none;
-            gap: 6px;
+            justify-content: space-between;
           }
-          .rpa__quickPills::-webkit-scrollbar {
-            display: none;
+          .rpa__themeWrap {
+            flex: 1;
           }
-
-          .rpa__quickPill {
-            flex-shrink: 0;
-            white-space: nowrap;
-            padding: 5px 10px;
-            font-size: 0.76rem;
-          }
-
-          .rpa__headerRight {
-            width: 100%;
-          }
-
-          .rpa__bulkActionBtn {
-            width: 100%;
-            justify-content: center;
-            padding: 10px 16px;
-            font-size: 0.84rem;
-          }
-
-          /* Active Theme Card Mobile */
-          .rpa__themeCard {
+          .rpa__subBar {
             flex-direction: column;
             align-items: stretch;
-            gap: 10px;
-            padding: 12px;
           }
-
-          .rpa__themeCardLeft {
-            width: 100%;
-            align-items: center;
-            gap: 10px;
-          }
-
-          .rpa__themeIcon {
-            width: 32px;
-            height: 32px;
-            font-size: 1.05rem;
-          }
-
-          .rpa__themeTitle {
-            font-size: 0.85rem;
-          }
-
-          .rpa__themeCardRight {
+          .rpa__searchBox {
             width: 100%;
           }
-
-          .rpa__segmentedGroup {
-            width: 100%;
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            padding: 3px;
-            gap: 3px;
+          .rpa__statsArea {
+            justify-content: space-between;
           }
-
-          .rpa__segBtn {
-            width: 100%;
-            justify-content: center;
-            padding: 8px 4px;
-            font-size: 0.74rem;
-            gap: 4px;
-            white-space: nowrap;
-          }
-
-          .rpa__themeBadge.locked {
-            width: 100%;
-            justify-content: center;
-            font-size: 0.78rem;
-          }
-
-          /* Page Groups Mobile */
           .rpa__groups {
             grid-template-columns: 1fr;
           }
-
-          .rpa__groupHead {
-            align-items: flex-start;
-            flex-direction: column;
-            gap: 10px;
-          }
-
-          .rpa__groupBtns {
-            width: 100%;
-            flex-wrap: wrap;
-          }
-
-          .rpa__flatToggle,
-          .rpa__groupToggle {
-            flex: 1;
-            justify-content: center;
-            min-height: 34px;
-          }
-
-          /* Bulk Modal Mobile */
           .rpa__modeCards {
             grid-template-columns: 1fr;
-          }
-
-          .rpa__bulkSectionHead {
-            flex-direction: column;
-            align-items: flex-start;
-            gap: 8px;
-          }
-
-          .rpa__bulkShortcuts {
-            width: 100%;
-            gap: 4px;
-          }
-
-          .rpa__shortcutBtn {
-            flex: 1 1 calc(50% - 4px);
-            text-align: center;
-            padding: 6px 4px;
-          }
-        }
-
-        @media (max-width: 420px) {
-          .rpa__segBtn {
-            font-size: 0.68rem;
-            padding: 6px 2px;
-            gap: 3px;
-          }
-          .rpa__segBtn i {
-            font-size: 0.72rem;
           }
         }
       `}</style>

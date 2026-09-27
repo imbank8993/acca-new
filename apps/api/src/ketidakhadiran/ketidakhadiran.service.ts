@@ -161,27 +161,48 @@ export class KetidakhadiranService {
       }),
     ]);
 
-    const nisnList = Array.from(new Set(items.map((i) => i.nisn)));
-    const matchingLetters =
-      nisnList.length > 0
-        ? await this.prisma.acca_letters.findMany({
-            where: {
-              OR: [
-                { siswa_nisn: { in: nisnList } },
-                ...nisnList.map((n) => ({ siswa_nisn: { contains: n } })),
-              ],
-            },
-            select: {
-              id: true,
-              nomor_surat: true,
-              jenis_izin: true,
-              siswa_nisn: true,
-              tgl_mulai: true,
-              tgl_selesai: true,
-              ketidakhadiran_id: true,
-            },
-          })
-        : [];
+    const nisnList = Array.from(new Set(items.map((i) => i.nisn).filter(Boolean)));
+    let matchingLetters: any[] = [];
+    let userProfiles: any[] = [];
+    if (nisnList.length > 0) {
+      [matchingLetters, userProfiles] = await Promise.all([
+        this.prisma.acca_letters.findMany({
+          where: {
+            OR: [
+              { siswa_nisn: { in: nisnList } },
+              ...nisnList.map((n) => ({ siswa_nisn: { contains: n } })),
+            ],
+          },
+          select: {
+            id: true,
+            nomor_surat: true,
+            jenis_izin: true,
+            siswa_nisn: true,
+            tgl_mulai: true,
+            tgl_selesai: true,
+            ketidakhadiran_id: true,
+          },
+        }),
+        this.prisma.public_users.findMany({
+          where: {
+            OR: [
+              { username: { in: nisnList } },
+              { nip: { in: nisnList } },
+            ],
+            foto_profil: { not: null },
+          },
+          select: { username: true, nip: true, foto_profil: true },
+        }),
+      ]);
+    }
+
+    const photoMap = new Map<string, string>();
+    for (const up of userProfiles) {
+      if (up.foto_profil) {
+        if (up.username) photoMap.set(up.username, up.foto_profil);
+        if (up.nip) photoMap.set(up.nip, up.foto_profil);
+      }
+    }
 
     // Overlap detection
     const byNisn: Record<string, any[]> = {};
@@ -205,7 +226,7 @@ export class KetidakhadiranService {
 
       const linkedLetters = r.acca_letters || [];
       const nisnLetters = matchingLetters.filter(
-        (l) =>
+        (l: any) =>
           l.siswa_nisn === r.nisn ||
           (l.siswa_nisn && l.siswa_nisn.split(',').map((s: string) => s.trim()).includes(r.nisn)),
       );
@@ -247,6 +268,7 @@ export class KetidakhadiranService {
         letter_nomor: asramaLetter?.nomor_surat || null,
         rekom_kontrol_issued: !!rekomLetter,
         rekom_kontrol_nomor: rekomLetter?.nomor_surat || null,
+        foto_profil: photoMap.get(r.nisn) || null,
       };
     });
 
@@ -767,6 +789,28 @@ export class KetidakhadiranService {
       }),
     ]);
 
+    const logNisnList = Array.from(new Set(rawRows.map((i: any) => i.nisn).filter(Boolean)));
+    const logUserProfiles =
+      logNisnList.length > 0
+        ? await this.prisma.public_users.findMany({
+            where: {
+              OR: [
+                { username: { in: logNisnList } },
+                { nip: { in: logNisnList } },
+              ],
+              foto_profil: { not: null },
+            },
+            select: { username: true, nip: true, foto_profil: true },
+          })
+        : [];
+    const logPhotoMap = new Map<string, string>();
+    for (const up of logUserProfiles) {
+      if (up.foto_profil) {
+        if (up.username) logPhotoMap.set(up.username, up.foto_profil);
+        if (up.nip) logPhotoMap.set(up.nip, up.foto_profil);
+      }
+    }
+
     const rows = rawRows.map((r: any) => {
       const tglMulaiStr = toDateString(r.tgl_mulai) || '';
       const tglSelesaiStr = toDateString(r.tgl_selesai) || '';
@@ -786,6 +830,7 @@ export class KetidakhadiranService {
         is_time_specific: !!(r.waktu_mulai_real && r.waktu_selesai_real),
         periode: tglMulaiStr === tglSelesaiStr ? tglMulaiStr : `${tglMulaiStr} — ${tglSelesaiStr}`,
         kelas_chip: r.kelas,
+        foto_profil: logPhotoMap.get(r.nisn) || null,
       };
     });
 

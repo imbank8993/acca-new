@@ -55,6 +55,7 @@ interface KetidakhadiranRow {
     rekom_kontrol_issued?: boolean;
     rekom_kontrol_nomor?: string | null;
     _fromAsramaQueue?: boolean;
+    foto_profil?: string | null;
 }
 
 interface KPIStats {
@@ -2354,7 +2355,7 @@ export function InputDataTab() {
                                     // Rona avatar dikunci ke NISN, bukan nama: ejaan
                                     // nama bisa diperbaiki, NISN-nya tidak berubah.
                                     seed={row.nisn}
-                                    avatarSrc={fotoMap[row.nisn] || null}
+                                    avatarSrc={row.foto_profil ? getProxiedImageUrl(row.foto_profil) : (fotoMap[row.nisn] || null)}
                                     subtitle={`${row.kelas} • ${labelStatus(row)} • ${labelWaktu(row)}`}
                                     // Pil berlabel, memakai kelas .pill-* yang sama
                                     // dengan sisa halaman ini supaya penanda jenis
@@ -2417,7 +2418,7 @@ export function InputDataTab() {
                             <MobileAvatar
                                 name={sheetRow.nama}
                                 seed={sheetRow.nisn}
-                                src={fotoMap[sheetRow.nisn] || null}
+                                src={sheetRow.foto_profil ? getProxiedImageUrl(sheetRow.foto_profil) : (fotoMap[sheetRow.nisn] || null)}
                             />
                         }
                         onClose={() => setSheetRow(null)}
