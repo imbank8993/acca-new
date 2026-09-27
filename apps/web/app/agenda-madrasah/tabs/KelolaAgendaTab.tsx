@@ -1009,7 +1009,7 @@ export default function KelolaAgendaTab({ user, onBack, headerTabs }: KelolaAgen
                     onClose={() => setShowCatModal(false)}
                 />
                 <ModalBody>
-                    <div style={{ background: 'var(--n-soft, #f8fafc)', padding: '16px', borderRadius: '14px', border: '1px solid var(--n-border, #e2e8f0)' }}>
+                    <div className="cat-form-card" style={{ background: 'var(--n-soft, #f8fafc)', padding: '16px', borderRadius: '14px', border: '1px solid var(--n-border, #e2e8f0)' }}>
                         <label style={{ fontSize: '0.68rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--n-muted)' }}>
                             {catForm.id ? 'Edit Kategori' : 'Tambah Kategori Baru'}
                         </label>

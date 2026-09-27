@@ -40,7 +40,6 @@ const MAINTENANCE_KEY_OVERRIDE: Record<string, string> = {
     'informasi-akademik': 'maintenance_informasi_akademik',   // app/informasi-akademik
     'agenda-madrasah': 'maintenance_agenda_akademik',
     'dokumen': 'maintenance_dokumen_siswa',
-    'unggah-dokumen': 'maintenance_dokumen_siswa',
 };
 
 let globalAutoCreateAttempted = false;

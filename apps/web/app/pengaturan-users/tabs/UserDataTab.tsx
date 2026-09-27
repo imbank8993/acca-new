@@ -1076,6 +1076,7 @@ export default function UserDataTab({ user }: { user?: User }) {
       {isAdmin && <MobileFab label="Tambah User" icon="plus-lg" onClick={handleAdd} />}
 
       <UserModal
+        key={editingUser ? `edit-${editingUser.id}` : isAdding ? 'add' : 'closed'}
         isOpen={isAdding || !!editingUser}
         onClose={handleCancel}
         onSave={async (modalData) => {

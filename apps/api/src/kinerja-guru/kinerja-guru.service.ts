@@ -26,6 +26,22 @@ export class KinerjaGuruService {
     private readonly jadwalService: JadwalService,
   ) {}
 
+  async getDashboardSummary(startMonth?: string, endMonth?: string) {
+    const result = await this.getStats(startMonth, endMonth);
+    const summarize = (items: { nama: string }[]) =>
+      items.slice(0, 3).map(({ nama }) => ({ nama }));
+
+    return {
+      success: true,
+      period: result.period,
+      data: {
+        jamKosong: summarize(result.data.jamKosong),
+        penugasanTanpa: summarize(result.data.penugasanTanpa),
+        terlambat: summarize(result.data.terlambat),
+      },
+    };
+  }
+
   async getStats(startMonth?: string, endMonth?: string) {
     const now = new Date();
     const currentYear = now.getFullYear();

@@ -673,13 +673,17 @@ html.dark .ftb-backBtn:hover {
         box-sizing: border-box !important;
     }
 
-    /* Sembunyikan label teks jika tombol ber-kelas .ftb-btn-icon-mobile pada mobile (kecuali jika membungkus ikon) */
+    /* Sembunyikan label teks jika tombol ber-kelas .ftb-btn-icon-mobile pada mobile */
     .ftb-mobile-inlineActions .ftb-btn-icon-mobile span:not(:has(i)):not(:has(svg)),
     .ftb-mobile-inlineActions .ui-btn.ftb-btn-icon-mobile span:not(:has(i)):not(:has(svg)),
     .ftb-mobile-inlineActions button.ftb-btn-icon-mobile span:not(:has(i)):not(:has(svg)),
     .ftb-mobile-inlineActions .ftb-btn-icon-mobile .hidden-mobile,
     .ftb-mobile-inlineActions .ftb-btn-icon-mobile .btn-text-desktop,
-    .ftb-mobile-inlineActions .ftb-actions .ftb-btn-icon-mobile .btn-text-desktop {
+    .ftb-mobile-inlineActions .ftb-actions .ftb-btn-icon-mobile .btn-text-desktop,
+    .ftb-mobile-inlineActions .ftb-btn-icon-mobile .btn-text-mobile,
+    .ftb-mobile-inlineActions .ftb-actions .ftb-btn-icon-mobile .btn-text-mobile,
+    .ftb-mobile-inlineActions .ftb-btn-icon-mobile .ui-btn__label,
+    .ftb-mobile-inlineActions .ftb-actions .ftb-btn-icon-mobile .ui-btn__label {
         display: none !important;
     }
 
@@ -723,13 +727,11 @@ html.dark .ftb-backBtn:hover {
         display: none !important;
     }
 
-    /* Pastikan pembungkus ikon .ui-btn__label tetap tampil dan terpusat */
+    /* Pastikan pembungkus ikon .ui-btn__label tetap tampil dan terpusat (khusus pembungkus ikon titik 3/menu) */
     .ftb-mobile-inlineActions .sk__more > button .ui-btn__label,
     .ftb-mobile-inlineActions .sk__more > .ui-btn .ui-btn__label,
     .ftb-mobile-inlineActions .sk__menuWrap > button .ui-btn__label,
-    .ftb-mobile-inlineActions .sk__menuWrap > .ui-btn .ui-btn__label,
-    .ftb-mobile-inlineActions .ftb-btn-icon-mobile .ui-btn__label,
-    .ftb-mobile-inlineActions .ftb-actions .ftb-btn-icon-mobile .ui-btn__label {
+    .ftb-mobile-inlineActions .sk__menuWrap > .ui-btn .ui-btn__label {
         display: inline-flex !important;
         align-items: center !important;
         justify-content: center !important;
@@ -743,7 +745,7 @@ html.dark .ftb-backBtn:hover {
     .ftb-mobile-inlineActions .ftb-actions > .sk__menuWrap > button i,
     .ftb-mobile-inlineActions .ftb-btn-icon-mobile i,
     .ftb-mobile-inlineActions .ftb-actions .ftb-btn-icon-mobile i {
-        margin-right: 0 !important;
+        margin: 0 !important;
         font-size: 1.15rem !important;
         line-height: 1 !important;
         color: #3083FF !important;
@@ -756,8 +758,12 @@ html.dark .ftb-backBtn:hover {
     .ftb-mobile-inlineActions .ftb-actions > .sk__menuWrap > button svg,
     .ftb-mobile-inlineActions .ftb-btn-icon-mobile svg,
     .ftb-mobile-inlineActions .ftb-actions .ftb-btn-icon-mobile svg {
-        margin-right: 0 !important;
+        margin: 0 !important;
         color: #3083FF !important;
+        width: 19px !important;
+        height: 19px !important;
+        display: inline-flex !important;
+        flex-shrink: 0 !important;
     }
 
     /* Sembunyikan label teks jika pemicu berupa ikon saja */
@@ -1591,6 +1597,14 @@ html.dark .ftb-backBtn:hover {
         border: 1px solid rgba(59, 130, 246, 0.4) !important;
         color: #60a5fa !important;
     }
+
+    .dark .ftb-mobile-inlineActions .ftb-btn-icon-mobile svg,
+    .dark .ftb-mobile-inlineActions .ftb-btn-icon-mobile i,
+    .dark .ftb-mobile-inlineActions .ftb-actions .ftb-btn-icon-mobile svg,
+    .dark .ftb-mobile-inlineActions .ftb-actions .ftb-btn-icon-mobile i {
+        color: #60a5fa !important;
+        stroke: #60a5fa !important;
+    }
 }
 
 .dark .ftb-label {
@@ -1724,7 +1738,7 @@ html.dark .ftb-backBtn:hover {
 .dark .ftb-mobile-filter-badge {
     background: #1a73e8;
     color: #ffffff;
-    border-color: #000000;
+    border-color: #0b1329;
 }
 
 /* ===================== Mobile Filter Modal ===================== */

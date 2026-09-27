@@ -22,3 +22,7 @@ export function useDashboardUser(): DashboardUserContextValue {
     }
     return ctx
 }
+
+export function useOptionalDashboardUser(): DashboardUserContextValue | null {
+    return useContext(DashboardUserContext)
+}

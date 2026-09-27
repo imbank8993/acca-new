@@ -1056,9 +1056,9 @@ export default function UnggahDokumenTab({
                     filter: brightness(1.08);
                 }
 
-                /* ── GOOGLE ONE PITCH BLACK DARK THEME ── */
+                /* ── DARK NAVY BLUE DARK THEME ── */
                 :global(.dark) .ud-hero {
-                    background: #000000 !important;
+                    background: #0b1329 !important;
                     border: 2px solid #1a73e8 !important;
                     border-radius: 20px !important;
                     box-shadow: 0 0 30px rgba(26, 115, 232, 0.25) !important;
@@ -1075,7 +1075,7 @@ export default function UnggahDokumenTab({
                     color: #94a3b8 !important;
                 }
                 :global(.dark) .ud-section {
-                    background: #000000 !important;
+                    background: #0b1329 !important;
                     border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
                     border-radius: 16px !important;
                     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5) !important;
@@ -1084,7 +1084,7 @@ export default function UnggahDokumenTab({
                     color: #f1f5f9 !important;
                 }
                 :global(.dark) .ud-tabs {
-                    background: #000000 !important;
+                    background: #0b1329 !important;
                     border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
                     border-radius: 14px !important;
                     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5) !important;
@@ -1103,8 +1103,8 @@ export default function UnggahDokumenTab({
                     box-shadow: 0 0 14px rgba(26, 115, 232, 0.45) !important;
                 }
                 :global(.dark) .ud-form-group select {
-                    background-color: #000000 !important;
-                    background: #000000 !important;
+                    background-color: #0b1329 !important;
+                    background: #0b1329 !important;
                     border: 2px solid rgba(59, 130, 246, 0.5) !important;
                     color: #f1f5f9 !important;
                     border-radius: 10px !important;
@@ -1131,7 +1131,7 @@ export default function UnggahDokumenTab({
                     color: #94a3b8 !important;
                 }
                 :global(.dark) .file-preview {
-                    background: #000000 !important;
+                    background: #0b1329 !important;
                     border: 1px solid rgba(59, 130, 246, 0.35) !important;
                 }
                 :global(.dark) .file-name {
@@ -1142,7 +1142,7 @@ export default function UnggahDokumenTab({
                     color: #94a3b8 !important;
                 }
                 :global(.dark) .file-item {
-                    background: #000000 !important;
+                    background: #0b1329 !important;
                     border: 1px solid rgba(59, 130, 246, 0.3) !important;
                 }
                 :global(.dark) .file-item:hover {
@@ -1166,7 +1166,7 @@ export default function UnggahDokumenTab({
                     color: #38bdf8 !important;
                 }
                 :global(.dark) .ud-dropzone {
-                    background: #000000 !important;
+                    background: #0b1329 !important;
                     border-color: rgba(59, 130, 246, 0.4) !important;
                 }
                 :global(.dark) .ud-dropzone.drag-over {
@@ -1178,7 +1178,7 @@ export default function UnggahDokumenTab({
                     border-color: #3b82f6 !important;
                 }
                 :global(.dark) .file-preview {
-                    background: #000000 !important;
+                    background: #0b1329 !important;
                     border-color: rgba(59, 130, 246, 0.3) !important;
                 }
                 :global(.dark) .file-count {
@@ -1199,7 +1199,7 @@ export default function UnggahDokumenTab({
                     backdrop-filter: blur(8px) !important;
                 }
                 :global(.dark) .ud-modal-card {
-                    background: #000000 !important;
+                    background: #0b1329 !important;
                     border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
                     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8) !important;
                 }
@@ -1219,7 +1219,7 @@ export default function UnggahDokumenTab({
                 }
                 :global(.dark) .btn-action,
                 :global(.dark) .btn-remove-file {
-                    background: #000000 !important;
+                    background: #0b1329 !important;
                     border: 1px solid rgba(59, 130, 246, 0.35) !important;
                     color: #93c5fd !important;
                 }

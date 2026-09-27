@@ -88,11 +88,11 @@ export default function DashboardCharts({
                         </div>
                     </div>
                     {attendance.isSunday ? (
-                        <span className="db-chart-card__live-pill" style={{ background: '#f1f5f9', color: '#64748b' }}>
+                        <span className="db-chart-card__live-pill db-chart-card__live-pill--holiday">
                             Hari Libur
                         </span>
                     ) : attendance.isNotStarted ? (
-                        <span className="db-chart-card__live-pill" style={{ background: '#fef9c3', color: '#854d0e' }}>
+                        <span className="db-chart-card__live-pill db-chart-card__live-pill--pending">
                             Belum Dimulai
                         </span>
                     ) : (
@@ -294,9 +294,9 @@ export default function DashboardCharts({
                 }
 
                 :global(.dark) .db-chart-card {
-                    background: #000000;
-                    border-color: rgba(37, 99, 235, 0.4);
-                    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+                    background: #0b1329 !important;
+                    border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
+                    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5) !important;
                 }
 
                 .db-chart-card__head {
@@ -366,10 +366,29 @@ export default function DashboardCharts({
                     color: #3083FF;
                     font-size: 0.75rem;
                     font-weight: 700;
+                    background: transparent !important;
                 }
 
                 :global(.dark) .db-chart-card__live-pill {
                     color: #60a5fa;
+                }
+
+                .db-chart-card__live-pill--holiday {
+                    color: #94a3b8 !important;
+                    font-weight: 600;
+                }
+
+                :global(.dark) .db-chart-card__live-pill--holiday {
+                    color: #94a3b8 !important;
+                }
+
+                .db-chart-card__live-pill--pending {
+                    color: #d97706 !important;
+                    font-weight: 600;
+                }
+
+                :global(.dark) .db-chart-card__live-pill--pending {
+                    color: #fbbf24 !important;
                 }
 
                 .db-chart-card__dot {
@@ -650,8 +669,8 @@ export default function DashboardCharts({
                 }
 
                 :global(.dark) .db-chart-gauge-stat-item {
-                    background: rgba(255, 255, 255, 0.03);
-                    border-color: rgba(255, 255, 255, 0.06);
+                    background: rgba(26, 115, 232, 0.08) !important;
+                    border-color: rgba(37, 99, 235, 0.25) !important;
                 }
 
                 .db-chart-gauge-num {
@@ -723,7 +742,7 @@ export default function DashboardCharts({
 
                     .db-chart-card__live-pill {
                         flex-shrink: 0;
-                        padding: 3px 8px;
+                        padding: 0;
                         font-size: 0.66rem;
                     }
 

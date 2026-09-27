@@ -267,7 +267,7 @@ body.dark .ui-btn--activate:hover:not(:disabled),
 }
 
 .dark .ui-btn--more {
-  background: #000000;
+  background: #0b1329;
   color: #60a5fa;
   border: 1.5px solid rgba(26, 115, 232, 0.75);
 }
@@ -281,7 +281,7 @@ body.dark .ui-btn--activate:hover:not(:disabled),
 
 .dark .ui-btn--outline,
 .dark .ui-btn--secondary {
-  background: #0f172a;
+  background: #0b1329;
   color: #f8fafc;
   border: 1px solid rgba(59, 130, 246, 0.4);
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);

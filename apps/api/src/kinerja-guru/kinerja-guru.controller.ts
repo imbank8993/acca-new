@@ -15,6 +15,16 @@ import { KinerjaGuruService } from './kinerja-guru.service';
 export class KinerjaGuruController {
   constructor(private readonly kinerjaGuruService: KinerjaGuruService) {}
 
+  @Get('dashboard')
+  @RequiresPage('dashboard')
+  @ApiOperation({ summary: 'Ringkasan kinerja guru untuk dashboard' })
+  async getDashboardSummary(
+    @Query('start_month') start_month?: string,
+    @Query('end_month') end_month?: string,
+  ) {
+    return await this.kinerjaGuruService.getDashboardSummary(start_month, end_month);
+  }
+
   @Get()
   @ApiOperation({ summary: 'Statistik dan Metrik Kinerja Guru' })
   async getStats(

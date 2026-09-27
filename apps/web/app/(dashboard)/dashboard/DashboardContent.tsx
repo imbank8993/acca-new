@@ -10,6 +10,7 @@ import type { User } from '@/lib/types';
 import { getProxiedImageUrl } from '@/lib/image-utils';
 import DOMPurify from 'isomorphic-dompurify';
 import DashboardCharts from './DashboardCharts';
+import DashboardKinerjaCard from './DashboardKinerjaCard';
 import Modal, { ModalBody, ModalFooter } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import {
@@ -58,7 +59,7 @@ export default function DashboardContent({ user, headerExtra }: { user: User; he
                 const json = await res.json().catch(() => null);
                 if (json?.ok && json?.data) {
                     setDashboardSummary(json.data);
-                    
+
                     if (json.data.age !== null) {
                         setAge(json.data.age);
                         const today = new Date();
@@ -186,7 +187,7 @@ export default function DashboardContent({ user, headerExtra }: { user: User; he
         loadAgendaMingguIni();
         return () => { aborted = true; };
     }, [weekDays]);
-    
+
     // Core states
     const [siswaKelas, setSiswaKelas] = useState<string | null>(null);
 
@@ -267,6 +268,8 @@ export default function DashboardContent({ user, headerExtra }: { user: User; he
     const isAdmin = roles.includes('ADMIN') || roles.includes('ADMINISTRATOR');
     const isOrangTua = roles.includes('ORANGTUA') || roles.includes('ORANG_TUA') || roles.includes('WALI');
     const isOtherRole = !isSiswa && !isGuru && !isOrangTua;
+    const isTU = roles.includes('TU') || roles.includes('TATA_USAHA');
+    const canViewKinerjaGuru = isGuru || isSiswa || isTU || isAdmin;
 
     useEffect(() => {
         if (isSiswa || isOrangTua) {
@@ -317,7 +320,7 @@ export default function DashboardContent({ user, headerExtra }: { user: User; he
         }
     }, [dashboardSummary?.siswaData?.id]);
 
-    
+
 
     // Fireworks Canvas
     useEffect(() => {
@@ -330,7 +333,7 @@ export default function DashboardContent({ user, headerExtra }: { user: User; he
         let h = canvas.height = window.innerHeight;
         let animationId: number;
         const particles: any[] = [];
-        
+
         const createFirework = (x: number, y: number) => {
             const count = 60;
             for (let i = 0; i < count; i++) {
@@ -353,7 +356,7 @@ export default function DashboardContent({ user, headerExtra }: { user: User; he
             ctx.fillStyle = 'rgba(0,0,0,0.1)';
             ctx.fillRect(0, 0, w, h);
             if (Math.random() < 0.04) createFirework(Math.random() * w, Math.random() * (h/2));
-            
+
             for (let i = particles.length - 1; i >= 0; i--) {
                 const p = particles[i];
                 p.x += p.vx;
@@ -371,7 +374,7 @@ export default function DashboardContent({ user, headerExtra }: { user: User; he
             animationId = requestAnimationFrame(loop);
         };
         loop();
-        
+
         return () => {
             cancelAnimationFrame(animationId);
             window.removeEventListener('resize', handleResize);
@@ -447,7 +450,7 @@ export default function DashboardContent({ user, headerExtra }: { user: User; he
             if (json?.ok && json?.data) {
                 const uniqueClasses = [...new Set(json.data.map((j: any) => j.kelas).filter(Boolean))] as string[];
                 const uniqueDays = [...new Set(json.data.map((j: any) => j.hari).filter(Boolean))] as string[];
-                
+
                 const classOrder: Record<string, number> = { 'X': 1, 'XI': 2, 'XII': 3 };
                 const getClassWeight = (cls: string) => {
                     const roman = cls.split(' ')[0];
@@ -577,7 +580,7 @@ export default function DashboardContent({ user, headerExtra }: { user: User; he
 
     const loadAllStudentClasses = async () => {};;
 
-    const loadEkskuls = async (overrideStudentId?: any) => { 
+    const loadEkskuls = async (overrideStudentId?: any) => {
         const studentId = overrideStudentId || dashboardSummary?.siswaData?.id;
         if (!studentId) return;
         try {
@@ -604,7 +607,7 @@ export default function DashboardContent({ user, headerExtra }: { user: User; he
         }
     };
 
-    const loadRecentTugas = async () => { 
+    const loadRecentTugas = async () => {
     if (!siswaKelas || !dashboardSummary?.siswaData?.id) return;
     try {
         const studentId = dashboardSummary.siswaData.id;
@@ -687,14 +690,14 @@ export default function DashboardContent({ user, headerExtra }: { user: User; he
                     <div className="db__widget-card">
                         <div className="db__widget-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                <span className="db__widgetIcon" style={{ 
-                                    width: '38px', 
-                                    height: '38px', 
-                                    borderRadius: '12px', 
-                                    display: 'inline-flex', 
-                                    alignItems: 'center', 
-                                    justifyContent: 'center', 
-                                    flexShrink: 0 
+                                <span className="db__widgetIcon" style={{
+                                    width: '38px',
+                                    height: '38px',
+                                    borderRadius: '12px',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    flexShrink: 0
                                 }}>
                                     <Megaphone size={18} />
                                 </span>
@@ -780,6 +783,11 @@ export default function DashboardContent({ user, headerExtra }: { user: User; he
                 </div>
             )}
 
+            {/* 🏆 KINERJA GURU — RADAR KEDISIPLINAN (JAM KOSONG, PENUGASAN TANPA PENDAMPINGAN, TERLAMBAT) */}
+            {canViewKinerjaGuru && (
+                <DashboardKinerjaCard />
+            )}
+
             {/* Layout Grid */}
             <div className="db__layout">
                 {/* Left Side: Role Specific Widgets */}
@@ -793,14 +801,14 @@ export default function DashboardContent({ user, headerExtra }: { user: User; he
                                 <div className="db__widget-card db__agenda-time-card db__area-agenda" style={{ height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
                                     <div className="db__widget-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', flexWrap: 'nowrap' }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: '1 1 auto', minWidth: 0 }}>
-                                            <span className="db__widgetIcon" style={{ 
-                                                width: '38px', 
-                                                height: '38px', 
-                                                borderRadius: '12px', 
-                                                display: 'inline-flex', 
-                                                alignItems: 'center', 
-                                                justifyContent: 'center', 
-                                                flexShrink: 0 
+                                            <span className="db__widgetIcon" style={{
+                                                width: '38px',
+                                                height: '38px',
+                                                borderRadius: '12px',
+                                                display: 'inline-flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                flexShrink: 0
                                             }}>
                                                 <Calendar size={18} />
                                             </span>
@@ -808,36 +816,31 @@ export default function DashboardContent({ user, headerExtra }: { user: User; he
                                                 Agenda Madrasah
                                             </h3>
                                         </div>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setAgendaOffset(prev => Math.max(0, prev - 1))}
-                                                    disabled={agendaOffset === 0}
-                                                    title="Hari sebelumnya"
-                                                    aria-label="Hari sebelumnya"
-                                                    className="db__announcement-scroll-btn"
-                                                    style={{ width: '26px', height: '26px', opacity: agendaOffset === 0 ? 0.35 : 1, cursor: agendaOffset === 0 ? 'not-allowed' : 'pointer' }}
-                                                >
-                                                    <ChevronLeft size={14} />
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setAgendaOffset(prev => prev + 1)}
-                                                    title="Hari berikutnya"
-                                                    aria-label="Hari berikutnya"
-                                                    className="db__announcement-scroll-btn"
-                                                    style={{ width: '26px', height: '26px', cursor: 'pointer' }}
-                                                >
-                                                    <ChevronRight size={14} />
-                                                </button>
-                                            </div>
-                                            <Link href="/agenda-madrasah" style={{ fontSize: '0.75rem', fontWeight: 600, color: '#3083FF', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '2px', whiteSpace: 'nowrap' }}>
-                                                Lihat Semua
-                                            </Link>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
+                                            <button
+                                                type="button"
+                                                onClick={() => setAgendaOffset(prev => Math.max(0, prev - 1))}
+                                                disabled={agendaOffset === 0}
+                                                title="Hari sebelumnya"
+                                                aria-label="Hari sebelumnya"
+                                                className="db__announcement-scroll-btn"
+                                                style={{ width: '26px', height: '26px', opacity: agendaOffset === 0 ? 0.35 : 1, cursor: agendaOffset === 0 ? 'not-allowed' : 'pointer' }}
+                                            >
+                                                <ChevronLeft size={14} />
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => setAgendaOffset(prev => prev + 1)}
+                                                title="Hari berikutnya"
+                                                aria-label="Hari berikutnya"
+                                                className="db__announcement-scroll-btn"
+                                                style={{ width: '26px', height: '26px', cursor: 'pointer' }}
+                                            >
+                                                <ChevronRight size={14} />
+                                            </button>
                                         </div>
                                     </div>
-                                    
+
                                     {/* Grafik Alur Agenda Terhubung (Connected Flow Track) */}
                                     <div
                                         className="db__agenda-flow-track"
@@ -869,11 +872,11 @@ export default function DashboardContent({ user, headerExtra }: { user: User; he
                                                         <span className="db__agenda-day-name">
                                                             {isToday ? 'Hari Ini' : label}
                                                         </span>
-                                                        
+
                                                         {/* Circle Node */}
                                                         <div className="db__agenda-circle">
                                                             {d.getDate()}
-                                                            
+
                                                             {/* Dot marker for agenda */}
                                                             {hasAgenda && !isToday && !isSelected && (
                                                                 <span className="db__agenda-dot-marker db__agenda-dot-marker--agenda" />
@@ -909,10 +912,10 @@ export default function DashboardContent({ user, headerExtra }: { user: User; he
                                                         const itemDate = new Date(`${tglMulai}T00:00:00`);
                                                         const formattedDate = itemDate.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
                                                         return (
-                                                            <div 
+                                                            <div
                                                                 key={item.id}
                                                                 className="db__agenda-item-card"
-                                                                style={{ 
+                                                                style={{
                                                                     borderLeftColor: item.warna || '#3083FF'
                                                                 }}
                                                             >
@@ -945,21 +948,37 @@ export default function DashboardContent({ user, headerExtra }: { user: User; he
                                             </div>
                                         );
                                     })()}
+
+                                    {/* Footer: Lihat Semua di Pojok Kanan Bawah */}
+                                    <div className="db__agenda-footer">
+                                        <Link
+                                            href="/agenda-madrasah"
+                                            className="db__agenda-see-all-link"
+                                            style={{
+                                                fontSize: '0.75rem',
+                                                fontWeight: 600,
+                                                textDecoration: 'none',
+                                                whiteSpace: 'nowrap'
+                                            }}
+                                        >
+                                            Lihat Semua
+                                        </Link>
+                                    </div>
                                 </div>
 
                                 {/* 2. Tugas Tambahan (Guru) / Ekstrakurikuler (Siswa, Orang Tua) */}
                                 {(isGuru || isSiswa || isOrangTua) && (
-                                    <div className="db__widget-card db__area-tugas" style={{ background: '#FFFFFF', border: '1px solid #E1E2E9', height: '100%', display: 'flex', flexDirection: 'column' }}>
-                                        <div className="db__widget-header" style={{ borderBottomColor: '#E1E2E9' }}>
+                                    <div className="db__widget-card db__area-tugas" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                                        <div className="db__widget-header">
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                                <span className="db__widgetIcon" style={{ 
-                                                    width: '38px', 
-                                                    height: '38px', 
-                                                    borderRadius: '12px', 
-                                                    display: 'inline-flex', 
-                                                    alignItems: 'center', 
-                                                    justifyContent: 'center', 
-                                                    flexShrink: 0 
+                                                <span className="db__widgetIcon" style={{
+                                                    width: '38px',
+                                                    height: '38px',
+                                                    borderRadius: '12px',
+                                                    display: 'inline-flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    flexShrink: 0
                                                 }}>
                                                     {isGuru ? <Briefcase size={18} /> : <Trophy size={18} />}
                                                 </span>
@@ -978,20 +997,20 @@ export default function DashboardContent({ user, headerExtra }: { user: User; he
                                                              {tugasTambahan.map((t, idx) => (
                                                                  <div key={idx} className={`db__chip ${!showAllTugasTambahan && idx >= 2 ? 'db__mobile-hide-tugas' : ''}`}>
                                                                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, minWidth: 0 }}>
-                                                                         <span 
-                                                                             style={{ 
-                                                                                 width: '22px', 
-                                                                                 height: '22px', 
-                                                                                 borderRadius: '50%', 
-                                                                                 background: '#EFF6FF', 
-                                                                                 color: '#3083FF', 
+                                                                         <span
+                                                                             style={{
+                                                                                 width: '22px',
+                                                                                 height: '22px',
+                                                                                 borderRadius: '50%',
+                                                                                 background: '#EFF6FF',
+                                                                                 color: '#3083FF',
                                                                                  border: '1px solid #BFDBFE',
-                                                                                 fontSize: '0.725rem', 
-                                                                                 fontWeight: 700, 
-                                                                                 display: 'inline-flex', 
-                                                                                 alignItems: 'center', 
+                                                                                 fontSize: '0.725rem',
+                                                                                 fontWeight: 700,
+                                                                                 display: 'inline-flex',
+                                                                                 alignItems: 'center',
                                                                                  justifyContent: 'center',
-                                                                                 flexShrink: 0 
+                                                                                 flexShrink: 0
                                                                              }}
                                                                          >
                                                                              {idx + 1}
@@ -1009,16 +1028,16 @@ export default function DashboardContent({ user, headerExtra }: { user: User; he
                                                              ))}
                                                          </div>
                                                          {!showAllTugasTambahan && tugasTambahan.length > 2 && (
-                                                             <button 
-                                                                 className="db__show-more-link db__mobile-only" 
+                                                             <button
+                                                                 className="db__show-more-link db__mobile-only"
                                                                  onClick={() => setShowAllTugasTambahan(true)}
                                                              >
                                                                  Lainnya
                                                              </button>
                                                          )}
                                                          {showAllTugasTambahan && tugasTambahan.length > 2 && (
-                                                             <button 
-                                                                 className="db__show-more-link db__mobile-only" 
+                                                             <button
+                                                                 className="db__show-more-link db__mobile-only"
                                                                  onClick={() => setShowAllTugasTambahan(false)}
                                                              >
                                                                  Lebih Sedikit
@@ -1039,16 +1058,16 @@ export default function DashboardContent({ user, headerExtra }: { user: User; he
                                                             ))}
                                                         </div>
                                                         {!showAllTugasTambahan && ekskuls.length > 2 && (
-                                                            <button 
-                                                                className="db__show-more-link db__mobile-only" 
+                                                            <button
+                                                                className="db__show-more-link db__mobile-only"
                                                                 onClick={() => setShowAllTugasTambahan(true)}
                                                             >
                                                                 Lainnya
                                                             </button>
                                                         )}
                                                         {showAllTugasTambahan && ekskuls.length > 2 && (
-                                                            <button 
-                                                                className="db__show-more-link db__mobile-only" 
+                                                            <button
+                                                                className="db__show-more-link db__mobile-only"
                                                                 onClick={() => setShowAllTugasTambahan(false)}
                                                             >
                                                                 Lebih Sedikit
@@ -1069,7 +1088,7 @@ export default function DashboardContent({ user, headerExtra }: { user: User; he
                                     const hadirCount = anakAsuh.filter(s => (anakAsuhKehadiran[s.nisn_siswa]?.kode || 'HADIR').toUpperCase() === 'HADIR').length;
                                     const sakitCount = anakAsuh.filter(s => (anakAsuhKehadiran[s.nisn_siswa]?.kode || '').toUpperCase() === 'SAKIT').length;
                                     const izinCount = anakAsuh.filter(s => (anakAsuhKehadiran[s.nisn_siswa]?.kode || '').toUpperCase() === 'IZIN').length;
-                                    
+
                                     const hasIzin = anakAsuh.some(s => anakAsuhKehadiran[s.nisn_siswa]?.kode === 'IZIN');
                                     const hasSakit = anakAsuh.some(s => anakAsuhKehadiran[s.nisn_siswa]?.kode === 'SAKIT');
                                     const blinkType = hasIzin && hasSakit ? 'both' : hasSakit ? 'sakit' : hasIzin ? 'izin' : null;
@@ -1077,17 +1096,17 @@ export default function DashboardContent({ user, headerExtra }: { user: User; he
                                     const blinkTitle = hasIzin && hasSakit ? `Ada ${titleWidget.toLowerCase()} yang Sakit & Izin hari ini` : hasSakit ? `Ada ${titleWidget.toLowerCase()} yang Sakit hari ini` : hasIzin ? `Ada ${titleWidget.toLowerCase()} yang Izin hari ini` : '';
 
                                     return (
-                                        <div className="db__widget-card db__area-anakasuh" style={{ background: '#FFFFFF', border: '1px solid #E1E2E9', height: '100%', display: 'flex', flexDirection: 'column' }}>
-                                            <div className="db__widget-header flex-between" style={{ borderBottomColor: '#E1E2E9' }}>
+                                        <div className="db__widget-card db__area-anakasuh" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                                            <div className="db__widget-header flex-between">
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                                    <span className="db__widgetIcon" style={{ 
-                                                        width: '38px', 
-                                                        height: '38px', 
-                                                        borderRadius: '12px', 
-                                                        display: 'inline-flex', 
-                                                        alignItems: 'center', 
-                                                        justifyContent: 'center', 
-                                                        flexShrink: 0 
+                                                    <span className="db__widgetIcon" style={{
+                                                        width: '38px',
+                                                        height: '38px',
+                                                        borderRadius: '12px',
+                                                        display: 'inline-flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        flexShrink: 0
                                                     }}>
                                                         <Users size={18} />
                                                     </span>
@@ -1194,16 +1213,16 @@ export default function DashboardContent({ user, headerExtra }: { user: User; he
                                                             })}
                                                         </div>
                                                         {!showAllAnakAsuh && anakAsuh.length > 0 && (
-                                                            <button 
-                                                                className="db__show-more-link db__mobile-only" 
+                                                            <button
+                                                                className="db__show-more-link db__mobile-only"
                                                                 onClick={() => setShowAllAnakAsuh(true)}
                                                             >
                                                                 Lainnya
                                                             </button>
                                                         )}
                                                         {showAllAnakAsuh && anakAsuh.length > 0 && (
-                                                            <button 
-                                                                className="db__show-more-link db__mobile-only" 
+                                                            <button
+                                                                className="db__show-more-link db__mobile-only"
                                                                 onClick={() => setShowAllAnakAsuh(false)}
                                                             >
                                                                 Lebih Sedikit
@@ -1240,10 +1259,10 @@ export default function DashboardContent({ user, headerExtra }: { user: User; he
 
                             {/* Row 3: Kehadiran (Khusus Other Roles) */}
                             {isOtherRole && (
-                                <div className="db__widget-card db__area-kehadiran" style={{ background: '#FFFFFF', border: '1px solid #E1E2E9' }}>
-                                    <div className="db__widget-header flex-between" style={{ borderBottomColor: '#E1E2E9' }}>
+                                <div className="db__widget-card db__area-kehadiran">
+                                    <div className="db__widget-header flex-between">
                                         <h3>
-                                            <UserX size={18} style={{ color: '#3083FF', display: 'inline', verticalAlign: 'middle' }} /> 
+                                            <UserX size={18} style={{ color: '#3083FF', display: 'inline', verticalAlign: 'middle' }} />
                                             <span>Kehadiran Hari Ini</span>
                                         </h3>
                                     </div>
@@ -1335,7 +1354,7 @@ export default function DashboardContent({ user, headerExtra }: { user: User; he
                         grid-template-columns: 1fr 1fr;
                         gap: 14px;
                     }
-                    
+
                     /* Align Hero Card with the standard Header position */
                     .db__hero {
                         margin: -16px -16px 0 -16px !important;
@@ -1441,7 +1460,7 @@ export default function DashboardContent({ user, headerExtra }: { user: User; he
                     border-color: rgba(96, 165, 250, 0.5) !important;
                 }
                 :global(.dark) .db__hero {
-                    background: #000000 !important;
+                    background: #0b1329 !important;
                     border-bottom: 1.5px solid rgba(26, 115, 232, 0.45) !important;
                     border-radius: 0 0 24px 24px !important;
                     box-shadow: 0 10px 30px rgba(0,0,0,0.5) !important;
@@ -1533,7 +1552,7 @@ export default function DashboardContent({ user, headerExtra }: { user: User; he
                     flex-direction: column;
                     gap: 12px;
                 }
-                
+
 
                 /* Widgets */
                 .db__widget-card {
@@ -1551,15 +1570,15 @@ export default function DashboardContent({ user, headerExtra }: { user: User; he
                     border-color: rgba(99, 102, 241, 0.3);
                 }
                 :global(.dark) .db__widget-card {
-                    background: #000000 !important;
-                    border: 1px solid rgba(37, 99, 235, 0.4) !important;
+                    background: #0b1329 !important;
+                    border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
                     border-radius: 16px !important;
-                    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.95) !important;
+                    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5) !important;
                     backdrop-filter: blur(16px);
                 }
                 :global(.dark) .db__widget-card:hover {
-                    border-color: #1a73e8 !important;
-                    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.98) !important;
+                    border-color: #60a5fa !important;
+                    box-shadow: 0 8px 28px rgba(26, 115, 232, 0.3) !important;
                 }
                 .db__widgetIcon {
                     width: 38px;
@@ -1697,9 +1716,9 @@ export default function DashboardContent({ user, headerExtra }: { user: User; he
                     background: #FFFFFF;
                 }
                 :global(.dark) .db__agenda-time-card {
-                    background: #000000 !important;
-                    border-color: rgba(37, 99, 235, 0.55) !important;
-                    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.95) !important;
+                    background: #0b1329 !important;
+                    border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
+                    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5) !important;
                 }
                 :global(.dark .db__day-cell) {
                     background: rgba(26, 115, 232, 0.12) !important;
@@ -1738,9 +1757,28 @@ export default function DashboardContent({ user, headerExtra }: { user: User; he
                     align-items: center;
                     background: none;
                     border: none;
+                    outline: none !important;
+                    box-shadow: none !important;
                     padding: 0;
                     cursor: pointer;
                     position: relative;
+                    -webkit-tap-highlight-color: transparent;
+                    user-select: none;
+                }
+                .db__agenda-day-btn:focus,
+                .db__agenda-day-btn:focus-visible,
+                .db__agenda-day-btn:active {
+                    outline: none !important;
+                    border: none !important;
+                    box-shadow: none !important;
+                }
+                :global(.dark) .db__agenda-day-btn,
+                :global(.dark) .db__agenda-day-btn:focus,
+                :global(.dark) .db__agenda-day-btn:focus-visible,
+                :global(.dark) .db__agenda-day-btn:active {
+                    outline: none !important;
+                    border: none !important;
+                    box-shadow: none !important;
                 }
                 .db__agenda-day-name {
                     font-size: 0.7rem;
@@ -1837,18 +1875,23 @@ export default function DashboardContent({ user, headerExtra }: { user: User; he
 
                 /* Dark Mode untuk Lingkaran & Elemen Agenda Madrasah */
                 :global(.dark) .db__agenda-circle {
-                    background: #000000 !important;
+                    background: #0b1329 !important;
                     border: 2px solid rgba(59, 130, 246, 0.45) !important;
                     color: #cbd5e1 !important;
                     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5) !important;
                 }
+                .db__agenda-day-btn:hover .db__agenda-circle {
+                    background: #E0ECFF;
+                    border-color: #3083FF;
+                    color: #1d4ed8;
+                }
                 :global(.dark) .db__agenda-day-btn:hover .db__agenda-circle {
-                    background: #0f172a !important;
+                    background: #162a4d !important;
                     border-color: #60a5fa !important;
                     color: #ffffff !important;
                 }
                 :global(.dark) .db__agenda-day-btn.has-agenda .db__agenda-circle {
-                    background: #000000 !important;
+                    background: #0b1329 !important;
                     border-color: #3b82f6 !important;
                     color: #60a5fa !important;
                 }
@@ -1865,7 +1908,7 @@ export default function DashboardContent({ user, headerExtra }: { user: User; he
                     box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.4), 0 0 20px rgba(37, 99, 235, 0.6) !important;
                 }
                 :global(.dark) .db__agenda-dot-marker {
-                    border-color: #000000 !important;
+                    border-color: #0b1329 !important;
                 }
 
                 /* Agenda list items */
@@ -1938,6 +1981,32 @@ export default function DashboardContent({ user, headerExtra }: { user: User; he
                 }
                 :global(.dark) .db__agenda-item-location {
                     color: #94a3b8 !important;
+                }
+                .db__agenda-footer {
+                    display: flex;
+                    justify-content: flex-end;
+                    align-items: center;
+                    margin-top: auto;
+                    padding-top: 8px;
+                    width: 100%;
+                }
+                :global(.db__agenda-see-all-link) {
+                    font-size: 0.75rem !important;
+                    font-weight: 600 !important;
+                    color: #3083FF !important;
+                    text-decoration: none !important;
+                    display: inline-block;
+                    transition: color 0.15s ease;
+                }
+                :global(.db__agenda-see-all-link:hover) {
+                    color: #1d4ed8 !important;
+                    text-decoration: underline !important;
+                }
+                :global(.dark .db__agenda-see-all-link) {
+                    color: #60a5fa !important;
+                }
+                :global(.dark .db__agenda-see-all-link:hover) {
+                    color: #93c5fd !important;
                 }
                 .db__widget-header {
                     border-bottom: 1px solid var(--n-border);
@@ -2165,7 +2234,12 @@ export default function DashboardContent({ user, headerExtra }: { user: User; he
                     border: 1px solid #bfdbfe;
                     text-decoration: none;
                     font-size: 0.95rem;
+                    outline: none !important;
                     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+                }
+                .db__goto-btn:focus,
+                .db__goto-btn:focus-visible {
+                    outline: none !important;
                 }
                 .db__goto-btn i {
                     color: var(--n-primary, #3083FF) !important;
@@ -2187,6 +2261,11 @@ export default function DashboardContent({ user, headerExtra }: { user: User; he
                     border: 1px solid #1a73e8 !important;
                     border-radius: 9999px !important;
                     box-shadow: 0 0 14px rgba(26, 115, 232, 0.4) !important;
+                    outline: none !important;
+                }
+                :global(.dark) .db__goto-btn:focus,
+                :global(.dark) .db__goto-btn:focus-visible {
+                    outline: none !important;
                 }
                 :global(.dark) .db__goto-btn i {
                     color: #ffffff !important;
@@ -2209,7 +2288,12 @@ export default function DashboardContent({ user, headerExtra }: { user: User; he
                     align-items: center;
                     justify-content: center;
                     cursor: pointer;
+                    outline: none !important;
                     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+                }
+                .db__announcement-scroll-btn:focus,
+                .db__announcement-scroll-btn:focus-visible {
+                    outline: none !important;
                 }
                 .db__announcement-scroll-btn:hover {
                     background: #E0ECFF;
@@ -2404,27 +2488,27 @@ export default function DashboardContent({ user, headerExtra }: { user: User; he
                 .db__stat-box:hover {
                     transform: translateY(-2px);
                 }
-                .db__stat-box.danger { 
-                    background: linear-gradient(135deg, #eff6ff 0%, #ffe4e6 50%, #fee2e2 100%); 
-                    border-color: #fecdd3; 
+                .db__stat-box.danger {
+                    background: linear-gradient(135deg, #eff6ff 0%, #ffe4e6 50%, #fee2e2 100%);
+                    border-color: #fecdd3;
                 }
-                .db__stat-box.warning { 
-                    background: linear-gradient(145deg, #ecfeff 0%, #cffafe 100%); 
-                    border-color: #a5f3fc; 
+                .db__stat-box.warning {
+                    background: linear-gradient(145deg, #ecfeff 0%, #cffafe 100%);
+                    border-color: #a5f3fc;
                 }
-                :global(.dark) .db__stat-box { 
-                    background: #050811 !important; 
-                    border: 1px solid rgba(37, 99, 235, 0.35) !important; 
+                :global(.dark) .db__stat-box {
+                    background: #0b1329 !important;
+                    border: 1.5px solid rgba(26, 115, 232, 0.6) !important;
                 }
-                :global(.dark) .db__stat-box.danger { 
-                    background: linear-gradient(135deg, #050811 0%, rgba(225, 29, 72, 0.12) 100%) !important; 
-                    border-color: rgba(244, 63, 94, 0.4) !important; 
+                :global(.dark) .db__stat-box.danger {
+                    background: linear-gradient(135deg, #0b1329 0%, rgba(225, 29, 72, 0.15) 100%) !important;
+                    border-color: rgba(244, 63, 94, 0.5) !important;
                 }
-                :global(.dark) .db__stat-box.warning { 
-                    background: #050811 !important; 
-                    border-color: rgba(6, 182, 212, 0.35) !important; 
+                :global(.dark) .db__stat-box.warning {
+                    background: #0b1329 !important;
+                    border-color: rgba(6, 182, 212, 0.5) !important;
                 }
-                
+
                 .db__stat-num {
                     font-size: 1.6rem;
                     font-weight: 900;
@@ -2434,7 +2518,7 @@ export default function DashboardContent({ user, headerExtra }: { user: User; he
                 :global(.dark) .db__stat-num {
                     color: #60a5fa !important;
                 }
-                
+
                 .db__stat-lbl {
                     font-size: 0.72rem;
                     color: var(--n-muted);
@@ -2509,9 +2593,9 @@ export default function DashboardContent({ user, headerExtra }: { user: User; he
                     text-align: center;
                     box-sizing: border-box;
                 }
-                :global(.dark) .db__chip-class { 
-                    background: rgba(37, 99, 235, 0.18) !important; 
-                    color: #E0ECFF !important; 
+                :global(.dark) .db__chip-class {
+                    background: rgba(37, 99, 235, 0.18) !important;
+                    color: #E0ECFF !important;
                     border: 1px solid rgba(59, 130, 246, 0.4) !important;
                     box-shadow: 0 0 8px rgba(37, 99, 235, 0.2) !important;
                     border-radius: 6px !important;
@@ -2546,8 +2630,8 @@ export default function DashboardContent({ user, headerExtra }: { user: User; he
                 .db__chip-status.is-sakit {
                     color: #ea580c !important; /* Orange */
                 }
-                :global(.dark) .db__chip-status { 
-                    background: transparent !important; 
+                :global(.dark) .db__chip-status {
+                    background: transparent !important;
                     border: none !important;
                     box-shadow: none !important;
                 }
@@ -2575,7 +2659,7 @@ export default function DashboardContent({ user, headerExtra }: { user: User; he
                     border: 1.5px solid #ffffff;
                 }
                 :global(.dark) .db__header-blink-dot {
-                    border-color: #000000;
+                    border-color: #0b1329;
                 }
                 .db__header-blink-dot.sakit {
                     background-color: #f97316;
@@ -2741,16 +2825,16 @@ export default function DashboardContent({ user, headerExtra }: { user: User; he
                     transform: translateY(-2px);
                     box-shadow: 0 6px 12px rgba(0,0,0,0.06);
                 }
-                .db__class-card.reguler { 
-                    background: linear-gradient(145deg, #f0fdf4 0%, #dcfce7 100%); 
-                    border-color: #86efac; 
+                .db__class-card.reguler {
+                    background: linear-gradient(145deg, #f0fdf4 0%, #dcfce7 100%);
+                    border-color: #86efac;
                     padding: 10px 12px;
                 }
                 .db__class-card.reguler .db__class-name { font-size: 1.05rem; }
                 .db__class-card.peminatan { background: linear-gradient(145deg, #eff6ff 0%, #E0ECFF 100%); border-color: #E0ECFF; }
                 :global(.dark) .db__class-card.reguler { background: rgba(16, 185, 129, 0.08); border-color: rgba(16, 185, 129, 0.2); }
                 :global(.dark) .db__class-card.peminatan { background: rgba(59, 130, 246, 0.08); border-color: rgba(59, 130, 246, 0.2); }
-                
+
                 .db__class-type {
                     font-size: 0.55rem;
                     text-transform: uppercase;
@@ -2855,9 +2939,9 @@ export default function DashboardContent({ user, headerExtra }: { user: User; he
                     background: var(--n-card);
                 }
                 :global(.dark) .db__table-wrap {
-                    background: rgba(3, 7, 18, 0.7) !important;
-                    border: 1px solid rgba(37, 99, 235, 0.4) !important;
-                    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.04) !important;
+                    background: #0b1329 !important;
+                    border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
+                    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.04) !important;
                 }
                 .db__table {
                     width: 100%;
@@ -3443,10 +3527,10 @@ export default function DashboardContent({ user, headerExtra }: { user: User; he
                         transform: scale(0.985);
                     }
                     :global(.dark) .db__mobile-ann-capsule {
-                        background: #000000 !important;
-                        border: 1.5px solid rgba(37, 99, 235, 0.45) !important;
+                        background: #0b1329 !important;
+                        border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
                         border-radius: 6px !important;
-                        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.7) !important;
+                        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5) !important;
                     }
                     .db__mobile-ann-capsule-icon {
                         width: 34px;
@@ -3546,8 +3630,8 @@ export default function DashboardContent({ user, headerExtra }: { user: User; he
                         gap: 3px !important;
                     }
                     :global(.dark) .db__bento-stat-card {
-                        background: rgba(15, 23, 42, 0.7) !important;
-                        border-color: rgba(37, 99, 235, 0.3) !important;
+                        background: #0b1329 !important;
+                        border: 1.5px solid rgba(26, 115, 232, 0.5) !important;
                     }
                     .db__bento-stat-label {
                         font-size: 0.65rem !important;
@@ -3682,7 +3766,7 @@ export default function DashboardContent({ user, headerExtra }: { user: User; he
                         max-width: 100% !important;
                         gap: 14px !important;
                     }
-                    
+
                     .db__widget-row {
                         flex-direction: column !important;
                         gap: 14px !important;
@@ -3793,10 +3877,10 @@ export default function DashboardContent({ user, headerExtra }: { user: User; he
                         border-radius: 4px !important;
                     }
                     :global(.dark) .db__widget-card {
-                        background: #000000 !important;
-                        border: 1px solid rgba(37, 99, 235, 0.4) !important;
+                        background: #0b1329 !important;
+                        border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
                         border-radius: 16px !important;
-                        box-shadow: 0 16px 48px rgba(0, 0, 0, 0.95) !important;
+                        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5) !important;
                         backdrop-filter: blur(16px);
                     }
                     :global(.dark) .db__widget-header {
@@ -3921,7 +4005,7 @@ export default function DashboardContent({ user, headerExtra }: { user: User; he
                     }
                 }
             `}</style>
-            
+
             {/* Modal Ulang Tahun */}
             {isBirthdayOpen && typeof window !== 'undefined' && createPortal(
                 <div className="bday-overlay">
@@ -3953,11 +4037,11 @@ export default function DashboardContent({ user, headerExtra }: { user: User; he
                                 <span>Oleh: {selectedPengumuman.created_by}</span>
                             </div>
                         )}
-                        <div 
-                            style={{ 
-                                fontSize: '0.875rem', 
-                                lineHeight: 1.6, 
-                                color: 'var(--n-ink, #1e293b)', 
+                        <div
+                            style={{
+                                fontSize: '0.875rem',
+                                lineHeight: 1.6,
+                                color: 'var(--n-ink, #1e293b)',
                                 wordBreak: 'break-word',
                                 whiteSpace: 'pre-wrap'
                             }}

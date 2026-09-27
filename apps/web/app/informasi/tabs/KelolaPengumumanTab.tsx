@@ -368,7 +368,7 @@ export default function KelolaPengumumanTab({
                                                             aria-label={item.pinned ? 'Unpin' : 'Pin'}
                                                             style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px', padding: '6px', borderRadius: '8px', border: 'none', background: 'transparent', cursor: 'pointer', outline: 'none' }}
                                                         >
-                                                            <i className={`bi ${item.pinned ? 'bi-pin-angle-fill' : 'bi-pin-angle'}`} style={{ fontSize: '18px', color: item.pinned ? '#e11d48' : 'var(--n-muted)' }} />
+                                                            <i className={`bi ${item.pinned ? 'bi-pin-angle-fill' : 'bi-pin-angle'}`} style={{ fontSize: '18px', color: item.pinned ? 'var(--n-primary, #3083FF)' : 'var(--n-muted)' }} />
                                                         </button>
                                                         <ActionButton 
                                                             action="edit" 
@@ -494,7 +494,7 @@ export default function KelolaPengumumanTab({
                                         onChange={(e) => setFormData({ ...formData, pinned: e.target.checked })}
                                         style={{ width: '16px', height: '16px', accentColor: 'var(--p-ink, #0284c7)', cursor: 'pointer' }}
                                     />
-                                    <i className="bi bi-pin-angle-fill" style={{ color: formData.pinned ? '#e11d48' : 'var(--n-ink-muted)' }}></i>
+                                    <i className="bi bi-pin-angle-fill" style={{ color: formData.pinned ? 'var(--n-primary, #3083FF)' : 'var(--n-ink-muted)' }}></i>
                                     Sematkan di bagian atas
                                 </label>
                             </ModalField>

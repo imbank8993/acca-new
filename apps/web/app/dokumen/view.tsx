@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect, useCallback, Suspense } from 'react';
+import { useState, useMemo, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Tab, { TabItem } from '@/components/ui/Tab';
 import MaintenanceBanner from '@/components/MaintenanceBanner';
@@ -8,6 +8,8 @@ import PersonalDocumentsPage from './tabs/PersonalDocumentsTab';
 import UnggahDokumenTab from './tabs/UnggahDokumenTab';
 import ManageDokumenTab from './tabs/ManageDokumenTab';
 import type { User } from '@/lib/types';
+import { isUserAdmin, getUserRoles } from '@/lib/auth-client';
+import { useOptionalDashboardUser } from '@/components/UserContext';
 
 type DokumenTabKey = 'pribadi' | 'sekolah' | 'kelola';
 
@@ -16,65 +18,68 @@ interface AccessConfig {
     allowedUsers: { id: string; nama: string; role?: string; nip?: string; username?: string }[];
 }
 
-function PusatDokumenContent({ user }: { user?: User }) {
+function PusatDokumenContent({ user: propUser }: { user?: User }) {
     const searchParams = useSearchParams();
     const router = useRouter();
+
+    const contextUser = useOptionalDashboardUser()?.user;
+    const user = propUser || contextUser;
 
     const [accessConfig, setAccessConfig] = useState<AccessConfig>({
         allowedRoles: ['ADMIN', 'ADMINISTRATOR'],
         allowedUsers: []
     });
 
-    const fetchAccessConfig = useCallback(async () => {
-        try {
-            const res = await fetch('/api/site-settings?key=dokumen_access_config');
-            const json = await res.json();
-            if (json.ok && json.data) {
-                const raw = typeof json.data.value === 'string' ? JSON.parse(json.data.value) : json.data.value;
-                if (raw && typeof raw === 'object') {
-                    setAccessConfig({
-                        allowedRoles: Array.isArray(raw.allowedRoles) ? raw.allowedRoles : ['ADMIN', 'ADMINISTRATOR'],
-                        allowedUsers: Array.isArray(raw.allowedUsers) ? raw.allowedUsers : []
-                    });
+    useEffect(() => {
+        let cancelled = false;
+        const loadAccessConfig = async () => {
+            try {
+                const res = await fetch('/api/site-settings?key=dokumen_access_config');
+                const json = await res.json();
+                if (!cancelled && json.ok && json.data) {
+                    const raw = typeof json.data.value === 'string' ? JSON.parse(json.data.value) : json.data.value;
+                    if (raw && typeof raw === 'object') {
+                        setAccessConfig({
+                            allowedRoles: Array.isArray(raw.allowedRoles) ? raw.allowedRoles : ['ADMIN', 'ADMINISTRATOR'],
+                            allowedUsers: Array.isArray(raw.allowedUsers) ? raw.allowedUsers : []
+                        });
+                    }
                 }
+            } catch (err) {
+                console.error('Error fetching dokumen_access_config:', err);
             }
-        } catch (err) {
-            console.error('Error fetching dokumen_access_config:', err);
-        }
+        };
+        void loadAccessConfig();
+        return () => { cancelled = true; };
     }, []);
 
-    useEffect(() => {
-        fetchAccessConfig();
-    }, [fetchAccessConfig]);
-
     const isAdmin = useMemo(() => {
-        if (!user) return false;
-        const userRoles = (user.roles || [user.role]).filter(Boolean).map(r => String(r).toUpperCase());
-        return userRoles.includes('ADMIN') || userRoles.includes('ADMINISTRATOR');
+        return isUserAdmin(user);
     }, [user]);
 
     const hasFullAccess = useMemo(() => {
         if (isAdmin) return true;
         if (!user) return false;
 
-        const userRoles = (user.roles || [user.role]).filter(Boolean).map(r => String(r).toUpperCase());
-        
-        const effectiveRoles = accessConfig.allowedRoles.length > 0 
-            ? accessConfig.allowedRoles 
+        const userRoles = getUserRoles(user);
+
+        const effectiveRoles = accessConfig.allowedRoles.length > 0
+            ? accessConfig.allowedRoles
             : ['ADMIN', 'ADMINISTRATOR', 'WALI_KELAS'];
 
         const roleAllowed = effectiveRoles.some(r => userRoles.includes(String(r).toUpperCase()));
         if (roleAllowed) return true;
 
-        const userIdStr = String(user.id || (user as any).user_id || '');
+        const userId = 'user_id' in user ? user.user_id : undefined;
+        const userIdStr = String(user.id || userId || '');
         const userNipStr = String(user.nip || '');
         const userNisnStr = String(user.nisn || '');
 
         const userAllowed = accessConfig.allowedUsers.some(u => {
             const uId = String(u.id || '');
             const uNip = String(u.nip || '');
-            return (userIdStr && uId === userIdStr) || 
-                   (userNipStr && uNip === userNipStr) || 
+            return (userIdStr && uId === userIdStr) ||
+                   (userNipStr && uNip === userNipStr) ||
                    (userNisnStr && uId === userNisnStr);
         });
 
@@ -83,11 +88,11 @@ function PusatDokumenContent({ user }: { user?: User }) {
 
     const isMasterGuruUser = useMemo(() => {
         if (!user) return false;
-        const userRoles = (user.roles || [user.role]).filter(Boolean).map(r => String(r).toUpperCase());
+        const userRoles = getUserRoles(user);
         const hasGuruOrStaffRole = userRoles.some(r => [
-            'GURU', 'STAF', 'TU', 'TATA_USAHA', 'BENDAHARA', 
-            'KAMAD', 'KEPALA_SEKOLAH', 'WAKAMAD', 'WALI_KELAS', 
-            'ADMIN', 'ADMINISTRATOR'
+            'GURU', 'STAF', 'TU', 'TATA_USAHA', 'BENDAHARA',
+            'KAMAD', 'KEPALA_SEKOLAH', 'WAKAMAD', 'WALI_KELAS',
+            'ADMIN', 'ADMINISTRATOR', 'SUPERADMIN'
         ].includes(r));
         const hasNip = Boolean(user.nip && String(user.nip).trim() !== '' && !user.nisn);
         return hasNip || hasGuruOrStaffRole;
@@ -102,19 +107,7 @@ function PusatDokumenContent({ user }: { user?: User }) {
         return isMasterGuruUser ? 'pribadi' : 'sekolah';
     }, [searchParams, hasFullAccess, isMasterGuruUser]);
 
-    const [activeTab, setActiveTab] = useState<DokumenTabKey>(initialTabFromUrl);
-
-    // Sync activeTab when query param changes
-    useEffect(() => {
-        const paramTab = searchParams.get('tab')?.toLowerCase();
-        if (paramTab === 'sekolah' || paramTab === 'upload') {
-            setActiveTab('sekolah');
-        } else if (paramTab === 'kelola' && hasFullAccess) {
-            setActiveTab('kelola');
-        } else if ((paramTab === 'pribadi' || paramTab === 'personal') && isMasterGuruUser) {
-            setActiveTab('pribadi');
-        }
-    }, [searchParams, hasFullAccess, isMasterGuruUser]);
+    const activeTab = initialTabFromUrl;
 
     // Guard: jika kelola/pribadi dipilih tapi tidak punya izin, kembalikan ke sekolah
     const resolvedTab = useMemo(() => {
@@ -124,7 +117,6 @@ function PusatDokumenContent({ user }: { user?: User }) {
     }, [activeTab, hasFullAccess, isMasterGuruUser]);
 
     const handleTabChange = (key: DokumenTabKey) => {
-        setActiveTab(key);
         const newParams = new URLSearchParams(searchParams.toString());
         newParams.set('tab', key);
         router.replace(`/dokumen?${newParams.toString()}`, { scroll: false });
@@ -133,11 +125,26 @@ function PusatDokumenContent({ user }: { user?: User }) {
     const tabsConfig = useMemo<TabItem<DokumenTabKey>[]>(() => {
         const items: TabItem<DokumenTabKey>[] = [];
         if (isMasterGuruUser) {
-            items.push({ key: 'pribadi', label: 'Dokumen Pribadi', icon: 'bi-vault' });
+            items.push({
+                key: 'pribadi',
+                label: 'Dokumen Pribadi',
+                shortLabel: 'Pribadi',
+                icon: 'vault'
+            });
         }
-        items.push({ key: 'sekolah', label: 'Dokumen Sekolah', icon: 'bi-file-earmark-arrow-up-fill' });
+        items.push({
+            key: 'sekolah',
+            label: 'Dokumen Sekolah',
+            shortLabel: 'Sekolah',
+            icon: 'file-text'
+        });
         if (hasFullAccess) {
-            items.push({ key: 'kelola', label: 'Kelola Dokumen', icon: 'bi-sliders' });
+            items.push({
+                key: 'kelola',
+                label: 'Kelola Dokumen',
+                shortLabel: 'Kelola',
+                icon: 'sliders'
+            });
         }
         return items;
     }, [hasFullAccess, isMasterGuruUser]);
@@ -150,6 +157,7 @@ function PusatDokumenContent({ user }: { user?: User }) {
                 activeTab={resolvedTab}
                 onChange={handleTabChange}
                 ariaLabel="Pusat Dokumen"
+                variant="slider"
             />
 
             {/* Tab Contents */}

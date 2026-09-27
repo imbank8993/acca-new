@@ -1769,12 +1769,12 @@ export default function PDFViewer({ url, title, onClose, inline = false }: PDFVi
                        ========================================= */
                     :global(.dark) .pdf-viewer-modal,
                     .dark .pdf-viewer-modal {
-                        background: #000000 !important;
+                        background: #0b1329 !important;
                     }
 
                     :global(.dark) .viewer-header,
                     .dark .viewer-header {
-                        background: #000000 !important;
+                        background: #0b1329 !important;
                         border-bottom: 1.5px solid rgba(59, 130, 246, 0.4) !important;
                         box-shadow: 0 4px 20px rgba(0, 0, 0, 0.8) !important;
                     }
@@ -1850,7 +1850,7 @@ export default function PDFViewer({ url, title, onClose, inline = false }: PDFVi
                     .dark .pdf-scroll,
                     :global(.dark) .pdf-content,
                     .dark .pdf-content {
-                        background: #000000 !important;
+                        background: #0b1329 !important;
                     }
 
                     :global(.dark) .pdf-page-wrap,
@@ -1863,7 +1863,7 @@ export default function PDFViewer({ url, title, onClose, inline = false }: PDFVi
 
                     :global(.dark) .viewer-footer,
                     .dark .viewer-footer {
-                        background: #000000 !important;
+                        background: #0b1329 !important;
                         border-top: 1.5px solid rgba(59, 130, 246, 0.35) !important;
                         box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.8) !important;
                     }
@@ -1885,18 +1885,18 @@ export default function PDFViewer({ url, title, onClose, inline = false }: PDFVi
                     /* Excel Dark Mode */
                     :global(.dark) .excel-container,
                     .dark .excel-container {
-                        background: #000000 !important;
+                        background: #0b1329 !important;
                     }
 
                     :global(.dark) .excel-tabs,
                     .dark .excel-tabs {
-                        background: #000000 !important;
+                        background: #0b1329 !important;
                         border-bottom: 1.5px solid rgba(59, 130, 246, 0.35) !important;
                     }
 
                     :global(.dark) .excel-tab-btn,
                     .dark .excel-tab-btn {
-                        background: #000000 !important;
+                        background: #0b1329 !important;
                         border: 1.5px solid rgba(59, 130, 246, 0.45) !important;
                         color: #cbd5e1 !important;
                         border-radius: 6px !important;
@@ -1912,12 +1912,12 @@ export default function PDFViewer({ url, title, onClose, inline = false }: PDFVi
 
                     :global(.dark) .excel-table-wrap,
                     .dark .excel-table-wrap {
-                        background: #000000 !important;
+                        background: #0b1329 !important;
                     }
 
                     :global(.dark) .excel-table,
                     .dark .excel-table {
-                        background: #000000 !important;
+                        background: #0b1329 !important;
                         border: 1.5px solid rgba(59, 130, 246, 0.4) !important;
                         color: #cbd5e1 !important;
                     }
@@ -1930,7 +1930,7 @@ export default function PDFViewer({ url, title, onClose, inline = false }: PDFVi
                     }
 
                     :global(.dark) .excel-table td {
-                        background: #000000 !important;
+                        background: #0b1329 !important;
                         color: #cbd5e1 !important;
                         border-color: rgba(59, 130, 246, 0.2) !important;
                     }
@@ -1943,7 +1943,7 @@ export default function PDFViewer({ url, title, onClose, inline = false }: PDFVi
 
                     :global(.dark) .excel-footer,
                     .dark .excel-footer {
-                        background: #000000 !important;
+                        background: #0b1329 !important;
                         border-top: 1.5px solid rgba(59, 130, 246, 0.35) !important;
                         color: #94a3b8 !important;
                     }
@@ -1951,7 +1951,7 @@ export default function PDFViewer({ url, title, onClose, inline = false }: PDFVi
                     /* Office Fallback Dark Mode */
                     :global(.dark) .office-toolbar,
                     .dark .office-toolbar {
-                        background: #000000 !important;
+                        background: #0b1329 !important;
                         border-bottom: 1.5px solid rgba(59, 130, 246, 0.35) !important;
                     }
 
@@ -1973,7 +1973,7 @@ export default function PDFViewer({ url, title, onClose, inline = false }: PDFVi
 
                     :global(.dark) .office-notice,
                     .dark .office-notice {
-                        background: #000000 !important;
+                        background: #0b1329 !important;
                         border-top: 1.5px solid rgba(59, 130, 246, 0.35) !important;
                         color: #94a3b8 !important;
                     }
@@ -1981,14 +1981,14 @@ export default function PDFViewer({ url, title, onClose, inline = false }: PDFVi
                     /* Media Player (Audio/Video) Dark Mode */
                     :global(.dark) .media-player-modal,
                     .dark .media-player-modal {
-                        background: #000000 !important;
+                        background: #0b1329 !important;
                         border: 1px solid rgba(37, 99, 235, 0.4) !important;
                         box-shadow: 0 0 30px rgba(26, 115, 232, 0.3) !important;
                     }
 
                     :global(.dark) .media-player-header,
                     .dark .media-player-header {
-                        background: #000000 !important;
+                        background: #0b1329 !important;
                         border-bottom: 1.5px solid rgba(59, 130, 246, 0.4) !important;
                     }
 
@@ -2002,7 +2002,7 @@ export default function PDFViewer({ url, title, onClose, inline = false }: PDFVi
 
                     :global(.dark) .media-player-body,
                     .dark .media-player-body {
-                        background: #000000 !important;
+                        background: #0b1329 !important;
                     }
 
                     /* =========================================

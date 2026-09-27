@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import Swal from 'sweetalert2';
 import { PageLoader } from '@/components/ui/Spinner';
 import SearchableSelect, { type Option } from '@/components/ui/SearchableSelect';
+import FilterToolbar, { FilterSearch, FilterSelect } from '@/components/ui/FilterToolbar';
 import { formatRoleDisplay } from '@/lib/auth';
 
 interface UserAccessItem {
@@ -14,9 +15,39 @@ interface UserAccessItem {
     username?: string;
 }
 
+interface RoleApiItem {
+    name?: string;
+    role?: string;
+    description?: string;
+}
+
+interface UserApiItem {
+    id?: string | number;
+    user_id?: string | number;
+    nama?: string;
+    name?: string;
+    nama_lengkap?: string;
+    role?: string;
+    roles?: string[];
+    nip?: string;
+    nisn?: string;
+    username?: string;
+}
+
 interface AccessConfig {
     allowedRoles: string[];
     allowedUsers: UserAccessItem[];
+}
+
+interface ModulItem {
+    settingKey: string;
+    judul: string;
+    ikon: string;
+    keterangan: string;
+    peranBawaan?: string[];
+    isCapability?: boolean;
+    /** Grup halaman — harus cocok dengan label sidebar / susun menu. */
+    grup: string;
 }
 
 /**
@@ -27,84 +58,89 @@ interface AccessConfig {
  * Menambah modul baru cukup menambah satu entri di sini lalu memasang
  * `@FeatureAccess('<settingKey>')` pada endpoint terkait.
  */
-const MODUL: Array<{
-    settingKey: string;
-    judul: string;
-    ikon: string;
-    keterangan: string;
-    peranBawaan?: string[];
-    isCapability?: boolean;
-}> = [
+const MODUL: ModulItem[] = [
     // ─── KLINIK PEMBELAJARAN ─────────────────────────────────────────────
     {
         settingKey: 'klinik.kelola_sesi',
         isCapability: true,
-        judul: 'Klinik Pembelajaran: Bentuk & Kelola Sesi',
+        judul: 'Bentuk & Kelola Sesi',
         ikon: 'bi-calendar2-plus-fill',
         keterangan: 'Membentuk sesi untuk guru lain, mengubah/menghapus sesi siapa pun, serta menelusuri daftar kelas & kandidat siswa.',
+        grup: 'Klinik Pembelajaran',
     },
     {
         settingKey: 'klinik.approve_slot',
         isCapability: true,
-        judul: 'Klinik Pembelajaran: Persetujuan Jadwal Sesi',
+        judul: 'Persetujuan Jadwal Sesi',
         ikon: 'bi-calendar-check-fill',
         keterangan: 'Menyetujui atau menolak pengajuan klinik kelompok dari siswa.',
+        grup: 'Klinik Pembelajaran',
     },
     {
         settingKey: 'klinik.approve_laporan',
         isCapability: true,
-        judul: 'Klinik Pembelajaran: Persetujuan Laporan',
+        judul: 'Persetujuan Laporan',
         ikon: 'bi-file-earmark-check-fill',
         keterangan: 'Menyetujui atau meminta revisi laporan pelaksanaan klinik dari guru.',
+        grup: 'Klinik Pembelajaran',
     },
     {
         settingKey: 'klinik.rekap',
         isCapability: true,
-        judul: 'Klinik Pembelajaran: Rekap & Laporan Dokumen',
+        judul: 'Rekap & Laporan Dokumen',
         ikon: 'bi-file-earmark-bar-graph-fill',
         keterangan: 'Mencetak rekap & laporan dokumen seluruh sesi klinik (memuat nama peserta dan foto dokumentasi).',
+        grup: 'Klinik Pembelajaran',
     },
+    // ─── PUSAT DOKUMEN ──────────────────────────────────────────────────
     {
         settingKey: 'dokumen_access_config',
-        judul: 'Pusat Dokumen',
+        judul: 'Pengelola Dokumen',
         ikon: 'bi-folder-fill',
         keterangan: 'Daftar role dan pengguna yang diberikan akses pengelola dokumen.',
+        grup: 'Pusat Dokumen',
     },
     // ─── GURU ASUH ────────────────────────────────────────────────────────
     {
         settingKey: 'guru_asuh_approval_access_config',
-        judul: 'Guru Asuh: Approval Laporan Bulanan',
+        judul: 'Approval Laporan Bulanan',
         ikon: 'bi-patch-check-fill',
         keterangan: 'Meninjau, menyetujui, meminta revisi, dan mengesahkan laporan bulanan guru asuh. Hanya role ADMIN yang melekat di kode; role lain atau pengguna tertentu ditunjuk di sini (bawaan: WKM_KEASRAMAAN).',
         peranBawaan: ['WKM_KEASRAMAAN'],
+        grup: 'Guru Asuh',
     },
     // ─── JURNAL PEMBELAJARAN ─────────────────────────────────────────────
     {
         settingKey: 'jurnal_input_access_config',
-        judul: 'Jurnal Pembelajaran: Input Jurnal',
+        judul: 'Input Jurnal',
         ikon: 'bi-pencil-square',
         keterangan: 'Role dan pengguna yang berwenang mengisi formulir jurnal pembelajaran kelas/mata pelajaran (bawaan: PENGURUS_KELAS).',
         peranBawaan: ['PENGURUS_KELAS'],
+        grup: 'Jurnal Pembelajaran',
     },
     {
         settingKey: 'jurnal_review_banding_access_config',
-        judul: 'Jurnal Pembelajaran: Review Banding',
+        judul: 'Review Banding',
         ikon: 'bi-shield-check',
         keterangan: 'Role dan pengguna yang berwenang meninjau, menyetujui, atau menolak permohonan banding jurnal dari guru (bawaan: ADMIN, OP_JURNAL).',
         peranBawaan: ['OP_JURNAL'],
+        grup: 'Jurnal Pembelajaran',
     },
     {
         settingKey: 'jurnal_generate_access_config',
-        judul: 'Jurnal Pembelajaran: Generate & Kelola Massal',
+        judul: 'Generate & Kelola Massal',
         ikon: 'bi-magic',
         keterangan: 'Role dan pengguna yang berwenang mengatur jadwal generate harian otomatis, generate manual, import, dan hapus massal jurnal (bawaan: ADMIN, OP_JURNAL).',
         peranBawaan: ['OP_JURNAL'],
+        grup: 'Jurnal Pembelajaran',
     },
+    // ─── JADWAL ─────────────────────────────────────────────────────────
     {
         settingKey: 'jadwal_generate_access_config',
-        judul: 'Kelola Jadwal (Generate PBM & Piket)',
+        judul: 'Generate PBM & Piket',
         ikon: 'bi-calendar-week-fill',
         keterangan: 'Role dan pengguna yang boleh membuat, mengimpor, mengubah, dan menghapus jadwal PBM & piket.',
+        grup: 'Jadwal',
     },
     {
         settingKey: 'tukar_jadwal_review_access_config',
@@ -117,40 +153,48 @@ const MODUL: Array<{
             + 'berbeda. CATATAN: WKM Akademik dan Kurikulum dulu memegang ini secara melekat di '
             + 'kode; sekarang perlu ditunjuk di sini. Guru tetap bisa mengajukan dan menanggapi '
             + 'pertukaran yang melibatkan dirinya tanpa ditunjuk.',
+        grup: 'Jadwal',
     },
+    // ─── IZIN GURU ──────────────────────────────────────────────────────
     {
         settingKey: 'izin_guru_approval_access_config',
-        judul: 'Setujui Izin & Sakit (Izin Guru)',
+        judul: 'Setujui Izin & Sakit',
         ikon: 'bi-check2-square',
         keterangan:
             'Menyetujui atau menolak pengajuan Izin dan Sakit di halaman Izin Guru. CATATAN: '
             + 'role KAMAD dulu memegang ini secara melekat di kode; sekarang perlu ditunjuk di '
             + 'sini. Setiap pegawai tetap bisa mengajukan izin untuk dirinya sendiri tanpa '
             + 'ditunjuk.',
+        grup: 'Izin Guru',
     },
     {
         settingKey: 'izin_guru_dinas_access_config',
-        judul: 'Verifikasi Dinas Luar (Izin Guru)',
+        judul: 'Verifikasi Dinas Luar',
         ikon: 'bi-briefcase-fill',
         keterangan:
             'Memverifikasi pengajuan Dinas Luar. Dipisahkan dari persetujuan Izin & Sakit '
             + 'karena keduanya memang wewenang berbeda. CATATAN: dulu melekat pada OP_IZINGURU.',
+        grup: 'Izin Guru',
     },
     {
         settingKey: 'izin_guru_kelola_access_config',
-        judul: 'Kelola Semua Pengajuan Izin Guru',
+        judul: 'Kelola Semua Pengajuan',
         ikon: 'bi-folder-check',
         keterangan:
             'Melihat, menyunting, dan menghapus pengajuan izin milik siapa pun, termasuk yang '
             + 'sudah diproses. Pemegangnya otomatis juga boleh menyetujui Izin/Sakit dan '
             + 'memverifikasi Dinas Luar. CATATAN: dulu melekat pada OP_IZINGURU.',
+        grup: 'Izin Guru',
     },
+    // ─── ABSENSI ────────────────────────────────────────────────────────
     {
         settingKey: 'absensi_access_config',
         judul: 'Kelola Absensi (Tab Kelola)',
         ikon: 'bi-journal-check',
         keterangan: 'Daftar role dan pengguna yang diberikan akses ke Tab Kelola pada modul Absensi.',
+        grup: 'Absensi',
     },
+    // ─── SURVEI ─────────────────────────────────────────────────────────
     {
         settingKey: 'pengembangan_diri_access_config',
         judul: 'Kelola Survei Pengembangan Diri',
@@ -158,216 +202,243 @@ const MODUL: Array<{
         keterangan: 'Role dan pengguna yang boleh melihat rekap dan menghapus respon survei Pengembangan Diri. '
             + 'Hanya ADMIN yang melekat di kode -- tidak ada role operator bawaan, karena di basis data tidak ada '
             + 'role operator yang cocok untuk survei ini.',
+        grup: 'Lainnya',
     },
     // ─── MASTER DATA, PER TAB ─────────────────────────────────────────────────
-    //
-    // ATURAN untuk ketiga halaman pengaturan (Master Data, Pengaturan Data,
-    // Pengaturan Tugas): HANYA role ADMIN yang melekat di kode, dan haknya tidak
-    // bisa dicabut dari layar ini. Semua pengelola lain — termasuk para WKM —
-    // ditunjuk di sini, per tab. Tidak ada lagi daftar role tertanam di controller,
-    // tidak ada lagi `role_pages` (navigasi) yang dipakai sebagai wewenang.
-    //
-    // Dipecah per tab supaya wewenangnya bisa sesempit kebutuhan — "TU mengelola
-    // tab Siswa" tanpa ikut membuka tab Pegawai atau Tahun Ajaran.
-    //
-    // Halaman Master Data terbuka bagi siapa pun yang memegang MINIMAL SATU tab;
-    // tab yang tidak dipegang tidak ikut ditampilkan.
-    //
-    // Termasuk aksi yang paling berdampak: mutasi jenis pegawai (Guru ↔ Tendik)
-    // dan penghapusan permanen (`?scope=all`) kini ikut wewenang tab, bukan lagi
-    // khusus ADMIN. Yang menjaga penghapusan permanen adalah `?confirm=all` yang
-    // dituntut server, bukan role pemanggilnya.
     {
         settingKey: 'master_tahun_ajaran_access_config',
-        judul: 'Master Data: Tahun Ajaran',
+        judul: 'Tahun Ajaran',
         ikon: 'bi-calendar-range-fill',
         keterangan: 'Menambah, mengubah, menghapus tahun ajaran & semester, serta menyalakan periode aktif.',
+        grup: 'Master Data',
     },
     {
         settingKey: 'master_siswa_access_config',
-        judul: 'Master Data: Siswa',
+        judul: 'Siswa',
         ikon: 'bi-people-fill',
         keterangan: 'Data induk siswa, termasuk kolom pribadi: NIK, tempat & tanggal lahir, nama dan nomor HP orang tua, alamat, asal sekolah.',
+        grup: 'Master Data',
     },
     {
         settingKey: 'master_guru_access_config',
-        judul: 'Master Data: Guru & Tendik',
+        judul: 'Guru & Tendik',
         ikon: 'bi-person-vcard-fill',
         keterangan: 'Data induk pegawai (kedua tab sekaligus — satu tabel, dibedakan jenis pegawai), termasuk kolom pribadi: alamat, nomor HP, tanggal lahir, riwayat pendidikan, dan nomor rekening.',
+        grup: 'Master Data',
     },
     {
         settingKey: 'master_kode_guru_access_config',
-        judul: 'Master Data: Kode Guru',
+        judul: 'Kode Guru',
         ikon: 'bi-person-badge-fill',
         keterangan: 'Kode singkat pegawai yang dipakai pada penyusunan jadwal.',
+        grup: 'Master Data',
     },
     {
         settingKey: 'master_mapel_access_config',
-        judul: 'Master Data: Mata Pelajaran',
+        judul: 'Mata Pelajaran',
         ikon: 'bi-book-fill',
         keterangan: 'Daftar mata pelajaran & kelompoknya, termasuk pemetaan mapel ke kelas dan guru pengampu.',
+        grup: 'Master Data',
     },
     {
         settingKey: 'master_kelas_access_config',
-        judul: 'Master Data: Kelas',
+        judul: 'Kelas',
         ikon: 'bi-building-fill',
         keterangan: 'Rombongan belajar: nama kelas, tingkat, program, dan kode.',
+        grup: 'Master Data',
     },
     {
         settingKey: 'master_waktu_access_config',
-        judul: 'Master Data: Waktu (Jam Pelajaran)',
+        judul: 'Waktu (Jam Pelajaran)',
         ikon: 'bi-clock-fill',
         keterangan: 'Jam pelajaran per hari & program, termasuk penanda jam istirahat.',
+        grup: 'Master Data',
     },
     {
         settingKey: 'master_jp_mapel_access_config',
-        judul: 'Master Data: JP Mapel',
+        judul: 'JP Mapel',
         ikon: 'bi-hourglass-split',
         keterangan: 'Alokasi jam pelajaran per mapel & tingkat kelas (intra dan kokurikuler).',
+        grup: 'Master Data',
+    },
+    {
+        settingKey: 'master_ekskul_access_config',
+        judul: 'Ekstrakurikuler',
+        ikon: 'bi-volleyball',
+        keterangan: 'Daftar ekstrakurikuler: menambah, mengubah, menghapus. CATATAN: WKM Kesiswaan dulu memegang ini secara melekat di kode; sekarang perlu ditunjuk di sini.',
+        grup: 'Master Data',
     },
     // ─── PENGATURAN DATA, PER TAB ─────────────────────────────────────────────
-    //
-    // Pola yang sama dengan Master Data: hanya ADMIN yang melekat di kode.
-    // Sebelumnya enam tab di halaman ini dijaga EMPAT mekanisme berbeda, dan dua
-    // tab tidak dijaga sama sekali.
-    //
-    // Pembacaan yang dipakai bersama halaman lain (daftar siswa-kelas dan
-    // guru-mapel dipakai jadwal, wali kelas, guru asuh, UM kelulusan) TIDAK
-    // digerbangi di sini — hanya penulisannya. Kalau bacanya ikut dibatasi, halaman
-    // lain kehilangan sumber dropdown-nya.
     {
         settingKey: 'pengaturan_data_siswa_kelas_access_config',
-        judul: 'Pengaturan Data: Siswa Kelas',
+        judul: 'Siswa Kelas',
         ikon: 'bi-people',
         keterangan: 'Menambah, mengubah, menghapus penempatan siswa ke kelas, termasuk impor massal per rombel.',
+        grup: 'Pengaturan Data',
     },
     {
         settingKey: 'pengaturan_data_guru_mapel_access_config',
-        judul: 'Pengaturan Data: Guru Mapel',
+        judul: 'Guru Mapel',
         ikon: 'bi-book',
         keterangan: 'Menambah, mengubah, menghapus pemetaan guru ke mata pelajaran yang diampunya.',
+        grup: 'Pengaturan Data',
     },
     {
         settingKey: 'pengaturan_data_ekskul_siswa_access_config',
-        judul: 'Pengaturan Data: Siswa Ekskul',
+        judul: 'Siswa Ekskul',
         ikon: 'bi-volleyball',
         keterangan: 'Mengelola keanggotaan siswa pada ekstrakurikuler dari sisi pengelola. WKM Kesiswaan dulu memegang ini secara melekat di kode; sekarang perlu ditunjuk di sini. Pendaftaran mandiri oleh siswa sendiri tidak dipengaruhi.',
+        grup: 'Pengaturan Data',
     },
     {
         settingKey: 'pengaturan_data_relasi_ortu_access_config',
-        judul: 'Pengaturan Data: Relasi Orang Tua',
+        judul: 'Relasi Orang Tua',
         ikon: 'bi-people-fill',
         keterangan: 'Melihat dan mengelola tautan akun orang tua ke siswa: menautkan, mengubah status keluarga, menghapus relasi, dan mencari siswa untuk form tambah.',
+        grup: 'Pengaturan Data',
     },
     {
         settingKey: 'pengaturan_data_dropdown_access_config',
-        judul: 'Pengaturan Data: Dropdown',
+        judul: 'Dropdown',
         ikon: 'bi-list-columns',
         keterangan: 'Mengelola daftar pilihan yang dipakai dropdown di seluruh aplikasi: kategori kehadiran, golongan, pangkat, jenis surat, dan lainnya.',
+        grup: 'Pengaturan Data',
     },
     {
-        // Tab paling merusak di seluruh aplikasi: satu permintaan bisa menimpa
-        // kolom kunci di puluhan tabel sekaligus, termasuk `users.role`. Sebelum
-        // ini, kedua endpoint-nya (`/api/reset-data/search` dan `/replace`) tidak
-        // memeriksa sesi maupun role sama sekali.
         settingKey: 'pengaturan_data_ganti_massal_access_config',
-        judul: 'Pengaturan Data: Ganti Data Massal',
+        judul: 'Ganti Data Massal',
         ikon: 'bi-arrow-repeat',
         keterangan:
             'Mencari sebuah nilai di seluruh basis data lalu menggantinya berikut seluruh '
             + 'kolom lain yang menyimpannya — dipakai untuk membetulkan salah tulis nama, NIP, '
             + 'atau NISN. Berikan hanya kepada yang benar-benar perlu: daftar kolom yang boleh '
             + 'diganti mencakup role, username, dan email pada tabel users.',
+        grup: 'Pengaturan Data',
     },
-    {
-        settingKey: 'master_ekskul_access_config',
-        judul: 'Master Data: Ekstrakurikuler',
-        ikon: 'bi-volleyball',
-        keterangan: 'Daftar ekstrakurikuler: menambah, mengubah, menghapus. CATATAN: WKM Kesiswaan dulu memegang ini secara melekat di kode; sekarang perlu ditunjuk di sini.',
-    },
-
     // ── Halaman Pengaturan Tugas ────────────────────────────────────────────
-    // Pola yang sama lagi. Sebelumnya keempat tab di halaman ini dijaga empat
-    // mekanisme berbeda, dan tiga di antaranya bermasalah: daftar role tertanam
-    // (Wali Kelas), perbandingan `role === 'ADMIN'` yang tidak pernah cocok dengan
-    // role gabungan (Guru Asuh), dan `role_pages` — tabel NAVIGASI — pada tab yang
-    // justru menentukan role tugas (Tugas Tambahan).
     {
         settingKey: 'pengaturan_tugas_wali_kelas_access_config',
-        judul: 'Pengaturan Tugas: Wali Kelas',
+        judul: 'Wali Kelas',
         ikon: 'bi-person-workspace',
         keterangan: 'Menetapkan dan mencabut wali kelas per rombel. Menentukan role WALI_KELAS, yang membuka data absensi dan nilai kelas yang diampu.',
+        grup: 'Pengaturan Tugas',
     },
     {
         settingKey: 'pengaturan_tugas_guru_asuh_access_config',
-        judul: 'Pengaturan Tugas: Guru Asuh',
+        judul: 'Guru Asuh',
         ikon: 'bi-heart-fill',
         keterangan: 'Mengelola siswa asuh untuk SEMUA guru, termasuk pengosongan massal. Tanpa ini, guru tetap bisa mengurus siswa asuhnya sendiri.',
+        grup: 'Pengaturan Tugas',
     },
     {
         settingKey: 'pengaturan_tugas_ploting_access_config',
-        judul: 'Pengaturan Tugas: Tugas Tambahan',
+        judul: 'Tugas Tambahan',
         ikon: 'bi-person-vcard',
         keterangan:
             'Menetapkan dan mencabut tugas tambahan. Berikan hanya kepada yang benar-benar perlu: '
             + 'tabel ini menentukan role tugas (WALI_KELAS, PEMBINA_EKSKUL) yang ikut dihitung saat '
             + 'login, jadi menulis di sini berarti memberi atau mencabut hak akses. Penulisan jurnal '
             + 'harian oleh pemegang tugasnya sendiri tidak dipengaruhi pengaturan ini.',
+        grup: 'Pengaturan Tugas',
     },
     {
         settingKey: 'pengaturan_tugas_pembina_ekskul_access_config',
-        judul: 'Pengaturan Tugas: Pembina Ekskul',
+        judul: 'Pembina Ekskul',
         ikon: 'bi-people-fill',
         keterangan: 'Menetapkan dan mencabut pembina ekstrakurikuler. Ikut menentukan role PEMBINA_EKSKUL. Hanya ADMIN yang melekat di kode — WKM Kesiswaan kini perlu ditunjuk di sini.',
+        grup: 'Pengaturan Tugas',
     },
+    // ─── INFORMASI ──────────────────────────────────────────────────────
     {
         settingKey: 'pengumuman_access_config',
         judul: 'Kelola Pengumuman',
         ikon: 'bi-megaphone-fill',
         keterangan: 'Daftar role dan pengguna yang diberikan akses untuk mengelola pengumuman (tambah, edit, pin, hapus).',
-    },
-    {
-        settingKey: 'agenda_access_config',
-        judul: 'Kelola Agenda Madrasah',
-        ikon: 'bi-calendar-event-fill',
-        keterangan: 'Role OP_AGENDA memiliki akses bawaan. Tambahkan role atau pengguna khusus untuk mengelola agenda madrasah (tambah, edit, hapus agenda, kategori, dan foto).',
-        peranBawaan: ['OP_AGENDA'],
-    },
-    {
-        settingKey: 'libur_access_config',
-        judul: 'Kelola Data Libur Madrasah',
-        ikon: 'bi-calendar-x-fill',
-        keterangan: 'Role OP_JURNAL memiliki akses bawaan. Tambahkan role atau pengguna khusus untuk mengelola kalender dan penetapan hari libur madrasah.',
-        peranBawaan: ['OP_JURNAL'],
+        grup: 'Informasi',
     },
     {
         settingKey: 'informasi_akademik_access_config',
-        judul: 'Kelola Informasi - Akademik',
+        judul: 'Kelola Folder Akademik',
         ikon: 'bi-mortarboard-fill',
         keterangan: 'Role WKM_AKADEMIK memiliki akses bawaan. Tambahkan role atau pengguna khusus untuk mengelola folder & dokumen kategori Akademik.',
         peranBawaan: ['WKM_AKADEMIK'],
+        grup: 'Informasi',
     },
     {
         settingKey: 'informasi_keasramaan_access_config',
-        judul: 'Kelola Informasi - Keasramaan',
+        judul: 'Kelola Folder Keasramaan',
         ikon: 'bi-building-fill',
         keterangan: 'Role WKM_KEASRAMAAN memiliki akses bawaan. Tambahkan role atau pengguna khusus untuk mengelola folder & dokumen kategori Keasramaan.',
         peranBawaan: ['WKM_KEASRAMAAN'],
+        grup: 'Informasi',
     },
     {
         settingKey: 'informasi_kesiswaan_access_config',
-        judul: 'Kelola Informasi - Kesiswaan',
+        judul: 'Kelola Folder Kesiswaan',
         ikon: 'bi-people-fill',
         keterangan: 'Role WKM_KESISWAAN memiliki akses bawaan. Tambahkan role atau pengguna khusus untuk mengelola folder & dokumen kategori Kesiswaan.',
         peranBawaan: ['WKM_KESISWAAN'],
+        grup: 'Informasi',
     },
     {
         settingKey: 'informasi_umum_access_config',
-        judul: 'Kelola Informasi - Umum',
+        judul: 'Kelola Folder Umum',
         ikon: 'bi-info-circle-fill',
         keterangan: 'Role WKM_HUMAS memiliki akses bawaan. Tambahkan role atau pengguna khusus untuk mengelola folder & dokumen kategori Umum.',
         peranBawaan: ['WKM_HUMAS'],
+        grup: 'Informasi',
     },
+    // ─── AGENDA MADRASAH ────────────────────────────────────────────────
+    {
+        settingKey: 'agenda_access_config',
+        judul: 'Kelola Agenda',
+        ikon: 'bi-calendar-event-fill',
+        keterangan: 'Role OP_AGENDA memiliki akses bawaan. Tambahkan role atau pengguna khusus untuk mengelola agenda madrasah (tambah, edit, hapus agenda, kategori, dan foto).',
+        peranBawaan: ['OP_AGENDA'],
+        grup: 'Agenda Madrasah',
+    },
+    {
+        settingKey: 'libur_access_config',
+        judul: 'Kelola Data Libur',
+        ikon: 'bi-calendar-x-fill',
+        keterangan: 'Role OP_JURNAL memiliki akses bawaan. Tambahkan role atau pengguna khusus untuk mengelola kalender dan penetapan hari libur madrasah.',
+        peranBawaan: ['OP_JURNAL'],
+        grup: 'Agenda Madrasah',
+    },
+];
+
+/** Ikon per grup — dipakai di header grup. */
+const GRUP_IKON: Record<string, string> = {
+    'Klinik Pembelajaran': 'bi-plus-square-fill',
+    'Pusat Dokumen': 'bi-folder-fill',
+    'Guru Asuh': 'bi-person-heart',
+    'Jurnal Pembelajaran': 'bi-book-fill',
+    'Jadwal': 'bi-calendar-week-fill',
+    'Izin Guru': 'bi-calendar-plus',
+    'Absensi': 'bi-check-square-fill',
+    'Master Data': 'bi-database-fill',
+    'Pengaturan Data': 'bi-sliders',
+    'Pengaturan Tugas': 'bi-calendar-plus-fill',
+    'Informasi': 'bi-megaphone-fill',
+    'Agenda Madrasah': 'bi-calendar-event-fill',
+    'Lainnya': 'bi-grid-fill',
+};
+
+/** Urutan tetap supaya grup tidak melompat-lompat. */
+const GRUP_ORDER = [
+    'Klinik Pembelajaran',
+    'Pusat Dokumen',
+    'Guru Asuh',
+    'Jurnal Pembelajaran',
+    'Jadwal',
+    'Izin Guru',
+    'Absensi',
+    'Master Data',
+    'Pengaturan Data',
+    'Pengaturan Tugas',
+    'Informasi',
+    'Agenda Madrasah',
+    'Lainnya',
 ];
 
 /** Selalu punya akses penuh; tidak ditawarkan & tidak bisa dicabut dari sini. */
@@ -378,14 +449,20 @@ const KONFIG_AWAL: AccessConfig = { allowedRoles: [...ROLE_ADMIN], allowedUsers:
 type GagalMuat = Set<string>;
 
 function parseKonfig(nilai: unknown): AccessConfig {
-    let raw: any = nilai;
+    let raw: unknown = nilai;
     if (typeof raw === 'string') {
         try { raw = JSON.parse(raw); } catch { raw = null; }
     }
     if (!raw || typeof raw !== 'object') return { ...KONFIG_AWAL };
+    const config = raw as Record<string, unknown>;
     return {
-        allowedRoles: Array.isArray(raw.allowedRoles) ? raw.allowedRoles : [...ROLE_ADMIN],
-        allowedUsers: Array.isArray(raw.allowedUsers) ? raw.allowedUsers : [],
+        allowedRoles: Array.isArray(config.allowedRoles)
+            ? config.allowedRoles.filter((role): role is string => typeof role === 'string')
+            : [...ROLE_ADMIN],
+        allowedUsers: Array.isArray(config.allowedUsers)
+            ? config.allowedUsers.filter((user): user is UserAccessItem =>
+                !!user && typeof user === 'object' && 'id' in user && 'nama' in user)
+            : [],
     };
 }
 
@@ -397,8 +474,13 @@ export default function FeatureAccessTab() {
     const [konfig, setKonfig] = useState<Record<string, AccessConfig>>({});
     const [gagalMuat, setGagalMuat] = useState<GagalMuat>(new Set());
 
-    const [dbRoles, setDbRoles] = useState<any[]>([]);
-    const [rawUserList, setRawUserList] = useState<any[]>([]);
+    const [dbRoles, setDbRoles] = useState<RoleApiItem[]>([]);
+    const [rawUserList, setRawUserList] = useState<UserApiItem[]>([]);
+
+    /** Search & filter state */
+    const [search, setSearch] = useState('');
+    const [filterGrup, setFilterGrup] = useState<string | null>(null);
+    const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
 
     const muatSemua = useCallback(async () => {
         try {
@@ -408,7 +490,7 @@ export default function FeatureAccessTab() {
             const usersJson = await usersRes.json().catch(() => ({}));
             const rolesJson = await rolesRes.json().catch(() => ({}));
 
-            const usersList: any[] = usersJson.ok && Array.isArray(usersJson.data) ? usersJson.data : [];
+            const usersList: UserApiItem[] = usersJson.ok && Array.isArray(usersJson.data) ? usersJson.data : [];
             if (usersJson.ok && Array.isArray(usersJson.data)) setRawUserList(usersJson.data);
             if (rolesJson.ok && Array.isArray(rolesJson.data)) setDbRoles(rolesJson.data);
 
@@ -435,9 +517,9 @@ export default function FeatureAccessTab() {
                     const capJson = itemRes.cap;
                     let capUsers: UserAccessItem[] = [];
                     if (capJson?.ok && Array.isArray(capJson.grants)) {
-                        const grantedIds = capJson.grants.map((g: any) => String(g.user_id));
+                        const grantedIds = capJson.grants.map((g: { user_id: string | number }) => String(g.user_id));
                         capUsers = grantedIds.map((id: string) => {
-                            const found = usersList.find((u: any) => String(u.id || u.user_id) === id);
+                            const found = usersList.find(u => String(u.id || u.user_id) === id);
                             return {
                                 id,
                                 nama: found?.nama || found?.name || found?.nama_lengkap || `User #${id}`,
@@ -503,7 +585,7 @@ export default function FeatureAccessTab() {
         });
     }, [rawUserList]);
 
-    const ubahRole = (m: (typeof MODUL)[number], dipilih: any) => {
+    const ubahRole = (m: ModulItem, dipilih: string | number | (string | number)[]) => {
         const nilai = (Array.isArray(dipilih) ? dipilih : [dipilih]).map(String).filter(Boolean);
         const defaults = [...ROLE_ADMIN, ...(m.peranBawaan || [])];
         setKonfig(prev => ({
@@ -515,7 +597,7 @@ export default function FeatureAccessTab() {
         }));
     };
 
-    const ubahUser = (settingKey: string, dipilih: any) => {
+    const ubahUser = (settingKey: string, dipilih: string | number | (string | number)[]) => {
         const ids = (Array.isArray(dipilih) ? dipilih : [dipilih]).map(String).filter(Boolean);
         setKonfig(prev => {
             const lama = prev[settingKey]?.allowedUsers ?? [];
@@ -527,8 +609,6 @@ export default function FeatureAccessTab() {
                     id,
                     nama: found?.nama || found?.name || found?.nama_lengkap || 'Pengguna',
                     role: found?.role || (Array.isArray(found?.roles) ? found.roles[0] : ''),
-                    // NIP ikut disimpan supaya backend tetap mengenali pengguna
-                    // walau id barisnya berubah.
                     nip: found?.nip || found?.nisn || '',
                     username: found?.username || '',
                 };
@@ -543,11 +623,7 @@ export default function FeatureAccessTab() {
         });
     };
 
-    const simpan = async (m: (typeof MODUL)[number]) => {
-        // Ditahan sebelum apa pun dikirim: konfigurasi yang gagal dimuat tampil
-        // sebagai "ADMIN saja" — identik dengan baris yang belum pernah diatur —
-        // sehingga menyimpan dari keadaan itu menghapus penunjukan yang sebenarnya
-        // ada, tanpa terlihat.
+    const simpan = async (m: ModulItem) => {
         if (gagalMuat.has(m.settingKey)) {
             Swal.fire(
                 'Tidak bisa menyimpan',
@@ -599,93 +675,198 @@ export default function FeatureAccessTab() {
 
             Swal.fire('Berhasil!', `Hak akses ${m.judul} berhasil disimpan.`, 'success');
             muatSemua();
-        } catch (err: any) {
-            Swal.fire('Error', err.message || 'Terjadi kesalahan', 'error');
+        } catch (err: unknown) {
+            Swal.fire('Error', err instanceof Error ? err.message : 'Terjadi kesalahan', 'error');
         } finally {
             setSavingKey(null);
         }
     };
 
+    /** Bangun pengelompokan: { grupName → ModulItem[] } */
+    const groupedModuls = useMemo(() => {
+        const map = new Map<string, ModulItem[]>();
+        const q = search.toLowerCase().trim();
+        for (const m of MODUL) {
+            // Filter per grup
+            if (filterGrup && m.grup !== filterGrup) continue;
+            // Filter per search
+            if (q && !m.judul.toLowerCase().includes(q) && !m.keterangan.toLowerCase().includes(q) && !m.grup.toLowerCase().includes(q)) continue;
+            if (!map.has(m.grup)) map.set(m.grup, []);
+            map.get(m.grup)!.push(m);
+        }
+        // Urutkan sesuai GRUP_ORDER
+        const sorted: [string, ModulItem[]][] = [];
+        for (const g of GRUP_ORDER) {
+            if (map.has(g)) sorted.push([g, map.get(g)!]);
+        }
+        // Tambahkan grup yang tidak ada di GRUP_ORDER (kalau ada)
+        for (const [g, items] of map) {
+            if (!GRUP_ORDER.includes(g)) sorted.push([g, items]);
+        }
+        return sorted;
+    }, [search, filterGrup]);
+
+    /** Daftar semua grup unik (untuk filter chips). */
+    const allGroups = useMemo(() => {
+        const seen = new Set<string>();
+        const result: string[] = [];
+        for (const g of GRUP_ORDER) {
+            if (MODUL.some(m => m.grup === g) && !seen.has(g)) {
+                seen.add(g);
+                result.push(g);
+            }
+        }
+        return result;
+    }, []);
+
+    const toggleGroup = (grup: string) => {
+        setCollapsedGroups(prev => {
+            const next = new Set(prev);
+            if (next.has(grup)) next.delete(grup);
+            else next.add(grup);
+            return next;
+        });
+    };
+
+    const totalFiltered = groupedModuls.reduce((sum, [, items]) => sum + items.length, 0);
+
     if (loading) return <PageLoader minHeight="300px" dotsOnly size={18} />;
 
     return (
         <div className="fa-clean-page">
+            {/* ──── HEADER ──── */}
             <div className="fa-header-bar">
                 <div className="fa-title-group">
                     <i className="bi bi-sliders2"></i>
-                    <h2>Hak Akses Fitur &amp; Pengelola Modul</h2>
+                    <div>
+                        <h2>Hak Akses Fitur &amp; Pengelola Modul</h2>
+                        <p className="fa-subtitle">{totalFiltered} modul dari {MODUL.length} total</p>
+                    </div>
                 </div>
             </div>
 
-            {MODUL.map(m => {
-                const cfg = konfig[m.settingKey] ?? KONFIG_AWAL;
-                const rolesToExclude = [...ROLE_ADMIN, ...(m.peranBawaan || [])];
-                const roleTerpilih = cfg.allowedRoles.filter(r => !rolesToExclude.includes(String(r).toUpperCase()));
-                const filteredRoleOptions = roleOptions.filter(opt => !(m.peranBawaan || []).includes(String(opt.value).toUpperCase()));
-                const userTerpilih = cfg.allowedUsers.map(u => String(u.id));
-                const sedangSimpan = savingKey === m.settingKey;
+            <FilterToolbar>
+                <FilterSearch
+                    value={search}
+                    onChange={setSearch}
+                    placeholder="Cari modul..."
+                />
+                <FilterSelect
+                    label="Grup Halaman"
+                    icon="grid"
+                    value={filterGrup ?? 'all'}
+                    onChange={value => setFilterGrup(value === 'all' ? null : value)}
+                    options={[
+                        { value: 'all', label: 'Semua Grup' },
+                        ...allGroups.map(grup => ({ value: grup, label: grup })),
+                    ]}
+                />
+            </FilterToolbar>
 
+            {/* ──── GROUPED MODULES ──── */}
+            {groupedModuls.length === 0 && (
+                <div className="fa-empty">
+                    <i className="bi bi-search"></i>
+                    <p>Tidak ada modul yang cocok dengan pencarian.</p>
+                </div>
+            )}
+
+            {groupedModuls.map(([grup, items]) => {
+                const isCollapsed = collapsedGroups.has(grup);
                 return (
-                    <div className="fa-card" key={m.settingKey}>
-                        <div className="fa-card-head">
-                            <div className="fa-head-info">
-                                <i className={`bi ${m.ikon}`}></i>
-                                <h3>Modul {m.judul}</h3>
+                    <div className="fa-group" key={grup}>
+                        <button
+                            type="button"
+                            className="fa-group-header"
+                            onClick={() => toggleGroup(grup)}
+                        >
+                            <div className="fa-group-left">
+                                <i className={`bi ${GRUP_IKON[grup] || 'bi-folder-fill'}`}></i>
+                                <span className="fa-group-name">{grup}</span>
+                                <span className="fa-group-badge">{items.length}</span>
                             </div>
-                        </div>
+                            <i className={`bi ${isCollapsed ? 'bi-chevron-down' : 'bi-chevron-up'} fa-group-chevron`}></i>
+                        </button>
 
-                        <div className="fa-card-body">
-                            <p className="fa-note">
-                                {m.peranBawaan && m.peranBawaan.length > 0
-                                    ? `ADMIN dan ${m.peranBawaan.join(', ')} memiliki hak akses bawaan. Tambahkan role atau pengguna di bawah untuk memberi hak yang sama.`
-                                    : 'ADMIN selalu punya akses penuh. Tambahkan role atau pengguna di bawah untuk memberi hak yang sama.'}
-                            </p>
+                        {!isCollapsed && (
+                            <div className="fa-group-body">
+                                {items.map(m => {
+                                    const cfg = konfig[m.settingKey] ?? KONFIG_AWAL;
+                                    const rolesToExclude = [...ROLE_ADMIN, ...(m.peranBawaan || [])];
+                                    const roleTerpilih = cfg.allowedRoles.filter(r => !rolesToExclude.includes(String(r).toUpperCase()));
+                                    const filteredRoleOptions = roleOptions.filter(opt => !(m.peranBawaan || []).includes(String(opt.value).toUpperCase()));
+                                    const userTerpilih = cfg.allowedUsers.map(u => String(u.id));
+                                    const sedangSimpan = savingKey === m.settingKey;
 
-                            <div className="fa-inline-field">
-                                <SearchableSelect
-                                    label="Role Pengelola"
-                                    options={filteredRoleOptions}
-                                    value={roleTerpilih}
-                                    onChange={(v: any) => ubahRole(m, v)}
-                                    placeholder="Cari atau Pilih Role Pengelola..."
-                                    itemLabel="role"
-                                    multiple={true}
-                                />
+                                    return (
+                                        <div className="fa-card" key={m.settingKey}>
+                                            <div className="fa-card-head">
+                                                <div className="fa-head-info">
+                                                    <div>
+                                                        <h3>{m.judul}</h3>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div className="fa-card-body">
+                                                <p className="fa-note">
+                                                    {m.peranBawaan && m.peranBawaan.length > 0
+                                                        ? `ADMIN dan ${m.peranBawaan.join(', ')} memiliki hak akses bawaan.`
+                                                        : 'ADMIN selalu punya akses penuh.'}
+                                                </p>
+
+                                                <div className="fa-fields-row">
+                                                    <div className="fa-inline-field">
+                                                        <SearchableSelect
+                                                            label="Role Pengelola"
+                                                            options={filteredRoleOptions}
+                                                            value={roleTerpilih}
+                                                            onChange={v => ubahRole(m, v)}
+                                                            placeholder="Cari atau Pilih Role..."
+                                                            itemLabel="role"
+                                                            multiple={true}
+                                                        />
+                                                    </div>
+
+                                                    <div className="fa-inline-field">
+                                                        <SearchableSelect
+                                                            label="Pengguna Khusus"
+                                                            options={userOptions}
+                                                            value={userTerpilih}
+                                                            onChange={v => ubahUser(m.settingKey, v)}
+                                                            placeholder="Cari atau Pilih Pengguna..."
+                                                            itemLabel="pengguna"
+                                                            multiple={true}
+                                                        />
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div className="fa-card-foot">
+                                                <button
+                                                    type="button"
+                                                    className="fa-btn-submit"
+                                                    onClick={() => simpan(m)}
+                                                    disabled={sedangSimpan}
+                                                >
+                                                    {sedangSimpan ? (
+                                                        <>
+                                                            <span className="fa-spin"></span>
+                                                            Menyimpan...
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <i className="bi bi-check2-circle"></i>
+                                                            Simpan
+                                                        </>
+                                                    )}
+                                                </button>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
                             </div>
-
-                            <div className="fa-inline-field">
-                                <SearchableSelect
-                                    label="Pengguna Khusus"
-                                    options={userOptions}
-                                    value={userTerpilih}
-                                    onChange={(v: any) => ubahUser(m.settingKey, v)}
-                                    placeholder="Cari atau Pilih Pengguna Khusus..."
-                                    itemLabel="pengguna"
-                                    multiple={true}
-                                />
-                            </div>
-                        </div>
-
-                        <div className="fa-card-foot">
-                            <button
-                                type="button"
-                                className="fa-btn-submit"
-                                onClick={() => simpan(m)}
-                                disabled={sedangSimpan}
-                            >
-                                {sedangSimpan ? (
-                                    <>
-                                        <span className="fa-spin"></span>
-                                        Menyimpan...
-                                    </>
-                                ) : (
-                                    <>
-                                        <i className="bi bi-check2-circle"></i>
-                                        Simpan Perubahan
-                                    </>
-                                )}
-                            </button>
-                        </div>
+                        )}
                     </div>
                 );
             })}
@@ -694,14 +875,15 @@ export default function FeatureAccessTab() {
                 .fa-clean-page {
                     display: flex;
                     flex-direction: column;
-                    gap: 16px;
+                    gap: 12px;
                 }
 
+                /* ─── HEADER ─── */
                 .fa-header-bar {
                     display: flex;
                     align-items: center;
                     justify-content: space-between;
-                    padding: 12px 16px;
+                    padding: 14px 18px;
                     background: var(--n-card, #ffffff);
                     border: 1px solid var(--n-border, #e2e8f0);
                     border-radius: 12px;
@@ -709,10 +891,10 @@ export default function FeatureAccessTab() {
                 .fa-title-group {
                     display: flex;
                     align-items: center;
-                    gap: 10px;
+                    gap: 12px;
                 }
                 .fa-title-group i {
-                    font-size: 1.25rem;
+                    font-size: 1.3rem;
                     color: var(--n-primary, #3b82f6);
                 }
                 .fa-title-group h2 {
@@ -721,78 +903,169 @@ export default function FeatureAccessTab() {
                     font-weight: 700;
                     color: var(--n-ink, #0f172a);
                 }
+                .fa-subtitle {
+                    margin: 2px 0 0;
+                    font-size: 0.78rem;
+                    color: var(--n-muted, #64748b);
+                }
 
-                /* CARD */
-                .fa-card {
-                    background: var(--n-card, #ffffff);
+                /* ─── EMPTY STATE ─── */
+                .fa-empty {
+                    text-align: center;
+                    padding: 48px 20px;
+                    color: var(--n-muted, #94a3b8);
+                }
+                .fa-empty i {
+                    font-size: 2rem;
+                    display: block;
+                    margin-bottom: 10px;
+                }
+                .fa-empty p {
+                    margin: 0;
+                    font-size: 0.9rem;
+                }
+
+                /* ─── GROUP ─── */
+                .fa-group {
                     border: 1px solid var(--n-border, #e2e8f0);
                     border-radius: 14px;
                     overflow: hidden;
-                    box-shadow: var(--n-shadow-soft);
+                    background: var(--n-card, #ffffff);
                 }
-                .fa-card-head {
+                .fa-group-header {
                     display: flex;
                     align-items: center;
                     justify-content: space-between;
-                    padding: 14px 20px;
+                    width: 100%;
+                    padding: 14px 18px;
                     background: var(--n-soft, #f8fafc);
+                    border: none;
                     border-bottom: 1px solid var(--n-border, #e2e8f0);
+                    cursor: pointer;
+                    transition: background 0.15s;
+                    font-family: inherit;
                 }
-                .fa-head-info {
+                .fa-group-header:hover {
+                    background: #eef4ff;
+                }
+                .fa-group-left {
                     display: flex;
                     align-items: center;
                     gap: 10px;
                 }
-                .fa-head-info i {
-                    font-size: 1.2rem;
+                .fa-group-left i {
+                    font-size: 1.1rem;
                     color: var(--n-primary, #3b82f6);
                 }
-                .fa-head-info h3 {
-                    margin: 0;
-                    font-size: 0.95rem;
+                .fa-group-name {
+                    font-size: 0.92rem;
                     font-weight: 700;
                     color: var(--n-ink, #0f172a);
                 }
-
-                .fa-card-body {
-                    padding: 20px;
+                .fa-group-badge {
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    min-width: 22px;
+                    height: 22px;
+                    padding: 0 7px;
+                    border-radius: 12px;
+                    background: var(--n-primary, #3b82f6);
+                    color: #fff;
+                    font-size: 0.72rem;
+                    font-weight: 700;
+                }
+                .fa-group-chevron {
+                    font-size: 0.8rem;
+                    color: var(--n-muted, #94a3b8);
+                    transition: transform 0.2s;
+                }
+                .fa-group-body {
                     display: flex;
                     flex-direction: column;
-                    gap: 16px;
+                    gap: 0;
+                }
+
+                /* ─── CARD ─── */
+                .fa-card {
+                    border-bottom: 1px solid var(--n-border, #e2e8f0);
+                }
+                .fa-card:last-child {
+                    border-bottom: none;
+                }
+                .fa-card-head {
+                    display: flex;
+                    align-items: flex-start;
+                    justify-content: space-between;
+                    padding: 16px 20px 0;
+                }
+                .fa-head-info {
+                    display: flex;
+                    align-items: flex-start;
+                    gap: 12px;
+                }
+                .fa-head-info > i {
+                    font-size: 1.1rem;
+                    color: var(--n-primary, #3b82f6);
+                    margin-top: 2px;
+                    flex-shrink: 0;
+                }
+                .fa-head-info h3 {
+                    margin: 0;
+                    font-size: 0.9rem;
+                    font-weight: 700;
+                    color: var(--n-ink, #0f172a);
+                }
+                .fa-card-body {
+                    padding: 12px 20px 16px;
+                    display: flex;
+                    flex-direction: column;
+                    gap: 10px;
                 }
 
                 .fa-note {
                     margin: 0;
-                    font-size: 0.8rem;
-                    color: var(--n-muted, #64748b);
-                    line-height: 1.5;
+                    font-size: 0.76rem;
+                    color: var(--n-muted, #94a3b8);
+                    line-height: 1.4;
+                    font-style: italic;
+                }
+
+                .fa-fields-row {
+                    display: grid;
+                    grid-template-columns: 1fr 1fr;
+                    gap: 14px;
+                }
+                @media (max-width: 768px) {
+                    .fa-fields-row {
+                        grid-template-columns: 1fr;
+                    }
                 }
 
                 .fa-inline-field {
                     width: 100%;
                 }
 
-                /* FOOTER */
+                /* ─── FOOTER ─── */
                 .fa-card-foot {
                     display: flex;
                     justify-content: flex-end;
-                    padding: 12px 20px;
-                    background: var(--n-soft, #f8fafc);
-                    border-top: 1px solid var(--n-border, #e2e8f0);
+                    padding: 0 20px 14px;
                 }
                 .fa-btn-submit {
                     display: flex;
                     align-items: center;
-                    gap: 8px;
-                    padding: 9px 20px;
+                    gap: 6px;
+                    padding: 7px 18px;
                     background: var(--n-primary, #3b82f6);
                     color: white;
                     border: none;
-                    border-radius: 10px;
-                    font-size: 0.85rem;
+                    border-radius: 8px;
+                    font-size: 0.82rem;
                     font-weight: 700;
                     cursor: pointer;
                     transition: all 0.2s;
+                    font-family: inherit;
                 }
                 .fa-btn-submit:hover:not(:disabled) {
                     filter: brightness(1.08);
@@ -814,15 +1087,24 @@ export default function FeatureAccessTab() {
                 }
                 @keyframes faSpin { to { transform: rotate(360deg); } }
 
-                /* DARK MODE */
+                /* ─── DARK MODE ─── */
                 :global(.dark) .fa-header-bar,
-                :global(.dark) .fa-card,
-                :global(.dark) .fa-card-head,
-                :global(.dark) .fa-card-foot {
+                :global(.dark) .fa-group {
                     background: #0b1329 !important;
-                    border-color: rgba(59, 130, 246, 0.35) !important;
+                    border-color: rgba(59, 130, 246, 0.25) !important;
+                }
+                :global(.dark) .fa-group-header {
+                    background: rgba(59, 130, 246, 0.08) !important;
+                    border-color: rgba(59, 130, 246, 0.2) !important;
+                }
+                :global(.dark) .fa-group-header:hover {
+                    background: rgba(59, 130, 246, 0.14) !important;
+                }
+                :global(.dark) .fa-card {
+                    border-color: rgba(59, 130, 246, 0.15) !important;
                 }
                 :global(.dark) .fa-title-group h2,
+                :global(.dark) .fa-group-name,
                 :global(.dark) .fa-head-info h3 {
                     color: #f1f5f9 !important;
                 }

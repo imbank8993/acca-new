@@ -364,8 +364,8 @@
    DARK MODE (Google One Theme)
 ========================================================= */
 .dark .dpk-trigger {
-    background: #000000 !important;
-    border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
+    background: #0b1329 !important;
+    border: 1.5px solid rgba(59, 130, 246, 0.45) !important;
     color: #f1f5f9 !important;
 }
 
@@ -389,8 +389,8 @@
 }
 
 .dark .dpk-panel {
-    background: #000000 !important;
-    border: 1px solid rgba(37, 99, 235, 0.4) !important;
+    background: #0b1329 !important;
+    border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
     border-radius: 16px !important;
     box-shadow: 0 0 35px rgba(26, 115, 232, 0.35) !important;
 }
@@ -447,7 +447,7 @@
 }
 
 .dark .dpk-range-summary {
-    background: #050811 !important;
+    background: #0b1329 !important;
     border: 1px solid rgba(59, 130, 246, 0.25) !important;
 }
 

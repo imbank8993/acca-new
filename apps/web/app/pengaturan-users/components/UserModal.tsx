@@ -2,19 +2,59 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import type { User } from '@/lib/types'
-import Select from 'react-select'
+import Select, { type MultiValue } from 'react-select'
 import Swal from 'sweetalert2'
 import { Modal, ModalHeader, ModalBody, ModalFooter } from '@/components/ui/Modal'
 import Button from '@/components/ui/Button'
 
+interface UserFormSubmission {
+    username: string
+    nip: string
+    nama_lengkap: string
+    nama: string
+    divisi: string
+    email: string
+    role: string
+    password: string
+}
+
+interface RoleOption {
+    value: string
+    label: string
+}
+
 interface UserModalProps {
     isOpen: boolean
     onClose: () => void
-    onSave: (formData: any) => Promise<void>
+    onSave: (formData: UserFormSubmission) => Promise<void>
     editingUser: User | null
-    availableRoles: { value: string, label: string }[]
+    availableRoles: RoleOption[]
     saving: boolean
 }
+
+const getInitialFormData = (user: User | null) => user ? ({
+    username: user.username || '',
+    nip: user.nip || '',
+    nama_lengkap: user.nama_lengkap || user.nama || '',
+    nama: user.nama || '',
+    divisi: user.divisi || '',
+    email: user.email || '',
+    role: user.role || '',
+    password: ''
+}) : ({
+    username: '',
+    nip: '',
+    nama_lengkap: '',
+    nama: '',
+    divisi: '',
+    email: '',
+    role: 'GURU',
+    password: ''
+})
+
+const getInitialRoles = (user: User | null) => user
+    ? (user.role || '').split(/[,|]/).map(role => role.trim().toUpperCase()).filter(Boolean)
+    : ['GURU']
 
 export default function UserModal({
     isOpen,
@@ -24,18 +64,9 @@ export default function UserModal({
     availableRoles,
     saving
 }: UserModalProps) {
-    const [roles, setRoles] = useState<{ value: string, label: string }[]>([])
-    const [formData, setFormData] = useState({
-        username: '',
-        nip: '',
-        nama_lengkap: '',
-        nama: '',
-        divisi: '',
-        email: '',
-        role: '',
-        password: ''
-    })
-    const [selectedRoles, setSelectedRoles] = useState<string[]>([])
+    const [roles, setRoles] = useState<RoleOption[]>([])
+    const [formData, setFormData] = useState(() => getInitialFormData(editingUser))
+    const [selectedRoles, setSelectedRoles] = useState<string[]>(() => getInitialRoles(editingUser))
     const [isAddingRole, setIsAddingRole] = useState(false)
     const [gagalMuatRole, setGagalMuatRole] = useState(false)
 
@@ -78,36 +109,6 @@ export default function UserModal({
         }
         fetchRoles()
     }, [isOpen])
-
-    useEffect(() => {
-        setIsAddingRole(false)
-        if (editingUser) {
-            const currentRoles = (editingUser.role || '').split(/[,|]/).map((r: string) => r.trim().toUpperCase()).filter(Boolean)
-            setFormData({
-                username: editingUser.username || '',
-                nip: editingUser.nip || '',
-                nama_lengkap: editingUser.nama_lengkap || editingUser.nama || '',
-                nama: editingUser.nama || '',
-                divisi: editingUser.divisi || '',
-                email: editingUser.email || '',
-                role: editingUser.role || '',
-                password: '' // Kosongkan saat edit
-            })
-            setSelectedRoles(currentRoles)
-        } else {
-            setFormData({
-                username: '',
-                nip: '',
-                nama_lengkap: '',
-                nama: '',
-                divisi: '',
-                email: '',
-                role: 'GURU',
-                password: ''
-            })
-            setSelectedRoles(['GURU'])
-        }
-    }, [editingUser, isOpen])
 
     if (!isOpen) return null
 
@@ -283,17 +284,15 @@ export default function UserModal({
 
                             {isAddingRole && (
                                 <div className="role-select-box">
-                                    <Select
+                                    <Select<RoleOption, true>
                                         isMulti
                                         value={[]}
                                         options={unselectedRoleOptions}
                                         placeholder="Pilih role untuk ditambahkan..."
                                         noOptionsMessage={() => "Semua role sudah terpilih"}
-                                        onChange={(newVal) => {
-                                            if (newVal) {
-                                                const newVals = (newVal as any[]).map(v => v.value)
-                                                setSelectedRoles(prev => Array.from(new Set([...prev, ...newVals])))
-                                            }
+                                        onChange={(newVal: MultiValue<RoleOption>) => {
+                                            const newVals = newVal.map(v => v.value)
+                                            setSelectedRoles(prev => Array.from(new Set([...prev, ...newVals])))
                                         }}
                                         className="react-select-container"
                                         classNamePrefix="react-select"
@@ -341,7 +340,7 @@ export default function UserModal({
                                 </div>
                             )}
                         </div>
-                        <p className="field-hint">Menampilkan role terpilih untuk user ini. Klik tombol '+ Tambah Role' untuk menambah role tambahan via dropdown multiselect.</p>
+                        <p className="field-hint">Menampilkan role terpilih untuk user ini. Klik tombol &apos;+ Tambah Role&apos; untuk menambah role tambahan via dropdown multiselect.</p>
                     </div>
                 </div>
             </ModalBody>

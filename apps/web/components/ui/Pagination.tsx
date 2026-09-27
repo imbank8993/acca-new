@@ -278,7 +278,7 @@ export default function Pagination({
 
                 /* Dark Mode Support */
                 :global(.dark) .pagination-container {
-                    background: #000000;
+                    background: #0b1329;
                     border-top: 1px solid rgba(37, 99, 235, 0.4);
                 }
 
@@ -291,13 +291,13 @@ export default function Pagination({
                 }
 
                 :global(.dark) .limit-selector select {
-                    background: #000000;
+                    background: #0b1329;
                     border: 1.2px solid rgba(26, 115, 232, 0.6);
                     color: #f8fafc;
                 }
 
                 :global(.dark) .btn-page {
-                    background: #000000;
+                    background: #0b1329;
                     border: 1.2px solid rgba(26, 115, 232, 0.6);
                     color: #f8fafc;
                 }

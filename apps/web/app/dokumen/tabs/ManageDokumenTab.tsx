@@ -14,6 +14,7 @@ import { FilterToolbar, FilterSelect, FilterSearch, FilterActions } from '@/comp
 import { Button } from '@/components/ui/Button'
 import ActionButton, { ActionGroup } from '@/components/ui/ActionButtons'
 import Modal, { ModalBody, ModalFooter } from '@/components/ui/Modal'
+import { isUserAdmin, getUserRoles } from '@/lib/auth-client'
 
 // Use PDFViewerWrapper instead of direct dynamic import to prevent
 // react-pdf/pdfjs-dist Object.defineProperty crash in webpack Evaluate phase
@@ -28,13 +29,12 @@ interface BulkFilePreview {
 
 export default function ManageDokumenTab({ user, canManageOverride }: { user?: any; canManageOverride?: boolean }) {
     const userRoles = useMemo(() => {
-        if (!user) return [];
-        return (user.roles || [user.role]).filter(Boolean).map((r: any) => String(r).toUpperCase());
+        return getUserRoles(user);
     }, [user]);
 
     const isAdmin = useMemo(() => {
-        return userRoles.includes('ADMIN') || userRoles.includes('ADMINISTRATOR');
-    }, [userRoles]);
+        return isUserAdmin(user);
+    }, [user]);
 
     const canManage = typeof canManageOverride === 'boolean' ? canManageOverride : isAdmin;
     const [categories, setCategories] = useState<any[]>([])
@@ -1718,7 +1718,7 @@ export default function ManageDokumenTab({ user, canManageOverride }: { user?: a
                     padding: 0 !important;
                 }
                 :global(.dark) .ds-table-wrap {
-                    background: #000000 !important;
+                    background: #0b1329 !important;
                     border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
                     border-radius: 16px !important;
                     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5) !important;
@@ -1729,7 +1729,7 @@ export default function ManageDokumenTab({ user, canManageOverride }: { user?: a
                     color: #f1f5f9 !important;
                 }
                 :global(.dark) .ds-folder-card {
-                    background: #000000 !important;
+                    background: #0b1329 !important;
                     border: 1px solid rgba(59, 130, 246, 0.3) !important;
                 }
                 :global(.dark) .ds-folder-card:hover {
@@ -1742,7 +1742,7 @@ export default function ManageDokumenTab({ user, canManageOverride }: { user?: a
                     border: 1px solid rgba(59, 130, 246, 0.3) !important;
                 }
                 :global(.dark) .ds-filters {
-                    background: #000000 !important;
+                    background: #0b1329 !important;
                     border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
                     border-radius: 16px !important;
                     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5) !important;
@@ -1760,8 +1760,8 @@ export default function ManageDokumenTab({ user, canManageOverride }: { user?: a
                 :global(.dark) .inline-add-row select,
                 :global(.dark) .inline-edit-row input,
                 :global(.dark) .inline-edit-row select {
-                    background-color: #000000 !important;
-                    background: #000000 !important;
+                    background-color: #0b1329 !important;
+                    background: #0b1329 !important;
                     border: 1px solid rgba(37, 99, 235, 0.4) !important;
                     color: #f1f5f9 !important;
                     border-radius: 10px !important;
@@ -1778,7 +1778,7 @@ export default function ManageDokumenTab({ user, canManageOverride }: { user?: a
                     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25) !important;
                 }
                 :global(.dark) .ds-table {
-                    background: #000000 !important;
+                    background: #0b1329 !important;
                 }
                 :global(.dark) .ds-table th {
                     background: rgba(26, 115, 232, 0.1) !important;
@@ -1786,7 +1786,7 @@ export default function ManageDokumenTab({ user, canManageOverride }: { user?: a
                     border-bottom: 1.5px solid rgba(59, 130, 246, 0.25) !important;
                 }
                 :global(.dark) .ds-table td {
-                    background: #000000 !important;
+                    background: #0b1329 !important;
                     color: #f1f5f9 !important;
                     border-bottom: 1px solid rgba(59, 130, 246, 0.12) !important;
                 }
@@ -1817,7 +1817,7 @@ export default function ManageDokumenTab({ user, canManageOverride }: { user?: a
                 :global(.dark) .btn-bulk-upload-trigger,
                 :global(.dark) .btn-refresh,
                 :global(.dark) .fm-btn-cancel {
-                    background: #000000 !important;
+                    background: #0b1329 !important;
                     border: 1.5px solid rgba(59, 130, 246, 0.4) !important;
                     color: #93c5fd !important;
                     border-radius: 10px !important;
@@ -1833,7 +1833,7 @@ export default function ManageDokumenTab({ user, canManageOverride }: { user?: a
                 :global(.dark) .btn-dl,
                 :global(.dark) .btn-edit-mini,
                 :global(.dark) .btn-save-inline {
-                    background: #000000 !important;
+                    background: #0b1329 !important;
                     border: 1px solid rgba(59, 130, 246, 0.35) !important;
                     color: #38bdf8 !important;
                 }
@@ -1843,7 +1843,7 @@ export default function ManageDokumenTab({ user, canManageOverride }: { user?: a
                 }
                 :global(.dark) .btn-del,
                 :global(.dark) .btn-del-mini {
-                    background: #000000 !important;
+                    background: #0b1329 !important;
                     border: 1px solid rgba(239, 68, 68, 0.35) !important;
                     color: #f87171 !important;
                 }
@@ -1852,11 +1852,11 @@ export default function ManageDokumenTab({ user, canManageOverride }: { user?: a
                     background: rgba(239, 68, 68, 0.15) !important;
                 }
                 :global(.dark) .inline-folder-list {
-                    background: #000000 !important;
+                    background: #0b1329 !important;
                     border-color: rgba(59, 130, 246, 0.25) !important;
                 }
                 :global(.dark) .inline-folder-item {
-                    background: #000000 !important;
+                    background: #0b1329 !important;
                     border-color: rgba(59, 130, 246, 0.2) !important;
                 }
                 :global(.dark) .fm-overlay {
@@ -1864,15 +1864,15 @@ export default function ManageDokumenTab({ user, canManageOverride }: { user?: a
                     backdrop-filter: blur(8px) !important;
                 }
                 :global(.dark) .fm-modal {
-                    background: #000000 !important;
-                    background-image: linear-gradient(180deg, rgba(59, 130, 246, 0.12) 0%, rgba(0, 0, 0, 0.4) 30%, #000000 100%) !important;
-                    border: 1px solid rgba(37, 99, 235, 0.4) !important;
+                    background: #0b1329 !important;
+                    background-image: linear-gradient(180deg, rgba(59, 130, 246, 0.12) 0%, rgba(11, 19, 41, 0.6) 30%, #0b1329 100%) !important;
+                    border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
                     border-radius: 20px !important;
                     box-shadow: inset 0 1.5px 1.5px 0 rgba(255, 255, 255, 0.4), inset 0 0 20px 0 rgba(26, 115, 232, 0.25), 0 25px 60px rgba(0, 0, 0, 0.95) !important;
                     overflow: hidden !important;
                 }
                 :global(.dark) .fm-header {
-                    background: #000000 !important;
+                    background: #0b1329 !important;
                     border-bottom: 1px solid rgba(59, 130, 246, 0.25) !important;
                 }
                 :global(.dark) .fm-title-group h2 {
@@ -1884,7 +1884,7 @@ export default function ManageDokumenTab({ user, canManageOverride }: { user?: a
                     display: inline-block;
                 }
                 :global(.dark) .fm-footer {
-                    background: #000000 !important;
+                    background: #0b1329 !important;
                     border-top: 1px solid rgba(59, 130, 246, 0.25) !important;
                 }
                 :global(.dark) .fm-icon {
@@ -1909,7 +1909,7 @@ export default function ManageDokumenTab({ user, canManageOverride }: { user?: a
                     color: #38bdf8 !important;
                 }
                 :global(.dark) .bulk-dropzone {
-                    background: #000000 !important;
+                    background: #0b1329 !important;
                     border: 1.5px dashed rgba(59, 130, 246, 0.4) !important;
                 }
                 :global(.dark) .bulk-dropzone.drag-over {
@@ -1929,7 +1929,7 @@ export default function ManageDokumenTab({ user, canManageOverride }: { user?: a
                     color: #38bdf8 !important;
                 }
                 :global(.dark) .bulk-file-item {
-                    background: #000000 !important;
+                    background: #0b1329 !important;
                     border-color: rgba(59, 130, 246, 0.3) !important;
                 }
                 :global(.dark) .bulk-file-item > i {
@@ -2058,7 +2058,7 @@ export default function ManageDokumenTab({ user, canManageOverride }: { user?: a
                         box-sizing: border-box;
                     }
                     :global(.dark) .ds-table tr {
-                        background: #000000 !important;
+                        background: #0b1329 !important;
                         border: 1.5px solid rgba(59, 130, 246, 0.35) !important;
                         box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4) !important;
                     }

@@ -126,7 +126,6 @@ export const PAGE_LABELS: Record<string, string> = {
   'wali-kelas': 'Wali Kelas',
   'ekstrakurikuler': 'Ekstrakurikuler',
   'klinik': 'Klinik Pembelajaran',
-  'unggah-dokumen': 'Pusat Dokumen',
   'prestasi': 'Prestasi Lomba',
   'bimbingan-konseling': 'Bimbingan Konseling',
   'permintaan-surat': 'Permintaan Surat',

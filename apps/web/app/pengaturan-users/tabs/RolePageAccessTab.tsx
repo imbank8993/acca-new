@@ -292,6 +292,7 @@ export default function RolePageAccessTab() {
   }
 
   const totalSelected = pageIds.size
+  const totalPages = groups.reduce((count, group) => count + group.pages.length, 0)
 
   // Options for single searchable role selector dropdown
   const roleSelectOptions: RoleSelectOption[] = useMemo(() => {
@@ -367,12 +368,16 @@ export default function RolePageAccessTab() {
 
   return (
     <div className="rpa">
-      {/* ── IDE 1: SINGLE-ROW ROLE SELECTOR & BULK ACTION BAR ── */}
+      <div className="rpa__intro">
+        <h2>Akses Halaman per Role</h2>
+        <p>Pilih halaman yang muncul di menu untuk setiap role. Pengaturan menu ini terpisah dari hak akses ke isi halaman.</p>
+      </div>
+
       <div className="rpa__headerBar">
         <div className="rpa__headerLeft">
           <div className="rpa__dropdownArea">
             <label className="rpa__fieldLabel">
-              <i className="bi bi-person-badge-fill"></i> Role:
+              Role yang diatur
             </label>
             <div className="rpa__selectBox">
               <Select<RoleSelectOption, false>
@@ -399,12 +404,16 @@ export default function RolePageAccessTab() {
           </div>
 
           <div className="rpa__quickPills">
+            {PRIMARY_ROLES.some(pr => roles.includes(pr)) && (
+              <span className="rpa__quickTitle">Pilih cepat</span>
+            )}
             {PRIMARY_ROLES.filter(pr => roles.includes(pr)).map(pr => (
               <button
                 key={pr}
                 type="button"
                 className={`rpa__quickPill ${selectedRole === pr ? 'active' : ''}`}
                 onClick={() => setSelectedRole(pr)}
+                aria-pressed={selectedRole === pr}
               >
                 {formatRoleDisplay(pr)}
                 <span className="rpa__quickCount">{userCountByRole[pr] || 0}</span>
@@ -418,10 +427,10 @@ export default function RolePageAccessTab() {
             type="button"
             className="rpa__bulkActionBtn"
             onClick={() => setShowBulkModal(true)}
-            title="Terapkan aturan mode tampilan ke banyak role sekaligus"
+            title="Terapkan pengaturan tema ke beberapa role sekaligus"
           >
             <i className="bi bi-sliders2"></i>
-            <span>Atur Mode Massal</span>
+            <span>Atur Tema Massal</span>
           </button>
         </div>
       </div>
@@ -449,7 +458,7 @@ export default function RolePageAccessTab() {
       <FilterToolbar>
         <div className="rpa__toolbarInfo">
           <span className="rpa__count">
-            <b>{formatRoleDisplay(selectedRole)}</b> • {totalSelected} Halaman
+            <b>{formatRoleDisplay(selectedRole)}</b> • {totalSelected} dari {totalPages} halaman menu dipilih
           </span>
           {warnCount > 0 && (
             <span
@@ -475,53 +484,59 @@ export default function RolePageAccessTab() {
 
       {/* ── ACTIVE ROLE THEME SETTING CARD (3 SEGMENTED CHOICES) ── */}
       {selectedRole && (
-        <div className="rpa__themeCard">
-          <div className="rpa__themeCardLeft">
-            <div className={`rpa__themeIcon ${currentRoleMode.toLowerCase()}`}>
-              <i className={currentRoleMode === 'ALL' ? 'bi bi-circle-half' : currentRoleMode === 'DARK' ? 'bi bi-moon-stars-fill' : 'bi bi-sun-fill'}></i>
-            </div>
-            <div className="rpa__themeInfo">
-              <div className="rpa__themeTitle">
-                Mode Tampilan <b>{formatRoleDisplay(selectedRole)}</b>
+        <section className="rpa__section">
+          <div className="rpa__sectionIntro">
+            <h3>Preferensi Tema</h3>
+            <p>Atur mode terang atau gelap yang dapat digunakan oleh pengguna dengan role ini.</p>
+          </div>
+          <div className="rpa__themeCard">
+            <div className="rpa__themeCardLeft">
+              <div className={`rpa__themeIcon ${currentRoleMode.toLowerCase()}`}>
+                <i className={currentRoleMode === 'ALL' ? 'bi bi-circle-half' : currentRoleMode === 'DARK' ? 'bi bi-moon-stars-fill' : 'bi bi-sun-fill'}></i>
+              </div>
+              <div className="rpa__themeInfo">
+                <div className="rpa__themeTitle">
+                  Mode Tampilan <b>{formatRoleDisplay(selectedRole)}</b>
+                </div>
               </div>
             </div>
-          </div>
 
-          <div className="rpa__themeCardRight">
-            {currentRoleIsAdmin ? (
-              <span className="rpa__themeBadge locked">
-                <i className="bi bi-shield-check"></i> Admin Selalu Semua Mode
-              </span>
-            ) : (
-              <div className="rpa__segmentedGroup" role="group" aria-label="Pilihan mode tema">
-                <button
-                  type="button"
-                  className={`rpa__segBtn ${currentRoleMode === 'ALL' ? 'active all' : ''}`}
-                  onClick={() => setModeForRole(selectedRole, 'ALL')}
-                >
-                  <i className="bi bi-circle-half"></i>
-                  <span>Semua Mode</span>
-                </button>
-                <button
-                  type="button"
-                  className={`rpa__segBtn ${currentRoleMode === 'LIGHT' ? 'active light' : ''}`}
-                  onClick={() => setModeForRole(selectedRole, 'LIGHT')}
-                >
-                  <i className="bi bi-sun-fill"></i>
-                  <span>Mode Light</span>
-                </button>
-                <button
-                  type="button"
-                  className={`rpa__segBtn ${currentRoleMode === 'DARK' ? 'active dark' : ''}`}
-                  onClick={() => setModeForRole(selectedRole, 'DARK')}
-                >
-                  <i className="bi bi-moon-stars-fill"></i>
-                  <span>Mode Dark</span>
-                </button>
-              </div>
-            )}
+            <div className="rpa__themeCardRight">
+              {currentRoleIsAdmin ? (
+                <span className="rpa__themeBadge locked">
+                  <i className="bi bi-shield-check"></i> Admin Selalu Semua Mode
+                </span>
+              ) : (
+                <div className="rpa__segmentedGroup" role="group" aria-label="Pilihan mode tema">
+                  <button
+                    type="button"
+                    className={`rpa__segBtn ${currentRoleMode === 'ALL' ? 'active all' : ''}`}
+                    onClick={() => setModeForRole(selectedRole, 'ALL')}
+                  >
+                    <i className="bi bi-circle-half"></i>
+                    <span>Semua Mode</span>
+                  </button>
+                  <button
+                    type="button"
+                    className={`rpa__segBtn ${currentRoleMode === 'LIGHT' ? 'active light' : ''}`}
+                    onClick={() => setModeForRole(selectedRole, 'LIGHT')}
+                  >
+                    <i className="bi bi-sun-fill"></i>
+                    <span>Mode Light</span>
+                  </button>
+                  <button
+                    type="button"
+                    className={`rpa__segBtn ${currentRoleMode === 'DARK' ? 'active dark' : ''}`}
+                    onClick={() => setModeForRole(selectedRole, 'DARK')}
+                  >
+                    <i className="bi bi-moon-stars-fill"></i>
+                    <span>Mode Dark</span>
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
+        </section>
       )}
 
       {/* ── GROUPED PAGE CHECKLIST ── */}
@@ -530,60 +545,75 @@ export default function RolePageAccessTab() {
           <Spinner variant="trace" />
         </div>
       ) : (
-        <div className="rpa__groups">
-          {groups.map(group => {
-            const allOn = group.pages.length > 0 && group.pages.every(p => pageIds.has(p))
-            const someOn = group.pages.some(p => pageIds.has(p))
-            const isFlat = flatGroups.has(group.key)
-            return (
-              <div key={group.key} className="rpa__group">
-                <div className="rpa__groupHead">
-                  <span className="rpa__groupTitle">
-                    <i className={`fa-solid ${group.icon}`}></i> {group.label}
-                  </span>
-                  <div className="rpa__groupBtns">
-                    <button
-                      type="button"
-                      className={`rpa__flatToggle ${isFlat ? 'flat' : ''}`}
-                      onClick={() => toggleFlat(group.key)}
-                      title={isFlat
-                        ? 'Halaman grup ini tampil rata (tanpa header grup) di sidebar role ini'
-                        : 'Halaman grup ini tampil berkelompok di bawah header grup'}
-                    >
-                      <i className={`bi ${isFlat ? 'bi-list' : 'bi-collection'}`}></i>
-                      {isFlat ? 'Rata' : 'Grup'}
-                    </button>
-                    <button
-                      type="button"
-                      className={`rpa__groupToggle ${someOn ? 'on' : ''}`}
-                      onClick={() => toggleGroup(group.pages, allOn)}
-                    >
-                      {allOn ? 'Kosongkan' : 'Pilih semua'}
-                    </button>
+        <section className="rpa__section">
+          <div className="rpa__sectionIntro">
+            <h3>Halaman di Menu</h3>
+            <p>
+              Centang halaman agar muncul di menu role. “Pilih semua” mengubah akses menu satu grup;
+              “Tampilan grup/rata” hanya mengatur susunannya.
+            </p>
+          </div>
+          <div className="rpa__groups">
+            {groups.map(group => {
+              const allOn = group.pages.length > 0 && group.pages.every(p => pageIds.has(p))
+              const someOn = group.pages.some(p => pageIds.has(p))
+              const isFlat = flatGroups.has(group.key)
+              const selectedInGroup = group.pages.filter(page => pageIds.has(page)).length
+              return (
+                <div key={group.key} className="rpa__group">
+                  <div className="rpa__groupHead">
+                    <span className="rpa__groupTitle">
+                      <i className={`fa-solid ${group.icon}`}></i> {group.label}
+                      <span className="rpa__groupCount">{selectedInGroup}/{group.pages.length} dipilih</span>
+                    </span>
+                    <div className="rpa__groupBtns">
+                      <button
+                        type="button"
+                        className={`rpa__flatToggle ${isFlat ? 'flat' : ''}`}
+                        onClick={() => toggleFlat(group.key)}
+                        title={isFlat
+                          ? 'Halaman grup ini tampil rata (tanpa header grup) di sidebar role ini'
+                          : 'Halaman grup ini tampil berkelompok di bawah header grup'}
+                        aria-pressed={isFlat}
+                      >
+                        <i className={`bi ${isFlat ? 'bi-list' : 'bi-collection'}`}></i>
+                        {isFlat ? 'Tampilan rata' : 'Tampilan grup'}
+                      </button>
+                      <button
+                        type="button"
+                        className={`rpa__groupToggle ${someOn ? 'on' : ''}`}
+                        onClick={() => toggleGroup(group.pages, allOn)}
+                      >
+                        {allOn ? 'Hapus pilihan' : 'Pilih semua'}
+                      </button>
+                    </div>
+                  </div>
+                  <div className="rpa__pages">
+                    {group.pages.map(p => {
+                      const lacks = roleLacksAccess(p)
+                      return (
+                        <label
+                          key={p}
+                          className={`rpa__page ${pageIds.has(p) ? 'selected' : ''} ${lacks ? 'warn' : ''}`}
+                          title={`ID halaman: ${p}`}
+                        >
+                          <input type="checkbox" checked={pageIds.has(p)} onChange={() => togglePage(p)} />
+                          <span className="rpa__pageLabel">{effectiveLabel(p)}</span>
+                          {lacks && (
+                            <i
+                              className="bi bi-exclamation-triangle-fill rpa__pageWarn"
+                              title={`Role ${formatRoleDisplay(selectedRole)} tidak terdaftar di akses fungsional halaman ini. Menu akan muncul tapi isinya bisa kosong/terbatas.`}
+                            ></i>
+                          )}
+                        </label>
+                      )
+                    })}
                   </div>
                 </div>
-                <div className="rpa__pages">
-                  {group.pages.map(p => {
-                    const lacks = roleLacksAccess(p)
-                    return (
-                      <label key={p} className={`rpa__page ${pageIds.has(p) ? 'selected' : ''} ${lacks ? 'warn' : ''}`}>
-                        <input type="checkbox" checked={pageIds.has(p)} onChange={() => togglePage(p)} />
-                        <span className="rpa__pageLabel">{effectiveLabel(p)}</span>
-                        {lacks && (
-                          <i
-                            className="bi bi-exclamation-triangle-fill rpa__pageWarn"
-                            title={`Role ${formatRoleDisplay(selectedRole)} tidak terdaftar di akses fungsional halaman ini. Menu akan muncul tapi isinya bisa kosong/terbatas.`}
-                          ></i>
-                        )}
-                        <span className="rpa__pageId">{p}</span>
-                      </label>
-                    )
-                  })}
-                </div>
-              </div>
-            )
-          })}
-        </div>
+              )
+            })}
+          </div>
+        </section>
       )}
 
       {/* ── MODAL ATUR MODE MASSAL (BULK THEME ASSIGNMENT) ── */}
@@ -723,7 +753,32 @@ export default function RolePageAccessTab() {
       <style jsx>{`
         .rpa { display: flex; flex-direction: column; gap: 14px; }
 
-        /* ── IDE 1: TOP HEADER BAR (SINGLE-ROW) ── */
+        .rpa__intro,
+        .rpa__sectionIntro {
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+        }
+        .rpa__intro h2,
+        .rpa__sectionIntro h3 {
+          margin: 0;
+          color: var(--n-ink, #0f172a);
+          font-size: 1rem;
+          font-weight: 750;
+        }
+        .rpa__intro p,
+        .rpa__sectionIntro p {
+          margin: 0;
+          color: var(--n-muted, #64748b);
+          font-size: 0.82rem;
+          line-height: 1.5;
+        }
+        .rpa__section {
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+        }
+
         .rpa__headerBar {
           display: flex;
           align-items: center;
@@ -1016,11 +1071,22 @@ export default function RolePageAccessTab() {
         .rpa__group { background: var(--n-card, #ffffff); border: 1px solid var(--n-border, #e2e8f0); border-radius: 14px; overflow: hidden; }
         .rpa__groupHead {
           display: flex; align-items: center; justify-content: space-between;
+          gap: 10px; flex-wrap: wrap;
           padding: 12px 14px; border-bottom: 1px solid var(--n-border, #e2e8f0); background: var(--n-soft, #f8fafc);
         }
         .rpa__groupTitle { font-size: 0.85rem; font-weight: 700; color: var(--n-ink, #0f172a); display: flex; align-items: center; gap: 8px; min-width: 0; }
         .rpa__groupTitle i { color: #2563eb; font-size: 0.8rem; flex-shrink: 0; }
-        .rpa__groupBtns { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+        .rpa__groupCount {
+          flex-shrink: 0;
+          padding: 2px 7px;
+          border-radius: 999px;
+          background: var(--n-card, #ffffff);
+          border: 1px solid var(--n-border, #e2e8f0);
+          color: var(--n-muted, #64748b);
+          font-size: 0.68rem;
+          font-weight: 700;
+        }
+        .rpa__groupBtns { display: flex; align-items: center; gap: 6px; flex-shrink: 0; flex-wrap: wrap; }
         .rpa__groupToggle {
           font-size: 0.7rem; font-weight: 700; border: 1px solid var(--n-border, #cbd5e1); background: var(--n-card, #ffffff);
           color: var(--n-muted, #64748b); padding: 4px 10px; border-radius: 8px; cursor: pointer;
@@ -1180,6 +1246,8 @@ export default function RolePageAccessTab() {
           box-shadow: 0 4px 20px rgba(0,0,0,0.6) !important;
         }
         :global(.dark) .rpa__fieldLabel,
+        :global(.dark) .rpa__intro h2,
+        :global(.dark) .rpa__sectionIntro h3,
         :global(.dark) .rpa__themeTitle,
         :global(.dark) .rpa__groupTitle,
         :global(.dark) .rpa__pageLabel,
@@ -1357,6 +1425,24 @@ export default function RolePageAccessTab() {
           /* Page Groups Mobile */
           .rpa__groups {
             grid-template-columns: 1fr;
+          }
+
+          .rpa__groupHead {
+            align-items: flex-start;
+            flex-direction: column;
+            gap: 10px;
+          }
+
+          .rpa__groupBtns {
+            width: 100%;
+            flex-wrap: wrap;
+          }
+
+          .rpa__flatToggle,
+          .rpa__groupToggle {
+            flex: 1;
+            justify-content: center;
+            min-height: 34px;
           }
 
           /* Bulk Modal Mobile */

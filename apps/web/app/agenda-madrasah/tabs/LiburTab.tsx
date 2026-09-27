@@ -1716,33 +1716,33 @@ export default function LiburTab({
 /* ROOT CONTAINER */
 :global(.dark) .lb { background: transparent !important; }
 /* TOOLBAR */
-:global(.dark) .lb__search input { background: #000000 !important; border: 2px solid rgba(59, 130, 246, 0.5) !important; color: #f1f5f9 !important; }
+:global(.dark) .lb__search input { background: #0b1329 !important; border: 1.5px solid rgba(59, 130, 246, 0.45) !important; color: #f1f5f9 !important; }
 :global(.dark) .lb__search input:focus { border-color: #3b82f6 !important; }
 :global(.dark) .lb__search i { color: #3b82f6 !important; }
 :global(.dark) .lb__filterSelect {
-    background-color: #000000 !important;
-    border: 2px solid rgba(59, 130, 246, 0.5) !important;
+    background-color: #0b1329 !important;
+    border: 1.5px solid rgba(59, 130, 246, 0.45) !important;
     color: #f1f5f9 !important;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2360a5fa' d='M6 8L1 3h10z'/%3E%3C/svg%3E") !important;
     background-repeat: no-repeat !important;
     background-position: right 11px center !important;
 }
 :global(.dark) .lb__filterSelect:focus { border-color: #3b82f6 !important; }
-:global(.dark) select { background: #000000 !important; border: 1.5px solid rgba(59, 130, 246, 0.35) !important; color: #f1f5f9 !important; }
+:global(.dark) select { background: #0b1329 !important; border: 1.5px solid rgba(59, 130, 246, 0.4) !important; color: #f1f5f9 !important; }
 /* BUTTONS */
-:global(.dark) .lb__btn { background: #000000 !important; border: 1.5px solid rgba(59, 130, 246, 0.35) !important; color: #f1f5f9 !important; }
+:global(.dark) .lb__btn { background: #0b1329 !important; border: 1.5px solid rgba(59, 130, 246, 0.4) !important; color: #f1f5f9 !important; }
 :global(.dark) .lb__btn:hover { background: rgba(37, 99, 235, 0.15) !important; border-color: #3b82f6 !important; }
 :global(.dark) .lb__btnPrimary { background: #1a73e8 !important; border-color: #3b82f6 !important; color: #ffffff !important; box-shadow: 0 0 12px rgba(26, 115, 232, 0.4) !important; }
 :global(.dark) .lb__btnPrimary:hover { background: #1565c0 !important; }
 :global(.dark) .lb__btnExport { background: linear-gradient(135deg, rgba(16, 185, 129, 0.9), rgba(5, 150, 105, 0.9)) !important; border-color: rgba(16, 185, 129, 0.4) !important; color: #fff !important; }
 :global(.dark) .lb__btnImport { background: linear-gradient(135deg, rgba(245, 158, 11, 0.9), rgba(180, 83, 9, 0.9)) !important; border-color: rgba(245, 158, 11, 0.4) !important; color: #fff !important; }
-:global(.dark) .lb__btnGhost { background: #000000 !important; color: #94a3b8 !important; border: 1.5px solid rgba(59, 130, 246, 0.35) !important; }
+:global(.dark) .lb__btnGhost { background: #0b1329 !important; color: #94a3b8 !important; border: 1.5px solid rgba(59, 130, 246, 0.4) !important; }
 :global(.dark) .lb__btnGhost:hover { background: rgba(37, 99, 235, 0.15) !important; color: #f1f5f9 !important; }
 :global(.dark) .lb__btnDanger { background: linear-gradient(135deg, #dc2626, #ef4444) !important; border-color: rgba(220, 38, 38, 0.4) !important; color: white !important; }
 /* TABLE */
-:global(.dark) .lb__tableWrap { background: #000000 !important; border: 1px solid rgba(37, 99, 235, 0.4) !important; }
+:global(.dark) .lb__tableWrap { background: #0b1329 !important; border: 1.8px solid rgba(26, 115, 232, 0.75) !important; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5) !important; }
 :global(.dark) .lb__table th { background: rgba(26, 115, 232, 0.1) !important; color: #93c5fd !important; border-bottom: 1.5px solid rgba(59, 130, 246, 0.25) !important; }
-:global(.dark) .lb__table td { background: #000000 !important; color: #f1f5f9 !important; border-bottom: 1px solid rgba(59, 130, 246, 0.15) !important; }
+:global(.dark) .lb__table td { background: #0b1329 !important; color: #f1f5f9 !important; border-bottom: 1px solid rgba(59, 130, 246, 0.15) !important; }
 :global(.dark) .lb__table tr:hover td { background: rgba(26, 115, 232, 0.06) !important; }
 :global(.dark) .lb__iconBtn { background: rgba(37, 99, 235, 0.12) !important; border: 1.5px solid rgba(59, 130, 246, 0.35) !important; color: #93c5fd !important; }
 :global(.dark) .lb__iconBtn:hover { background: #1a73e8 !important; border-color: #3b82f6 !important; color: #ffffff !important; box-shadow: 0 0 10px rgba(26, 115, 232, 0.4) !important; }
@@ -1756,13 +1756,14 @@ export default function LiburTab({
 }
 
 :global(.dark) .sk__cardCompact {
-  background: #000000 !important;
+  background: #0b1329 !important;
   border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5) !important;
 }
 :global(.dark) .sk__cardCompact:hover,
 :global(.dark) .sk__cardCompact:active {
-  border-color: #60a5fa !important;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5) !important;
+  border-color: #38bdf8 !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5) !important;
 }
 :global(.dark) .sk__cardCompactLeft .sk__cardName {
   color: #ffffff !important;
@@ -1782,7 +1783,7 @@ export default function LiburTab({
   border-color: #60a5fa !important;
 }
 
-:global(.dark) .lb__card { background: #000000 !important; border: 1px solid rgba(37, 99, 235, 0.4) !important; }
+:global(.dark) .lb__card { background: #0b1329 !important; border: 1.8px solid rgba(26, 115, 232, 0.75) !important; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5) !important; }
 :global(.dark) .lb__cardName { color: #f1f5f9 !important; }
 :global(.dark) .lb__cardSub { color: #94a3b8 !important; }
 :global(.dark) .lb__cardBody { color: #f1f5f9 !important; }
@@ -1790,17 +1791,17 @@ export default function LiburTab({
 :global(.dark) .lb__v { color: #f1f5f9 !important; }
 :global(.dark) .lb__moreBtn { color: #94a3b8 !important; }
 /* MODAL */
-:global(.dark) .lb__modal { background: #000000 !important; border: 1px solid rgba(37, 99, 235, 0.4) !important; }
+:global(.dark) .lb__modal { background: #0b1329 !important; border: 1.8px solid rgba(26, 115, 232, 0.75) !important; box-shadow: 0 0 40px rgba(26, 115, 232, 0.35) !important; }
 :global(.dark) .lb__modalHead { background: rgba(26, 115, 232, 0.08) !important; border-bottom: 1px solid rgba(37, 99, 235, 0.4) !important; }
 :global(.dark) .lb__modalTitle h2 { color: #f1f5f9 !important; }
 :global(.dark) .lb__modalTitle p { color: #94a3b8 !important; }
 :global(.dark) .lb__close { color: #94a3b8 !important; }
 :global(.dark) .lb__close:hover { background: rgba(37, 99, 235, 0.15) !important; color: #f1f5f9 !important; }
-:global(.dark) .lb__modalBody { background: #000000 !important; }
+:global(.dark) .lb__modalBody { background: #0b1329 !important; }
 :global(.dark) .lb__modalFoot { background: rgba(26, 115, 232, 0.06) !important; border-top: 1px solid rgba(37, 99, 235, 0.4) !important; }
 :global(.dark) .lb__field input,
 :global(.dark) .lb__field select,
-:global(.dark) .lb__field textarea { background: #000000 !important; border: 1.5px solid rgba(59, 130, 246, 0.35) !important; color: #f1f5f9 !important; }
+:global(.dark) .lb__field textarea { background: #0b1329 !important; border: 1.5px solid rgba(59, 130, 246, 0.4) !important; color: #f1f5f9 !important; }
 :global(.dark) .lb__field label { color: #93c5fd !important; }
 /* LINGKUP */
 :global(.dark) .lb__scope { background: rgba(148,163,184,0.14) !important; border-color: rgba(148,163,184,0.3) !important; color: #cbd5e1 !important; }
@@ -1811,29 +1812,29 @@ export default function LiburTab({
 :global(.dark) .lb__scopeTab.is-active { background: #1a73e8 !important; color: #ffffff !important; box-shadow: 0 0 12px rgba(26,115,232,0.35) !important; }
 :global(.dark) .lb__scopeHint { color: #94a3b8 !important; }
 /* DELETE MODAL */
-:global(.dark) .lb__delModal { background: #000000 !important; border: 1px solid rgba(37, 99, 235, 0.4) !important; }
+:global(.dark) .lb__delModal { background: #0b1329 !important; border: 1.8px solid rgba(26, 115, 232, 0.75) !important; }
 :global(.dark) .lb__delModalHead { background: rgba(220, 38, 38, 0.08) !important; border-bottom-color: rgba(239, 68, 68, 0.2) !important; }
-:global(.dark) .lb__delModalBody { background: #000000 !important; }
-:global(.dark) .lb__delModalFoot { background: #000000 !important; border-top: 1px solid rgba(59, 130, 246, 0.2) !important; }
+:global(.dark) .lb__delModalBody { background: #0b1329 !important; }
+:global(.dark) .lb__delModalFoot { background: #0b1329 !important; border-top: 1px solid rgba(59, 130, 246, 0.2) !important; }
 /* JAM KE DROPDOWN */
-:global(.dark) .lb__jamBtn { background: #000000 !important; border: 1.5px solid rgba(59, 130, 246, 0.35) !important; color: #f1f5f9 !important; }
-:global(.dark) .lb__jamDropdown { background: #000000 !important; border: 1.5px solid rgba(59, 130, 246, 0.35) !important; }
+:global(.dark) .lb__jamBtn { background: #0b1329 !important; border: 1.5px solid rgba(59, 130, 246, 0.4) !important; color: #f1f5f9 !important; }
+:global(.dark) .lb__jamDropdown { background: #0b1329 !important; border: 1.5px solid rgba(59, 130, 246, 0.4) !important; }
 :global(.dark) .lb__jamOption { border-bottom-color: rgba(59, 130, 246, 0.15) !important; }
 :global(.dark) .lb__jamOption:hover { background: rgba(26, 115, 232, 0.1) !important; }
 :global(.dark) .lb__jamOption span { color: #f1f5f9 !important; }
 :global(.dark) .lb__jamOption input[type="checkbox"] { accent-color: #1a73e8 !important; }
 /* SHEET (mobile action sheet) */
-:global(.dark) .lb__sheet { background: #000000 !important; border-top: 1px solid rgba(37, 99, 235, 0.4) !important; }
+:global(.dark) .lb__sheet { background: #0b1329 !important; border-top: 1.8px solid rgba(26, 115, 232, 0.75) !important; }
 :global(.dark) .lb__sheetHandle { background: rgba(59, 130, 246, 0.4) !important; }
 :global(.dark) .lb__sheetName { color: #f1f5f9 !important; }
 :global(.dark) .lb__sheetSub { color: #94a3b8 !important; }
 :global(.dark) .lb__sheetBtn { background: rgba(26, 115, 232, 0.1) !important; color: #f1f5f9 !important; border: 1px solid rgba(37, 99, 235, 0.4) !important; }
 :global(.dark) .lb__sheetBtn.danger { background: rgba(239, 68, 68, 0.1) !important; color: #f87171 !important; border-color: rgba(239, 68, 68, 0.3) !important; }
-:global(.dark) .lb__sheetCancel { background: #000000 !important; color: #94a3b8 !important; border: 1px solid rgba(37, 99, 235, 0.4) !important; }
+:global(.dark) .lb__sheetCancel { background: #0b1329 !important; color: #94a3b8 !important; border: 1px solid rgba(37, 99, 235, 0.4) !important; }
 /* REACT-SELECT (control inside modal, inherits background from parent) */
 .lb__modalBody .lb-select__control {
-    background: #000000 !important;
-    border: 1.5px solid rgba(59, 130, 246, 0.35) !important;
+    background: #0b1329 !important;
+    border: 1.5px solid rgba(59, 130, 246, 0.4) !important;
     color: #f1f5f9 !important;
 }
 .lb__modalBody .lb-select__single-value,
@@ -1843,13 +1844,13 @@ export default function LiburTab({
 .lb__modalBody .lb-select__multi-value__label { color: #93c5fd !important; }
 /* REACT-SELECT MENU PORTAL (rendered in body, need :global) */
 :global(.dark) .lb-select__menu {
-    background: #000000 !important;
-    border: 1.5px solid rgba(59, 130, 246, 0.35) !important;
+    background: #0b1329 !important;
+    border: 1.5px solid rgba(59, 130, 246, 0.4) !important;
     box-shadow: 0 8px 24px rgba(0,0,0,0.8), 0 0 15px rgba(26,115,232,0.15) !important;
     border-radius: 12px !important;
     color: #f1f5f9 !important;
 }
-:global(.dark) .lb-select__menu-list { background: #000000 !important; }
+:global(.dark) .lb-select__menu-list { background: #0b1329 !important; }
 :global(.dark) .lb-select__option {
     background: transparent !important;
     color: #f1f5f9 !important;
@@ -1863,8 +1864,8 @@ export default function LiburTab({
     color: #93c5fd !important;
 }
 :global(.dark) .lb-select__control {
-    background: #000000 !important;
-    border: 1.5px solid rgba(59, 130, 246, 0.35) !important;
+    background: #0b1329 !important;
+    border: 1.5px solid rgba(59, 130, 246, 0.4) !important;
     color: #f1f5f9 !important;
 }
 :global(.dark) .lb-select__single-value { color: #f1f5f9 !important; }

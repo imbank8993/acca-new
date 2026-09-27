@@ -69,7 +69,7 @@ body, .header, .sidebar, .main-content, .card, .p-card, .modal-box {
 }
 
 .dark .form-header-card {
-  background: #000000 !important;
+  background: #0b1329 !important;
   border: 1.8px solid rgba(26, 115, 232, 0.85) !important;
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.6) !important;
 }
@@ -1576,7 +1576,7 @@ html.dark .acca-ambient-bg,
        `.acca-ambient-bg` (fixed, inset 0). Yang di html/body cuma salinan yang
        selalu tertutup olehnya. Di desktop blok ini tidak berlaku, jadi gradien
        body di sana tetap utuh. */
-    background-color: #000000 !important;
+    background-color: #0b1329 !important;
     background-image: none !important;
     color-scheme: dark;
   }
@@ -2011,8 +2011,8 @@ div:where(.swal2-icon.swal2-info) {
 .dark .swal2-popup,
 div.swal2-container.dark .swal2-popup,
 .dark div.swal2-popup {
-  background: #000000 !important;
-  background-image: linear-gradient(180deg, rgba(59, 130, 246, 0.14) 0%, rgba(0, 0, 0, 0.4) 35%, #000000 100%) !important;
+  background: #0b1329 !important;
+  background-image: linear-gradient(180deg, rgba(59, 130, 246, 0.14) 0%, rgba(0, 0, 0, 0.4) 35%, #0b1329 100%) !important;
   border: 1px solid rgba(37, 99, 235, 0.4) !important;
   border-radius: 26px !important;
   box-shadow: inset 0 1.5px 1.5px 0 rgba(255, 255, 255, 0.4), inset 0 0 20px 0 rgba(26, 115, 232, 0.25), 0 25px 60px rgba(0, 0, 0, 0.95) !important;
@@ -2598,7 +2598,7 @@ html.dark body .swal2-popup button.swal2-styled.swal2-confirm.swal-btn-danger:ho
   .dark .modal-container,
   .dark .notification-dropdown,
   .dark div:where(.swal2-popup) {
-    background: #000000 !important;
+    background: #0b1329 !important;
     border-top: 1px solid rgba(37, 99, 235, 0.4) !important;
     border-left: none !important;
     border-right: none !important;
@@ -6575,12 +6575,12 @@ body.dark ::-webkit-scrollbar-thumb:hover {
    ========================================================= */
 .dark .pdf-viewer-modal,
 html.dark .pdf-viewer-modal {
-  background: #000000 !important;
+  background: #0b1329 !important;
 }
 
 .dark .viewer-header,
 html.dark .viewer-header {
-  background: #000000 !important;
+  background: #0b1329 !important;
   border-bottom: 1.5px solid rgba(59, 130, 246, 0.4) !important;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.8) !important;
 }
@@ -6656,7 +6656,7 @@ html.dark .pdf-scroll-area,
 html.dark .pdf-scroll,
 .dark .pdf-content,
 html.dark .pdf-content {
-  background: #000000 !important;
+  background: #0b1329 !important;
 }
 
 .dark .pdf-page-wrap,
@@ -6669,7 +6669,7 @@ html.dark .pdf-page-wrap {
 
 .dark .viewer-footer,
 html.dark .viewer-footer {
-  background: #000000 !important;
+  background: #0b1329 !important;
   border-top: 1.5px solid rgba(59, 130, 246, 0.35) !important;
   box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.8) !important;
 }
@@ -6691,18 +6691,18 @@ html.dark .viewer-footer-key {
 /* Excel Dark Mode */
 .dark .excel-container,
 html.dark .excel-container {
-  background: #000000 !important;
+  background: #0b1329 !important;
 }
 
 .dark .excel-tabs,
 html.dark .excel-tabs {
-  background: #000000 !important;
+  background: #0b1329 !important;
   border-bottom: 1.5px solid rgba(59, 130, 246, 0.35) !important;
 }
 
 .dark .excel-tab-btn,
 html.dark .excel-tab-btn {
-  background: #000000 !important;
+  background: #0b1329 !important;
   border: 1.5px solid rgba(59, 130, 246, 0.45) !important;
   color: #cbd5e1 !important;
   border-radius: 6px !important;
@@ -6718,12 +6718,12 @@ html.dark .excel-tab-btn.is-active {
 
 .dark .excel-table-wrap,
 html.dark .excel-table-wrap {
-  background: #000000 !important;
+  background: #0b1329 !important;
 }
 
 .dark .excel-table,
 html.dark .excel-table {
-  background: #000000 !important;
+  background: #0b1329 !important;
   border: 1.5px solid rgba(59, 130, 246, 0.4) !important;
   color: #cbd5e1 !important;
 }
@@ -6736,7 +6736,7 @@ html.dark .excel-table {
 }
 
 .dark .excel-table td {
-  background: #000000 !important;
+  background: #0b1329 !important;
   color: #cbd5e1 !important;
   border-color: rgba(59, 130, 246, 0.2) !important;
 }
@@ -6749,7 +6749,7 @@ html.dark .excel-table {
 
 .dark .excel-footer,
 html.dark .excel-footer {
-  background: #000000 !important;
+  background: #0b1329 !important;
   border-top: 1.5px solid rgba(59, 130, 246, 0.35) !important;
   color: #94a3b8 !important;
 }
@@ -6757,7 +6757,7 @@ html.dark .excel-footer {
 /* Office Fallback Dark Mode */
 .dark .office-toolbar,
 html.dark .office-toolbar {
-  background: #000000 !important;
+  background: #0b1329 !important;
   border-bottom: 1.5px solid rgba(59, 130, 246, 0.35) !important;
 }
 
@@ -6779,7 +6779,7 @@ html.dark .office-btn:hover {
 
 .dark .office-notice,
 html.dark .office-notice {
-  background: #000000 !important;
+  background: #0b1329 !important;
   border-top: 1.5px solid rgba(59, 130, 246, 0.35) !important;
   color: #94a3b8 !important;
 }
@@ -6937,7 +6937,7 @@ html.dark .office-notice {
 .dark .ekskul__modal,
 .dark .ds-modal,
 .dark .md__modal {
-  background: #000000 !important;
+  background: #0b1329 !important;
   border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
   border-radius: 20px !important;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.95) !important;
@@ -6959,7 +6959,7 @@ html.dark .office-notice {
 .dark .kelas__modalFoot,
 .dark .waktu__modalFoot,
 .dark .ekskul__modalFoot {
-  background: #000000 !important;
+  background: #0b1329 !important;
   border-color: rgba(59, 130, 246, 0.35) !important;
 }
 
@@ -6993,9 +6993,9 @@ html.dark .office-notice {
 .dark .waktu__search,
 .dark .ekskul__search,
 .dark .ptt-search {
-  background: #000000 !important;
+  background: #0b1329 !important;
   color: #ffffff !important;
-  border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
+  border: 1.5px solid rgba(59, 130, 246, 0.45) !important;
   border-radius: 12px !important;
   box-shadow: 0 0 10px rgba(26, 115, 232, 0.2) !important;
 }
@@ -7046,9 +7046,9 @@ html.dark .office-notice {
 .dark .sk__filterSelect,
 .dark .sk__filterGroup select,
 .dark .sis__filterSelect {
-  background-color: #000000 !important;
+  background-color: #0b1329 !important;
   color: #ffffff !important;
-  border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
+  border: 1.5px solid rgba(59, 130, 246, 0.45) !important;
   border-radius: 12px !important;
   box-shadow: 0 0 10px rgba(26, 115, 232, 0.25) !important;
   -webkit-appearance: none !important;
@@ -7064,7 +7064,7 @@ html.dark .office-notice {
 
 
 .dark select option {
-  background-color: #000000 !important;
+  background-color: #0b1329 !important;
   color: #ffffff !important;
 }
 
@@ -7080,7 +7080,7 @@ html.dark .office-notice {
 }
 
 .dark .ds-header {
-  background: #000000 !important;
+  background: #0b1329 !important;
   border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.7), 0 0 16px rgba(26, 115, 232, 0.2) !important;
 }
@@ -7099,7 +7099,7 @@ html.dark .office-notice {
 
 /* ── Tab nav strip ── */
 .dark .ds-tabsWrap {
-  background: #000000 !important;
+  background: #0b1329 !important;
   border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5) !important;
 }
@@ -7127,7 +7127,7 @@ html.dark .office-notice {
 .dark .sk__bar,
 .dark .est__toolbar,
 .dark .ors-toolbar {
-  background: #000000 !important;
+  background: #0b1329 !important;
   border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
   border-radius: 16px !important;
   padding: 12px 14px !important;
@@ -7163,7 +7163,7 @@ html.dark .office-notice {
   min-height: 40px !important;
   max-height: 40px !important;
   box-sizing: border-box !important;
-  background: #000000 !important;
+  background: #0b1329 !important;
   border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
   border-radius: 12px !important;
   color: #ffffff !important;
@@ -7197,7 +7197,7 @@ html.dark .office-notice {
   min-height: 40px !important;
   max-height: 40px !important;
   box-sizing: border-box !important;
-  background-color: #000000 !important;
+  background-color: #0b1329 !important;
   background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiM2MGE1ZmEiIHN0cm9rZS13aWR0aD0iMi41IiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiPjxwb2x5bGluZSBwb2ludHM9IjYgOSAxMiAxNSAxOCA5Ij48L3BvbHlsaW5lPjwvc3ZnPg==") !important;
   background-repeat: no-repeat !important;
   background-position: right 12px center !important;
@@ -7227,7 +7227,7 @@ html.dark .office-notice {
   min-height: 40px !important;
   max-height: 40px !important;
   box-sizing: border-box !important;
-  background: #000000 !important;
+  background: #0b1329 !important;
   border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
   color: #ffffff !important;
   border-radius: 12px !important;
@@ -7248,7 +7248,7 @@ html.dark .office-notice {
 }
 
 .dark .sk__btnGhost {
-  background: #000000 !important;
+  background: #0b1329 !important;
   border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
   color: #ffffff !important;
   border-radius: 12px !important;
@@ -7487,13 +7487,13 @@ table.sk__table td {
 
 /* ── Mobile cards ── */
 .dark .sk__card {
-  background: #000000 !important;
+  background: #0b1329 !important;
   border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5) !important;
 }
 
 .dark .sk__cardHead {
-  background: #000000 !important;
+  background: #0b1329 !important;
   border-bottom: 1px solid rgba(26, 115, 232, 0.3) !important;
 }
 
@@ -7509,13 +7509,13 @@ table.sk__table td {
 
 /* ── Modals ── */
 .dark .sk__modal {
-  background: #000000 !important;
+  background: #0b1329 !important;
   border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.95) !important;
 }
 
 .dark .sk__modalHead {
-  background: #000000 !important;
+  background: #0b1329 !important;
   border-bottom: 1px solid rgba(37, 99, 235, 0.4) !important;
 }
 
@@ -7523,7 +7523,7 @@ table.sk__table td {
 .dark .sk__modalTitle p { color: #94a3b8 !important; }
 
 .dark .sk__close {
-  background: #000000 !important;
+  background: #0b1329 !important;
   border: 1.5px solid rgba(26, 115, 232, 0.4) !important;
   color: #60a5fa !important;
 }
@@ -7534,10 +7534,10 @@ table.sk__table td {
 }
 
 
-.dark .sk__modalBody { background: #000000 !important; }
+.dark .sk__modalBody { background: #0b1329 !important; }
 
 .dark .sk__modalFoot {
-  background: #000000 !important;
+  background: #0b1329 !important;
   border-top: 1px solid rgba(37, 99, 235, 0.4) !important;
 }
 
@@ -7546,7 +7546,7 @@ table.sk__table td {
 .dark .sk__field input,
 .dark .sk__field select,
 .dark .sk__field textarea {
-  background: #000000 !important;
+  background: #0b1329 !important;
   border: 1.5px solid rgba(26, 115, 232, 0.5) !important;
   color: #ffffff !important;
   border-radius: 12px !important;
@@ -7615,7 +7615,7 @@ table.sk__table td {
 
 /* ── More menu dropdown ── */
 .dark .sk__moreMenu {
-  background: #000000 !important;
+  background: #0b1329 !important;
   border: 1.5px solid rgba(26, 115, 232, 0.6) !important;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.8), 0 0 16px rgba(26, 115, 232, 0.2) !important;
 }
@@ -7666,7 +7666,7 @@ table.sk__table td {
 }
 
 .dark .sk__dateList {
-  background: #000000 !important;
+  background: #0b1329 !important;
   border: 1.5px solid rgba(26, 115, 232, 0.4) !important;
 }
 
@@ -7728,7 +7728,7 @@ table.sk__table td {
 
 /* ── Sheet (mobile bottom sheet) ── */
 .dark .sk__sheet {
-  background: #000000 !important;
+  background: #0b1329 !important;
   border-top: 1.8px solid rgba(26, 115, 232, 0.75) !important;
   box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.9) !important;
 }
@@ -7756,7 +7756,7 @@ table.sk__table td {
 
 /* ── GenerateJurnal tab specific ── */
 .dark .card {
-  background: #000000 !important;
+  background: #0b1329 !important;
   border: 1.8px solid rgba(26, 115, 232, 0.6) !important;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5) !important;
 }
@@ -7789,8 +7789,8 @@ table.sk__table td {
 .dark .form-group label { color: #94a3b8 !important; }
 
 .dark input[type="date"] {
-  background: #000000 !important;
-  border: 1.5px solid rgba(26, 115, 232, 0.5) !important;
+  background: #0b1329 !important;
+  border: 1.5px solid rgba(59, 130, 246, 0.45) !important;
   color: #e2e8f0 !important;
   border-radius: 12px !important;
 }
@@ -7864,14 +7864,14 @@ table.sk__table td {
 
 /* ── Pagination in sub-tabs ── */
 .dark .pagination-container {
-  background: #000000 !important;
-  border: 1px solid rgba(37, 99, 235, 0.4) !important;
+  background: #0b1329 !important;
+  border: 1.5px solid rgba(59, 130, 246, 0.45) !important;
   border-radius: 14px !important;
 }
 
 .dark .btn-page {
-  background: #000000 !important;
-  border: 1px solid rgba(26, 115, 232, 0.4) !important;
+  background: #0b1329 !important;
+  border: 1.5px solid rgba(59, 130, 246, 0.45) !important;
   color: #60a5fa !important;
 }
 
@@ -7885,11 +7885,11 @@ table.sk__table td {
 .dark .pagination-info { color: #94a3b8 !important; }
 
 /* ==========================================================
-   EKSKUL SISWA TAB (est__) — PITCH BLACK + NEON BLUE
+   EKSKUL SISWA TAB (est__) — DARK NAVY + NEON BLUE
    ========================================================== */
 
 .dark .est__statCard {
-  background: #000000 !important;
+  background: #0b1329 !important;
   border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5) !important;
 }
@@ -7921,7 +7921,7 @@ table.sk__table td {
   min-height: 40px !important;
   max-height: 40px !important;
   box-sizing: border-box !important;
-  background: #000000 !important;
+  background: #0b1329 !important;
   border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
   border-radius: 12px !important;
   color: #ffffff !important;
@@ -7935,7 +7935,7 @@ table.sk__table td {
   min-height: 40px !important;
   max-height: 40px !important;
   box-sizing: border-box !important;
-  background-color: #000000 !important;
+  background-color: #0b1329 !important;
   border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
   border-radius: 12px !important;
   color: #ffffff !important;
@@ -8120,8 +8120,8 @@ div.gak__taFilterWrap {
 }
 
 .dark div.gak__taFilterWrap {
-  background: #000000 !important;
-  border: 1px solid rgba(37, 99, 235, 0.4) !important;
+  background: #0b1329 !important;
+  border: 1.5px solid rgba(59, 130, 246, 0.45) !important;
   border-radius: 12px !important;
   box-shadow: 0 0 8px rgba(26, 115, 232, 0.15) !important;
 }
@@ -8276,6 +8276,24 @@ html.dark body .db__announcements-item:not(.is-pinned):hover {
 /* ---------------------------------------------------------
    Agenda Madrasah Flow & Lingkaran Tanggal — mode gelap
    --------------------------------------------------------- */
+.db__agenda-day-btn,
+.dark .db__agenda-day-btn,
+html.dark body .db__agenda-day-btn,
+.db__agenda-day-btn:focus,
+.db__agenda-day-btn:focus-visible,
+.db__agenda-day-btn:active,
+.dark .db__agenda-day-btn:focus,
+.dark .db__agenda-day-btn:focus-visible,
+.dark .db__agenda-day-btn:active,
+html.dark body .db__agenda-day-btn:focus,
+html.dark body .db__agenda-day-btn:focus-visible,
+html.dark body .db__agenda-day-btn:active {
+  outline: none !important;
+  border: none !important;
+  box-shadow: none !important;
+  -webkit-tap-highlight-color: transparent !important;
+}
+
 .dark .db__agenda-track-line,
 html.dark body .db__agenda-track-line {
   background: linear-gradient(90deg, #1a73e8 0%, #4f46e5 50%, rgba(59, 130, 246, 0.25) 100%) !important;
@@ -8283,7 +8301,7 @@ html.dark body .db__agenda-track-line {
 
 .dark .db__agenda-circle,
 html.dark body .db__agenda-circle {
-  background: #000000 !important;
+  background: #0b1329 !important;
   border: 2px solid rgba(59, 130, 246, 0.45) !important;
   color: #cbd5e1 !important;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5) !important;
@@ -8291,14 +8309,14 @@ html.dark body .db__agenda-circle {
 
 .dark .db__agenda-day-btn:hover .db__agenda-circle,
 html.dark body .db__agenda-day-btn:hover .db__agenda-circle {
-  background: #0f172a !important;
+  background: #162a4d !important;
   border-color: #60a5fa !important;
   color: #ffffff !important;
 }
 
 .dark .db__agenda-day-btn.has-agenda .db__agenda-circle,
 html.dark body .db__agenda-day-btn.has-agenda .db__agenda-circle {
-  background: #000000 !important;
+  background: #0b1329 !important;
   border-color: #3b82f6 !important;
   color: #60a5fa !important;
 }
@@ -8321,7 +8339,7 @@ html.dark body .db__agenda-day-btn.is-selected .db__agenda-circle {
 
 .dark .db__agenda-dot-marker,
 html.dark body .db__agenda-dot-marker {
-  border-color: #000000 !important;
+  border-color: #0b1329 !important;
 }
 
 .dark .db__agenda-day-btn.is-today .db__agenda-day-name,
@@ -8357,6 +8375,25 @@ html.dark body .db__agenda-dot-marker {
 
 .dark .db__agenda-item-location {
   color: #94a3b8 !important;
+}
+
+.db__agenda-see-all-link {
+  font-size: 0.75rem !important;
+  font-weight: 600 !important;
+  color: #3083FF !important;
+  text-decoration: none !important;
+}
+.db__agenda-see-all-link:hover {
+  color: #1d4ed8 !important;
+  text-decoration: underline !important;
+}
+.dark .db__agenda-see-all-link,
+html.dark body .db__agenda-see-all-link {
+  color: #60a5fa !important;
+}
+.dark .db__agenda-see-all-link:hover,
+html.dark body .db__agenda-see-all-link:hover {
+  color: #93c5fd !important;
 }
 
 

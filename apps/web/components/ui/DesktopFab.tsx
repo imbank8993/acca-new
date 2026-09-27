@@ -116,8 +116,8 @@ export function DesktopFab({
     /** Jepit posisi supaya tombol selalu utuh di dalam viewport. */
     const clamp = (p: Pos): Pos => {
         const el = wrapperRef.current;
-        const w = el?.offsetWidth || 52;
-        const h = el?.offsetHeight || 52;
+        const w = el?.offsetWidth || 46;
+        const h = el?.offsetHeight || 46;
         const maxX = Math.max(EDGE_MARGIN, window.innerWidth - w - EDGE_MARGIN);
         const maxY = Math.max(EDGE_MARGIN, window.innerHeight - h - EDGE_MARGIN);
         return {

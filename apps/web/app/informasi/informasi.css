@@ -293,25 +293,41 @@
 }
 
 .dark .ia-folder-card {
-    background: #000000;
-    border-color: rgba(59, 130, 246, 0.3);
+    background: #0b1329 !important;
+    border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5) !important;
+}
+.dark .ia-folder-card:hover {
+    border-color: #38bdf8 !important;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.6), 0 0 15px rgba(26, 115, 232, 0.25) !important;
 }
 .dark .ia-folder-icon {
     background: rgba(26, 115, 232, 0.15);
     color: #60a5fa;
+}
+.dark .ia-folder-count {
+    background: rgba(26, 115, 232, 0.18) !important;
+    color: #93c5fd !important;
 }
 .dark .ia-file-item:hover {
     background: rgba(26, 115, 232, 0.12);
     border-color: rgba(59, 130, 246, 0.3);
 }
 .dark .ia-share-btn {
-    background: #000000;
-    border-color: rgba(59, 130, 246, 0.3);
-    color: #94a3b8;
+    background: rgba(26, 115, 232, 0.15) !important;
+    border: 1px solid rgba(59, 130, 246, 0.4) !important;
+    color: #94a3b8 !important;
 }
 .dark .ia-share-btn:hover {
-    color: #60a5fa;
-    border-color: #38bdf8;
+    color: #ffffff !important;
+    background: #1a73e8 !important;
+    border-color: #38bdf8 !important;
+}
+.dark .ia-show-more {
+    color: #60a5fa !important;
+}
+.dark .ia-show-more:hover {
+    background: rgba(26, 115, 232, 0.15) !important;
 }
 
 /* ----------------------------------------------------------
@@ -420,9 +436,10 @@
     background: #f8fafc;
 }
 .dark .inf-backBtn {
-    background: #000000;
-    border-color: rgba(26, 115, 232, 0.75);
-    color: #60a5fa;
+    background: #0b1329 !important;
+    border-color: rgba(26, 115, 232, 0.75) !important;
+    color: #60a5fa !important;
+    box-shadow: 0 0 10px rgba(26, 115, 232, 0.25) !important;
 }
 
 @media (max-width: 639px) {
@@ -814,7 +831,7 @@
     appearance: none !important;
     -webkit-appearance: none !important;
     -moz-appearance: none !important;
-    background-color: #000000 !important;
+    background-color: #0b1329 !important;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='%2360a5fa' viewBox='0 0 16 16'%3E%3Cpath fill-rule='evenodd' d='M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z'/%3E%3C/svg%3E") !important;
     background-repeat: no-repeat !important;
     background-position: right 10px center !important;
@@ -843,16 +860,16 @@
 }
 
 .dark .inf__folderOrder {
-    background: #000000 !important;
-    border: 2px solid rgba(59, 130, 246, 0.7) !important;
-    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.95), 0 0 25px rgba(26, 115, 232, 0.22) !important;
+    background: #0b1329 !important;
+    border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.7), 0 0 25px rgba(26, 115, 232, 0.22) !important;
     border-radius: 14px !important;
 }
 .dark .inf__folderOrderHead h4 {
     color: #cbd5e1 !important;
 }
 .dark .inf__folderAddBtn {
-    background: #000000 !important;
+    background: #0b1329 !important;
     border: 1.5px solid rgba(59, 130, 246, 0.75) !important;
     color: #e2e8f0 !important;
     border-radius: 6px !important;
@@ -865,7 +882,7 @@
     box-shadow: 0 0 12px rgba(26, 115, 232, 0.4) !important;
 }
 .dark .inf__folderItem {
-    background: #000000 !important;
+    background: #0b1329 !important;
     border: 1px solid rgba(37, 99, 235, 0.4) !important;
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.7) !important;
     border-radius: 10px !important;
@@ -878,7 +895,7 @@
     color: #93c5fd !important;
 }
 .dark .inf__folderOrderInput {
-    background: #000000 !important;
+    background: #0b1329 !important;
     border: 1.5px solid rgba(59, 130, 246, 0.75) !important;
     color: #cbd5e1 !important;
     border-radius: 6px !important;
@@ -903,7 +920,7 @@
     border: 1.5px solid rgba(255, 255, 255, 0.2) !important;
 }
 .dark .inf__folderActionBtn {
-    background: #000000 !important;
+    background: #0b1329 !important;
     border: 1.5px solid rgba(59, 130, 246, 0.6) !important;
     color: #cbd5e1 !important;
     border-radius: 6px !important;
@@ -974,7 +991,7 @@
     color: #94a3b8 !important;
 }
 .dark .inf-icon-btn {
-    background: #000000 !important;
+    background: #0b1329 !important;
     border: 1.5px solid rgba(59, 130, 246, 0.6) !important;
     color: #cbd5e1 !important;
     border-radius: 6px !important;
@@ -997,19 +1014,19 @@
 }
 
 .dark .inf-group {
-    background: #000000 !important;
-    border: 1.5px solid rgba(59, 130, 246, 0.6) !important;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6) !important;
+    background: #0b1329 !important;
+    border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5) !important;
     border-radius: 14px !important;
 }
 .dark .inf-group-head {
-    background: #000000 !important;
+    background: #0b1329 !important;
     border-bottom: 1.5px solid rgba(59, 130, 246, 0.35) !important;
     color: #93c5fd !important;
 }
 .dark .inf-doc-card {
-    background: rgba(3, 7, 18, 0.7) !important;
-    border: 1px solid rgba(37, 99, 235, 0.4) !important;
+    background: rgba(26, 115, 232, 0.08) !important;
+    border: 1px solid rgba(37, 99, 235, 0.3) !important;
     border-radius: 10px !important;
 }
 .dark .inf-doc-title {
@@ -1048,13 +1065,13 @@
     backdrop-filter: blur(8px) !important;
 }
 .dark .inf-modal {
-    background: #000000 !important;
-    border: 1px solid rgba(37, 99, 235, 0.4) !important;
+    background: #0b1329 !important;
+    border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
     box-shadow: 0 24px 64px rgba(0, 0, 0, 0.98) !important;
     border-radius: 16px !important;
 }
 .dark .inf-modal-head {
-    background: #000000 !important;
+    background: #0b1329 !important;
     border-bottom: 1px solid rgba(37, 99, 235, 0.4) !important;
 }
 .dark .inf-modal-head h4 {
@@ -1068,7 +1085,7 @@
     border: 1px solid rgba(59, 130, 246, 0.4) !important;
 }
 .dark .inf-modal-foot {
-    background: #000000 !important;
+    background: #0b1329 !important;
     border-top: 1px solid rgba(37, 99, 235, 0.4) !important;
 }
 .dark .inf-btn--primary {
@@ -1159,10 +1176,10 @@
     color: var(--n-ink);
 }
 .tr-pinned {
-    background: #fffdf6;
+    background: rgba(48, 131, 255, 0.04);
 }
 .dark .tr-pinned {
-    background: rgba(245, 158, 11, 0.08);
+    background: rgba(26, 115, 232, 0.08);
 }
 .pm-title-cell {
     max-width: 300px;
@@ -1300,8 +1317,11 @@
     flex-shrink: 0;
 }
 .pm-list-pin-icon {
-    color: #e11d48;
+    color: #3083FF;
     font-size: 14px;
+}
+.dark .pm-list-pin-icon {
+    color: #60a5fa !important;
 }
 .pm-list-item-title {
     font-size: 0.95rem;
@@ -1334,13 +1354,13 @@
 }
 
 .dark .pm-admin-panel {
-    background: #000000 !important;
-    border: 1px solid rgba(37, 99, 235, 0.4) !important;
+    background: #0b1329 !important;
+    border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
     border-radius: 16px !important;
 }
 .dark .pm-table-container {
-    background: #000000 !important;
-    border: 1px solid rgba(37, 99, 235, 0.4) !important;
+    background: #0b1329 !important;
+    border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
     border-radius: 12px !important;
 }
 .dark .pm-table th {
@@ -1349,12 +1369,20 @@
     border-bottom: 1.5px solid rgba(59, 130, 246, 0.25) !important;
 }
 .dark .pm-table td {
-    background: #000000 !important;
+    background: #0b1329 !important;
     color: #f1f5f9 !important;
     border-bottom: 1px solid rgba(59, 130, 246, 0.12) !important;
 }
 .dark .tr-pinned td {
-    background: rgba(225, 29, 72, 0.06) !important;
+    background: rgba(26, 115, 232, 0.08) !important;
+}
+.btn-pin.is-pinned i,
+.btn-pin .bi-pin-angle-fill {
+    color: #3083FF !important;
+}
+.dark .btn-pin.is-pinned i,
+.dark .btn-pin .bi-pin-angle-fill {
+    color: #60a5fa !important;
 }
 .dark .pm-list-item {
     background: transparent !important;
@@ -1364,13 +1392,13 @@
     color: #f1f5f9 !important;
 }
 .dark .pm-card-menu-btn {
-    background: #000000 !important;
+    background: #0b1329 !important;
     border: 1px solid rgba(37, 99, 235, 0.4) !important;
     color: #94a3b8 !important;
 }
 .dark .pm-card-menu {
-    background: #000000 !important;
-    border: 1px solid rgba(37, 99, 235, 0.4) !important;
+    background: #0b1329 !important;
+    border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
 }
 .dark .pm-card-menu-item {
     color: #e2e8f0 !important;
@@ -1594,7 +1622,7 @@
 .dark .ish-url,
 .dark .ish-root input[type="text"],
 .dark .ish-select {
-    background: #000 !important;
+    background: #0b1329 !important;
     border-color: rgba(59, 130, 246, 0.4) !important;
     color: #cbd5e1 !important;
 }
@@ -1605,7 +1633,7 @@
 }
 
 .dark .ish-icon-btn {
-    background: #000;
+    background: #0b1329;
     border-color: rgba(59, 130, 246, 0.4);
     color: #cbd5e1;
 }

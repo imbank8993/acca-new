@@ -161,32 +161,13 @@ export default function PersonalDocumentsPage({ user }: { user: any }) {
         if (!user) return false;
         const userRoles = (user.roles || [user.role]).filter(Boolean).map((r: any) => String(r).toUpperCase());
         const hasGuruOrStaffRole = userRoles.some((r: string) => [
-            'GURU', 'STAF', 'TU', 'TATA_USAHA', 'BENDAHARA', 
-            'KAMAD', 'KEPALA_SEKOLAH', 'WAKAMAD', 'WALI_KELAS', 
+            'GURU', 'STAF', 'TU', 'TATA_USAHA', 'BENDAHARA',
+            'KAMAD', 'KEPALA_SEKOLAH', 'WAKAMAD', 'WALI_KELAS',
             'ADMIN', 'ADMINISTRATOR'
         ].includes(r));
         const hasNip = Boolean(user.nip && String(user.nip).trim() !== '' && !user.nisn);
         return hasNip || hasGuruOrStaffRole;
     }, [user]);
-
-    if (!isMasterGuruUser) {
-        return (
-            <div style={{
-                padding: '32px 24px',
-                textAlign: 'center',
-                background: 'var(--n-card, #ffffff)',
-                borderRadius: '16px',
-                border: '1.5px solid var(--n-border, #e2e8f0)',
-                margin: '20px 0'
-            }}>
-                <i className="bi bi-shield-lock-fill" style={{ fontSize: '2.5rem', color: '#f59e0b', display: 'block', marginBottom: '12px' }}></i>
-                <h3 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '6px' }}>Akses Dokumen Pribadi Dibatasi</h3>
-                <p style={{ fontSize: '0.86rem', color: 'var(--n-muted, #64748b)', margin: 0 }}>
-                    Fitur Dokumen Pribadi hanya dapat diakses oleh Guru & Tenaga Kependidikan yang terdaftar pada Master Guru.
-                </p>
-            </div>
-        );
-    }
 
     const canManage = true; // All users can manage their own documents
     const canShare = true; // All users can share their own documents
@@ -267,11 +248,11 @@ export default function PersonalDocumentsPage({ user }: { user: any }) {
         setLoading(true);
         try {
             const isMine = activeTab === 'mine';
-            
+
             // 1. Prepare URLs
             const folderUrl = isMine ? '/api/personal/folders' : '/api/personal/folders?shared=true';
             let docUrl = isMine ? '/api/personal/documents' : '/api/personal/documents?shared=true';
-            
+
             if (selectedFolder === '__root__') {
                 docUrl += (docUrl.includes('?') ? '&' : '?') + 'folder_id=null';
             } else if (selectedFolder) {
@@ -816,6 +797,25 @@ export default function PersonalDocumentsPage({ user }: { user: any }) {
         return Math.min(100, Math.round((totalStorageBytes / MAX_STORAGE_BYTES) * 100));
     }, [totalStorageBytes]);
 
+    if (!isMasterGuruUser) {
+        return (
+            <div style={{
+                padding: '32px 24px',
+                textAlign: 'center',
+                background: 'var(--n-card, #ffffff)',
+                borderRadius: '16px',
+                border: '1.5px solid var(--n-border, #e2e8f0)',
+                margin: '20px 0'
+            }}>
+                <i className="bi bi-shield-lock-fill" style={{ fontSize: '2.5rem', color: '#f59e0b', display: 'block', marginBottom: '12px' }}></i>
+                <h3 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '6px' }}>Akses Dokumen Pribadi Dibatasi</h3>
+                <p style={{ fontSize: '0.86rem', color: 'var(--n-muted, #64748b)', margin: 0 }}>
+                    Fitur Dokumen Pribadi hanya dapat diakses oleh Guru & Tenaga Kependidikan yang terdaftar pada Master Guru.
+                </p>
+            </div>
+        );
+    }
+
     return (
 
         <MaintenanceBanner pageKey="maintenance_personal_documents">
@@ -957,8 +957,15 @@ export default function PersonalDocumentsPage({ user }: { user: any }) {
 
                             {canManage && (
                                 <FilterActions>
-                                    <Button variant="outline" onClick={handleCreateFolder} leftIcon={<FolderPen size={18} />} className="ftb-btn-icon-mobile">
-                                        Folder Baru
+                                    <Button
+                                        variant="outline"
+                                        onClick={handleCreateFolder}
+                                        leftIcon={<FolderPen size={18} />}
+                                        className="ftb-btn-icon-mobile"
+                                        title="Folder Baru"
+                                        aria-label="Folder Baru"
+                                    >
+                                        <span className="btn-text-desktop">Folder Baru</span>
                                     </Button>
                                 </FilterActions>
                             )}
@@ -1404,6 +1411,5 @@ function getIconClass(ext: string) {
     return 'default';
 
 }
-
 
 

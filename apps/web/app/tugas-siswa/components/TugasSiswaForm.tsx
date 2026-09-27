@@ -275,7 +275,7 @@ export default function TugasSiswaForm({
         });
     };
 
-    const handleGuruChange = (val: string | (string | number)[]) => {
+    const handleGuruChange = (val: string | number | (string | number)[]) => {
         const guruId = String(val);
         const selectedGuru = masterData.guru?.find(g => (g.guru_id || g.nip) === guruId);
         setFormData(prev => ({
@@ -285,7 +285,7 @@ export default function TugasSiswaForm({
         }));
     };
 
-    const handleMapelChange = (val: string | (string | number)[]) => {
+    const handleMapelChange = (val: string | number | (string | number)[]) => {
         const mapelId = String(val);
         const selectedMapel = masterData.mapel?.find(m => m.id.toString() === mapelId);
         setFormData(prev => ({
@@ -295,7 +295,7 @@ export default function TugasSiswaForm({
         }));
     };
 
-    const handleKelasChange = (val: string | (string | number)[]) => {
+    const handleKelasChange = (val: string | number | (string | number)[]) => {
         setFormData(prev => ({ ...prev, kelas: String(val) }));
     };
 

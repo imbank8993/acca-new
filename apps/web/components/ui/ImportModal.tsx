@@ -443,14 +443,14 @@ export default function ImportModal({
 
         /* ===== DARK MODE OVERRIDES ===== */
         :global(.dark) .im-modal {
-          background: #000000 !important;
+          background: #0b1329 !important;
           border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
           border-radius: 20px !important;
           box-shadow: 0 20px 60px rgba(0, 0, 0, 0.95) !important;
         }
 
         :global(.dark) .im-header {
-          background: #000000 !important;
+          background: #0b1329 !important;
           border-bottom: 1.5px solid rgba(59, 130, 246, 0.35) !important;
         }
 
@@ -464,7 +464,7 @@ export default function ImportModal({
         }
 
         :global(.dark) .im-close {
-          background: #000000 !important;
+          background: #0b1329 !important;
           border: 1px solid rgba(59, 130, 246, 0.35) !important;
           color: #94a3b8 !important;
         }
@@ -475,11 +475,11 @@ export default function ImportModal({
         }
 
         :global(.dark) .im-body {
-          background: #000000 !important;
+          background: #0b1329 !important;
         }
 
         :global(.dark) .im-step {
-          background: #000000 !important;
+          background: #0b1329 !important;
           border: 1.5px solid rgba(59, 130, 246, 0.35) !important;
           border-radius: 14px !important;
         }
@@ -518,7 +518,7 @@ export default function ImportModal({
         }
 
         :global(.dark) .im-fileInner {
-          background: #000000 !important;
+          background: #0b1329 !important;
           border: 2px dashed rgba(56, 189, 248, 0.5) !important;
           border-radius: 12px !important;
         }
@@ -543,12 +543,12 @@ export default function ImportModal({
         }
 
         :global(.dark) .im-footer {
-          background: #000000 !important;
+          background: #0b1329 !important;
           border-top: 1.5px solid rgba(59, 130, 246, 0.35) !important;
         }
 
         :global(.dark) .im-btn--close {
-          background: #000000 !important;
+          background: #0b1329 !important;
           border: 1.5px solid rgba(59, 130, 246, 0.4) !important;
           color: #ffffff !important;
           border-radius: 10px !important;

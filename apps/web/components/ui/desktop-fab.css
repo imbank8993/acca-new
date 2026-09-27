@@ -30,15 +30,15 @@
         background: #3083FF;
         color: #ffffff;
         border: none;
-        height: 52px;
-        min-width: 52px;
+        height: 46px;
+        min-width: 46px;
         padding: 0;
         border-radius: 999px;
         font-family: inherit;
-        font-size: 0.95rem;
+        font-size: 0.85rem;
         font-weight: 600;
         cursor: pointer;
-        box-shadow: 0 8px 24px rgba(0, 56, 168, 0.35);
+        box-shadow: 0 6px 18px rgba(0, 56, 168, 0.3);
         transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
         overflow: hidden;
         white-space: nowrap;
@@ -62,7 +62,7 @@
 
     .dfab:hover:not(.is-expanded) {
         transform: translateY(-4px) scale(1.02);
-        box-shadow: 0 12px 28px rgba(0, 56, 168, 0.45);
+        box-shadow: 0 8px 22px rgba(0, 56, 168, 0.4);
         background: #002D8B;
     }
 
@@ -74,7 +74,7 @@
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        font-size: 1.15rem;
+        font-size: 1rem;
         line-height: 1;
     }
 
@@ -93,11 +93,11 @@
 
     .dark .dfab {
         background: #3B82F6;
-        box-shadow: 0 8px 24px rgba(59, 130, 246, 0.35);
+        box-shadow: 0 6px 18px rgba(59, 130, 246, 0.3);
     }
 
     .dark .dfab:hover:not(.is-expanded) {
         background: #2563EB;
-        box-shadow: 0 12px 28px rgba(59, 130, 246, 0.45);
+        box-shadow: 0 8px 22px rgba(59, 130, 246, 0.4);
     }
 }

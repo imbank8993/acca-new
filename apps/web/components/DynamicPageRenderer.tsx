@@ -1,11 +1,7 @@
 'use client'
 
-import { useState, useEffect, lazy, Suspense } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { PageLoader } from './ui/Spinner'
-
-// Cache page registry in localStorage to persist across sessions
-const CACHE_KEY = 'page_registry_cache'
-const CACHE_TTL = 5 * 60 * 1000 // 5 minutes
 
 interface PageInfo {
   id: string
@@ -93,21 +89,9 @@ const PAGE_LABELS: Record<string, string> = {
   'dokumen': 'Pusat Dokumen',
 }
 
-// For backward compatibility
-const KNOWN_PAGES = PAGE_LABELS
-
 // Hook to get and manage page registry
 export function usePageRegistry() {
-  const [registry, setRegistry] = useState<Record<string, PageInfo>>({})
-  const [loading, setLoading] = useState(false)
-
-  useEffect(() => {
-    loadRegistry()
-  }, [])
-
-  const loadRegistry = async () => {
-    setLoading(true)
-
+  const buildRegistry = useCallback((): Record<string, PageInfo> => {
     // Build registry from LAZY_PAGES
     const pages: Record<string, PageInfo> = {}
     Object.entries(LAZY_PAGES).forEach(([id]) => {
@@ -119,15 +103,18 @@ export function usePageRegistry() {
         lastChecked: Date.now()
       }
     })
+    return pages
+  }, [])
 
-    setRegistry(pages)
-    setLoading(false)
-  }
+  const [registry, setRegistry] = useState<Record<string, PageInfo>>(buildRegistry)
+  const loadRegistry = useCallback(async () => {
+    setRegistry(buildRegistry())
+  }, [buildRegistry])
 
   const isPageKnown = (pageId: string) => !!LAZY_PAGES[pageId]
   const getPageLabel = (pageId: string) => PAGE_LABELS[pageId] || pageId
 
-  return { registry, loading, refresh: loadRegistry, isPageKnown, getPageLabel }
+  return { registry, loading: false, refresh: loadRegistry, isPageKnown, getPageLabel }
 }
 
 // Dynamic page renderer
@@ -140,38 +127,32 @@ export default function DynamicPageRenderer({
   user: any
   onRefreshUser: () => void
 }) {
-  const [Component, setComponent] = useState<React.ComponentType<any> | null>(null)
-  const [error, setError] = useState(false)
-  const [loading, setLoading] = useState(true)
+  const [loadedPage, setLoadedPage] = useState<{
+    id: string
+    component: React.ComponentType<any> | null
+    error: boolean
+  } | null>(null)
 
   useEffect(() => {
-    loadPage(pageId)
+    const loader = LAZY_PAGES[pageId]
+    if (!loader) return
+
+    let cancelled = false
+    loader().then(
+      mod => {
+        if (!cancelled) {
+          setLoadedPage({ id: pageId, component: mod.default || null, error: !mod.default })
+        }
+      },
+      err => {
+        console.error(`Gagal memuat halaman "${pageId}":`, err)
+        if (!cancelled) setLoadedPage({ id: pageId, component: null, error: true })
+      },
+    )
+    return () => { cancelled = true }
   }, [pageId])
 
-  const loadPage = async (id: string) => {
-    setError(false)
-    setComponent(null)
-    setLoading(true)
-
-    // Use pre-built lazy loader
-    if (LAZY_PAGES[id]) {
-      try {
-        const mod = await LAZY_PAGES[id]()
-        const PageComponent = mod.default
-        if (PageComponent) {
-          setComponent(() => PageComponent)
-          setLoading(false)
-          return
-        }
-      } catch {}
-    }
-
-    // Page not found
-    setError(true)
-    setLoading(false)
-  }
-
-  if (error) {
+  if (!LAZY_PAGES[pageId] || (loadedPage?.id === pageId && loadedPage.error)) {
     return (
       <div className="page-not-found">
         <div className="page-not-found-icon">
@@ -214,10 +195,11 @@ export default function DynamicPageRenderer({
     )
   }
 
-  if (!Component) {
+  if (loadedPage?.id !== pageId || !loadedPage.component) {
     return <PageLoader label="Memuat modul…" />
   }
 
+  const Component = loadedPage.component
   return <Component user={user} onRefreshUser={onRefreshUser} />
 }
 

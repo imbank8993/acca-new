@@ -12,7 +12,7 @@ export interface Option {
 export interface SearchableSelectProps {
   options: Option[]
   value: string | number | (string | number)[]
-  onChange: (value: any) => void
+  onChange: (value: string | number | (string | number)[]) => void
   placeholder?: string
   label?: string
   className?: string
@@ -44,11 +44,15 @@ export default function SearchableSelect({
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
+        setSearch('')
         setIsOpen(false)
       }
     }
     function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === 'Escape') setIsOpen(false)
+      if (event.key === 'Escape') {
+        setSearch('')
+        setIsOpen(false)
+      }
     }
     document.addEventListener('click', handleClickOutside)
     document.addEventListener('keydown', handleKeyDown)
@@ -57,10 +61,6 @@ export default function SearchableSelect({
       document.removeEventListener('keydown', handleKeyDown)
     }
   }, [])
-
-  useEffect(() => {
-    if (!isOpen) setSearch('')
-  }, [isOpen])
 
   const selectedOptions = useMemo(() => {
     if (multiple) {
@@ -88,6 +88,7 @@ export default function SearchableSelect({
       setTimeout(() => inputRef.current?.focus(), 0)
     } else {
       if ((e.target as HTMLElement).tagName !== 'INPUT') {
+        setSearch('')
         setIsOpen(false)
       }
     }
@@ -529,8 +530,8 @@ export default function SearchableSelect({
 
         /* Dark mode overrides */
         :global(.dark) .ss__trigger {
-          background: #000000 !important;
-          border: 1.5px solid rgba(59, 130, 246, 0.4) !important;
+          background: #0b1329 !important;
+          border: 1.5px solid rgba(59, 130, 246, 0.45) !important;
         }
         :global(.dark) .ss__mainInput {
           color: #f1f5f9 !important;
@@ -546,12 +547,12 @@ export default function SearchableSelect({
           color: #60a5fa !important;
         }
         :global(.dark) .ss__drop {
-          background: #090d16 !important;
-          border: 1.5px solid rgba(59, 130, 246, 0.35) !important;
+          background: #0b1329 !important;
+          border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
           box-shadow: 0 16px 36px rgba(0, 0, 0, 0.6) !important;
         }
         :global(.dark) .ss__quickActions {
-          background: #0d1322 !important;
+          background: rgba(26, 115, 232, 0.08) !important;
           border-bottom-color: rgba(255, 255, 255, 0.1) !important;
         }
         :global(.dark) .ss__item {
