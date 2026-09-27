@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Query, Body, Request, UseGuards, Res } from '@nestjs/common';
+import { Controller, Get, Post, Put, Query, Body, Request, UseGuards, Res, StreamableFile } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { BankDataService } from './bank-data.service';
@@ -19,10 +19,14 @@ export class BankDataController {
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Preview & Export Bank Data' })
   async handlePost(@Request() req: any, @Body() body: any, @Res({ passthrough: true }) res: any) {
-    const result = await this.service.handlePost(body, req.user);
+    const forwarded = req.headers?.['x-forwarded-for'];
+    const clientIp = typeof forwarded === 'string'
+      ? forwarded.split(',')[0].trim()
+      : (req.headers?.['x-real-ip'] || req.ip || req.socket?.remoteAddress || '');
+    const result = await this.service.handlePost(body, req.user, clientIp);
     
     // Check if result is a buffer or stream (we'll just use StreamableFile)
-    if (result && result.constructor && result.constructor.name === 'StreamableFile') {
+    if (result && (result instanceof StreamableFile || result.constructor?.name === 'StreamableFile')) {
       res.set({
         'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         'Content-Disposition': `attachment; filename="${body.dataset_id || 'export'}.xlsx"`,

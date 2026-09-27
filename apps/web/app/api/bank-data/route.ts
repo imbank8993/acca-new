@@ -4,7 +4,8 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(request: NextRequest) {
   const token = extractRequestToken(request);
-  const { status, body } = await nestFetchAsUser('/bank-data', token);
+  const search = request.nextUrl.search || '';
+  const { status, body } = await nestFetchAsUser(`/bank-data${search}`, token);
   return NextResponse.json(body || { ok: false }, { status: status || 200 });
 }
 
@@ -13,6 +14,7 @@ export async function POST(request: NextRequest) {
   const bodyData = await request.json().catch(() => ({}));
   
   const NEST_API_URL = process.env.NEXT_PUBLIC_NEST_API_URL || 'http://127.0.0.1:3007/api';
+  const clientIp = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || request.headers.get('x-real-ip') || '';
   
   try {
     const res = await fetch(`${NEST_API_URL}/bank-data`, {
@@ -20,6 +22,7 @@ export async function POST(request: NextRequest) {
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${token}`,
+        ...(clientIp ? { 'x-forwarded-for': clientIp } : {}),
       },
       body: JSON.stringify(bodyData),
       cache: 'no-store',

@@ -112,11 +112,10 @@
   min-width: 0;
 }
 
-/* Tombol lipat sidebar — pindahan dari .collapse-toggle di sidebar.
-   Desktop saja: di mobile sidebar berupa panel geser tanpa keadaan terlipat,
-   jadi tombol ini tidak punya arti di sana (aturan penyembunyiannya ada di
-   blok @media mobile di bawah). Ukurannya disamakan dengan .dark-mode-toggle
-   di sisi kanan header supaya kedua ujung barisnya seimbang. */
+/* Tombol kembali ke halaman sebelumnya — menggantikan tombol collapse sidebar.
+   Desktop saja: di mobile sidebar berupa panel geser dan navigasi kembali ada di bottom nav.
+   Ukurannya disamakan dengan .dark-mode-toggle di sisi kanan header supaya kedua ujung barisnya seimbang. */
+.header-back-btn,
 .header-collapse-toggle {
   /* DI LUAR ALIRAN, duduk di pita padding kiri header — yakni tepat di samping
      sidebar. Kalau ikut aliran .header-left, tombol mulai setelah padding kiri
@@ -149,21 +148,26 @@
   border: none;
   border-radius: 10px;
   color: var(--header-text);
-  /* Chevron Font Awesome (ikon yang sama dengan tombol lama di sidebar)
-     digambar jauh lebih kecil dari ukuran fontnya, jadi ukurannya disetel di
-     sini — bukan diwarisi dari header yang 1.1rem. */
   font-size: 0.8rem;
   opacity: 0.75;
   cursor: pointer;
-  transition: background 0.2s ease, color 0.2s ease, opacity 0.2s ease;
+  transition: background 0.2s ease, color 0.2s ease, opacity 0.2s ease, transform 0.15s ease;
 }
 
+.header-back-btn:hover,
 .header-collapse-toggle:hover {
   background: rgba(59, 130, 246, 0.1);
   color: var(--n-primary);
   opacity: 1;
 }
 
+.header-back-btn:active,
+.header-collapse-toggle:active {
+  transform: translateY(-50%) scale(0.92);
+}
+
+.dark .header-back-btn:hover,
+html.dark .header-back-btn:hover,
 .dark .header-collapse-toggle:hover,
 html.dark .header-collapse-toggle:hover {
   background: rgba(37, 99, 235, 0.22);
@@ -219,8 +223,9 @@ html.dark .header-collapse-toggle:hover {
   }
 
   /* Sidebar mobile tidak punya keadaan terlipat — dibuka penuh sebagai panel
-     geser lewat bilah nav bawah. */
-  .header-collapse-toggle {
+     geser lewat bilah nav bawah. Tombol kembali desktop juga disembunyikan di mobile. */
+  .header-collapse-toggle,
+  .header-back-btn {
     display: none !important;
   }
 }

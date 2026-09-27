@@ -405,6 +405,15 @@ const MODUL: ModulItem[] = [
         peranBawaan: ['OP_JURNAL'],
         grup: 'Agenda Madrasah',
     },
+    // ─── BANK DATA ──────────────────────────────────────────────────────
+    {
+        settingKey: 'bank_data.kelola',
+        isCapability: true,
+        judul: 'Pengelola Bank Data',
+        ikon: 'bi-database-fill-gear',
+        keterangan: 'Menyalakan dataset, memilih kolom yang boleh keluar, dan mengelola konfigurasi Bank Data.',
+        grup: 'Bank Data',
+    },
 ];
 
 /** Ikon per grup — dipakai di header grup. */
@@ -421,6 +430,7 @@ const GRUP_IKON: Record<string, string> = {
     'Pengaturan Tugas': 'bi-calendar-plus-fill',
     'Informasi': 'bi-megaphone-fill',
     'Agenda Madrasah': 'bi-calendar-event-fill',
+    'Bank Data': 'bi-database-fill-gear',
     'Lainnya': 'bi-grid-fill',
 };
 
@@ -438,6 +448,7 @@ const GRUP_ORDER = [
     'Pengaturan Tugas',
     'Informasi',
     'Agenda Madrasah',
+    'Bank Data',
     'Lainnya',
 ];
 

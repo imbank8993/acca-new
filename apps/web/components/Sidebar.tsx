@@ -480,7 +480,19 @@ export default function Sidebar({
       <aside className={`sidebar ${isOpen ? 'open' : ''} ${isCollapsed ? 'collapsed' : ''} ${isAnyModalOpen ? 'blur-when-modal-open' : ''}`}>
         <div className="sidebar-header">
           <div className="brand-wrapper">
-            <div className="brand-logo">
+            <button
+              type="button"
+              className="brand-logo"
+              onClick={() => {
+                if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+                  onToggle()
+                } else {
+                  onCollapse()
+                }
+              }}
+              title={isCollapsed ? 'Perbesar sidebar' : 'Kecilkan sidebar'}
+              aria-label={isCollapsed ? 'Perbesar sidebar' : 'Kecilkan sidebar'}
+            >
               {!isCollapsed ? (
                 <>
                   <img src="/logo-sidebar.png" alt="ACCA Logo" className="brand-logo-img light-logo" />
@@ -492,12 +504,8 @@ export default function Sidebar({
                 // kedua latar tanpa perlu varian kedua.
                 <img src="/logo-sidebar-kecil.webp" alt="ACCA Logo" className="brand-logo-img" />
               )}
-            </div>
-            {/* Tombol lipat sidebar sekarang ada di Header, sebelah kiri judul
-                halaman (lihat .header-collapse-toggle di components/Header.tsx).
-                `onCollapse` tetap diterima di sini karena masih dipakai untuk
-                MEMBUKA sidebar otomatis saat pengguna mencari atau membuka grup
-                menu dalam keadaan terlipat. */}
+            </button>
+            {/* Tombol lipat/perbesar sidebar dioperasikan langsung dengan menekan logo di atas. */}
           </div>
         </div>
 

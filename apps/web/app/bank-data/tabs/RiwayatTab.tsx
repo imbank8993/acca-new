@@ -6,11 +6,6 @@ import { Spinner } from '@/components/ui/Spinner';
 import { Button } from '@/components/ui/Button';
 import type { BarisLog } from '../types';
 
-/**
- * Riwayat ekspor — jejak siapa mengunduh dataset apa, kapan, berapa baris.
- * Hanya untuk pemegang `bank_data.kelola`; gerbangnya juga dipasang di
- * /api/bank-data/log, bukan cuma di sini.
- */
 export default function RiwayatTab() {
   const [rows, setRows] = useState<BarisLog[]>([]);
   const [total, setTotal] = useState(0);
@@ -43,33 +38,25 @@ export default function RiwayatTab() {
       day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
     });
 
-  /** Filter tersimpan sebagai objek; ditampilkan ringkas supaya baris tetap terbaca. */
   const ringkasFilter = (f: Record<string, any> | null) => {
     if (!f || Object.keys(f).length === 0) return '—';
-    return Object.entries(f)
+    const entries = Object.entries(f).filter(([k]) => !k.startsWith('_'));
+    if (entries.length === 0) return 'Semua';
+    return entries
       .map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(', ') : v}`)
       .join(' · ');
   };
 
   if (loading) {
-    return <div className="bd-loading"><Spinner variant="trace" label="Memuat riwayat ekspor..." /></div>;
+    return <div className="bd-loading"><Spinner variant="trace" label="Memuat riwayat..." /></div>;
   }
 
   return (
-    <div className="bd-panel">
-      <div className="bd-panel__head">
-        <div>
-          <h3>Riwayat Ekspor</h3>
-          <p>{total.toLocaleString('id-ID')} unduhan tercatat.</p>
-        </div>
-        <Button variant="secondary" icon="refresh" onClick={() => muat(halaman)}>Muat Ulang</Button>
-      </div>
-
+    <div className="bd-panel" style={{ padding: 0, border: 'none', background: 'transparent' }}>
       {rows.length === 0 ? (
         <div className="bd-empty">
           <i className="bi bi-clock-history" />
-          <h3>Belum ada ekspor tercatat</h3>
-          <p>Setiap unduhan akan muncul di sini beserta filter dan jumlah barisnya.</p>
+          <h3>Belum ada riwayat tercatat</h3>
         </div>
       ) : (
         <>
@@ -81,7 +68,7 @@ export default function RiwayatTab() {
                   <th>Pengguna</th>
                   <th>Dataset</th>
                   <th>Filter</th>
-                  <th style={{ textAlign: 'right' }}>Baris</th>
+                  <th style={{ textAlign: 'right' }}>Jumlah Baris</th>
                   <th>Kolom</th>
                   <th>IP</th>
                 </tr>
@@ -89,9 +76,14 @@ export default function RiwayatTab() {
               <tbody>
                 {rows.map(r => (
                   <tr key={r.id}>
-                    <td>{waktu(r.created_at)}</td>
+                    <td className="bd-table__time">{waktu(r.created_at)}</td>
                     <td>{r.nama_user || `#${r.user_id ?? '?'}`}</td>
-                    <td>{r.dataset_label}</td>
+                    <td>
+                      {r.dataset_label}
+                      {r.filter && r.filter._tipe === 'preview' && (
+                        <span style={{ marginLeft: 6, fontSize: '0.72rem', color: 'var(--n-muted)' }}>(Pratinjau)</span>
+                      )}
+                    </td>
                     <td className="bd-table__muted">{ringkasFilter(r.filter)}</td>
                     <td style={{ textAlign: 'right' }}>{(r.jumlah_baris ?? 0).toLocaleString('id-ID')}</td>
                     <td className="bd-table__muted">{r.kolom?.length ?? 0} kolom</td>
@@ -107,7 +99,7 @@ export default function RiwayatTab() {
               <Button variant="secondary" disabled={halaman <= 1} onClick={() => setHalaman(h => h - 1)}>
                 Sebelumnya
               </Button>
-              <span>Halaman {halaman} dari {maksHalaman}</span>
+              <span className="bd-pager__info">{halaman} / {maksHalaman}</span>
               <Button variant="secondary" disabled={halaman >= maksHalaman} onClick={() => setHalaman(h => h + 1)}>
                 Berikutnya
               </Button>

@@ -1,175 +1,114 @@
 /**
- * Gaya halaman Bank Data.
- *
- * File CSS biasa, bukan <style jsx>: gaya di dalam <style jsx> tidak menjangkau
- * subkomponen (ExportModal, RiwayatTab, PengaturanTab), sehingga layoutnya akan
- * datar begitu dipecah jadi beberapa file.
- *
- * Warna memakai token --n-* yang sudah dipakai halaman lain supaya mode gelap
- * ikut tanpa aturan tersendiri.
+ * Gaya halaman Bank Data — ACCA
+ * Desain Simple, Minimalis, dan Bersih (Desktop & Mobile).
  */
 
 .bd-container {
     display: flex;
     flex-direction: column;
-    gap: var(--page-gap, 12px);
+    gap: 16px;
+    width: 100%;
 }
 
-/* ── Keadaan kosong & loading ─────────────────────────────────────────── */
+/* ── Keadaan Kosong & Loading ─────────────────────────────────────────── */
 .bd-loading {
     padding: 60px 0;
     text-align: center;
 }
 
 .bd-empty {
-    background: var(--n-surface);
-    border: 1px dashed var(--n-border);
-    border-radius: 14px;
-    padding: 48px 24px;
+    background: var(--n-card);
+    border: 1px solid var(--n-border);
+    border-radius: 12px;
+    padding: 48px 20px;
     text-align: center;
 }
 
 .bd-empty i {
-    font-size: 2.2rem;
+    font-size: 2rem;
     color: var(--n-muted);
     display: block;
-    margin-bottom: 10px;
+    margin-bottom: 8px;
 }
 
 .bd-empty h3 {
     font-size: 1rem;
-    font-weight: 700;
+    font-weight: 600;
     color: var(--n-ink);
-    margin: 0 0 4px;
-}
-
-.bd-empty p {
-    font-size: 0.85rem;
-    color: var(--n-muted);
     margin: 0;
 }
 
-/* ── Daftar subjek (Siswa / Guru / Tendik) ────────────────────────────── */
-/* `auto-fit`, bukan `auto-fill`: dengan tiga kartu, `auto-fill` menyisakan
-   kolom-kolom kosong di layar lebar dan ketiga kartu jadi berdesakan di kiri. */
+/* ── Grid Kartu Dataset (Simple & Minimal) ────────────────────────────── */
 .bd-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    grid-template-columns: repeat(3, 1fr);
     gap: 12px;
 }
 
 .bd-card {
     background: var(--n-card);
     border: 1px solid var(--n-border);
-    border-radius: 14px;
-    padding: 16px;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
-.bd-card__head {
+    border-radius: 12px;
+    padding: 16px 18px;
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 14px;
+    cursor: pointer;
+    text-align: left;
+    width: 100%;
+    transition: border-color 0.15s ease, background 0.15s ease;
 }
 
-.bd-card__head h4 {
-    font-size: 0.95rem;
-    font-weight: 700;
-    color: var(--n-ink);
-    margin: 0;
+.bd-card:hover {
+    border-color: var(--n-primary);
+    background: var(--n-surface);
 }
 
-.bd-card__ikon {
-    flex-shrink: 0;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 34px;
-    height: 34px;
+.bd-card__icon {
+    width: 38px;
+    height: 38px;
     border-radius: 10px;
     background: var(--n-soft);
     color: var(--n-primary);
-    font-size: 1.05rem;
-}
-
-.bd-card__desc {
-    font-size: 0.8rem;
-    line-height: 1.5;
-    color: var(--n-muted);
-    margin: 0;
-    flex: 1;
-}
-
-.bd-card__meta {
     display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    font-size: 0.72rem;
-    color: var(--n-muted);
-}
-
-.bd-card__sensitif {
-    color: #b45309;
-    font-weight: 600;
-}
-
-.bd-card__btn {
-    margin-top: 4px;
-    height: 36px;
-    border-radius: 10px;
-    border: 1px solid var(--n-primary);
-    background: transparent;
-    color: var(--n-primary);
-    font-size: 0.82rem;
-    font-weight: 700;
-    cursor: pointer;
-    display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 6px;
+    font-size: 1.2rem;
+    flex-shrink: 0;
 }
 
-.bd-card__btn:hover {
-    background: var(--n-primary);
-    color: #fff;
+.bd-card__name {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--n-ink);
 }
 
-/* ── Panel (riwayat & pengaturan) ─────────────────────────────────────── */
+/* ── Panel Kontainer (Riwayat & Pengaturan) ────────────────────────────── */
 .bd-panel {
     background: var(--n-card);
     border: 1px solid var(--n-border);
-    border-radius: 14px;
-    padding: 18px;
+    border-radius: 12px;
+    padding: 20px;
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 16px;
 }
 
 .bd-panel__head {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     justify-content: space-between;
     gap: 12px;
-    flex-wrap: wrap;
 }
 
-.bd-panel__head h3 {
+.bd-panel__title {
     font-size: 1rem;
     font-weight: 700;
     color: var(--n-ink);
-    margin: 0 0 2px;
-}
-
-.bd-panel__head p {
-    font-size: 0.8rem;
-    color: var(--n-muted);
     margin: 0;
-    max-width: 60ch;
 }
 
-/* ── Bagian di dalam modal / panel ────────────────────────────────────── */
+/* ── Bagian (Section) Modal & Panel ───────────────────────────────────── */
 .bd-sec {
     display: flex;
     flex-direction: column;
@@ -187,36 +126,35 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 10px;
-    flex-wrap: wrap;
+    gap: 12px;
 }
 
 .bd-sec__title {
     font-size: 0.78rem;
     font-weight: 700;
-    letter-spacing: 0.04em;
     text-transform: uppercase;
+    letter-spacing: 0.04em;
     color: var(--n-muted);
-    margin: 0;
 }
 
-/* Judul kelompok kolom di DALAM sebuah .bd-sec (mis. "Data pendukung").
-   Sengaja lebih ringan dari .bd-sec__title supaya tidak terbaca sebagai
-   bagian baru yang sederajat. */
 .bd-sec__sub {
     font-size: 0.76rem;
     font-weight: 700;
-    color: var(--n-ink);
-    margin: 6px 0 0;
-}
-
-.bd-sec__sub .bd-hint {
-    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--n-muted);
+    margin-top: 8px;
 }
 
 .bd-sec__act {
     display: flex;
-    gap: 12px;
+    align-items: center;
+    gap: 6px;
+}
+
+.bd-sep {
+    color: var(--n-border);
+    font-size: 0.8rem;
 }
 
 .bd-link {
@@ -224,7 +162,7 @@
     border: none;
     padding: 0;
     font-size: 0.76rem;
-    font-weight: 700;
+    font-weight: 600;
     color: var(--n-primary);
     cursor: pointer;
 }
@@ -233,68 +171,74 @@
     text-decoration: underline;
 }
 
-.bd-hint {
+.bd-btn-subtle {
+    border: 1px solid var(--n-border);
+    background: transparent;
+    color: var(--n-ink);
+    padding: 3px 8px;
+    border-radius: 6px;
     font-size: 0.72rem;
-    color: var(--n-muted);
-    line-height: 1.5;
+    font-weight: 600;
+    cursor: pointer;
 }
 
-/* ── Field ────────────────────────────────────────────────────────────── */
+.bd-btn-subtle:hover {
+    border-color: var(--n-primary);
+    color: var(--n-primary);
+}
+
+/* ── Field & Form ─────────────────────────────────────────────────────── */
 .bd-filters {
-    display: flex;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
     gap: 10px;
 }
 
 .bd-field {
     display: flex;
     flex-direction: column;
-    gap: 4px;
-    min-width: 180px;
+    gap: 5px;
 }
 
 .bd-field--grow {
-    flex: 1;
+    grid-column: 1 / -1;
 }
 
 .bd-field > span:first-child {
     font-size: 0.72rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.03em;
+    font-weight: 600;
     color: var(--n-muted);
+}
+
+.bd-field .uisel {
+    width: 100%;
 }
 
 .bd-field select,
 .bd-field input[type="text"],
-.bd-field input[type="date"],
 .bd-field input[type="number"] {
     height: 38px;
-    border-radius: 10px;
+    border-radius: 8px;
     border: 1px solid var(--n-border);
     background: var(--n-card);
     color: var(--n-ink);
     padding: 0 10px;
-    font-size: 0.85rem;
+    font-size: 0.84rem;
     width: 100%;
 }
 
-/*
- * globals.css memasang aturan `.dark input[type=text]` yang bocor ke kotak
- * pencarian react-select dan memunculkan garis tegak di dropdown mode gelap.
- * Ditimpa di lingkup halaman ini saja.
- */
-.dark .bd-container input[type="text"],
-.dark .bd-modal input[type="text"] {
-    background: transparent;
-    box-shadow: none;
+.bd-field select:focus,
+.bd-field input:focus {
+    border-color: var(--n-primary);
+    outline: none;
 }
 
-/* ── Chip kelas ───────────────────────────────────────────────────────── */
+/* ── Chip Kelas ───────────────────────────────────────────────────────── */
 .bd-kelas {
     display: flex;
     flex-direction: column;
     gap: 6px;
+    margin-top: 4px;
 }
 
 .bd-kelas__head {
@@ -302,17 +246,15 @@
     align-items: center;
     justify-content: space-between;
     font-size: 0.72rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.03em;
+    font-weight: 600;
     color: var(--n-muted);
 }
 
 .bd-chips {
     display: flex;
     flex-wrap: wrap;
-    gap: 6px;
-    max-height: 132px;
+    gap: 5px;
+    max-height: 120px;
     overflow-y: auto;
 }
 
@@ -320,10 +262,10 @@
     border: 1px solid var(--n-border);
     background: var(--n-card);
     color: var(--n-ink);
-    border-radius: 999px;
-    padding: 5px 12px;
+    border-radius: 6px;
+    padding: 4px 10px;
     font-size: 0.76rem;
-    font-weight: 600;
+    font-weight: 500;
     cursor: pointer;
 }
 
@@ -333,10 +275,10 @@
     color: #fff;
 }
 
-/* ── Daftar kolom ─────────────────────────────────────────────────────── */
+/* ── Kolom Grid ───────────────────────────────────────────────────────── */
 .bd-kolom {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
     gap: 6px 12px;
 }
 
@@ -347,18 +289,28 @@
     font-size: 0.82rem;
     color: var(--n-ink);
     cursor: pointer;
+    user-select: none;
 }
 
-.bd-kolom__sensitif {
+/* ── Notice Pratinjau ─────────────────────────────────────────────────── */
+.bd-alert-notice {
+    padding: 8px 12px;
+    border-radius: 6px;
+    background: rgba(245, 158, 11, 0.1);
     color: #b45309;
-    font-size: 0.8rem;
+    font-size: 0.78rem;
+    font-weight: 500;
 }
 
-/* ── Tabel (pratinjau & riwayat) ──────────────────────────────────────── */
+.dark .bd-alert-notice {
+    color: #f59e0b;
+}
+
+/* ── Tabel (Pratinjau & Riwayat) ──────────────────────────────────────── */
 .bd-tablewrap {
     overflow-x: auto;
     border: 1px solid var(--n-border);
-    border-radius: 10px;
+    border-radius: 8px;
 }
 
 .bd-table {
@@ -370,10 +322,8 @@
 
 .bd-table th {
     text-align: left;
-    font-weight: 700;
+    font-weight: 600;
     font-size: 0.72rem;
-    text-transform: uppercase;
-    letter-spacing: 0.03em;
     color: var(--n-muted);
     background: var(--n-surface);
     padding: 9px 12px;
@@ -390,9 +340,13 @@
     border-bottom: none;
 }
 
+.bd-table__time {
+    font-variant-numeric: tabular-nums;
+}
+
 .bd-table__muted {
     color: var(--n-muted);
-    max-width: 280px;
+    max-width: 260px;
     overflow: hidden;
     text-overflow: ellipsis;
 }
@@ -400,18 +354,7 @@
 .bd-table__kosong {
     text-align: center;
     color: var(--n-muted);
-    padding: 22px 12px;
-}
-
-.bd-summary {
-    font-size: 0.85rem;
-    color: var(--n-ink);
-    margin: 0;
-}
-
-.bd-warn {
-    color: #b45309;
-    font-weight: 600;
+    padding: 24px 12px;
 }
 
 .bd-pager {
@@ -419,25 +362,23 @@
     align-items: center;
     justify-content: center;
     gap: 12px;
+}
+
+.bd-pager__info {
     font-size: 0.8rem;
     color: var(--n-muted);
 }
 
-/* ── Kartu konfigurasi subjek (tab Pengaturan) ────────────────────────── */
+/* ── Konfigurasi Dataset (Pengaturan) ──────────────────────────────────── */
 .bd-konfig-list {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 8px;
 }
 
 .bd-konfig {
     border: 1px solid var(--n-border);
-    border-radius: 12px;
-    background: var(--n-surface);
-}
-
-.bd-konfig--on {
-    border-color: var(--n-primary);
+    border-radius: 10px;
     background: var(--n-card);
 }
 
@@ -445,7 +386,6 @@
     display: flex;
     align-items: center;
     gap: 12px;
-    flex-wrap: wrap;
     padding: 12px 14px;
 }
 
@@ -457,26 +397,21 @@
 }
 
 .bd-konfig__label {
-    font-size: 0.88rem;
-    font-weight: 700;
+    font-size: 0.9rem;
+    font-weight: 600;
     color: var(--n-ink);
 }
 
 .bd-konfig__meta {
     display: flex;
     align-items: center;
-    gap: 12px;
-    flex-wrap: wrap;
-    font-size: 0.72rem;
-    color: var(--n-muted);
+    gap: 10px;
     margin-left: auto;
 }
 
-.bd-konfig__meta code {
-    font-size: 0.7rem;
-    background: var(--n-soft);
-    border-radius: 6px;
-    padding: 2px 6px;
+.bd-konfig__count {
+    font-size: 0.75rem;
+    color: var(--n-muted);
 }
 
 .bd-konfig__isi {
@@ -493,13 +428,32 @@
     justify-content: flex-end;
 }
 
+.bd-caps-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 12px;
+}
+
+/* ── Responsif Mobile (< 640px) ───────────────────────────────────────── */
 @media (max-width: 640px) {
-    .bd-konfig__meta {
-        margin-left: 0;
-        width: 100%;
+    .bd-grid {
+        grid-template-columns: 1fr;
+        gap: 8px;
     }
 
-    .bd-grid {
+    .bd-card {
+        padding: 14px;
+    }
+
+    .bd-panel {
+        padding: 14px;
+    }
+
+    .bd-kolom {
+        grid-template-columns: 1fr;
+    }
+
+    .bd-filters {
         grid-template-columns: 1fr;
     }
 }

@@ -5,7 +5,7 @@ import type { User } from '@/lib/types'
 import { useModalBlur } from './ModalBlurProvider'
 import { useDarkMode } from '@/hooks/use-dark-mode'
 import { getProxiedImageUrl } from '@/lib/image-utils'
-import { Sun, Moon, Menu, User as UserIcon, Shield, LogOut } from 'lucide-react'
+import { Sun, Moon, Menu, User as UserIcon, Shield, LogOut, ArrowLeft } from 'lucide-react'
 import NotificationBell from './NotificationBell'
 import './header.css'
 
@@ -14,10 +14,10 @@ interface HeaderProps {
     onMenuToggle: () => void
     onNavigate: (page: string) => void
     isCollapsed: boolean
-    /** Melipat/membentangkan sidebar. Tombolnya ada di header — sebelah kiri
-     *  judul halaman — dan hanya tampil di desktop, sebab di mobile sidebar
-     *  memang tidak punya keadaan terlipat. */
+    /** Melipat/membentangkan sidebar (opsional). */
     onCollapse?: () => void
+    /** Handler kembali ke halaman sebelumnya (opsional, fallback ke history.back). */
+    onBack?: () => void
     /** Judul halaman aktif — dipakai HANYA di mobile, menggantikan nama aplikasi. */
     pageTitle?: string
     pageSubtitle?: string
@@ -30,7 +30,7 @@ function useDetectModalOpen() {
     return isAnyModalOpen
 }
 
-export default function Header({ user, onMenuToggle, onNavigate, isCollapsed, onCollapse, pageTitle, pageSubtitle, onScrollHiddenChange }: HeaderProps) {
+export default function Header({ user, onMenuToggle, onNavigate, isCollapsed, onCollapse, onBack, pageTitle, pageSubtitle, onScrollHiddenChange }: HeaderProps) {
     const [showUserMenu, setShowUserMenu] = useState(false)
     const [customSubtitle, setCustomSubtitle] = useState<string | null>(null)
 
@@ -121,6 +121,20 @@ export default function Header({ user, onMenuToggle, onNavigate, isCollapsed, on
         window.location.href = toolsUrl ? `${toolsUrl.replace(/\/$/, '')}/logout` : '/login'
     }
 
+    const handleBack = () => {
+        if (onBack) {
+            onBack()
+            return
+        }
+        if (typeof window !== 'undefined') {
+            if (window.history.length > 1) {
+                window.history.back()
+            } else {
+                onNavigate('dashboard')
+            }
+        }
+    }
+
     return (
         <header className={`header ${isCollapsed ? 'collapsed' : ''} ${isScrolled ? 'is-scrolled' : ''} ${isAnyModalOpen ? 'blur-when-modal-open' : ''} ${scrollHidden ? 'scroll-hidden' : ''}`}>
             <div className="header-inner content-container">
@@ -128,26 +142,16 @@ export default function Header({ user, onMenuToggle, onNavigate, isCollapsed, on
                     <button className="menu-toggle" onClick={onMenuToggle}>
                         <Menu size={19} />
                     </button>
-                    {/* Pindahan dari sidebar (dulu .collapse-toggle di pojok
-                        kanan sidebar-header). Di sini ia tetap di tempat yang
-                        sama saat sidebar melebar maupun menyempit, jadi tidak
-                        ikut bergeser bersama tepi sidebar. Disembunyikan di
-                        mobile lewat CSS. */}
-                    {onCollapse && (
-                        <button
-                            type="button"
-                            className="header-collapse-toggle"
-                            onClick={onCollapse}
-                            title={isCollapsed ? 'Bentangkan menu samping' : 'Lipat menu samping'}
-                            aria-label={isCollapsed ? 'Bentangkan menu samping' : 'Lipat menu samping'}
-                            aria-expanded={!isCollapsed}
-                        >
-                            {/* Chevron Font Awesome yang sama persis dengan
-                                tombol lama di sidebar — hanya tempatnya yang
-                                pindah, bentuknya tidak. */}
-                            <i className={`fa-solid fa-chevron-${isCollapsed ? 'right' : 'left'}`} />
-                        </button>
-                    )}
+                    {/* Tombol kembali ke halaman sebelumnya */}
+                    <button
+                        type="button"
+                        className="header-back-btn header-collapse-toggle"
+                        onClick={handleBack}
+                        title="Kembali ke halaman sebelumnya"
+                        aria-label="Kembali ke halaman sebelumnya"
+                    >
+                        <ArrowLeft size={18} />
+                    </button>
                     {/* Dua judul dirender bersama dan dipilih lewat CSS, bukan
                         JS: `useIsMobile` akan menyebabkan judul salah tampil satu
                         frame di tiap muat halaman karena server tidak tahu lebar

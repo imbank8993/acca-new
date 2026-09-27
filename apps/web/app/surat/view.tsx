@@ -15,6 +15,7 @@ import Swal from 'sweetalert2';
 import { getCurrentUser } from '@/lib/auth-client';
 import DaftarSuratPage from '@/app/surat/daftar/view';
 import Tab from '@/components/ui/Tab';
+import InlineSelect from '@/components/ui/InlineSelect';
 
 // ── Types ──────────────────────────────────────────────────────
 interface KodeItem { kode: string; nama: string; }
@@ -144,16 +145,48 @@ const SignView = ({
                     <div className="codes-grid">
                         <div>
                             <label className="tiny-lbl">Kode 1</label>
-                            <select className="srt-select srt-input-sm" value={meta.nomor_kode1} onChange={e => setMeta({ ...meta, nomor_kode1: e.target.value })}>
-                                {suratConfig?.kode1_options?.map((o: any) => <option key={o.kode} value={o.kode}>{o.kode} - {o.nama}</option>)}
-                            </select>
+                            <InlineSelect
+                                value={meta.nomor_kode1}
+                                onChange={val => setMeta({ ...meta, nomor_kode1: val })}
+                                minWidth="0"
+                                style={{ width: '100%' }}
+                                height="34px"
+                                options={(suratConfig?.kode1_options || []).map((o: any) => ({
+                                    value: o.kode,
+                                    label: `${o.kode} - ${o.nama}`
+                                }))}
+                            />
                         </div>
                         <div>
                             <label className="tiny-lbl">Kode 2</label>
-                            <select className="srt-select srt-input-sm" value={meta.nomor_kode2} onChange={e => setMeta({ ...meta, nomor_kode2: e.target.value })}>
-                                {suratConfig?.kode2_options?.map((o: any) => <option key={o.kode} value={o.kode}>{o.kode} - {o.nama}</option>)}
-                            </select>
+                            <InlineSelect
+                                value={meta.nomor_kode2}
+                                onChange={val => setMeta({ ...meta, nomor_kode2: val })}
+                                minWidth="0"
+                                style={{ width: '100%' }}
+                                height="34px"
+                                options={(suratConfig?.kode2_options || []).map((o: any) => ({
+                                    value: o.kode,
+                                    label: `${o.kode} - ${o.nama}`
+                                }))}
+                            />
                         </div>
+                        {suratConfig?.kode3_options && suratConfig.kode3_options.length > 0 && (
+                            <div>
+                                <label className="tiny-lbl">Kode 3</label>
+                                <InlineSelect
+                                    value={meta.nomor_kode3}
+                                    onChange={val => setMeta({ ...meta, nomor_kode3: val })}
+                                    minWidth="0"
+                                    style={{ width: '100%' }}
+                                    height="34px"
+                                    options={suratConfig.kode3_options.map((o: any) => ({
+                                        value: o.kode,
+                                        label: `${o.kode} - ${o.nama}`
+                                    }))}
+                                />
+                            </div>
+                        )}
                     </div>
                     <button type="button" onClick={handleGenerateNomor} disabled={generatingNumber} className="srt-btn srt-btn-primary gen-btn" style={{ width: '100%', marginTop: '10px' }}>
                         {generatingNumber ? '...' : <><i className="bi bi-arrow-repeat"></i> Generate Nomor Urut</>}
@@ -230,12 +263,20 @@ const SignView = ({
                         </div>
                         <div className="srt-field">
                             <label className="srt-label">Jenis Surat</label>
-                            <select className="srt-select" value={meta.jenis_surat} onChange={e => setMeta((prev: any) => ({ ...prev, jenis_surat: e.target.value }))}>
-                                <option value="">— Pilih Jenis Surat —</option>
-                                {jenisSuratOptions.map((j: any) => (
-                                    <option key={j.kode} value={j.kode}>{j.nama}</option>
-                                ))}
-                            </select>
+                            <InlineSelect
+                                value={meta.jenis_surat}
+                                onChange={val => setMeta((prev: any) => ({ ...prev, jenis_surat: val }))}
+                                minWidth="0"
+                                style={{ width: '100%' }}
+                                height="38px"
+                                options={[
+                                    { value: '', label: '— Pilih Jenis Surat —' },
+                                    ...(jenisSuratOptions || []).map((j: any) => ({
+                                        value: j.kode,
+                                        label: j.nama
+                                    }))
+                                ]}
+                            />
                         </div>
                     </div>
                 </div>
