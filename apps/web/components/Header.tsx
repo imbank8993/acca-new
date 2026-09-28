@@ -264,7 +264,10 @@ export default function Header({ user, onMenuToggle, onNavigate, isCollapsed, on
                                     <button
                                         type="button"
                                         className="user-menu-item user-menu-theme-btn"
-                                        onClick={toggleDarkMode}
+                                        onClick={() => {
+                                            toggleDarkMode();
+                                            setShowUserMenu(false);
+                                        }}
                                     >
                                         {isDark ? (
                                             <Sun size={16} style={{ color: '#f59e0b', flexShrink: 0 }} />
