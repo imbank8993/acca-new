@@ -121,7 +121,7 @@ export async function GET(req: Request) {
 
         // Fallback default jika sama sekali belum dikonfigurasi di .env atau database
         if (!cbtUrl) {
-            cbtUrl = 'https://accav2-cbt.icgowa.sch.id';
+            cbtUrl = 'https://acca-cbt.icgowa.sch.id';
         }
 
         cbtUrl = cbtUrl.replace(/\/$/, '');
