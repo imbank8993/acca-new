@@ -360,9 +360,9 @@ export default function GenerateJurnalTab({ user }: { user?: any }) {
         control: (base: any, state: any) => ({
             ...base,
             borderRadius: '12px',
-            border: isDark ? '1.8px solid rgba(26, 115, 232, 0.75)' : '1.5px solid #e2e8f0',
+            border: isDark ? '1px solid rgba(26, 115, 232, 0.35)' : '1.5px solid #e2e8f0',
             boxShadow: state.isFocused ? (isDark ? '0 0 12px rgba(26, 115, 232, 0.4)' : '0 0 0 3px rgba(59, 130, 246, 0.1)') : 'none',
-            background: isDark ? '#000000' : (state.isFocused ? '#ffffff' : '#f8fafc'),
+            background: isDark ? '#0b1329' : (state.isFocused ? '#ffffff' : '#f8fafc'),
             padding: '0 4px',
             minHeight: '40px',
             height: '40px',
@@ -384,8 +384,8 @@ export default function GenerateJurnalTab({ user }: { user?: any }) {
         menu: (base: any) => ({
             ...base,
             borderRadius: '12px',
-            background: isDark ? '#000000' : '#ffffff',
-            border: isDark ? '1.8px solid rgba(26, 115, 232, 0.75)' : '1px solid #e2e8f0',
+            background: isDark ? '#0b1329' : '#ffffff',
+            border: isDark ? '1px solid rgba(26, 115, 232, 0.35)' : '1px solid #e2e8f0',
             boxShadow: isDark ? '0 10px 30px rgba(0,0,0,0.85)' : '0 10px 25px rgba(0,0,0,0.1)',
             zIndex: 99999,
             overflow: 'hidden'
@@ -395,7 +395,7 @@ export default function GenerateJurnalTab({ user }: { user?: any }) {
             ...base,
             background: state.isFocused
                 ? (isDark ? 'rgba(26, 115, 232, 0.2)' : 'rgba(59, 130, 246, 0.1)')
-                : (isDark ? '#000000' : 'transparent'),
+                : (isDark ? '#0b1329' : 'transparent'),
             color: state.isFocused
                 ? (isDark ? '#60a5fa' : '#1e40af')
                 : (isDark ? '#e2e8f0' : '#0f172a'),
@@ -490,7 +490,7 @@ export default function GenerateJurnalTab({ user }: { user?: any }) {
 
                         {canManage && (
                             <button onClick={handleSaveSettings} disabled={isBusy} className="btn-primary">
-                                {loadingAction === 'settings' ? <Spinner variant="trace" /> : 'Simpan Pengaturan'}
+                                {loadingAction === 'settings' ? <Spinner variant="buble" /> : 'Simpan Pengaturan'}
                             </button>
                         )}
                     </div>
@@ -543,7 +543,7 @@ export default function GenerateJurnalTab({ user }: { user?: any }) {
 
                         {canManage && (
                             <button onClick={handleGenerateManual} disabled={isBusy} className="btn-success">
-                                {loadingAction === 'generate' ? <Spinner variant="trace" /> : 'Generate Sekarang'}
+                                {loadingAction === 'generate' ? <Spinner variant="buble" /> : 'Generate Sekarang'}
                             </button>
                         )}
                     </div>
@@ -603,7 +603,7 @@ export default function GenerateJurnalTab({ user }: { user?: any }) {
                                 disabled={isBusy || !importData.length}
                                 className="btn-primary"
                             >
-                                {loadingAction === 'import' ? <Spinner variant="trace" /> : 'Mulai Import'}
+                                {loadingAction === 'import' ? <Spinner variant="buble" /> : 'Mulai Import'}
                             </button>
                         )}
                     </div>
@@ -660,7 +660,7 @@ export default function GenerateJurnalTab({ user }: { user?: any }) {
 
                         {canManage && (
                             <button onClick={handleDeleteByDate} disabled={isBusy} className="btn-danger">
-                                {loadingAction === 'delete' ? <Spinner variant="trace" /> : 'Hapus Permanen'}
+                                {loadingAction === 'delete' ? <Spinner variant="buble" /> : 'Hapus Permanen'}
                             </button>
                         )}
                     </div>
@@ -900,10 +900,15 @@ export default function GenerateJurnalTab({ user }: { user?: any }) {
                 /* ===== DARK MODE FULL ===== */
                 :global(.dark) .gj { background: transparent !important; }
                 :global(.dark) .card {
-                    background: #000000 !important;
-                    border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
+                    background: #0b1329 !important;
+                    border: 1px solid rgba(26, 115, 232, 0.35) !important;
                     border-radius: 16px !important;
-                    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6) !important;
+                    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4) !important;
+                    transition: all 0.2s ease !important;
+                }
+                :global(.dark) .card:hover {
+                    border-color: rgba(59, 130, 246, 0.6) !important;
+                    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.5), 0 0 15px rgba(26, 115, 232, 0.15) !important;
                 }
                 :global(.dark) .card-head { border-bottom: 1px solid rgba(37, 99, 235, 0.4) !important; }
                 :global(.dark) .card-head h3 { color: #ffffff !important; }
@@ -933,8 +938,8 @@ export default function GenerateJurnalTab({ user }: { user?: any }) {
                 :global(.dark) .form-group label { color: #94a3b8 !important; font-weight: 650 !important; }
                 :global(.dark) input[type="date"] {
                     height: 40px !important;
-                    background: #000000 !important;
-                    border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
+                    background: #0b1329 !important;
+                    border: 1px solid rgba(26, 115, 232, 0.35) !important;
                     border-radius: 12px !important;
                     color: #ffffff !important;
                     box-shadow: 0 0 10px rgba(26, 115, 232, 0.15) !important;
@@ -943,8 +948,8 @@ export default function GenerateJurnalTab({ user }: { user?: any }) {
                 :global(.dark) .checkbox-group input { accent-color: #1a73e8 !important; }
                 :global(.dark) .file-input {
                     height: 40px !important;
-                    background: #000000 !important;
-                    border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
+                    background: #0b1329 !important;
+                    border: 1px solid rgba(26, 115, 232, 0.35) !important;
                     border-radius: 12px !important;
                     color: #ffffff !important;
                 }
@@ -957,13 +962,13 @@ export default function GenerateJurnalTab({ user }: { user?: any }) {
                 }
                 :global(.dark) .alert-info {
                     background: rgba(26, 115, 232, 0.12) !important;
-                    border: 1.5px solid rgba(26, 115, 232, 0.4) !important;
+                    border: 1px solid rgba(26, 115, 232, 0.35) !important;
                     color: #60a5fa !important;
                     border-radius: 12px !important;
                 }
                 :global(.dark) .alert-danger {
                     background: rgba(239, 68, 68, 0.12) !important;
-                    border: 1.5px solid rgba(239, 68, 68, 0.4) !important;
+                    border: 1px solid rgba(239, 68, 68, 0.35) !important;
                     color: #f87171 !important;
                     border-radius: 12px !important;
                 }
@@ -971,7 +976,7 @@ export default function GenerateJurnalTab({ user }: { user?: any }) {
                 :global(.dark) .btn-primary {
                     background: #1a73e8 !important;
                     color: #ffffff !important;
-                    border: 1.8px solid #3b82f6 !important;
+                    border: 1.5px solid #3b82f6 !important;
                     box-shadow: 0 0 14px rgba(26, 115, 232, 0.5) !important;
                 }
                 :global(.dark) .btn-primary:hover:not(:disabled) {
@@ -981,7 +986,7 @@ export default function GenerateJurnalTab({ user }: { user?: any }) {
                 :global(.dark) .btn-success {
                     background: #059669 !important;
                     color: #ffffff !important;
-                    border: 1.8px solid #10b981 !important;
+                    border: 1.5px solid #10b981 !important;
                     box-shadow: 0 0 14px rgba(16, 185, 129, 0.4) !important;
                 }
                 :global(.dark) .btn-success:hover:not(:disabled) {
@@ -991,7 +996,7 @@ export default function GenerateJurnalTab({ user }: { user?: any }) {
                 :global(.dark) .btn-danger {
                     background: #dc2626 !important;
                     color: #ffffff !important;
-                    border: 1.8px solid #f87171 !important;
+                    border: 1.5px solid #f87171 !important;
                     box-shadow: 0 0 14px rgba(239, 68, 68, 0.4) !important;
                 }
                 :global(.dark) .btn-danger:hover:not(:disabled) {

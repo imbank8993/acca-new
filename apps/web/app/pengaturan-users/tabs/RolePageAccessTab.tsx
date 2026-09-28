@@ -532,7 +532,7 @@ export default function RolePageAccessTab() {
       {/* ── 3. GROUPED PAGE CHECKLIST ── */}
       {loading ? (
         <div className="rpa__loading">
-          <Spinner variant="trace" />
+          <Spinner variant="buble" />
         </div>
       ) : filteredGroups.length === 0 ? (
         <div className="rpa__emptySearch">

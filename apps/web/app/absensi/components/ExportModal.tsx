@@ -1474,8 +1474,8 @@ export default function ExportModal({
 
                 /* ── Dark Mode ── */
                 :global(.dark) .em-tabs {
-                    background: #000000 !important;
-                    border: 1px solid rgba(59, 130, 246, 0.3) !important;
+                    background: #0b1329 !important;
+                    border: 1px solid rgba(26, 115, 232, 0.35) !important;
                 }
                 :global(.dark) .em-tab {
                     color: #94a3b8 !important;

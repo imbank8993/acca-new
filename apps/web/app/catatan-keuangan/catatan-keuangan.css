@@ -358,15 +358,15 @@
 }
 
 /* =========================================================
-   DARK MODE — GOOGLE ONE PITCH BLACK THEME
+   DARK MODE — THEME OVERRIDES
 ========================================================= */
 
 /* Hero Banner */
 .dark .ck-header {
-    background: #000000 !important;
-    border: 2px solid #1a73e8 !important;
+    background: #0b1329 !important;
+    border: 1px solid rgba(26, 115, 232, 0.35) !important;
     border-radius: 24px !important;
-    box-shadow: 0 0 30px rgba(26, 115, 232, 0.25) !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4) !important;
 }
 .dark .ck-header-left h1 {
     background: linear-gradient(90deg, #1d6bf3 0%, #3b82f6 30%, #60a5fa 70%, #93c5fd 100%) !important;
@@ -382,9 +382,15 @@
 
 /* Stat Cards */
 .dark .ck-stat {
-    background: #000000 !important;
-    border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
+    background: #0b1329 !important;
+    border: 1px solid rgba(26, 115, 232, 0.35) !important;
     border-radius: 14px !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4) !important;
+    transition: all 0.2s ease !important;
+}
+.dark .ck-stat:hover {
+    border-color: rgba(59, 130, 246, 0.6) !important;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.5), 0 0 15px rgba(26, 115, 232, 0.15) !important;
 }
 .dark .ck-stat-value {
     color: #f1f5f9 !important;
@@ -407,12 +413,14 @@
 
 /* Filter Row */
 .dark .ck-filter-row {
-    background: transparent !important;
-    border: none !important;
+    background: #0b1329 !important;
+    border: 1px solid rgba(26, 115, 232, 0.35) !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4) !important;
+    border-radius: 12px !important;
 }
 .dark .ck-filter-select {
-    background-color: #000000 !important;
-    border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
+    background-color: #0b1329 !important;
+    border: 1px solid rgba(26, 115, 232, 0.35) !important;
     color: #f1f5f9 !important;
     border-radius: 10px !important;
     appearance: none !important;
@@ -432,7 +440,7 @@
 }
 .dark .ck-btn-tambah {
     background: #1a73e8 !important;
-    border: 1.5px solid #3b82f6 !important;
+    border: 1px solid #3b82f6 !important;
     color: #ffffff !important;
     border-radius: 10px !important;
     box-shadow: 0 0 12px rgba(26, 115, 232, 0.4) !important;
@@ -440,22 +448,23 @@
 
 /* Table */
 .dark .ck-table-wrap {
-    background: #000000 !important;
-    border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
+    background: #0b1329 !important;
+    border: 1px solid rgba(26, 115, 232, 0.35) !important;
     border-radius: 16px !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4) !important;
 }
 .dark .ck-table th {
-    background: rgba(26, 115, 232, 0.1) !important;
+    background: rgba(37, 99, 235, 0.15) !important;
     color: #93c5fd !important;
-    border-bottom: 1.5px solid rgba(59, 130, 246, 0.25) !important;
+    border-bottom: 1px solid rgba(26, 115, 232, 0.35) !important;
 }
 .dark .ck-table td {
-    background: #000000 !important;
-    border-bottom: 1px solid rgba(59, 130, 246, 0.12) !important;
+    background: #0b1329 !important;
+    border-bottom: 1px solid rgba(26, 115, 232, 0.2) !important;
     color: #f1f5f9 !important;
 }
 .dark .ck-table tbody tr:hover td {
-    background: rgba(26, 115, 232, 0.06) !important;
+    background: rgba(26, 115, 232, 0.08) !important;
 }
 .dark .ck-no {
     color: #94a3b8 !important;
@@ -516,12 +525,12 @@
 
 /* Mobile List */
 .dark .ck-mobile-list {
-    background: #000000 !important;
-    border: 1.5px solid rgba(59, 130, 246, 0.35) !important;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6) !important;
+    background: #0b1329 !important;
+    border: 1px solid rgba(26, 115, 232, 0.35) !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4) !important;
 }
 .dark .ck-list-item {
-    border-bottom-color: rgba(59, 130, 246, 0.25) !important;
+    border-bottom-color: rgba(26, 115, 232, 0.2) !important;
 }
 .dark .ck-list-item-title {
     color: #f1f5f9 !important;
@@ -539,14 +548,14 @@
     background: rgba(0, 0, 0, 0.8) !important;
 }
 .dark .ck-modal-box {
-    background: #000000 !important;
-    border: 1.8px solid #1a73e8 !important;
+    background: #0b1329 !important;
+    border: 1px solid rgba(26, 115, 232, 0.35) !important;
     border-radius: 20px !important;
-    box-shadow: 0 0 40px rgba(26, 115, 232, 0.35) !important;
+    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.8) !important;
 }
 .dark .ck-modal-header {
-    background: #000000 !important;
-    border-bottom: 1px solid rgba(59, 130, 246, 0.25) !important;
+    background: #0b1329 !important;
+    border-bottom: 1px solid rgba(26, 115, 232, 0.25) !important;
     color: #f1f5f9 !important;
 }
 .dark .ck-modal-header h3 {
@@ -570,9 +579,9 @@
 .dark input[type="text"].ck-form-input,
 .dark input[type="number"].ck-form-input,
 .dark .ck-form-input {
-    background: #000000 !important;
-    background-color: #000000 !important;
-    border: 1.5px solid rgba(59, 130, 246, 0.4) !important;
+    background: #0b1329 !important;
+    background-color: #0b1329 !important;
+    border: 1px solid rgba(59, 130, 246, 0.4) !important;
     color: #f1f5f9 !important;
     border-radius: 10px !important;
 }
@@ -582,19 +591,19 @@
 .dark .ck-form-input:focus {
     border-color: #3b82f6 !important;
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15) !important;
-    background: #000000 !important;
-    background-color: #000000 !important;
+    background: #0b1329 !important;
+    background-color: #0b1329 !important;
 }
 .dark input.ck-form-input[readonly],
 .dark .ck-form-input[readonly] {
-    background: #000000 !important;
-    background-color: #000000 !important;
+    background: #070d1d !important;
+    background-color: #070d1d !important;
     color: #94a3b8 !important;
     border-color: rgba(59, 130, 246, 0.25) !important;
 }
 .dark select.ck-form-input {
-    background-color: #000000 !important;
-    background: #000000 !important;
+    background-color: #0b1329 !important;
+    background: #0b1329 !important;
     appearance: none !important;
     -webkit-appearance: none !important;
     background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 10 7'%3e%3cpath stroke='%233b82f6' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.8' d='M1 2l4 3 4-3'/%3e%3c/svg%3e") !important;
@@ -606,14 +615,14 @@
 .dark input.ck-form-input:-webkit-autofill,
 .dark input.ck-form-input:-webkit-autofill:hover, 
 .dark input.ck-form-input:-webkit-autofill:focus {
-    -webkit-box-shadow: 0 0 0px 1000px #000000 inset !important;
+    -webkit-box-shadow: 0 0 0px 1000px #0b1329 inset !important;
     -webkit-text-fill-color: #f1f5f9 !important;
     caret-color: #f1f5f9 !important;
 }
 .dark .ck-dropdown {
-    background: #000000 !important;
-    border: 1.5px solid rgba(59, 130, 246, 0.5) !important;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.9) !important;
+    background: #0b1329 !important;
+    border: 1px solid rgba(26, 115, 232, 0.35) !important;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7) !important;
     border-radius: 12px !important;
 }
 .dark .ck-dropdown-item {
@@ -629,8 +638,8 @@
     color: #94a3b8 !important;
 }
 .dark .ck-modal-footer {
-    background: #000000 !important;
-    border-top: 1px solid rgba(59, 130, 246, 0.25) !important;
+    background: #0b1329 !important;
+    border-top: 1px solid rgba(26, 115, 232, 0.25) !important;
 }
 .dark .ck-btn--outline {
     background: transparent !important;

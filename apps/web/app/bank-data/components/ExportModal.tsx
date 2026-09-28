@@ -243,7 +243,7 @@ export default function ExportModal({ dataset, onClose }: Props) {
 
         {/* ── Pratinjau ──────────────────────────────────────────── */}
         {memuatPratinjau ? (
-          <div className="bd-loading"><Spinner variant="trace" label="Memuat pratinjau..." /></div>
+          <div className="bd-loading"><Spinner variant="buble" label="Memuat pratinjau..." /></div>
         ) : pratinjau && (
           <section className="bd-sec">
             <div className="bd-sec__bar">

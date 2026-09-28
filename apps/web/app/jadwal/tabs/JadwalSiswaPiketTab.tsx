@@ -64,7 +64,7 @@ export default function JadwalSiswaPiketTab({
         />
 
         {loadingSiswaPiket ? (
-          <div className="db__loading"><Spinner variant="trace" /></div>
+          <div className="db__loading"><Spinner variant="buble" /></div>
         ) : libur ? (
           <LiburSehariPenuh libur={libur} jenis="piket" />
         ) : siswaPiketHariIni.length > 0 ? (
@@ -86,7 +86,7 @@ export default function JadwalSiswaPiketTab({
         />
 
         {loadingSiswaPiket ? (
-          <div className="db__loading"><Spinner variant="trace" /></div>
+          <div className="db__loading"><Spinner variant="buble" /></div>
         ) : siswaPiketMingguIni.length > 0 ? (
           <JadwalPekan
             rows={siswaPiketMingguIni}

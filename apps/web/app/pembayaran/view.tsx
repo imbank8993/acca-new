@@ -637,7 +637,7 @@ export default function PembayaranPage({ user: propUser }: PembayaranPageProps =
     if (!user) {
         return (
             <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '300px' }}>
-                <Spinner variant="trace" />
+                <Spinner variant="buble" />
             </div>
         );
     }
@@ -707,7 +707,7 @@ export default function PembayaranPage({ user: propUser }: PembayaranPageProps =
                             {loading && (
                                 <tr>
                                     <td colSpan={7} className="gap-td-center" style={{ padding: '24px 0' }}>
-                                        <Spinner variant="trace" />
+                                        <Spinner variant="buble" />
                                     </td>
                                 </tr>
                             )}
@@ -825,7 +825,7 @@ export default function PembayaranPage({ user: propUser }: PembayaranPageProps =
                                     {loadingKlinik && (
                                         <tr>
                                             <td colSpan={7} className="gap-td-center" style={{ padding: '24px 0' }}>
-                                                <Spinner variant="trace" />
+                                                <Spinner variant="buble" />
                                             </td>
                                         </tr>
                                     )}
@@ -915,7 +915,7 @@ export default function PembayaranPage({ user: propUser }: PembayaranPageProps =
                                     {loadingEkskul && (
                                         <tr>
                                             <td colSpan={8} className="gap-td-center" style={{ padding: '24px 0' }}>
-                                                <Spinner variant="trace" />
+                                                <Spinner variant="buble" />
                                             </td>
                                         </tr>
                                     )}
@@ -1020,7 +1020,7 @@ export default function PembayaranPage({ user: propUser }: PembayaranPageProps =
                                 {loadingTarif && (
                                     <tr>
                                         <td colSpan={5} className="gap-td-center" style={{ padding: '24px 0' }}>
-                                            <Spinner variant="trace" />
+                                            <Spinner variant="buble" />
                                         </td>
                                     </tr>
                                 )}
@@ -1097,7 +1097,7 @@ export default function PembayaranPage({ user: propUser }: PembayaranPageProps =
                                 {(loading || loadingKlinik || loadingEkskul) ? (
                                     <tr>
                                         <td colSpan={2} className="gap-td-center" style={{ padding: '24px 0' }}>
-                                            <Spinner variant="trace" />
+                                            <Spinner variant="buble" />
                                         </td>
                                     </tr>
                                 ) : (

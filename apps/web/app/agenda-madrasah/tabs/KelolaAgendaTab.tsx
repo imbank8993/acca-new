@@ -580,7 +580,7 @@ export default function KelolaAgendaTab({ user, onBack, headerTabs }: KelolaAgen
             {/* ── AGENDA ── */}
             {loading ? (
                 <div style={{ display: 'flex', justifyContent: 'center', padding: '40px 0' }}>
-                    <Spinner variant="trace" />
+                    <Spinner variant="buble" />
                 </div>
             ) : filteredAgendas.length === 0 ? (
                 <div className="empty-state">

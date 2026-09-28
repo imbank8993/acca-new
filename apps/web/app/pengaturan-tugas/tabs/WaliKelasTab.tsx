@@ -470,7 +470,7 @@ export default function WaliKelasTab(_props: { user?: unknown }) {
             {loading ? (
               <tr>
                 <td colSpan={8} className="wk__empty">
-                  <Spinner variant="trace" />
+                  <Spinner variant="buble" />
                 </td>
               </tr>
             ) : list.length === 0 ? (
@@ -530,7 +530,7 @@ export default function WaliKelasTab(_props: { user?: unknown }) {
           <div className="wk__card">
             <div className="wk__cardHead">
               <div className="wk__cardTitle">
-                <Spinner variant="trace" />
+                <Spinner variant="buble" />
               </div>
             </div>
           </div>

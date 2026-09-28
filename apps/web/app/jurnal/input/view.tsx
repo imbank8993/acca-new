@@ -1468,10 +1468,15 @@ export default function JurnalInputPage() {
                     transition: all 0.3s ease;
                 }
                 :global(.dark) .jp__card {
-                    background: #000000;
-                    border: 1.8px solid rgba(26, 115, 232, 0.75);
+                    background: #0b1329;
+                    border: 1px solid rgba(26, 115, 232, 0.35);
                     border-radius: 16px;
-                    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+                    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+                    transition: all 0.2s ease;
+                }
+                :global(.dark) .jp__card:hover {
+                    border-color: rgba(59, 130, 246, 0.6);
+                    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.5), 0 0 15px rgba(26, 115, 232, 0.15);
                 }
 
                 .jp__grid {
@@ -1885,10 +1890,10 @@ export default function JurnalInputPage() {
                     background: rgba(239, 68, 68, 0.2);
                 }
 
-                :global(.dark) .jp__penggantiSection { background: #000000; }
+                :global(.dark) .jp__penggantiSection { background: #0b1329; }
                 :global(.dark) .jp__identityBadge {
                     background: rgba(59, 130, 246, 0.15);
-                    border-color: rgba(59, 130, 246, 0.4);
+                    border-color: rgba(26, 115, 232, 0.35);
                     color: #3b82f6;
                 }
                 :global(.dark) .jp__kelasWarning {
@@ -1898,8 +1903,8 @@ export default function JurnalInputPage() {
                 }
                 :global(.dark) .jp__badgeId { color: #94a3b8; }
                 :global(.dark) .jp__textarea {
-                    background: #000000;
-                    border: 1.8px solid rgba(26, 115, 232, 0.75);
+                    background: #0b1329;
+                    border: 1px solid rgba(26, 115, 232, 0.35);
                     border-radius: 12px;
                     color: #ffffff;
                 }
@@ -1910,20 +1915,20 @@ export default function JurnalInputPage() {
                 :global(.dark) .jp__textarea::placeholder { color: #64748b; }
                 :global(.dark) .jp__textarea.jp__disabled { background: rgba(26, 115, 232, 0.06); color: #94a3b8; }
                 :global(.dark) .jp__detailSection {
-                    background: #000000;
-                    border: 1px solid rgba(37, 99, 235, 0.4);
+                    background: #0b1329;
+                    border: 1px solid rgba(26, 115, 232, 0.35);
                     border-radius: 12px;
                 }
                 :global(.dark) .jp__jamAll { color: #3b82f6; }
                 :global(.dark) .jp__jamTime { background: rgba(59, 130, 246, 0.15); color: #60a5fa; }
                 :global(.dark) .jp__jamInfoBadge {
                     background: rgba(59, 130, 246, 0.15);
-                    border-color: rgba(59, 130, 246, 0.3);
+                    border-color: rgba(26, 115, 232, 0.35);
                     color: #60a5fa;
                 }
                 :global(.dark .jp .uisel select.uisel-input) {
-                    background-color: #000000 !important;
-                    border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
+                    background-color: #0b1329 !important;
+                    border: 1px solid rgba(26, 115, 232, 0.35) !important;
                     color: #ffffff !important;
                 }
                 :global(.dark .jp .uisel select.uisel-input:focus) {
@@ -1938,8 +1943,8 @@ export default function JurnalInputPage() {
                 :global(.dark) .jp__lockedInfo { color: #94a3b8; }
                 :global(.dark) .jp__editInfo { color: #4ade80; }
                 :global(.dark) .jp__penggantiSection {
-                    background: #000000;
-                    border: 1px solid rgba(37, 99, 235, 0.4);
+                    background: #0b1329;
+                    border: 1px solid rgba(26, 115, 232, 0.35);
                     border-radius: 12px;
                 }
                 :global(.dark) .jp__info { color: #94a3b8; }

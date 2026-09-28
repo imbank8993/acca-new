@@ -659,7 +659,7 @@ export default function ManageDokumenTab({ user, canManageOverride }: { user?: a
                         </thead>
                         <tbody>
                             {loading ? (
-                                <tr><td colSpan={canManage ? 5 : 4} className="loading-cell"><Spinner variant="trace" /></td></tr>
+                                <tr><td colSpan={canManage ? 5 : 4} className="loading-cell"><Spinner variant="buble" /></td></tr>
                             ) : documents.length === 0 ? (
                                 <tr><td colSpan={canManage ? 5 : 4} className="loading-cell">Belum ada dokumen yang diunggah.</td></tr>
                             ) : documents.map(doc => (

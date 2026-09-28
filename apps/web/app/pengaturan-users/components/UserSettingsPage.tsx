@@ -60,7 +60,7 @@ export default function UserSettingsPage({ initialTab, user }: { initialTab?: st
 
   const allowedTabs = tabs;
 
-  if (!user) return <PageLoader minHeight="50vh" variant="trace" />
+  if (!user) return <PageLoader minHeight="50vh" variant="buble" />
 
   if (!isAdmin) {
     return (

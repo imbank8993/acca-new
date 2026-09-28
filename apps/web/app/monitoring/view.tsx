@@ -271,7 +271,7 @@ export default function MonitoringPage() {
                 <div className="mc-content">
                     {loading && users.length === 0 ? (
                         <div className="mc-loading">
-                            <Spinner variant="trace" />
+                            <Spinner variant="buble" />
                         </div>
                     ) : error ? (
                         <div className="mc-error">

@@ -858,7 +858,7 @@ export default function KeuanganPage({ user: propUser }: { user?: User }) {
     // Spinner trace tanpa label
     if (loading) return (
         <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '50vh' }}>
-            <Spinner variant="trace" />
+            <Spinner variant="buble" />
         </div>
     );
 

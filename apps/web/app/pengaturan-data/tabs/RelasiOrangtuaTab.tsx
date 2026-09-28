@@ -419,7 +419,7 @@ export default function RelasiOrangtuaTab(_props: { user?: unknown }) {
                 {/* Tabel relasi */}
                 <div className="ors-card">
                     {loading ? (
-                        <div className="ors-loading"><Spinner variant="trace" /></div>
+                        <div className="ors-loading"><Spinner variant="buble" /></div>
                     ) : filteredRelations.length === 0 ? (
                         <div className="ors-empty">
                             <i className="bi bi-inbox"></i>

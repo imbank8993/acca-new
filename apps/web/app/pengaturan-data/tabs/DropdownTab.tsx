@@ -607,7 +607,7 @@ export default function DropdownTab(_props: { user?: unknown }) {
             {/* Loading State */}
             {loading ? (
                 <div className="md__loading">
-                    <Spinner variant="trace" />
+                    <Spinner variant="buble" />
                 </div>
             ) : (
                 /* Cards Grid */

@@ -295,7 +295,7 @@ function FormRegistrasi({ user, configData, asalSekolah, isLoading }: { user: Us
         }
     }
 
-    if (isLoading || fetchingKuota || checkingReg) return <div className="sr-loading" style={{ padding: '48px', textAlign: 'center', color: 'var(--n-muted)' }}><Spinner variant="trace" size={28} color="currentColor" /></div>
+    if (isLoading || fetchingKuota || checkingReg) return <div className="sr-loading" style={{ padding: '48px', textAlign: 'center', color: 'var(--n-muted)' }}><Spinner variant="buble" size={28} color="currentColor" /></div>
 
     if (existingReg) {
         return (
@@ -667,7 +667,7 @@ function DataRegistrasi({ configData }: { configData: SanggarConfig[] }) {
         }
     }
 
-    if (loading) return <div className="sr-loading" style={{ padding: '48px', textAlign: 'center', color: 'var(--n-muted)' }}><Spinner variant="trace" size={28} color="currentColor" /></div>
+    if (loading) return <div className="sr-loading" style={{ padding: '48px', textAlign: 'center', color: 'var(--n-muted)' }}><Spinner variant="buble" size={28} color="currentColor" /></div>
 
     if (data.length === 0) return (
         <div className="sr-empty">
@@ -1273,7 +1273,7 @@ function BroadcastWA() {
                 </div>
             </div>
             {loading ? (
-                <div style={{ padding: '32px', textAlign: 'center', color: 'var(--n-muted)' }}><Spinner variant="trace" size={24} color="currentColor" /></div>
+                <div style={{ padding: '32px', textAlign: 'center', color: 'var(--n-muted)' }}><Spinner variant="buble" size={24} color="currentColor" /></div>
             ) : (
                 <>
                             {/* Token */}

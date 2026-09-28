@@ -298,7 +298,7 @@ export default function JadwalLengkapModal({ open, onClose, type = 'mengajar' }:
 
                 {loading ? (
                     <div className="jl__state" style={{ padding: '80px 20px' }}>
-                        <Spinner variant="trace" />
+                        <Spinner variant="buble" />
                     </div>
                 ) : error ? (
                     <div className="jl__state jl__stateErr"><AlertTriangle size={18} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 6 }} /><span>{error}</span></div>

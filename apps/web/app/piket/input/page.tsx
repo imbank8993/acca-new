@@ -1649,15 +1649,15 @@ export default function PiketInputPage(props?: any) {
                         .pk__cardGuru { font-size: 0.85rem; }
                     }
 
-                    /* ===== DARK MODE — GOOGLE ONE PITCH BLACK THEME ===== */
+                    /* ===== DARK MODE — THEME OVERRIDES ===== */
                     :global(.dark) .pk__loading { color: #94a3b8; }
                     :global(.dark) .pk__loading i { color: #60a5fa; }
 
                     :global(.dark) .pk__pageHeader {
-                        background: #000000 !important;
-                        border: 2px solid #1a73e8 !important;
+                        background: #0b1329 !important;
+                        border: 1px solid rgba(26, 115, 232, 0.35) !important;
                         border-radius: 24px !important;
-                        box-shadow: 0 0 30px rgba(26, 115, 232, 0.25) !important;
+                        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4) !important;
                     }
                     :global(.dark) .pk__titleArea h1 {
                         background: linear-gradient(90deg, #1d6bf3 0%, #3b82f6 30%, #60a5fa 70%, #93c5fd 100%) !important;
@@ -1670,9 +1670,10 @@ export default function PiketInputPage(props?: any) {
                     :global(.dark) .pk__titleArea p { color: #94a3b8 !important; }
 
                     :global(.dark) .pk__card {
-                        background: #000000 !important;
-                        border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
+                        background: #0b1329 !important;
+                        border: 1px solid rgba(26, 115, 232, 0.35) !important;
                         border-radius: 16px !important;
+                        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4) !important;
                     }
 
                     :global(.dark) .pk__sectionTitle { color: #f1f5f9 !important; }
@@ -1696,8 +1697,9 @@ export default function PiketInputPage(props?: any) {
                     :global(.dark) .pk__select,
                     :global(.dark) .pk__cardSelect,
                     :global(.dark) .pk__textarea {
-                        background-color: #000000 !important;
-                        border: 2px solid rgba(59, 130, 246, 0.5) !important;
+                        background-color: #0b1329 !important;
+                        background: #0b1329 !important;
+                        border: 1px solid rgba(26, 115, 232, 0.35) !important;
                         color: #f1f5f9 !important;
                         border-radius: 10px !important;
                     }
@@ -1705,7 +1707,7 @@ export default function PiketInputPage(props?: any) {
                     :global(.dark) .pk__cardSelect {
                         appearance: none !important;
                         -webkit-appearance: none !important;
-                        background-color: #000000 !important;
+                        background-color: #0b1329 !important;
                         background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 10 7'%3e%3cpath stroke='%233b82f6' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.8' d='M1 2l4 3 4-3'/%3e%3c/svg%3e") !important;
                         background-size: 10px 7px !important;
                         background-position: right 10px center !important;
@@ -1721,20 +1723,20 @@ export default function PiketInputPage(props?: any) {
 
                     /* MultiSelect */
                     :global(.dark) .pk__multiSelectBtn {
-                        background: #000000 !important;
-                        border: 2px solid rgba(59, 130, 246, 0.5) !important;
+                        background: #0b1329 !important;
+                        border: 1px solid rgba(26, 115, 232, 0.35) !important;
                         color: #f1f5f9 !important;
                         border-radius: 10px !important;
                     }
                     :global(.dark) .pk__multiSelectBtn i { color: #60a5fa !important; }
                     :global(.dark) .pk__multiSelectDropdown {
-                        background: #000000 !important;
-                        border: 1.8px solid #1a73e8 !important;
+                        background: #0b1329 !important;
+                        border: 1px solid rgba(26, 115, 232, 0.35) !important;
                         border-radius: 14px !important;
-                        box-shadow: 0 0 30px rgba(26, 115, 232, 0.3) !important;
+                        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.7) !important;
                     }
                     :global(.dark) .pk__multiSelectOption {
-                        background: #000000 !important;
+                        background: #0b1329 !important;
                         border-bottom-color: rgba(59, 130, 246, 0.15) !important;
                         color: #f1f5f9 !important;
                     }
@@ -1748,9 +1750,10 @@ export default function PiketInputPage(props?: any) {
 
                     /* Toggle Card */
                     :global(.dark) .pk__toggleCard {
-                        background: #000000 !important;
-                        border: 1px solid rgba(37, 99, 235, 0.4) !important;
+                        background: #0b1329 !important;
+                        border: 1px solid rgba(26, 115, 232, 0.35) !important;
                         border-radius: 14px !important;
+                        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4) !important;
                     }
                     :global(.dark) .pk__toggleLabel { color: #f1f5f9 !important; }
                     :global(.dark) .pk__toggleDesc { color: #94a3b8 !important; }
@@ -1759,30 +1762,31 @@ export default function PiketInputPage(props?: any) {
 
                     /* Table Desktop */
                     :global(.dark) .pk__table th {
-                        background: rgba(26, 115, 232, 0.1) !important;
+                        background: rgba(37, 99, 235, 0.15) !important;
                         color: #93c5fd !important;
-                        border-bottom: 1.5px solid rgba(59, 130, 246, 0.25) !important;
+                        border-bottom: 1px solid rgba(26, 115, 232, 0.35) !important;
                     }
                     :global(.dark) .pk__table td {
-                        background: #000000 !important;
-                        border-bottom: 1px solid rgba(59, 130, 246, 0.12) !important;
+                        background: #0b1329 !important;
+                        border-bottom: 1px solid rgba(26, 115, 232, 0.2) !important;
                         color: #f1f5f9 !important;
                     }
                     :global(.dark) .pk__table tr:hover td {
-                        background: rgba(26, 115, 232, 0.06) !important;
+                        background: rgba(26, 115, 232, 0.08) !important;
                     }
                     :global(.dark) .pk__mapelLabel { color: #94a3b8 !important; }
                     :global(.dark) .pk__tableSelect,
                     :global(.dark) .pk__tableInput {
-                        background-color: #000000 !important;
-                        border: 1.5px solid rgba(59, 130, 246, 0.4) !important;
+                        background-color: #0b1329 !important;
+                        background: #0b1329 !important;
+                        border: 1px solid rgba(26, 115, 232, 0.35) !important;
                         color: #f1f5f9 !important;
                         border-radius: 8px !important;
                     }
                     :global(.dark) .pk__tableSelect {
                         appearance: none !important;
                         -webkit-appearance: none !important;
-                        background-color: #000000 !important;
+                        background-color: #0b1329 !important;
                         background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 10 7'%3e%3cpath stroke='%233b82f6' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.8' d='M1 2l4 3 4-3'/%3e%3c/svg%3e") !important;
                         background-size: 10px 7px !important;
                         background-position: right 8px center !important;
@@ -1811,7 +1815,7 @@ export default function PiketInputPage(props?: any) {
                     :global(.dark) .pk__uploadBtnRequired i { color: #ffffff !important; }
                     :global(.dark) .pk__uploadBtnRequired:hover { background: #b91c1c !important; border-color: #b91c1c !important; }
                     :global(.dark) .pk__uploadBtnDisabled {
-                        background: #000000 !important;
+                        background: #0b1329 !important;
                         border-color: rgba(255,255,255,0.1) !important;
                         color: #64748b !important;
                     }
@@ -1844,10 +1848,15 @@ export default function PiketInputPage(props?: any) {
 
                     /* Mobile Class Cards */
                     :global(.dark) .pk__classCard {
-                        background: #000000 !important;
-                        border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
+                        background: #0b1329 !important;
+                        border: 1px solid rgba(26, 115, 232, 0.35) !important;
                         border-radius: 16px !important;
                         box-shadow: 0 4px 20px rgba(0,0,0,0.4) !important;
+                        transition: all 0.2s ease !important;
+                    }
+                    :global(.dark) .pk__classCard:hover {
+                        border-color: rgba(59, 130, 246, 0.6) !important;
+                        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.5), 0 0 15px rgba(26, 115, 232, 0.15) !important;
                     }
                     :global(.dark) .pk__cardKelas { color: #ffffff !important; }
                     :global(.dark) .pk__cardMapel { color: rgba(255,255,255,0.85) !important; }
@@ -1860,9 +1869,9 @@ export default function PiketInputPage(props?: any) {
                     :global(.dark) .pk__cardGuru i { color: #60a5fa !important; }
                     :global(.dark) .pk__cardField label { color: #94a3b8 !important; }
                     :global(.dark) .pk__cardSelect {
-                        background-color: #000000 !important;
-                        background: #000000 !important;
-                        border: 1px solid rgba(37, 99, 235, 0.4) !important;
+                        background-color: #0b1329 !important;
+                        background: #0b1329 !important;
+                        border: 1px solid rgba(26, 115, 232, 0.35) !important;
                         color: #f1f5f9 !important;
                         border-radius: 10px !important;
                     }
@@ -1892,7 +1901,7 @@ export default function PiketInputPage(props?: any) {
                     }
                     :global(.dark) .pk__cardUploadBtnAmbil:hover { background: #b91c1c !important; }
                     :global(.dark) .pk__cardUploadBtnDisabled {
-                        background: #000000 !important;
+                        background: #0b1329 !important;
                         border-color: rgba(255,255,255,0.1) !important;
                         color: #64748b !important;
                     }

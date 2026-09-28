@@ -337,7 +337,7 @@ export default function CatatanKeuanganPage() {
     if (loading && data.length === 0) {
         return (
             <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
-                <Spinner variant="trace" />
+                <Spinner variant="buble" />
             </div>
         );
     }

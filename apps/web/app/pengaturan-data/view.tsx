@@ -100,7 +100,7 @@ export default function DataSettingsPage({ user }: { user?: any }) {
         background: 'var(--n-surface, #0f172a)',
         zIndex: 9999,
       }}>
-        <PageLoader minHeight="auto" variant="trace" size={56} />
+        <PageLoader minHeight="auto" variant="buble" size={56} />
       </div>
     )
   }

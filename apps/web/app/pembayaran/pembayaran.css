@@ -425,15 +425,15 @@
 }
 
 /* =========================================================
-   DARK MODE — GOOGLE ONE PITCH BLACK THEME
+   DARK MODE — THEME OVERRIDES
 ========================================================= */
 
 /* Hero Banner */
 .dark .gap-banner {
-    background: #000000 !important;
-    border: 2px solid #1a73e8 !important;
+    background: #0b1329 !important;
+    border: 1px solid rgba(26, 115, 232, 0.35) !important;
     border-radius: 24px !important;
-    box-shadow: 0 0 30px rgba(26, 115, 232, 0.25) !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4) !important;
 }
 
 .dark .gap-banner h1 {
@@ -451,10 +451,11 @@
 
 /* Tabs */
 .dark .gap-tab-btn {
-    background: #000000 !important;
-    border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
+    background: #0b1329 !important;
+    border: 1px solid rgba(26, 115, 232, 0.35) !important;
     color: #94a3b8 !important;
     border-radius: 12px !important;
+    transition: all 0.2s ease !important;
 }
 
 .dark .gap-tab-btn i {
@@ -464,7 +465,7 @@
 .dark .gap-tab-btn:hover {
     background: rgba(26, 115, 232, 0.12) !important;
     color: #93c5fd !important;
-    border-color: #3b82f6 !important;
+    border-color: rgba(59, 130, 246, 0.6) !important;
 }
 
 .dark .gap-tab-btn.active {
@@ -480,9 +481,16 @@
 
 /* Stat Cards */
 .dark .gap-stat-item {
-    background: #000000 !important;
-    border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
+    background: #0b1329 !important;
+    border: 1px solid rgba(26, 115, 232, 0.35) !important;
     border-radius: 14px !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4) !important;
+    transition: all 0.2s ease !important;
+}
+
+.dark .gap-stat-item:hover {
+    border-color: rgba(59, 130, 246, 0.6) !important;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.5), 0 0 15px rgba(26, 115, 232, 0.15) !important;
 }
 
 .dark .gap-stat-val {
@@ -503,21 +511,22 @@
 
 /* Table Card Container */
 .dark .gap-table-card {
-    background: #000000 !important;
-    border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
+    background: #0b1329 !important;
+    border: 1px solid rgba(26, 115, 232, 0.35) !important;
     border-radius: 20px !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4) !important;
 }
 
 .dark .gap-toolbar {
-    background: #000000 !important;
-    border-bottom: 1.5px solid rgba(59, 130, 246, 0.25) !important;
+    background: #0b1329 !important;
+    border-bottom: 1px solid rgba(26, 115, 232, 0.25) !important;
 }
 
 /* Filter Select & Search Inputs */
 .dark .gap-select {
-    background-color: #000000 !important;
-    background: #000000 !important;
-    border: 2px solid rgba(59, 130, 246, 0.5) !important;
+    background-color: #0b1329 !important;
+    background: #0b1329 !important;
+    border: 1px solid rgba(26, 115, 232, 0.35) !important;
     color: #f1f5f9 !important;
     border-radius: 12px !important;
     appearance: none !important;
@@ -544,9 +553,9 @@
 }
 
 .dark .gap-search-wrap input {
-    background-color: #000000 !important;
-    background: #000000 !important;
-    border: 1px solid rgba(37, 99, 235, 0.4) !important;
+    background-color: #0b1329 !important;
+    background: #0b1329 !important;
+    border: 1px solid rgba(26, 115, 232, 0.35) !important;
     color: #f1f5f9 !important;
     border-radius: 12px !important;
 }
@@ -558,19 +567,19 @@
 
 /* Table */
 .dark .gap-table th {
-    background: rgba(26, 115, 232, 0.1) !important;
+    background: rgba(37, 99, 235, 0.15) !important;
     color: #93c5fd !important;
-    border-bottom: 1.5px solid rgba(59, 130, 246, 0.25) !important;
+    border-bottom: 1px solid rgba(26, 115, 232, 0.35) !important;
 }
 
 .dark .gap-table td {
-    background: #000000 !important;
-    border-bottom: 1px solid rgba(59, 130, 246, 0.12) !important;
+    background: #0b1329 !important;
+    border-bottom: 1px solid rgba(26, 115, 232, 0.2) !important;
     color: #f1f5f9 !important;
 }
 
 .dark .gap-table tbody tr:hover td {
-    background: rgba(26, 115, 232, 0.06) !important;
+    background: rgba(26, 115, 232, 0.08) !important;
 }
 
 .dark .gap-td-name {
@@ -582,13 +591,13 @@
 }
 
 .dark .gap-table tfoot tr {
-    background: #000000 !important;
-    border-top: 1.5px solid rgba(59, 130, 246, 0.3) !important;
+    background: #0b1329 !important;
+    border-top: 1px solid rgba(26, 115, 232, 0.25) !important;
 }
 
 .dark .gap-table tfoot td {
-    background: #000000 !important;
-    border-top: 1.5px solid rgba(59, 130, 246, 0.3) !important;
+    background: #0b1329 !important;
+    border-top: 1px solid rgba(26, 115, 232, 0.25) !important;
     color: #f1f5f9 !important;
 }
 
@@ -667,8 +676,8 @@
 
 /* Empty tab & Denied */
 .dark .gap-empty-tab {
-    background: #000000 !important;
-    border: 1.8px dashed rgba(26, 115, 232, 0.5) !important;
+    background: #0b1329 !important;
+    border: 1px dashed rgba(26, 115, 232, 0.35) !important;
     color: #94a3b8 !important;
     border-radius: 20px !important;
 }

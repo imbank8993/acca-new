@@ -235,7 +235,7 @@ export default function AdminObservasiKelas() {
                             {loading ? (
                                 <tr>
                                     <td colSpan={6} style={{ padding: '48px 0', textAlign: 'center' }}>
-                                        <Spinner variant="trace" size={36} />
+                                        <Spinner variant="buble" size={36} />
                                     </td>
                                 </tr>
                             ) : filteredData.length === 0 ? (
@@ -278,7 +278,7 @@ export default function AdminObservasiKelas() {
                 <div className="sk__cards">
                     {loading ? (
                         <div style={{ padding: '48px 0', display: 'flex', justifyContent: 'center' }}>
-                            <Spinner variant="trace" size={36} />
+                            <Spinner variant="buble" size={36} />
                         </div>
                     ) : filteredData.length === 0 ? (
                         <div className="sk__empty sk__muted" style={{ padding: '24px 0', textAlign: 'center' }}>Tidak ada data observasi.</div>

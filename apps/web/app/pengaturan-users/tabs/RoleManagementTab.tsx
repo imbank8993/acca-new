@@ -284,7 +284,7 @@ export default function RoleManagementTab() {
     })
   }
 
-  if (loading) return <PageLoader minHeight="300px" variant="trace" />
+  if (loading) return <PageLoader minHeight="300px" variant="buble" />
 
   return (
     <div className="dr">

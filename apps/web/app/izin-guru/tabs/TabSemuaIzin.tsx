@@ -139,7 +139,7 @@ export default function TabSemuaIzin({ rows, loading, onView, onDelete, onEdit, 
     return (
       <>
         {loading ? (
-          <div className="mui-loading"><Spinner variant="trace" /></div>
+          <div className="mui-loading"><Spinner variant="buble" /></div>
         ) : rows.length === 0 ? (
           <MobileEmpty
             icon="folder2-open"
@@ -195,7 +195,7 @@ export default function TabSemuaIzin({ rows, loading, onView, onDelete, onEdit, 
             {loading ? (
               <tr>
                 <td colSpan={6} style={{ padding: '48px 0', textAlign: 'center' }}>
-                  <Spinner variant="trace" label="Memuat data pengajuan..." />
+                  <Spinner variant="buble" label="Memuat data pengajuan..." />
                 </td>
               </tr>
             ) : rows.length === 0 ? (

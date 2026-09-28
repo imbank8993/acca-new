@@ -265,7 +265,7 @@ export default function BimbinganKonselingPage({ user }: { user?: any }) {
                 {/* Desktop Table View */}
                 <div className="bk-table-wrap bk-desktop-only">
                     {loading ? (
-                        <div className="bk-state" style={{ padding: '32px 0' }}><Spinner variant="trace" /></div>
+                        <div className="bk-state" style={{ padding: '32px 0' }}><Spinner variant="buble" /></div>
                     ) : items.length === 0 ? (
                         <div className="bk-state">
                             <i className="bi bi-inbox" style={{ fontSize: '2rem', opacity: 0.4 }}></i>
@@ -323,7 +323,7 @@ export default function BimbinganKonselingPage({ user }: { user?: any }) {
                 {/* Mobile Cards View */}
                 <div className="bk-mobile-only">
                     {loading ? (
-                        <div className="bk-table-wrap"><div className="bk-state" style={{ padding: '32px 0' }}><Spinner variant="trace" /></div></div>
+                        <div className="bk-table-wrap"><div className="bk-state" style={{ padding: '32px 0' }}><Spinner variant="buble" /></div></div>
                     ) : items.length === 0 ? (
                         <div className="bk-table-wrap">
                             <div className="bk-state">

@@ -546,7 +546,7 @@ export default function GuruAsuhTab(_props: { user?: unknown }) {
             {loading ? (
               <tr>
                 <td colSpan={7} className="ga__empty">
-                  <Spinner variant="trace" />
+                  <Spinner variant="buble" />
                 </td>
               </tr>
             ) : list.length === 0 ? (
@@ -597,7 +597,7 @@ export default function GuruAsuhTab(_props: { user?: unknown }) {
       <div className="ga__cards" aria-label="Daftar Guru Asuh versi mobile">
         {loading ? (
           <div className="ga__loading">
-            <Spinner variant="trace" />
+            <Spinner variant="buble" />
           </div>
         ) : list.length === 0 ? (
           <div className="ga__emptyState">

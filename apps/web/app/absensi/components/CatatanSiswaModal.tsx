@@ -456,15 +456,15 @@ export default function CatatanSiswaModal({
                     backdrop-filter: blur(8px) !important;
                 }
                 :global(.dark) .csm-modal {
-                    background: #000000 !important;
-                    background-image: linear-gradient(180deg, rgba(59, 130, 246, 0.12) 0%, rgba(0, 0, 0, 0.4) 30%, #000000 100%) !important;
-                    border: 1px solid rgba(37, 99, 235, 0.4) !important;
+                    background: #0b1329 !important;
+                    background-image: linear-gradient(180deg, rgba(59, 130, 246, 0.12) 0%, rgba(11, 19, 41, 0.4) 30%, #0b1329 100%) !important;
+                    border: 1px solid rgba(26, 115, 232, 0.35) !important;
                     border-radius: 20px !important;
-                    box-shadow: inset 0 1.5px 1.5px 0 rgba(255, 255, 255, 0.4), inset 0 0 20px 0 rgba(26, 115, 232, 0.25), 0 25px 60px rgba(0, 0, 0, 0.95) !important;
+                    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4) !important;
                 }
                 :global(.dark) .csm-header {
-                    background: #000000 !important;
-                    border-bottom: 1px solid rgba(59, 130, 246, 0.25) !important;
+                    background: #0b1329 !important;
+                    border-bottom: 1px solid rgba(26, 115, 232, 0.25) !important;
                 }
                 :global(.dark) .csm-header-icon {
                     background: #1a73e8 !important;
@@ -489,8 +489,8 @@ export default function CatatanSiswaModal({
                     color: #f87171 !important;
                 }
                 :global(.dark) .csm-tabs {
-                    background: #000000 !important;
-                    border-bottom: 1px solid rgba(59, 130, 246, 0.25) !important;
+                    background: #0b1329 !important;
+                    border-bottom: 1px solid rgba(26, 115, 232, 0.25) !important;
                 }
                 :global(.dark) .csm-tab {
                     color: #94a3b8 !important;
@@ -499,16 +499,16 @@ export default function CatatanSiswaModal({
                     color: #38bdf8 !important;
                     border-bottom: 2px solid #3b82f6 !important;
                 }
-                :global(.dark) .csm-body { background: #000000 !important; color: #f1f5f9 !important; }
+                :global(.dark) .csm-body { background: #0b1329 !important; color: #f1f5f9 !important; }
                 :global(.dark) .csm-card {
-                    background: #000000 !important;
-                    border: 1px solid rgba(59, 130, 246, 0.25) !important;
+                    background: #0b1329 !important;
+                    border: 1px solid rgba(26, 115, 232, 0.35) !important;
                 }
                 :global(.dark) .csm-card-text { color: #f1f5f9 !important; }
                 :global(.dark) .csm-card-meta { color: #94a3b8 !important; }
                 :global(.dark) .csm-textarea {
-                    background: #000000 !important;
-                    border: 1.5px solid rgba(59, 130, 246, 0.35) !important;
+                    background: #0b1329 !important;
+                    border: 1px solid rgba(26, 115, 232, 0.35) !important;
                     color: #f1f5f9 !important;
                 }
                 :global(.dark) .csm-textarea:focus {
@@ -516,8 +516,8 @@ export default function CatatanSiswaModal({
                     box-shadow: 0 0 10px rgba(26, 115, 232, 0.4) !important;
                 }
                 :global(.dark) .csm-jenis-btn {
-                    background: #000000 !important;
-                    border: 1px solid rgba(59, 130, 246, 0.35) !important;
+                    background: #0b1329 !important;
+                    border: 1px solid rgba(26, 115, 232, 0.35) !important;
                     color: #94a3b8 !important;
                 }
                 :global(.dark) .csm-jenis-btn--positif.active {

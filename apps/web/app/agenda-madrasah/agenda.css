@@ -1947,9 +1947,9 @@ textarea.form-input {
 /* ── 11. DARK MODE (GOOGLE ONE THEME OVERRIDES) ── */
 .dark .page-header {
     background: #0b1329 !important;
-    border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
+    border: 1px solid rgba(26, 115, 232, 0.35) !important;
     border-radius: 24px !important;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5) !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4) !important;
 }
 
 .dark .page-header::before,
@@ -2007,12 +2007,18 @@ textarea.form-input {
 
 .dark .stat-card {
     background: #0b1329 !important;
-    border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
+    border: 1px solid rgba(26, 115, 232, 0.35) !important;
     border-radius: 18px !important;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5) !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4) !important;
     align-items: center !important;
     justify-content: center !important;
     text-align: center !important;
+    transition: all 0.2s ease !important;
+}
+
+.dark .stat-card:hover {
+    border-color: rgba(59, 130, 246, 0.6) !important;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.5), 0 0 15px rgba(26, 115, 232, 0.15) !important;
 }
 
 .dark .stat-value { color: #f1f5f9 !important; text-align: center !important; }
@@ -2022,9 +2028,9 @@ textarea.form-input {
 .dark .select-wrapper,
 .dark .filter-select-wrapper {
     background: #0b1329 !important;
-    border: 1.5px solid rgba(59, 130, 246, 0.45) !important;
+    border: 1px solid rgba(26, 115, 232, 0.35) !important;
     border-radius: 12px !important;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5) !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3) !important;
 }
 
 .dark .select-wrapper i,
@@ -2065,7 +2071,7 @@ textarea.form-input {
 
 .dark .view-toggle {
     background: #0b1329 !important;
-    border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
+    border: 1px solid rgba(26, 115, 232, 0.35) !important;
     border-radius: 12px !important;
 }
 
@@ -2091,22 +2097,23 @@ textarea.form-input {
 
 .dark .agenda-card {
     background: #0b1329 !important;
-    border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
+    border: 1px solid rgba(26, 115, 232, 0.35) !important;
     border-radius: 18px !important;
     opacity: 1 !important;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5) !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4) !important;
+    transition: all 0.2s ease !important;
 }
 
 .dark .agenda-card.past {
     background: #0b1329 !important;
-    border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
+    border: 1px solid rgba(26, 115, 232, 0.35) !important;
     opacity: 1 !important;
     filter: none !important;
 }
 
 .dark .agenda-card:hover {
-    border-color: #38bdf8 !important;
-    box-shadow: 0 8px 30px rgba(26, 115, 232, 0.3) !important;
+    border-color: rgba(59, 130, 246, 0.6) !important;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.5), 0 0 15px rgba(26, 115, 232, 0.15) !important;
 }
 
 .dark .card-title { color: #f1f5f9 !important; }
@@ -2116,29 +2123,30 @@ textarea.form-input {
 
 .dark .timeline-card {
     background: #0b1329 !important;
-    border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
+    border: 1px solid rgba(26, 115, 232, 0.35) !important;
     border-radius: 16px !important;
     opacity: 1 !important;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5) !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4) !important;
+    transition: all 0.2s ease !important;
 }
 
 .dark .timeline-card.past {
     background: #0b1329 !important;
-    border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
+    border: 1px solid rgba(26, 115, 232, 0.35) !important;
     opacity: 1 !important;
     filter: none !important;
 }
 
 .dark .timeline-card:hover {
-    border-color: #38bdf8 !important;
-    box-shadow: 0 8px 24px rgba(26, 115, 232, 0.3) !important;
+    border-color: rgba(59, 130, 246, 0.6) !important;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.5), 0 0 15px rgba(26, 115, 232, 0.15) !important;
 }
 
 .dark .timeline-title { color: #f1f5f9 !important; }
 .dark .timeline-desc { color: #94a3b8 !important; }
 .dark .timeline-date-box {
     background: #0b1329 !important;
-    border: 1.5px solid rgba(59, 130, 246, 0.4) !important;
+    border: 1px solid rgba(26, 115, 232, 0.35) !important;
     border-radius: 12px !important;
 }
 
@@ -2196,9 +2204,9 @@ textarea.form-input {
 .dark .modal-box,
 .dark .cat-modal-box {
     background: #0b1329 !important;
-    border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
+    border: 1px solid rgba(26, 115, 232, 0.35) !important;
     border-radius: 20px !important;
-    box-shadow: 0 0 40px rgba(26, 115, 232, 0.35) !important;
+    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.8) !important;
     overflow: hidden !important;
 }
 
@@ -2364,7 +2372,7 @@ textarea.form-input {
 
 .dark .cat-form-card {
     background: #0b1329 !important;
-    border: 1.5px solid rgba(59, 130, 246, 0.4) !important;
+    border: 1px solid rgba(26, 115, 232, 0.35) !important;
     border-radius: 12px !important;
 }
 
@@ -2390,9 +2398,9 @@ textarea.form-input {
 
 .dark .ag-page-header {
     background: #0b1329 !important;
-    border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
+    border: 1px solid rgba(26, 115, 232, 0.35) !important;
     border-radius: 24px !important;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5) !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4) !important;
 }
 
 .dark .ag-page-header::before,
@@ -2443,9 +2451,15 @@ textarea.form-input {
 
 .dark .ag-card {
     background: #0b1329 !important;
-    border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
+    border: 1px solid rgba(26, 115, 232, 0.35) !important;
     border-radius: 20px !important;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5) !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4) !important;
+    transition: all 0.2s ease !important;
+}
+
+.dark .ag-card:hover {
+    border-color: rgba(59, 130, 246, 0.6) !important;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.5), 0 0 15px rgba(26, 115, 232, 0.15) !important;
 }
 
 .dark .ag-nav-btn {
@@ -2500,7 +2514,7 @@ textarea.form-input {
 .dark .is-full-holiday .ag-day-number { color: #f87171 !important; }
 
 .dark .ag-calendar-footer {
-    border-top: 1.5px solid rgba(59, 130, 246, 0.25) !important;
+    border-top: 1px solid rgba(26, 115, 232, 0.25) !important;
 }
 
 .dark .ag-legend-item { color: #94a3b8 !important; }
@@ -2510,7 +2524,7 @@ textarea.form-input {
 
 .dark .ag-details-header {
     background: #0b1329 !important;
-    border-bottom: 1.5px solid rgba(59, 130, 246, 0.25) !important;
+    border-bottom: 1px solid rgba(26, 115, 232, 0.25) !important;
 }
 
 .dark .ag-big-day { color: #f1f5f9 !important; }
@@ -2524,7 +2538,7 @@ textarea.form-input {
 }
 
 .dark .ag-timeline-tabs {
-    border-bottom: 1.5px solid rgba(59, 130, 246, 0.25) !important;
+    border-bottom: 1px solid rgba(26, 115, 232, 0.25) !important;
 }
 
 .dark .ag-tab-btn { color: #94a3b8 !important; background: transparent !important; }
@@ -2569,13 +2583,13 @@ textarea.form-input {
 
 .dark .ag-mini-event {
     background: #0b1329 !important;
-    border: 1.5px solid rgba(59, 130, 246, 0.45) !important;
+    border: 1px solid rgba(26, 115, 232, 0.35) !important;
 }
 
 .dark .ag-mini-event:hover {
     background: rgba(26, 115, 232, 0.15) !important;
-    border-color: #38bdf8 !important;
-    box-shadow: 0 0 16px rgba(26, 115, 232, 0.4) !important;
+    border-color: rgba(59, 130, 246, 0.6) !important;
+    box-shadow: 0 0 16px rgba(26, 115, 232, 0.3) !important;
 }
 
 .dark .ag-mini-title { color: #f1f5f9 !important; }
@@ -2583,16 +2597,16 @@ textarea.form-input {
 
 .dark .ag-event-card {
     background: #0b1329 !important;
-    border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
+    border: 1px solid rgba(26, 115, 232, 0.35) !important;
     border-left: 5px solid var(--accent) !important;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5) !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4) !important;
 }
 
 .dark .ag-event-card:hover {
     background: rgba(26, 115, 232, 0.15) !important;
-    border-color: #38bdf8 !important;
+    border-color: rgba(59, 130, 246, 0.6) !important;
     border-left-color: var(--accent) !important;
-    box-shadow: 0 0 20px rgba(26, 115, 232, 0.35) !important;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.5), 0 0 15px rgba(26, 115, 232, 0.15) !important;
 }
 
 .dark .ag-ev-badge {
@@ -2613,13 +2627,13 @@ textarea.form-input {
 
 .dark .ag-desc-modal {
     background: #0b1329 !important;
-    border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
-    box-shadow: 0 0 40px rgba(26, 115, 232, 0.35) !important;
+    border: 1px solid rgba(26, 115, 232, 0.35) !important;
+    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.8) !important;
 }
 
 .dark .ag-desc-header {
     background: #0b1329 !important;
-    border-bottom: 1.5px solid rgba(59, 130, 246, 0.35) !important;
+    border-bottom: 1px solid rgba(26, 115, 232, 0.25) !important;
 }
 
 .dark .ag-desc-header h4 { color: #f1f5f9 !important; }
@@ -2979,19 +2993,20 @@ textarea.form-input {
 }
 
 .dark .ag-table-container {
-    background: var(--n-card, #1e293b);
-    border-color: var(--n-border, #334155);
+    background: #0b1329 !important;
+    border: 1px solid rgba(26, 115, 232, 0.35) !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4) !important;
 }
 
 .dark .ag-table th {
-    background: rgba(255, 255, 255, 0.03);
-    border-color: var(--n-border, #334155);
-    color: var(--n-muted, #94a3b8);
+    background: rgba(37, 99, 235, 0.15) !important;
+    border-bottom: 1px solid rgba(26, 115, 232, 0.35) !important;
+    color: #e2e8f0 !important;
 }
 
 .dark .ag-table td {
-    border-color: var(--n-border, #334155);
-    color: var(--n-ink, #f1f5f9);
+    border-bottom: 1px solid rgba(26, 115, 232, 0.2) !important;
+    color: #cbd5e1 !important;
 }
 
 .dark .ag-table tbody tr:hover {

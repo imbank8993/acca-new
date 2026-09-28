@@ -329,7 +329,7 @@ export default function KelolaPengumumanTab({
                                 <tbody>
                                     {loading ? (
                                         <tr>
-                                            <td colSpan={6} className="text-center py-4"><Spinner variant="trace" /></td>
+                                            <td colSpan={6} className="text-center py-4"><Spinner variant="buble" /></td>
                                         </tr>
                                     ) : filteredList.length === 0 ? (
                                         <tr>
@@ -391,7 +391,7 @@ export default function KelolaPengumumanTab({
                         <div className="pm-mobile-only">
                             <div className="pm-mobile-list">
                                 {loading ? (
-                                    <div className="text-center py-4"><Spinner variant="trace" /></div>
+                                    <div className="text-center py-4"><Spinner variant="buble" /></div>
                                 ) : filteredList.length === 0 ? (
                                     <div className="text-center py-4 text-muted">Belum ada pengumuman.</div>
                                 ) : (

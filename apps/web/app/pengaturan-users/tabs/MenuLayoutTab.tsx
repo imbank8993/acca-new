@@ -178,7 +178,7 @@ export default function MenuLayoutTab() {
       setSaving(false)
     }
   }
-  if (loading) return <PageLoader minHeight="300px" variant="trace" />
+  if (loading) return <PageLoader minHeight="300px" variant="buble" />
 
   // Jangan render editor saat gagal memuat: menyimpan dari state kosong akan
   // menghapus susunan menu yang tersimpan di DB.

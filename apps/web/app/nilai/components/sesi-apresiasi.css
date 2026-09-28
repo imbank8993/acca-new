@@ -252,8 +252,12 @@
 /* ── Mode gelap ────────────────────────────────────────── */
 
 .dark .apr-siswa {
-    background: #000000;
-    border-color: rgba(37, 99, 235, 0.4);
+    background: #0b1329;
+    border: 1px solid rgba(26, 115, 232, 0.35);
+}
+
+.dark .apr-siswa:hover {
+    border-color: rgba(59, 130, 246, 0.6);
 }
 
 .dark .apr-siswa.is-menang {
@@ -267,15 +271,21 @@
 .dark .apr-root input[type="text"],
 .dark .apr-root input[type="number"],
 .dark .apr-root textarea {
-    background: #000000;
-    border-color: rgba(37, 99, 235, 0.4);
+    background: #0b1329;
+    border: 1px solid rgba(26, 115, 232, 0.35);
     color: #e2e8f0;
 }
 
 .dark .apr-board-head,
 .dark .apr-summary-chip {
-    background: rgba(255, 255, 255, 0.03);
-    border-color: rgba(37, 99, 235, 0.4);
+    background: #0b1329;
+    border: 1px solid rgba(26, 115, 232, 0.35);
+}
+
+.dark .apr-undo {
+    background: #0b1329;
+    border: 1px solid rgba(26, 115, 232, 0.35);
+    color: #f1f5f9;
 }
 
 @media (max-width: 767.98px) {

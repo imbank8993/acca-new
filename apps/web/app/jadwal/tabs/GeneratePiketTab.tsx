@@ -1039,7 +1039,7 @@ export default function GeneratePiketTab({ bolehKelola }: GeneratePiketTabProps)
                         {loading ? (
                             <tr>
                                 <td colSpan={9} className="sk__empty" style={{ border: 'none' }}>
-                                    <Spinner variant="trace" />
+                                    <Spinner variant="buble" />
                                 </td>
                             </tr>
                         ) : pageRows.length === 0 ? (
@@ -1183,7 +1183,7 @@ export default function GeneratePiketTab({ bolehKelola }: GeneratePiketTabProps)
                                     </div>
                                 </div>
                                 {availableDates.length === 0 ? (
-                                    <Spinner variant="trace" />
+                                    <Spinner variant="buble" />
                                 ) : (
                                     <div className="sk__dateList">
                                         {availableDates.map(date => (

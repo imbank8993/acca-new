@@ -43,7 +43,7 @@ export function Spinner({
     dotsOnly = false,
     variant,
 }: SpinnerProps) {
-    const resolvedVariant: SpinnerVariant = variant ?? (dotsOnly ? 'buble' : 'trace');
+    const resolvedVariant: SpinnerVariant = (variant === 'trace' ? 'buble' : variant) ?? 'buble';
     const traceSize = TRACE_SIZE;
 
     return (
@@ -278,9 +278,9 @@ export function Spinner({
 }
 
 /**
- * PageLoader — loader area/halaman penuh, default variant trace.
+ * PageLoader — loader area/halaman penuh, default variant buble.
  */
-export function PageLoader({ label, minHeight, dotsOnly = false, variant, size }: { label?: string; minHeight?: string; dotsOnly?: boolean; variant?: SpinnerVariant; size?: number }) {
+export function PageLoader({ label, minHeight, dotsOnly = false, variant = 'buble', size }: { label?: string; minHeight?: string; dotsOnly?: boolean; variant?: SpinnerVariant; size?: number }) {
     return (
         <div className="app-page-loader" style={minHeight ? { minHeight } : undefined}>
             <Spinner size={size} label={label} dotsOnly={dotsOnly} variant={variant} />

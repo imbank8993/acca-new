@@ -322,7 +322,7 @@ function InformasiViewer({
                 <div className="ia-content">
                     {loading ? (
                         <div className="ia-loading">
-                            <Spinner variant="trace" />
+                            <Spinner variant="buble" />
                         </div>
                     ) : sortedCategories.length === 0 ? (
                         <div className="ia-empty">

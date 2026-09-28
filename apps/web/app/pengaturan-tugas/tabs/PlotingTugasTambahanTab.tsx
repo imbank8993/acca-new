@@ -458,7 +458,7 @@ export default function PlotingTugasTambahanTab(_props: PlotingTugasTambahanTabP
             <div className="ptt-content">
                 {loading ? (
                     <div className="ptt-empty">
-                        <Spinner variant="trace" />
+                        <Spinner variant="buble" />
                     </div>
                 ) : filteredList.length === 0 ? (
                     <div className="ptt-empty">

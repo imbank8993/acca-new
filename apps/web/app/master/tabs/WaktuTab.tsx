@@ -492,7 +492,7 @@ export default function WaktuTab({ user }: { user?: any }) {
             ) : loading ? (
               <tr>
                 <td colSpan={8} className="sk__loadingCell">
-                  <Spinner variant="trace" />
+                  <Spinner variant="buble" />
                 </td>
               </tr>
             ) : waktuList.length === 0 ? (
@@ -536,7 +536,7 @@ export default function WaktuTab({ user }: { user?: any }) {
       <div className="sk__cards" aria-label="Daftar Waktu versi mobile">
         {loading ? (
           <div className="sk__cardLoading" style={{ padding: '36px', display: 'flex', justifyContent: 'center' }}>
-            <Spinner variant="trace" />
+            <Spinner variant="buble" />
           </div>
         ) : waktuList.length === 0 ? (
           <div className="sk__cardEmpty" style={{ padding: '36px 16px', textAlign: 'center' }}>
@@ -1690,9 +1690,19 @@ export default function WaktuTab({ user }: { user?: any }) {
 :global(.dark) .sk__card { background: var(--n-card); }
 @keyframes zoomInDelete { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 /* ===== DARK MODE FULL ===== */
-:global(.dark) .sk__tableWrap { background: var(--n-card) !important; border-color: var(--n-border) !important; }
-:global(.dark) .sk__table thead th { background: rgba(255,255,255,0.05) !important; color: var(--n-muted) !important; border-bottom-color: var(--n-border) !important; }
-:global(.dark) .sk__table tbody td { background: var(--n-card) !important; color: var(--n-ink) !important; border-bottom-color: var(--n-border) !important; }
+:global(.dark) .sk__tableWrap {
+  background: #0b1329 !important;
+  border: 1px solid rgba(26, 115, 232, 0.35) !important;
+  border-radius: 16px !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5) !important;
+  transition: all 0.2s ease !important;
+}
+:global(.dark) .sk__tableWrap:hover {
+  border-color: rgba(59, 130, 246, 0.6) !important;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.5), 0 0 15px rgba(26, 115, 232, 0.15) !important;
+}
+:global(.dark) .sk__table thead th { background: rgba(37, 99, 235, 0.15) !important; color: var(--n-muted) !important; border-bottom: 1px solid rgba(26, 115, 232, 0.35) !important; }
+:global(.dark) .sk__table tbody td { background: #0b1329 !important; color: var(--n-ink) !important; border-bottom: 1px solid rgba(26, 115, 232, 0.2) !important; }
 :global(.dark) .sk__table tbody tr:nth-child(even) td { background: rgba(255,255,255,0.025) !important; }
 :global(.dark) .sk__table tbody tr:hover td { background: rgba(79,142,247,0.06) !important; }
 
@@ -1730,8 +1740,17 @@ export default function WaktuTab({ user }: { user?: any }) {
 :global(.dark) .sk__groupTitle { color: var(--n-ink) !important; }
 :global(.dark) .sk__groupMeta { color: var(--n-muted) !important; }
 
-:global(.dark) .sk__card { background: var(--n-card) !important; border-color: var(--n-border) !important; }
-:global(.dark) .sk__cardHead { background: var(--n-elevated) !important; }
+:global(.dark) .sk__card {
+  background: #0b1329 !important;
+  border: 1px solid rgba(26, 115, 232, 0.35) !important;
+  border-radius: 14px !important;
+  transition: all 0.2s ease !important;
+}
+:global(.dark) .sk__card:hover {
+  border-color: rgba(59, 130, 246, 0.6) !important;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.5), 0 0 15px rgba(26, 115, 232, 0.15) !important;
+}
+:global(.dark) .sk__cardHead { background: rgba(37, 99, 235, 0.15) !important; }
 :global(.dark) .sk__cardName { color: var(--n-ink) !important; }
 :global(.dark) .sk__cardSub { color: var(--n-muted) !important; }
 
@@ -1774,8 +1793,8 @@ export default function WaktuTab({ user }: { user?: any }) {
 }
 
 :global(.dark) .sk__menu {
-  background: #000000 !important;
-  border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
+  background: #0b1329 !important;
+  border: 1px solid rgba(26, 115, 232, 0.35) !important;
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.7) !important;
 }
 :global(.dark) .sk__menuItem {
@@ -1797,8 +1816,8 @@ export default function WaktuTab({ user }: { user?: any }) {
 }
 
 :global(.dark) .sk__cards {
-  background: #000000 !important;
-  border: 1.8px solid rgba(26, 115, 232, 0.65) !important;
+  background: #0b1329 !important;
+  border: 1px solid rgba(26, 115, 232, 0.35) !important;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4) !important;
 }
 

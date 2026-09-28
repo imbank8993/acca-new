@@ -869,7 +869,7 @@ export default function NilaiUMTab({
       {/* ── Matrix Table Content ─────────────────────────────────────── */}
       {loadingData ? (
         <div className="um__tableWrap" style={{ padding: '40px 0', textAlign: 'center' }}>
-          <Spinner variant="trace" label="Memuat nilai ujian madrasah..." />
+          <Spinner variant="buble" label="Memuat nilai ujian madrasah..." />
         </div>
       ) : mapelList.length === 0 ? (
         <div className="um__tableWrap">

@@ -379,7 +379,7 @@ export default function EkskulTab(_props: { user?: unknown }) {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={isAdmin ? 4 : 3} className="sk__loadingCell"><Spinner variant="trace" /></td></tr>
+              <tr><td colSpan={isAdmin ? 4 : 3} className="sk__loadingCell"><Spinner variant="buble" /></td></tr>
             ) : paginatedData.length === 0 ? (
               <tr><td colSpan={isAdmin ? 4 : 3} className="sk__empty sk__muted">Belum ada data ekstrakurikuler.</td></tr>
             ) : (
@@ -416,7 +416,7 @@ export default function EkskulTab(_props: { user?: unknown }) {
       <div className="sk__cards" aria-label="Daftar Ekstrakurikuler versi mobile">
         {loading ? (
           <div className="sk__cardLoading" style={{ padding: '36px', display: 'flex', justifyContent: 'center' }}>
-            <Spinner variant="trace" />
+            <Spinner variant="buble" />
           </div>
         ) : paginatedData.length === 0 ? (
           <div className="sk__cardEmpty" style={{ padding: '36px 16px', textAlign: 'center' }}>
@@ -875,10 +875,15 @@ export default function EkskulTab(_props: { user?: unknown }) {
 
         /* ===== DARK MODE FULL OVERHAUL ===== */
         :global(.dark) .tt__statCard {
-          background: #000000 !important;
-          border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
+          background: #0b1329 !important;
+          border: 1px solid rgba(26, 115, 232, 0.35) !important;
           border-radius: 16px !important;
           box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5) !important;
+          transition: all 0.2s ease !important;
+        }
+        :global(.dark) .tt__statCard:hover {
+          border-color: rgba(59, 130, 246, 0.6) !important;
+          box-shadow: 0 8px 25px rgba(0, 0, 0, 0.5), 0 0 15px rgba(26, 115, 232, 0.15) !important;
         }
         :global(.dark) .tt__statIconTotal,
         :global(.dark) .tt__statIconAktif,
@@ -897,13 +902,13 @@ export default function EkskulTab(_props: { user?: unknown }) {
         :global(.dark) .sk__actions { background: transparent !important; border: none !important; box-shadow: none !important; }
         
         :global(.dark) .sk__search {
-          background: #000000 !important;
-          border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
+          background: #0b1329 !important;
+          border: 1px solid rgba(26, 115, 232, 0.35) !important;
           border-radius: 12px !important;
-          box-shadow: 0 0 10px rgba(26, 115, 232, 0.2) !important;
+          box-shadow: 0 0 10px rgba(26, 115, 232, 0.15) !important;
         }
         :global(.dark) .sk__search input {
-          background: #000000 !important;
+          background: #0b1329 !important;
           border: none !important;
           color: #ffffff !important;
           border-radius: 12px !important;
@@ -911,8 +916,8 @@ export default function EkskulTab(_props: { user?: unknown }) {
         :global(.dark) .sk__search i { color: #94a3b8 !important; }
 
         :global(.dark) .sk__btn {
-          background: #000000 !important;
-          border: 1.5px solid rgba(59, 130, 246, 0.4) !important;
+          background: #0b1329 !important;
+          border: 1px solid rgba(26, 115, 232, 0.35) !important;
           color: #e2e8f0 !important;
           border-radius: 12px !important;
         }
@@ -943,23 +948,28 @@ export default function EkskulTab(_props: { user?: unknown }) {
         }
 
         :global(.dark) .sk__tableWrap {
-          background: #000000 !important;
-          border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
+          background: #0b1329 !important;
+          border: 1px solid rgba(26, 115, 232, 0.35) !important;
           border-radius: 18px !important;
           box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5) !important;
           overflow: hidden !important;
+          transition: all 0.2s ease !important;
         }
-        :global(.dark) .sk__table { background: #000000 !important; color: #e2e8f0 !important; border: none !important; }
+        :global(.dark) .sk__tableWrap:hover {
+          border-color: rgba(59, 130, 246, 0.6) !important;
+          box-shadow: 0 8px 25px rgba(0, 0, 0, 0.5), 0 0 15px rgba(26, 115, 232, 0.15) !important;
+        }
+        :global(.dark) .sk__table { background: #0b1329 !important; color: #e2e8f0 !important; border: none !important; }
         :global(.dark) .sk__table th {
-          background: #000000 !important;
+          background: rgba(37, 99, 235, 0.15) !important;
           color: #94a3b8 !important;
-          border-bottom: 1.5px solid rgba(59, 130, 246, 0.4) !important;
+          border-bottom: 1px solid rgba(26, 115, 232, 0.35) !important;
           font-weight: 800 !important;
         }
         :global(.dark) .sk__table td {
-          background: #000000 !important;
+          background: #0b1329 !important;
           color: #e2e8f0 !important;
-          border-bottom: 1px solid rgba(59, 130, 246, 0.2) !important;
+          border-bottom: 1px solid rgba(26, 115, 232, 0.2) !important;
         }
         :global(.dark) .sk__table tbody tr:hover td { background: rgba(37, 99, 235, 0.08) !important; }
 
@@ -1127,8 +1137,8 @@ export default function EkskulTab(_props: { user?: unknown }) {
         }
 
         :global(.dark) .sk__menu {
-          background: #000000 !important;
-          border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
+          background: #0b1329 !important;
+          border: 1px solid rgba(26, 115, 232, 0.35) !important;
           box-shadow: 0 12px 32px rgba(0, 0, 0, 0.7) !important;
         }
         :global(.dark) .sk__menuItem {
@@ -1150,8 +1160,8 @@ export default function EkskulTab(_props: { user?: unknown }) {
         }
 
         :global(.dark) .sk__cards {
-          background: #000000 !important;
-          border: 1.8px solid rgba(26, 115, 232, 0.65) !important;
+          background: #0b1329 !important;
+          border: 1px solid rgba(26, 115, 232, 0.35) !important;
           box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4) !important;
         }
 
@@ -1207,10 +1217,10 @@ export default function EkskulTab(_props: { user?: unknown }) {
           border-color: #60a5fa !important;
         }
 
-        :global(.dark) .sk__card { background: #000000 !important; border: 1.8px solid rgba(26, 115, 232, 0.75) !important; }
-        :global(.dark) .sk__cardHead { background: #000000 !important; }
+        :global(.dark) .sk__card { background: #0b1329 !important; border: 1px solid rgba(26, 115, 232, 0.35) !important; }
+        :global(.dark) .sk__cardHead { background: #0b1329 !important; }
         :global(.dark) .sk__cardName { color: #ffffff !important; }
-        :global(.dark) .sk__btnGhost { background: #000000 !important; color: #e2e8f0 !important; border: 1.5px solid rgba(59, 130, 246, 0.4) !important; }
+        :global(.dark) .sk__btnGhost { background: #0b1329 !important; color: #e2e8f0 !important; border: 1px solid rgba(26, 115, 232, 0.35) !important; }
       `}</style>
     </div>
   )

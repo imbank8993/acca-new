@@ -8,7 +8,7 @@ import { PageLoader } from '@/components/ui/Spinner'
 
 export default function Home() {
   return (
-    <Suspense fallback={<PageLoader variant="trace" minHeight="100vh" />}>
+    <Suspense fallback={<PageLoader variant="buble" minHeight="100vh" />}>
       <HomeRedirect />
     </Suspense>
   )
@@ -54,5 +54,5 @@ function HomeRedirect() {
 
   if (showLogin) return <LoginPage />
 
-  return <PageLoader variant="trace" minHeight="100vh" />
+  return <PageLoader variant="buble" minHeight="100vh" />
 }

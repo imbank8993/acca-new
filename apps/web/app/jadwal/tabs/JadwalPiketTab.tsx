@@ -71,7 +71,7 @@ export default function JadwalPiketTab({
         />
 
         {loadingPiket ? (
-          <div className="db__loading"><Spinner variant="trace" /></div>
+          <div className="db__loading"><Spinner variant="buble" /></div>
         ) : libur ? (
           <LiburSehariPenuh libur={libur} jenis="Piket" />
         ) : jadwalPiketHariIni.length > 0 ? (

@@ -235,18 +235,14 @@ export default function HistoriNilaiModal({ nisn, namaSiswa, onClose }: HistoriN
                 @keyframes spin { to { transform: rotate(360deg); } }
 
                 :global(.dark) .hnm__content {
-                    background: #000000 !important;
-                    background-image: linear-gradient(180deg, rgba(59, 130, 246, 0.12) 0%, rgba(0, 0, 0, 0.4) 30%, #000000 100%) !important;
-                    border: 2px solid #1a73e8 !important;
-                    box-shadow: 
-                        inset 0 1.5px 1.5px 0 rgba(255, 255, 255, 0.4),
-                        inset 0 0 20px 0 rgba(26, 115, 232, 0.25),
-                        0 0 40px rgba(26, 115, 232, 0.45),
-                        0 25px 60px rgba(0, 0, 0, 0.95) !important;
+                    background: #0b1329 !important;
+                    background-image: linear-gradient(180deg, rgba(59, 130, 246, 0.12) 0%, rgba(11, 19, 41, 0.4) 30%, #0b1329 100%) !important;
+                    border: 1px solid rgba(26, 115, 232, 0.35) !important;
+                    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4) !important;
                 }
                 :global(.dark) .hnm__header {
-                    background: #000000 !important;
-                    border-bottom: 1px solid rgba(59, 130, 246, 0.25) !important;
+                    background: #0b1329 !important;
+                    border-bottom: 1px solid rgba(26, 115, 232, 0.25) !important;
                 }
                 :global(.dark) .hnm__titleIcon {
                     background: #1a73e8 !important;
@@ -270,12 +266,12 @@ export default function HistoriNilaiModal({ nisn, namaSiswa, onClose }: HistoriN
                     color: #f87171 !important;
                 }
                 :global(.dark) .hnm__filters {
-                    background: #000000 !important;
-                    border-bottom: 1px solid rgba(59, 130, 246, 0.25) !important;
+                    background: #0b1329 !important;
+                    border-bottom: 1px solid rgba(26, 115, 232, 0.25) !important;
                 }
                 :global(.dark) .hnm__select {
-                    background: #000000 !important;
-                    border: 1.5px solid rgba(59, 130, 246, 0.35) !important;
+                    background: #0b1329 !important;
+                    border: 1px solid rgba(26, 115, 232, 0.35) !important;
                     color: #f1f5f9 !important;
                 }
                 :global(.dark) .hnm__select:focus {
@@ -283,22 +279,22 @@ export default function HistoriNilaiModal({ nisn, namaSiswa, onClose }: HistoriN
                     box-shadow: 0 0 10px rgba(26, 115, 232, 0.4) !important;
                 }
                 :global(.dark) .hnm__select option {
-                    background: #000000 !important;
+                    background: #0b1329 !important;
                     color: #f1f5f9 !important;
                 }
-                :global(.dark) .hnm__body { background: #000000 !important; }
+                :global(.dark) .hnm__body { background: #0b1329 !important; }
                 :global(.dark) .hnm__mapelTitle {
                     color: #f1f5f9 !important;
-                    border-bottom-color: rgba(59, 130, 246, 0.25) !important;
+                    border-bottom-color: rgba(26, 115, 232, 0.25) !important;
                 }
                 :global(.dark) .hnm__mapelTitle i { color: #38bdf8 !important; }
                 :global(.dark) .hnm__nilaiItem {
-                    background: #000000 !important;
-                    border: 1px solid rgba(37, 99, 235, 0.4) !important;
+                    background: #0b1329 !important;
+                    border: 1px solid rgba(26, 115, 232, 0.35) !important;
                 }
                 :global(.dark) .hnm__nilaiItem:hover {
-                    border-color: #3b82f6 !important;
-                    box-shadow: 0 0 12px rgba(26, 115, 232, 0.25) !important;
+                    border-color: rgba(59, 130, 246, 0.6) !important;
+                    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4) !important;
                 }
                 :global(.dark) .hnm__tagType {
                     background: rgba(26, 115, 232, 0.2) !important;

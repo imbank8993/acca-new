@@ -240,7 +240,7 @@ export default function DashboardShellLayout({ children }: { children: React.Rea
             color: '#eaf2ff',
           }}
         >
-          <Spinner variant="trace" />
+          <Spinner variant="buble" />
         </div>
       </div>
     )

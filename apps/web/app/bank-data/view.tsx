@@ -80,7 +80,7 @@ export default function BankDataView() {
         <RiwayatTab />
       ) : loading || !capsSiap ? (
         <div className="bd-loading">
-          <Spinner variant="trace" label="Memuat katalog..." />
+          <Spinner variant="buble" label="Memuat katalog..." />
         </div>
       ) : ditolak ? (
         <div className="bd-empty">

@@ -704,7 +704,7 @@ export default function KelulusanTab({
                 {loadingData ? (
                   <tr>
                     <td colSpan={6} style={{ padding: '40px 0', textAlign: 'center' }}>
-                      <Spinner variant="trace" label="Memuat data kelulusan..." />
+                      <Spinner variant="buble" label="Memuat data kelulusan..." />
                     </td>
                   </tr>
                 ) : filteredSiswa.length === 0 ? (
@@ -796,7 +796,7 @@ export default function KelulusanTab({
         <div className="kl-cards">
           {loadingData ? (
             <div className="kl-card kl-card--empty" style={{ padding: '30px 0', textAlign: 'center' }}>
-              <Spinner variant="trace" label="Memuat data..." />
+              <Spinner variant="buble" label="Memuat data..." />
             </div>
           ) : filteredSiswa.length === 0 ? (
             <div className="kl-card kl-card--empty">

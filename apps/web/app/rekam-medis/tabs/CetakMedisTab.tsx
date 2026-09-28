@@ -110,7 +110,7 @@ export default function CetakMedisTab({
                             {printLoadingList ? (
                                 <tr>
                                     <td colSpan={6} style={{ textAlign: 'center', padding: '32px' }}>
-                                        <Spinner variant="trace" />
+                                        <Spinner variant="buble" />
                                     </td>
                                 </tr>
                             ) : filteredPrintStudentList.length === 0 ? (
@@ -168,7 +168,7 @@ export default function CetakMedisTab({
             <div className="kh-mobile-cards mobile-only" style={{ flexDirection: 'column', gap: '12px' }}>
                 {printLoadingList ? (
                     <div style={{ textAlign: 'center', padding: '32px', background: 'var(--n-card)', borderRadius: '14px', border: '1px solid var(--kh-tb-border)' }}>
-                        <Spinner variant="trace" />
+                        <Spinner variant="buble" />
                     </div>
                 ) : filteredPrintStudentList.length === 0 ? (
                     <div style={{ textAlign: 'center', padding: '32px', color: 'var(--kh-text-muted)', background: 'var(--n-card)', borderRadius: '14px', border: '1px solid var(--kh-tb-border)' }}>

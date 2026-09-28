@@ -704,7 +704,7 @@ export default function PegawaiTab({ user, jenis }: { user?: any; jenis: JenisPe
             {loading ? (
               <tr>
                 <td colSpan={7} className="sk__loadingCell">
-                  <Spinner variant="trace" />
+                  <Spinner variant="buble" />
                 </td>
               </tr>
             ) : guruList.length === 0 ? (
@@ -767,7 +767,7 @@ export default function PegawaiTab({ user, jenis }: { user?: any; jenis: JenisPe
       <div className="sk__cards" aria-label={`Daftar ${label} versi mobile`}>
         {loading ? (
           <div className="sk__cardLoading" style={{ padding: '36px', display: 'flex', justifyContent: 'center' }}>
-            <Spinner variant="trace" />
+            <Spinner variant="buble" />
           </div>
         ) : guruList.length === 0 ? (
           <div className="sk__cardEmpty" style={{ padding: '36px 16px', textAlign: 'center' }}>
@@ -1212,7 +1212,7 @@ export default function PegawaiTab({ user, jenis }: { user?: any; jenis: JenisPe
 
             {pindahPenugasan === null ? (
               <div className="sk__pindahLoading">
-                <Spinner variant="trace" />
+                <Spinner variant="buble" />
                 <span>Memeriksa penugasan aktif...</span>
               </div>
             ) : pindahPenugasan.length > 0 && (
@@ -2253,37 +2253,42 @@ export default function PegawaiTab({ user, jenis }: { user?: any; jenis: JenisPe
 /* ===== DARK MODE FULL ===== */
 :global(.dark) .sk__bar { background: transparent !important; border: none !important; }
 :global(.dark) .sk__tableWrap {
-  background: #000000 !important;
-  border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
+  background: #0b1329 !important;
+  border: 1px solid rgba(26, 115, 232, 0.35) !important;
   border-radius: 18px !important;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5) !important;
   overflow: hidden !important;
+  transition: all 0.2s ease !important;
 }
-:global(.dark) .sk__table { background: #000000 !important; color: #e2e8f0 !important; }
+:global(.dark) .sk__tableWrap:hover {
+  border-color: rgba(59, 130, 246, 0.6) !important;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.5), 0 0 15px rgba(26, 115, 232, 0.15) !important;
+}
+:global(.dark) .sk__table { background: #0b1329 !important; color: #e2e8f0 !important; }
 :global(.dark) .sk__table thead th {
-  background: #000000 !important;
+  background: rgba(37, 99, 235, 0.15) !important;
   color: #94a3b8 !important;
-  border-bottom: 1.5px solid rgba(59, 130, 246, 0.4) !important;
+  border-bottom: 1px solid rgba(26, 115, 232, 0.35) !important;
   font-weight: 800 !important;
 }
 :global(.dark) .sk__table tbody td {
-  background: #000000 !important;
+  background: #0b1329 !important;
   color: #e2e8f0 !important;
-  border-bottom: 1px solid rgba(59, 130, 246, 0.2) !important;
+  border-bottom: 1px solid rgba(26, 115, 232, 0.2) !important;
 }
-:global(.dark) .sk__table tbody tr:nth-child(even) td { background: #000000 !important; }
+:global(.dark) .sk__table tbody tr:nth-child(even) td { background: #0b1329 !important; }
 :global(.dark) .sk__table tbody tr:hover td { background: rgba(37, 99, 235, 0.08) !important; }
 
 :global(.dark) .sk__search {
-  background: #000000 !important;
-  border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
+  background: #0b1329 !important;
+  border: 1px solid rgba(26, 115, 232, 0.35) !important;
   border-radius: 12px !important;
-  box-shadow: 0 0 10px rgba(26, 115, 232, 0.2) !important;
+  box-shadow: 0 0 10px rgba(26, 115, 232, 0.15) !important;
 }
 :global(.dark) .sk__filters,
 :global(.dark) .sk__actions { background: transparent !important; border: none !important; box-shadow: none !important; }
 :global(.dark) .sk__search input {
-  background: #000000 !important;
+  background: #0b1329 !important;
   border: none !important;
   color: #ffffff !important;
   border-radius: 12px !important;
@@ -2293,16 +2298,16 @@ export default function PegawaiTab({ user, jenis }: { user?: any; jenis: JenisPe
 :global(.dark) .sk__filterGroup label { color: #94a3b8 !important; }
 :global(.dark) select,
 :global(.dark) .sk__filterGroup select {
-  background-color: #000000 !important;
-  border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
+  background-color: #0b1329 !important;
+  border: 1px solid rgba(26, 115, 232, 0.35) !important;
   color: #ffffff !important;
   border-radius: 12px !important;
-  box-shadow: 0 0 10px rgba(26, 115, 232, 0.25) !important;
+  box-shadow: 0 0 10px rgba(26, 115, 232, 0.15) !important;
 }
 
 :global(.dark) .sk__btn {
-  background: #000000 !important;
-  border: 1.5px solid rgba(59, 130, 246, 0.4) !important;
+  background: #0b1329 !important;
+  border: 1px solid rgba(26, 115, 232, 0.35) !important;
   color: #e2e8f0 !important;
   border-radius: 12px !important;
 }
@@ -2332,7 +2337,7 @@ export default function PegawaiTab({ user, jenis }: { user?: any; jenis: JenisPe
   border-radius: 12px !important;
 }
 :global(.dark) input:disabled, :global(.dark) select:disabled, :global(.dark) textarea:disabled { background: rgba(255,255,255,0.04) !important; color: #94a3b8 !important; }
-:global(.dark) .sk__btnGhost { background: #000000 !important; color: #e2e8f0 !important; border: 1.5px solid rgba(59, 130, 246, 0.4) !important; }
+:global(.dark) .sk__btnGhost { background: #0b1329 !important; color: #e2e8f0 !important; border: 1px solid rgba(26, 115, 232, 0.35) !important; }
 :global(.dark) .sk__hint { color: #94a3b8 !important; }
 :global(.dark) .sk__formInfo { background: rgba(14, 165, 233, 0.15) !important; color: #38bdf8 !important; border: 1px solid rgba(56, 189, 248, 0.3) !important; }
 
@@ -2370,13 +2375,22 @@ export default function PegawaiTab({ user, jenis }: { user?: any; jenis: JenisPe
 }
 :global(.dark) .sk__iconBtn.danger:hover { background: #ef4444 !important; color: #ffffff !important; }
 
-:global(.dark) .sk__group { background: #000000 !important; border: 1.5px solid rgba(59, 130, 246, 0.35) !important; }
-:global(.dark) .sk__groupHead { background: #000000 !important; }
+:global(.dark) .sk__group { background: #0b1329 !important; border: 1px solid rgba(26, 115, 232, 0.35) !important; border-radius: 14px !important; }
+:global(.dark) .sk__groupHead { background: rgba(37, 99, 235, 0.15) !important; }
 :global(.dark) .sk__groupTitle { color: #ffffff !important; }
 :global(.dark) .sk__groupMeta { color: #94a3b8 !important; }
 
-:global(.dark) .sk__card { background: #000000 !important; border: 1.8px solid rgba(26, 115, 232, 0.75) !important; }
-:global(.dark) .sk__cardHead { background: #000000 !important; }
+:global(.dark) .sk__card {
+  background: #0b1329 !important;
+  border: 1px solid rgba(26, 115, 232, 0.35) !important;
+  border-radius: 14px !important;
+  transition: all 0.2s ease !important;
+}
+:global(.dark) .sk__card:hover {
+  border-color: rgba(59, 130, 246, 0.6) !important;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.5), 0 0 15px rgba(26, 115, 232, 0.15) !important;
+}
+:global(.dark) .sk__cardHead { background: rgba(37, 99, 235, 0.15) !important; }
 :global(.dark) .sk__cardName { color: #ffffff !important; }
 :global(.dark) .sk__cardSub { color: #94a3b8 !important; }
 
@@ -2411,8 +2425,8 @@ export default function PegawaiTab({ user, jenis }: { user?: any; jenis: JenisPe
 }
 
 :global(.dark) .sk__menu {
-  background: #000000 !important;
-  border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
+  background: #0b1329 !important;
+  border: 1px solid rgba(26, 115, 232, 0.35) !important;
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.7) !important;
 }
 :global(.dark) .sk__menuItem {
@@ -2434,8 +2448,8 @@ export default function PegawaiTab({ user, jenis }: { user?: any; jenis: JenisPe
 }
 
 :global(.dark) .sk__cards {
-  background: #000000 !important;
-  border: 1.8px solid rgba(26, 115, 232, 0.65) !important;
+  background: #0b1329 !important;
+  border: 1px solid rgba(26, 115, 232, 0.35) !important;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4) !important;
 }
 

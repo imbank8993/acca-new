@@ -501,7 +501,7 @@ export default function MaintenanceTab({ user }: { user?: any }) {
         : null;
 
     if (loading) {
-        return <PageLoader minHeight="300px" variant="trace" />;
+        return <PageLoader minHeight="300px" variant="buble" />;
     }
 
     return (

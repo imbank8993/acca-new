@@ -14,7 +14,7 @@ export default function LoginPage() {
   return (
     <Suspense fallback={
       <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f8fafc' }}>
-        <Spinner variant="trace" />
+        <Spinner variant="buble" />
       </div>
     }>
       <LoginContent />
@@ -459,7 +459,7 @@ function LoginContent() {
 
           {!mounted && (
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 260 }}>
-              <Spinner variant="trace" size={80} />
+              <Spinner variant="buble" size={80} />
             </div>
           )}
 
@@ -1877,9 +1877,9 @@ function LoginContent() {
         .dark .lp-brand-logo img.lp-logo-light { display: none; }
         .dark .lp-brand-logo img.lp-logo-dark { display: block; }
         .dark .lp-card { 
-          background: #000000; 
-          border: 1px solid rgba(37, 99, 235, 0.4) !important;
-          box-shadow: 0 16px 48px rgba(0, 0, 0, 0.95);
+          background: #0b1329; 
+          border: 2px solid rgba(37, 99, 235, 0.35) !important;
+          box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6), 0 0 30px rgba(26, 115, 232, 0.15);
         }
         .dark .lp-card-head h2 {
           background: linear-gradient(90deg, #1d6bf3 0%, #3b82f6 30%, #60a5fa 70%, #93c5fd 100%);
@@ -1893,8 +1893,8 @@ function LoginContent() {
         .dark .lp-field label { color: #cbd5e1; }
         .dark .lp-req { color: #f87171; }
         .dark .lp-input-wrap input {
-          background: #000000 !important;
-          border-color: rgba(37, 99, 235, 0.4) !important;
+          background: #070d1e !important;
+          border-color: rgba(37, 99, 235, 0.35) !important;
           color: #f8fafc !important;
           /* Tanpa ini caret mewarisi magenta dari aturan light mode */
           caret-color: #60a5fa;
@@ -1903,17 +1903,17 @@ function LoginContent() {
         .dark .lp-input-wrap input:-webkit-autofill:hover,
         .dark .lp-input-wrap input:-webkit-autofill:focus,
         .dark .lp-input-wrap input:-webkit-autofill:active {
-          -webkit-box-shadow: 0 0 0 30px #000000 inset !important;
+          -webkit-box-shadow: 0 0 0 30px #070d1e inset !important;
           -webkit-text-fill-color: #f8fafc !important;
           caret-color: #60a5fa;
         }
         .dark .lp-input-wrap input:focus {
-          background: #000000;
+          background: #070d1e;
           border-color: #1a73e8;
-          box-shadow: 0 0 0 4px rgba(26, 115, 232, 0.15);
+          box-shadow: 0 0 0 4px rgba(26, 115, 232, 0.2);
         }
         .dark .lp-input-wrap input:focus:-webkit-autofill {
-          -webkit-box-shadow: 0 0 0 30px #000000 inset !important;
+          -webkit-box-shadow: 0 0 0 30px #070d1e inset !important;
         }
         .dark .lp-input-wrap input:disabled { background: rgba(255, 255, 255, 0.05); opacity: 0.5; }
         .dark .lp-input-wrap input::placeholder { color: #64748b; opacity: 1; }
@@ -1947,9 +1947,9 @@ function LoginContent() {
 
         /* Modal Dark Mode */
         .dark .lp-modal-content {
-          background: #000000;
-          border: 1px solid rgba(37, 99, 235, 0.45);
-          box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.95);
+          background: #0b1329;
+          border: 1.5px solid rgba(37, 99, 235, 0.4);
+          box-shadow: 0 25px 60px rgba(0, 0, 0, 0.8), 0 0 30px rgba(26, 115, 232, 0.15);
         }
         .dark .lp-modal-header { border-bottom-color: rgba(37, 99, 235, 0.2); }
         .dark .lp-modal-header h3 { color: #f8fafc; }
@@ -1957,16 +1957,16 @@ function LoginContent() {
         .dark .lp-modal-close:hover { background: rgba(239, 68, 68, 0.2); color: #f87171; }
         .dark .lp-modal-body p { color: #94a3b8; }
         .dark .lp-reg-header {
-          background: #000000;
-          border-bottom: 1px solid rgba(37, 99, 235, 0.45);
+          background: #0b1329;
+          border-bottom: 1px solid rgba(37, 99, 235, 0.35);
         }
         .dark .lp-reg-section {
           color: #60a5fa;
           border-bottom-color: rgba(37, 99, 235, 0.2);
         }
         .dark .lp-reg-select select.uisel-input {
-          background-color: #000000 !important;
-          border-color: rgba(37, 99, 235, 0.4) !important;
+          background-color: #070d1e !important;
+          border-color: rgba(37, 99, 235, 0.35) !important;
           color: #f8fafc !important;
         }
         .dark .lp-reg-select select.uisel-input:focus {
@@ -1993,21 +1993,21 @@ function LoginContent() {
 
         /* DatePicker Dark Mode Overrides */
         .dark .lp-input-wrap .dpk-trigger {
-          background: #000000 !important;
-          border-color: rgba(37, 99, 235, 0.4) !important;
+          background: #070d1e !important;
+          border-color: rgba(37, 99, 235, 0.35) !important;
           color: #f8fafc !important;
         }
         .dark .lp-input-wrap .dpk-trigger.dpk-open {
-          background: #000000 !important;
+          background: #070d1e !important;
           border-color: #1a73e8 !important;
           box-shadow: 0 0 0 4px rgba(26, 115, 232, 0.15) !important;
         }
         .dark .lp-input-wrap .dpk-trigger .dpk-placeholder { color: #64748b !important; }
         .dark .lp-input-wrap .dpk-trigger .dpk-icon { color: #94a3b8 !important; }
         .dark .dpk-panel {
-          background: #000000 !important;
-          border: 1px solid rgba(37, 99, 235, 0.45) !important;
-          box-shadow: 0 15px 35px rgba(0, 0, 0, 0.95) !important;
+          background: #0b1329 !important;
+          border: 1px solid rgba(37, 99, 235, 0.4) !important;
+          box-shadow: 0 15px 35px rgba(0, 0, 0, 0.8) !important;
         }
         .dark .dpk-header .dpk-title, .dark .dpk-header .dpk-nav { color: #f8fafc !important; }
         .dark .dpk-header .dpk-nav:hover, .dark .dpk-header .dpk-title:hover { background: rgba(37, 99, 235, 0.2) !important; }

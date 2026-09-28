@@ -348,11 +348,11 @@
 }
 
 .dark .tt-table th:last-child {
-    background: rgba(15, 23, 42, 0.5);
+    background: rgba(37, 99, 235, 0.15) !important;
 }
 
 .dark .tt-table td:last-child {
-    background: rgba(30, 41, 59, 0.75);
+    background: #0b1329 !important;
 }
 
 .tt-table {
@@ -1293,19 +1293,20 @@
 }
 
 /* ==========================================================================
-   GOOGLE ONE PITCH BLACK DARK THEME - TUGAS TAMBAHAN
-   Pure #000000, Blue Neon Borders (1.8px), Blue Gradients & Soft Glows
+   GOOGLE ONE DARK THEME - TUGAS TAMBAHAN
    ========================================================================== */
 
 .dark .tt-header {
-    background: #000000 !important;
-    border: 2px solid #1a73e8 !important;
+    background: #0b1329 !important;
+    border: 1px solid rgba(26, 115, 232, 0.35) !important;
     border-radius: 20px !important;
-    box-shadow: 
-        inset 0 1.5px 1.5px 0 rgba(255, 255, 255, 0.4),
-        inset 0 0 20px 0 rgba(26, 115, 232, 0.25),
-        0 0 35px rgba(26, 115, 232, 0.4),
-        0 20px 50px rgba(0, 0, 0, 0.9) !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4) !important;
+    transition: all 0.2s ease !important;
+}
+
+.dark .tt-header:hover {
+    border-color: rgba(59, 130, 246, 0.6) !important;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.5), 0 0 15px rgba(26, 115, 232, 0.15) !important;
 }
 
 .dark .tt-header h1 {
@@ -1323,21 +1324,28 @@
 
 .dark .tt-action-bar,
 .dark .tt-topbar {
-    background: #000000 !important;
-    border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
+    background: #0b1329 !important;
+    border: 1px solid rgba(26, 115, 232, 0.35) !important;
     border-radius: 20px !important;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5) !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4) !important;
+    transition: all 0.2s ease !important;
+}
+
+.dark .tt-action-bar:hover,
+.dark .tt-topbar:hover {
+    border-color: rgba(59, 130, 246, 0.6) !important;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.5), 0 0 15px rgba(26, 115, 232, 0.15) !important;
 }
 
 .dark .tt-task-selector select {
-    background: #000000 !important;
-    border: 1.5px solid rgba(59, 130, 246, 0.45) !important;
+    background: #0b1329 !important;
+    border: 1px solid rgba(26, 115, 232, 0.35) !important;
     color: #f1f5f9 !important;
     border-radius: 12px !important;
 }
 
 .dark .tt-task-selector select option {
-    background: #000000 !important;
+    background: #0b1329 !important;
     color: #f1f5f9 !important;
 }
 
@@ -1346,8 +1354,8 @@
 }
 
 .dark .tt-topbar-chip {
-    background: #000000 !important;
-    border: 1.5px solid rgba(59, 130, 246, 0.35) !important;
+    background: #0b1329 !important;
+    border: 1px solid rgba(26, 115, 232, 0.35) !important;
     color: #94a3b8 !important;
 }
 
@@ -1369,10 +1377,16 @@
 }
 
 .dark .tt-stat-card {
-    background: #000000 !important;
-    border: 1px solid rgba(37, 99, 235, 0.4) !important;
+    background: #0b1329 !important;
+    border: 1px solid rgba(26, 115, 232, 0.35) !important;
     border-radius: 20px !important;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5) !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4) !important;
+    transition: all 0.2s ease !important;
+}
+
+.dark .tt-stat-card:hover {
+    border-color: rgba(59, 130, 246, 0.6) !important;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.5), 0 0 15px rgba(26, 115, 232, 0.15) !important;
 }
 
 .dark .tt-stat-value {
@@ -1386,35 +1400,44 @@
 .dark .tt-sidebar,
 .dark .tt-content,
 .dark .tt-card {
-    background: #000000 !important;
-    border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
+    background: #0b1329 !important;
+    border: 1px solid rgba(26, 115, 232, 0.35) !important;
     border-radius: 20px !important;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5) !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4) !important;
     overflow: hidden !important;
+    transition: all 0.2s ease !important;
+}
+
+.dark .tt-sidebar:hover,
+.dark .tt-content:hover,
+.dark .tt-card:hover {
+    border-color: rgba(59, 130, 246, 0.6) !important;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.5), 0 0 15px rgba(26, 115, 232, 0.15) !important;
 }
 
 .dark .tt-card-header,
 .dark .tt-sidebar-header,
 .dark .tt-content-header {
-    background: #000000 !important;
-    border-bottom: 1px solid rgba(59, 130, 246, 0.25) !important;
+    background: #0b1329 !important;
+    border-bottom: 1px solid rgba(26, 115, 232, 0.25) !important;
     color: #f1f5f9 !important;
     border-radius: 18px 18px 0 0 !important;
 }
 
 .dark .tt-table {
-    background: #000000 !important;
+    background: #0b1329 !important;
 }
 
 .dark .tt-table th {
-    background: #000000 !important;
+    background: rgba(37, 99, 235, 0.15) !important;
     color: #93c5fd !important;
-    border-bottom: 2px solid rgba(59, 130, 246, 0.35) !important;
+    border-bottom: 1px solid rgba(26, 115, 232, 0.35) !important;
 }
 
 .dark .tt-table td {
+    background: #0b1329 !important;
     color: #f1f5f9 !important;
-    border-bottom: 1px solid rgba(59, 130, 246, 0.15) !important;
+    border-bottom: 1px solid rgba(26, 115, 232, 0.2) !important;
 }
 
 .dark .tt-table tbody tr:hover td,
@@ -1437,14 +1460,14 @@
 }
 
 .dark .tt-btn-export {
-    background: #000000 !important;
-    border: 1.5px solid rgba(16, 185, 129, 0.4) !important;
+    background: #0b1329 !important;
+    border: 1px solid rgba(16, 185, 129, 0.4) !important;
     color: #34d399 !important;
 }
 
 .dark .tt-icon-btn {
-    background: #000000 !important;
-    border: 1px solid rgba(59, 130, 246, 0.35) !important;
+    background: #0b1329 !important;
+    border: 1px solid rgba(26, 115, 232, 0.35) !important;
     color: #38bdf8 !important;
 }
 
@@ -1460,21 +1483,21 @@
 }
 
 .dark .tt-modal-content {
-    background: #000000 !important;
-    background-image: linear-gradient(180deg, rgba(59, 130, 246, 0.12) 0%, rgba(0, 0, 0, 0.4) 30%, #000000 100%) !important;
-    border: 1px solid rgba(37, 99, 235, 0.4) !important;
+    background: #0b1329 !important;
+    background-image: linear-gradient(180deg, rgba(59, 130, 246, 0.12) 0%, rgba(11, 19, 41, 0.4) 30%, #0b1329 100%) !important;
+    border: 1px solid rgba(26, 115, 232, 0.35) !important;
     border-radius: 20px !important;
-    box-shadow: inset 0 1.5px 1.5px 0 rgba(255, 255, 255, 0.4), inset 0 0 20px 0 rgba(26, 115, 232, 0.25), 0 25px 60px rgba(0, 0, 0, 0.95) !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4) !important;
 }
 
 .dark .tt-modal-header {
-    background: #000000 !important;
-    border-bottom: 1px solid rgba(59, 130, 246, 0.25) !important;
+    background: #0b1329 !important;
+    border-bottom: 1px solid rgba(26, 115, 232, 0.25) !important;
 }
 
 .dark .tt-modal-icon {
     background: rgba(26, 115, 232, 0.2) !important;
-    border: 1px solid rgba(59, 130, 246, 0.4) !important;
+    border: 1px solid rgba(26, 115, 232, 0.35) !important;
     color: #38bdf8 !important;
 }
 
@@ -1502,20 +1525,20 @@
 }
 
 .dark .tt-modal-body {
-    background: #000000 !important;
+    background: #0b1329 !important;
     color: #f1f5f9 !important;
 }
 
 .dark .tt-modal-footer {
-    background: #000000 !important;
-    border-top: 1px solid rgba(59, 130, 246, 0.25) !important;
+    background: #0b1329 !important;
+    border-top: 1px solid rgba(26, 115, 232, 0.25) !important;
 }
 
 .dark .tt-form-input,
 .dark .tt-form-select,
 .dark .tt-form-textarea {
-    background: #000000 !important;
-    border: 1.5px solid rgba(59, 130, 246, 0.35) !important;
+    background: #0b1329 !important;
+    border: 1px solid rgba(26, 115, 232, 0.35) !important;
     color: #f1f5f9 !important;
 }
 
@@ -1527,7 +1550,7 @@
 }
 
 .dark .tt-form-select option {
-    background: #000000 !important;
+    background: #0b1329 !important;
     color: #f1f5f9 !important;
 }
 
@@ -1536,7 +1559,7 @@
 }
 
 .dark .tt-file-upload-btn {
-    background: #000000 !important;
+    background: #0b1329 !important;
     border: 1.5px dashed rgba(59, 130, 246, 0.4) !important;
     color: #38bdf8 !important;
 }
@@ -1547,8 +1570,8 @@
 }
 
 .dark .tt-btn-cancel {
-    background: #000000 !important;
-    border: 1.5px solid rgba(59, 130, 246, 0.4) !important;
+    background: #0b1329 !important;
+    border: 1px solid rgba(26, 115, 232, 0.35) !important;
     color: #93c5fd !important;
 }
 

@@ -507,7 +507,7 @@ export default function GuruMapelTab(_props: GuruMapelTabProps) {
                         {loading ? (
                             <tr>
                                 <td colSpan={7} className="gm__empty">
-                                    <Spinner variant="trace" />
+                                    <Spinner variant="buble" />
                                 </td>
                             </tr>
                         ) : list.length === 0 ? (
@@ -553,7 +553,7 @@ export default function GuruMapelTab(_props: GuruMapelTabProps) {
             <div className="gm__cards" aria-label="Daftar Guru Mapel versi mobile">
                 {loading ? (
                     <div className="gm__loading">
-                        <Spinner variant="trace" />
+                        <Spinner variant="buble" />
                     </div>
                 ) : list.length === 0 ? (
                     <div className="gm__emptyState">

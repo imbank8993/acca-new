@@ -38,10 +38,15 @@
 
 /* Dark mode */
 .dark .md-header {
-  background: #000000 !important;
-  border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
+  background: #0b1329 !important;
+  border: 1px solid rgba(26, 115, 232, 0.35) !important;
   border-radius: 18px !important;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5) !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4) !important;
+  transition: all 0.2s ease !important;
+}
+.dark .md-header:hover {
+  border-color: rgba(59, 130, 246, 0.6) !important;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.5), 0 0 15px rgba(26, 115, 232, 0.15) !important;
 }
 .dark .md-titleArea h1 {
   background: linear-gradient(90deg, #1d6bf3 0%, #3b82f6 30%, #60a5fa 70%, #93c5fd 100%) !important;

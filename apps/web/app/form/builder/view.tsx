@@ -380,7 +380,7 @@ function BuilderContent() {
             style={{ borderRadius: '6px', padding: '48px 24px', borderWidth: '1.5px', borderStyle: 'solid' }} 
             className="text-center bg-white dark:bg-black border-slate-300 dark:border-blue-600/80 flex flex-col items-center justify-center min-h-[220px]"
           >
-            <Spinner variant="trace" size={44} />
+            <Spinner variant="buble" size={44} />
           </div>
         </div>
       </div>
@@ -1017,7 +1017,7 @@ export default function BuilderPage() {
     <Suspense
       fallback={
         <div className="flex items-center justify-center h-64">
-          <Spinner variant="trace" size={44} />
+          <Spinner variant="buble" size={44} />
         </div>
       }
     >

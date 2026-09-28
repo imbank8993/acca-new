@@ -484,8 +484,8 @@ input[type="date"].form-input {
 }
 
 .dark .status-radio-group {
-  background: #000000 !important;
-  border-color: rgba(255, 255, 255, 0.18) !important;
+  background: #0b1329 !important;
+  border-color: rgba(26, 115, 232, 0.35) !important;
 }
 
 /* Disabled */
@@ -1687,19 +1687,14 @@ input[type="date"].form-input {
 }
 
 /* ==========================================================================
-   GOOGLE ONE PITCH BLACK DARK THEME - ABSENSI
-   Pure #000000, Blue Neon Borders (1.8px), Blue Gradients & Soft Glows
+   DARK MODE — THEME OVERRIDES - ABSENSI
    ========================================================================== */
 
 .dark .absensi-header {
-  background: #000000 !important;
-  border: 2px solid #1a73e8 !important;
+  background: #0b1329 !important;
+  border: 1px solid rgba(26, 115, 232, 0.35) !important;
   border-radius: 20px !important;
-  box-shadow: 
-    inset 0 1.5px 1.5px 0 rgba(255, 255, 255, 0.4),
-    inset 0 0 20px 0 rgba(26, 115, 232, 0.25),
-    0 0 35px rgba(26, 115, 232, 0.4),
-    0 20px 50px rgba(0, 0, 0, 0.9) !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4) !important;
 }
 
 .dark .absensi-title {
@@ -1733,8 +1728,8 @@ input[type="date"].form-input {
 .dark .form-input,
 .dark .form-select,
 .dark .filter-card .dpk-trigger {
-  background: #000000 !important;
-  border: 1px solid rgba(37, 99, 235, 0.4) !important;
+  background: #0b1329 !important;
+  border: 1px solid rgba(26, 115, 232, 0.35) !important;
   color: #f1f5f9 !important;
   border-radius: 12px !important;
 }
@@ -1754,13 +1749,13 @@ input[type="date"].form-input {
 }
 
 .dark .form-select option {
-  background: #000000 !important;
+  background: #0b1329 !important;
   color: #f1f5f9 !important;
 }
 
 .dark .status-radio-group {
-  background: #000000 !important;
-  border: 1px solid rgba(59, 130, 246, 0.3) !important;
+  background: #0b1329 !important;
+  border: 1px solid rgba(26, 115, 232, 0.35) !important;
 }
 
 .dark .status-radio-label {
@@ -1768,26 +1763,24 @@ input[type="date"].form-input {
 }
 
 .dark .data-table {
-  background: #000000 !important;
-  border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
+  background: #0b1329 !important;
+  border: 1px solid rgba(26, 115, 232, 0.35) !important;
   border-radius: 20px !important;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5) !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4) !important;
   overflow: hidden !important;
 }
 
 .dark .data-table thead,
 .dark .data-table thead th {
-  background: #000000 !important;
+  background: rgba(37, 99, 235, 0.15) !important;
   color: #93c5fd !important;
-  border-bottom: 2px solid rgba(59, 130, 246, 0.35) !important;
+  border-bottom: 1px solid rgba(26, 115, 232, 0.35) !important;
 }
 
 .dark .data-table tbody tr td {
-  background: transparent !important;
+  background: #0b1329 !important;
   color: #f1f5f9 !important;
-  /* Alpha dinaikkan dari .15 — pada latar hitam garis .15 nyaris tak terlihat
-     sehingga batas antar baris/seksi kartu hilang. */
-  border-bottom: 1px solid rgba(59, 130, 246, 0.3) !important;
+  border-bottom: 1px solid rgba(26, 115, 232, 0.2) !important;
 }
 
 @media (max-width: 640px) {
@@ -1798,7 +1791,7 @@ input[type="date"].form-input {
      spesifisitas lebih tinggi untuk mengembalikannya. `:not(:first-child)`
      menjaga badge nomor tetap memakai border penuhnya sendiri. */
   .dark .data-table tbody tr:last-child td:not(:first-child):not(:last-child) {
-    border-bottom: 1px solid rgba(59, 130, 246, 0.3) !important;
+    border-bottom: 1px solid rgba(26, 115, 232, 0.2) !important;
   }
 
   /* Sel aksi = penutup kartu, jadi tanpa garis. Tanpa ini garis yang sudah
@@ -1807,12 +1800,10 @@ input[type="date"].form-input {
     border-bottom: none !important;
   }
 
-  /* Badge nomor: latar hitam + tepi biru, seirama dengan header & tombol
-     Admin. Perlu spesifisitas ini untuk menang atas aturan
-     `.dark .data-table tbody tr td` di atas. */
+  /* Badge nomor: latar navy + tepi biru, seirama dengan header & tombol Admin */
   .dark .data-table tbody tr td:first-child {
-    background: #000000 !important;
-    border: 1.5px solid rgba(26, 115, 232, 0.8) !important;
+    background: #0b1329 !important;
+    border: 1px solid rgba(26, 115, 232, 0.35) !important;
     border-radius: 8px !important;
     color: #ffffff !important;
     box-shadow: 0 0 10px rgba(26, 115, 232, 0.3) !important;
@@ -1824,20 +1815,22 @@ input[type="date"].form-input {
 }
 
 .dark .admin-table {
-  background: #000000 !important;
-  border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
+  background: #0b1329 !important;
+  border: 1px solid rgba(26, 115, 232, 0.35) !important;
   border-radius: 20px !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4) !important;
 }
 
 .dark .admin-table th {
-  background: #000000 !important;
+  background: rgba(37, 99, 235, 0.15) !important;
   color: #93c5fd !important;
-  border-bottom: 2px solid rgba(59, 130, 246, 0.35) !important;
+  border-bottom: 1px solid rgba(26, 115, 232, 0.35) !important;
 }
 
 .dark .admin-table td {
+  background: #0b1329 !important;
   color: #f1f5f9 !important;
-  border-bottom: 1px solid rgba(59, 130, 246, 0.15) !important;
+  border-bottom: 1px solid rgba(26, 115, 232, 0.2) !important;
 }
 
 .dark .admin-table tbody tr:hover td {
@@ -1857,16 +1850,24 @@ input[type="date"].form-input {
 }
 
 .dark .session-info {
-  background: #000000 !important;
-  border-color: rgba(59, 130, 246, 0.25) !important;
+  background: #0b1329 !important;
+  border: 1px solid rgba(26, 115, 232, 0.35) !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4) !important;
 }
 
 .dark .mobile-student-card,
 .dark .absensi-mobile-card {
-  background: #000000 !important;
-  border: 1px solid rgba(37, 99, 235, 0.4) !important;
+  background: #0b1329 !important;
+  border: 1px solid rgba(26, 115, 232, 0.35) !important;
   border-radius: 20px !important;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5) !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4) !important;
+  transition: all 0.2s ease !important;
+}
+
+.dark .mobile-student-card:hover,
+.dark .absensi-mobile-card:hover {
+  border-color: rgba(59, 130, 246, 0.6) !important;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.5), 0 0 15px rgba(26, 115, 232, 0.15) !important;
 }
 
 /* Compact SweetAlert Popup (Keterangan Absensi Modal) */
@@ -1913,8 +1914,8 @@ textarea.swal-compact-input {
 .dark div:where(.swal2-textarea).swal-compact-input,
 .dark .swal2-textarea.swal-compact-input,
 .dark textarea.swal-compact-input {
-  background: #000000 !important;
-  border: 1.5px solid rgba(59, 130, 246, 0.45) !important;
+  background: #0b1329 !important;
+  border: 1px solid rgba(26, 115, 232, 0.35) !important;
   color: #f1f5f9 !important;
 }
 

@@ -365,7 +365,7 @@ export default function AgendaDisplayView({ headerTabs }: { headerTabs?: React.R
                         <div className="ag-details-content">
                             {loading ? (
                                 <div className="ag-state-msg">
-                                    <Spinner variant="trace" />
+                                    <Spinner variant="buble" />
                                 </div>
                             ) : error ? (
                                 <div className="ag-state-msg error">

@@ -202,7 +202,7 @@ function BaileysPairing({ color, canManage }: { color: string; canManage: boolea
                 </div>
             ) : (
                 <div className="wa__baileysWaiting">
-                    <Spinner variant="trace" />
+                    <Spinner variant="buble" />
                     {status?.error && <span>Error: {status.error}</span>}
                 </div>
             )}
@@ -657,7 +657,7 @@ export default function WhatsAppTab({ user }: { user?: any }) {
     if (loading) {
         return (
             <div className="wa-loading">
-                <Spinner variant="trace" />
+                <Spinner variant="buble" />
             </div>
         )
     }
@@ -1630,50 +1630,60 @@ export default function WhatsAppTab({ user }: { user?: any }) {
 
 
                 /* Dark Mode - Electric Blue & Pitch Black Standard */
-                :global(.dark) .wa__tabs { background: #000000 !important; border: 1px solid rgba(37, 99, 235, 0.4) !important; border-radius: 16px !important; }
+                :global(.dark) .wa__tabs { background: #0b1329 !important; border: 1px solid rgba(26, 115, 232, 0.35) !important; border-radius: 16px !important; }
                 :global(.dark) .wa__tab { color: rgba(255, 255, 255, 0.65) !important; }
                 :global(.dark) .wa__tab:hover { background: rgba(26, 115, 232, 0.15) !important; color: #ffffff !important; }
                 :global(.dark) .wa__tab.active { background: #1a73e8 !important; color: #ffffff !important; box-shadow: 0 0 14px rgba(26, 115, 232, 0.5) !important; }
-                :global(.dark) .wa__card { background: #000000 !important; border: 1px solid rgba(37, 99, 235, 0.4) !important; border-radius: 16px !important; box-shadow: 0 4px 20px rgba(0,0,0,0.6) !important; }
-                :global(.dark) .wa__cardHeader { background: linear-gradient(135deg, rgba(26, 115, 232, 0.15), rgba(0, 40, 122, 0.25)) !important; border-bottom: 1px solid rgba(37, 99, 235, 0.4) !important; }
+                :global(.dark) .wa__card {
+                    background: #0b1329 !important;
+                    border: 1px solid rgba(26, 115, 232, 0.35) !important;
+                    border-radius: 16px !important;
+                    box-shadow: 0 4px 20px rgba(0,0,0,0.5) !important;
+                    transition: all 0.2s ease !important;
+                }
+                :global(.dark) .wa__card:hover {
+                    border-color: rgba(59, 130, 246, 0.6) !important;
+                    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.5), 0 0 15px rgba(26, 115, 232, 0.15) !important;
+                }
+                :global(.dark) .wa__cardHeader { background: rgba(37, 99, 235, 0.15) !important; border-bottom: 1px solid rgba(26, 115, 232, 0.35) !important; }
                 :global(.dark) .wa__cardTitle { color: #e2e8f0 !important; }
                 :global(.dark) .wa__cardDesc { color: #94a3b8 !important; }
                 :global(.dark) .wa__toggle { background: rgba(255, 255, 255, 0.1) !important; border: 1px solid rgba(37, 99, 235, 0.4) !important; }
                 :global(.dark) .wa__toggle.on { background: #1a73e8 !important; border-color: #3b82f6 !important; box-shadow: 0 0 10px rgba(26, 115, 232, 0.5) !important; }
                 :global(.dark) .wa__toggleThumb { background: #ffffff !important; }
-                :global(.dark) .wa__imageMode { background: #000000 !important; border: 1px solid rgba(37, 99, 235, 0.4) !important; border-radius: 12px !important; }
-                :global(.dark) .wa__provider { background: #000000 !important; border: 1px solid rgba(37, 99, 235, 0.4) !important; border-radius: 12px !important; }
+                :global(.dark) .wa__imageMode { background: #0b1329 !important; border: 1px solid rgba(26, 115, 232, 0.35) !important; border-radius: 12px !important; }
+                :global(.dark) .wa__provider { background: #0b1329 !important; border: 1px solid rgba(26, 115, 232, 0.35) !important; border-radius: 12px !important; }
                 :global(.dark) .wa__pBadge.ok { background: rgba(26, 115, 232, 0.2) !important; color: #60a5fa !important; border: 1px solid rgba(59, 130, 246, 0.4) !important; }
                 :global(.dark) .wa__pBadge.warn { background: rgba(245, 158, 11, 0.15) !important; color: #fbbf24 !important; }
                 :global(.dark) .wa__pBadge.no { background: rgba(239, 68, 68, 0.15) !important; color: #f87171 !important; }
-                :global(.dark) .wa__input, :global(.dark) .wa__textarea { background: #000000 !important; border: 1px solid rgba(37, 99, 235, 0.4) !important; border-radius: 12px !important; color: #e2e8f0 !important; }
+                :global(.dark) .wa__input, :global(.dark) .wa__textarea { background: #0b1329 !important; border: 1px solid rgba(26, 115, 232, 0.35) !important; border-radius: 12px !important; color: #e2e8f0 !important; }
                 :global(.dark) .wa__input:focus, :global(.dark) .wa__textarea:focus { border-color: #3b82f6 !important; box-shadow: 0 0 12px rgba(26, 115, 232, 0.4) !important; }
-                :global(.dark) .wa__select { height: 40px !important; background-color: #000000 !important; background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiM2MGE1ZmEiIHN0cm9rZS13aWR0aD0iMi41IiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiPjxwb2x5bGluZSBwb2ludHM9IjYgOSAxMiAxNSAxOCA5Ij48L3BvbHlsaW5lPjwvc3ZnPg==") !important; background-repeat: no-repeat !important; background-position: right 12px center !important; background-size: 16px 16px !important; padding-right: 36px !important; border: 1px solid rgba(37, 99, 235, 0.4) !important; border-radius: 12px !important; color: #e2e8f0 !important; -webkit-appearance: none !important; appearance: none !important; }
+                :global(.dark) .wa__select { height: 40px !important; background-color: #0b1329 !important; background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiM2MGE1ZmEiIHN0cm9rZS13aWR0aD0iMi41IiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiPjxwb2x5bGluZSBwb2ludHM9IjYgOSAxMiAxNSAxOCA5Ij48L3BvbHlsaW5lPjwvc3ZnPg==") !important; background-repeat: no-repeat !important; background-position: right 12px center !important; background-size: 16px 16px !important; padding-right: 36px !important; border: 1px solid rgba(26, 115, 232, 0.35) !important; border-radius: 12px !important; color: #e2e8f0 !important; -webkit-appearance: none !important; appearance: none !important; }
                 :global(.dark) .wa__input.filled { border-color: #3b82f6 !important; }
-                :global(.dark) .wa__accountItem { background: #000000 !important; border: 1px solid rgba(37, 99, 235, 0.4) !important; border-radius: 12px !important; }
+                :global(.dark) .wa__accountItem { background: #0b1329 !important; border: 1px solid rgba(26, 115, 232, 0.35) !important; border-radius: 12px !important; }
                 :global(.dark) .wa__accountItem.active { background: rgba(26, 115, 232, 0.15) !important; border: 1px solid #3b82f6 !important; box-shadow: 0 0 14px rgba(26, 115, 232, 0.4) !important; }
                 :global(.dark) .wa__accountSelect input[type="radio"] { accent-color: #3b82f6 !important; }
-                :global(.dark) .wa__addBtn { background: #000000 !important; color: #60a5fa !important; border: 1px solid rgba(37, 99, 235, 0.4) !important; border-radius: 10px !important; }
+                :global(.dark) .wa__addBtn { background: #0b1329 !important; color: #60a5fa !important; border: 1px solid rgba(26, 115, 232, 0.35) !important; border-radius: 10px !important; }
                 :global(.dark) .wa__addBtn:hover { background: rgba(26, 115, 232, 0.2) !important; color: #ffffff !important; border-color: #3b82f6 !important; }
                 :global(.dark) .wa__targetIdx { background: rgba(26, 115, 232, 0.15) !important; color: #60a5fa !important; }
                 :global(.dark) .wa__targetsEmpty { background: rgba(26, 115, 232, 0.08) !important; border: 1px dashed rgba(26, 115, 232, 0.4) !important; color: #94a3b8 !important; border-radius: 12px !important; }
                 :global(.dark) .wa__targetCheck input[type="checkbox"] { accent-color: #3b82f6 !important; }
                 :global(.dark) .wa__statusDot.ready { background: #3b82f6 !important; box-shadow: 0 0 8px #3b82f6 !important; }
-                :global(.dark) .wa__testBtn, :global(.dark) .wa__testBtnImg { background: #000000 !important; color: #60a5fa !important; border: 1px solid rgba(37, 99, 235, 0.4) !important; border-radius: 10px !important; }
+                :global(.dark) .wa__testBtn, :global(.dark) .wa__testBtnImg { background: #0b1329 !important; color: #60a5fa !important; border: 1px solid rgba(26, 115, 232, 0.35) !important; border-radius: 10px !important; }
                 :global(.dark) .wa__testBtn:hover, :global(.dark) .wa__testBtnImg:hover { background: rgba(26, 115, 232, 0.2) !important; color: #ffffff !important; border-color: #3b82f6 !important; }
-                :global(.dark) .wa__helpBtn { background: #000000 !important; color: #60a5fa !important; border: 1px solid rgba(37, 99, 235, 0.4) !important; border-radius: 10px !important; }
+                :global(.dark) .wa__helpBtn { background: #0b1329 !important; color: #60a5fa !important; border: 1px solid rgba(26, 115, 232, 0.35) !important; border-radius: 10px !important; }
                 :global(.dark) .wa__helpBtn:hover { background: rgba(26, 115, 232, 0.2) !important; color: #ffffff !important; }
-                :global(.dark) .wa__helpBox { background: #000000 !important; border: 1px solid rgba(37, 99, 235, 0.4) !important; color: #94a3b8 !important; border-radius: 12px !important; }
+                :global(.dark) .wa__helpBox { background: #0b1329 !important; border: 1px solid rgba(26, 115, 232, 0.35) !important; color: #94a3b8 !important; border-radius: 12px !important; }
                 :global(.dark) .wa__helpTitle { border-bottom-color: rgba(26, 115, 232, 0.4) !important; color: #e2e8f0 !important; }
                 :global(.dark) .wa__helpContent code { background: rgba(26, 115, 232, 0.2) !important; color: #60a5fa !important; }
                 :global(.dark) .wa__preview { border-color: rgba(26, 115, 232, 0.4) !important; border-radius: 12px !important; }
-                :global(.dark) .wa__previewHeader { background: #000000 !important; border-color: rgba(26, 115, 232, 0.4) !important; color: #e2e8f0 !important; }
-                :global(.dark) .wa__previewContent { background: #000000 !important; color: #cbd5e1 !important; }
+                :global(.dark) .wa__previewHeader { background: #0b1329 !important; border-color: rgba(26, 115, 232, 0.35) !important; color: #e2e8f0 !important; }
+                :global(.dark) .wa__previewContent { background: #0b1329 !important; color: #cbd5e1 !important; }
                 :global(.dark) .wa__placeholder { background: rgba(26, 115, 232, 0.2) !important; color: #60a5fa !important; }
-                :global(.dark) .wa__targetCheckItem { background: #000000 !important; border: 1px solid rgba(37, 99, 235, 0.4) !important; border-radius: 12px !important; }
+                :global(.dark) .wa__targetCheckItem { background: #0b1329 !important; border: 1px solid rgba(26, 115, 232, 0.35) !important; border-radius: 12px !important; }
                 :global(.dark) .wa__targetCheckItem:hover { border-color: #3b82f6 !important; }
                 :global(.dark) .wa__targetCheckItem.selected { background: rgba(26, 115, 232, 0.15) !important; border-color: #3b82f6 !important; box-shadow: 0 0 12px rgba(26, 115, 232, 0.3) !important; }
-                :global(.dark) .wa__checkIcon { background: #000000 !important; border-color: rgba(26, 115, 232, 0.5) !important; }
+                :global(.dark) .wa__checkIcon { background: #0b1329 !important; border-color: rgba(26, 115, 232, 0.35) !important; }
                 :global(.dark) .wa__checkIcon.checked { background: #1a73e8 !important; border-color: #3b82f6 !important; color: #ffffff !important; }
                 :global(.dark) .wa__targetInfo .wa__targetName { color: #e2e8f0 !important; }
                 :global(.dark) .wa__sendSection { background: rgba(26, 115, 232, 0.08) !important; border: 1px solid rgba(26, 115, 232, 0.3) !important; border-radius: 12px !important; }

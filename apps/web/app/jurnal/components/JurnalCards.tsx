@@ -219,9 +219,13 @@ export default function JurnalCards({
                 }
 
                 :global(.dark) .jt__card {
-                    background: #000000 !important;
-                    border: 1px solid rgba(37, 99, 235, 0.4) !important;
-                    box-shadow: 0 4px 16px rgba(0,0,0,0.5) !important;
+                    background: #0b1329 !important;
+                    border: 1px solid rgba(26, 115, 232, 0.35) !important;
+                    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4) !important;
+                }
+                :global(.dark) .jt__card:hover {
+                    border-color: rgba(59, 130, 246, 0.6) !important;
+                    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.5), 0 0 15px rgba(26, 115, 232, 0.15) !important;
                 }
                 .jt__card::before {
                     content: '';
@@ -257,8 +261,8 @@ export default function JurnalCards({
                 :global(.dark) .jt__k { color: #94a3b8 !important; }
                 :global(.dark) .jt__v { color: #f1f5f9 !important; }
                 :global(.dark) .jt__cardActions .jt__iconBtn {
-                    background: #000000 !important;
-                    border: 1px solid rgba(59, 130, 246, 0.35) !important;
+                    background: #0b1329 !important;
+                    border: 1px solid rgba(26, 115, 232, 0.35) !important;
                     color: #38bdf8 !important;
                 }
                 :global(.dark) .jt__cardActions .jt__iconBtn:hover {

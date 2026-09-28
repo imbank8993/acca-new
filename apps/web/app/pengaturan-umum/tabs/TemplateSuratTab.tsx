@@ -325,7 +325,7 @@ export default function TemplateSuratTab({ user }: { user?: any }) {
       {/* ── Loading ── */}
       {loading ? (
         <div className="tsrt-loading">
-          <Spinner variant="trace" />
+          <Spinner variant="buble" />
         </div>
       ) : (
         <>
@@ -750,14 +750,19 @@ export default function TemplateSuratTab({ user }: { user?: any }) {
 
         /* ── Dark Mode ── */
         :global(.dark) .tsrt-table-wrap {
-          background: #000000 !important;
-          border: 1px solid rgba(37, 99, 235, 0.4) !important;
+          background: #0b1329 !important;
+          border: 1px solid rgba(26, 115, 232, 0.35) !important;
           border-radius: 16px !important;
-          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6) !important;
+          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5) !important;
+          transition: all 0.2s ease !important;
+        }
+        :global(.dark) .tsrt-table-wrap:hover {
+          border-color: rgba(59, 130, 246, 0.6) !important;
+          box-shadow: 0 8px 25px rgba(0, 0, 0, 0.5), 0 0 15px rgba(26, 115, 232, 0.15) !important;
         }
         :global(.dark) .tsrt-th {
-          background: linear-gradient(135deg, rgba(26, 115, 232, 0.15), rgba(0, 40, 122, 0.25)) !important;
-          border-bottom: 1px solid rgba(37, 99, 235, 0.4) !important;
+          background: rgba(37, 99, 235, 0.15) !important;
+          border-bottom: 1px solid rgba(26, 115, 232, 0.35) !important;
           color: #94a3b8 !important;
         }
         :global(.dark) .tsrt-row {
@@ -794,16 +799,16 @@ export default function TemplateSuratTab({ user }: { user?: any }) {
           color: #60a5fa !important;
         }
         :global(.dark) .tsrt-btn {
-          background: #000000 !important;
-          border-color: rgba(26, 115, 232, 0.4) !important;
+          background: #0b1329 !important;
+          border: 1px solid rgba(26, 115, 232, 0.35) !important;
           color: #94a3b8 !important;
         }
         :global(.dark) .tsrt-btn:hover {
           color: #ffffff !important;
         }
         :global(.dark) .tsrt-btn--view {
-          background: #000000 !important;
-          border: 1px solid rgba(37, 99, 235, 0.4) !important;
+          background: #0b1329 !important;
+          border: 1px solid rgba(26, 115, 232, 0.35) !important;
           color: #60a5fa !important;
         }
         :global(.dark) .tsrt-btn--view:hover {
@@ -824,19 +829,19 @@ export default function TemplateSuratTab({ user }: { user?: any }) {
           box-shadow: 0 4px 14px rgba(26, 115, 232, 0.4) !important;
         }
         :global(.dark) .tsrt-help {
-          background: #000000 !important;
-          border: 1px solid rgba(37, 99, 235, 0.4) !important;
+          background: #0b1329 !important;
+          border: 1px solid rgba(26, 115, 232, 0.35) !important;
           border-radius: 12px !important;
           color: #94a3b8 !important;
         }
 
         :global(.dark) .tsrt-modal {
-          background: #000000 !important;
-          border: 1px solid rgba(37, 99, 235, 0.4) !important;
+          background: #0b1329 !important;
+          border: 1px solid rgba(26, 115, 232, 0.35) !important;
         }
         :global(.dark) .tsrt-modal-info {
-          background: #000000 !important;
-          border-color: rgba(26, 115, 232, 0.4) !important;
+          background: #0b1329 !important;
+          border: 1px solid rgba(26, 115, 232, 0.35) !important;
         }
         :global(.dark) .tsrt-modal-info-title {
           color: #ffffff !important;

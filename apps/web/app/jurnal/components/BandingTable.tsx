@@ -485,25 +485,30 @@ export default function BandingTable({ bandings, isReviewer, onRowClick, onDelet
 
                 /* ---- Dark Mode ---- */
                 :global(.dark) .bt__tableWrap {
-                    background: #000000 !important;
-                    border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
+                    background: #0b1329 !important;
+                    border: 1px solid rgba(26, 115, 232, 0.35) !important;
                     border-radius: 16px !important;
-                    box-shadow: none !important;
+                    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4) !important;
                     background-clip: padding-box !important;
+                    transition: all 0.2s ease !important;
+                }
+                :global(.dark) .bt__tableWrap:hover {
+                    border-color: rgba(59, 130, 246, 0.6) !important;
+                    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.5), 0 0 15px rgba(26, 115, 232, 0.15) !important;
                 }
                 :global(.dark) .bt__table thead tr {
-                    background: #000000 !important;
-                    border-bottom: 2px solid rgba(59, 130, 246, 0.35) !important;
+                    background: rgba(37, 99, 235, 0.15) !important;
+                    border-bottom: 1px solid rgba(26, 115, 232, 0.35) !important;
                 }
                 :global(.dark) .bt__table th { color: #93c5fd !important; }
-                :global(.dark) .bt__row { border-bottom: 1px solid rgba(59, 130, 246, 0.15) !important; }
+                :global(.dark) .bt__row { border-bottom: 1px solid rgba(26, 115, 232, 0.2) !important; }
                 :global(.dark) .bt__row:hover { background: rgba(26, 115, 232, 0.08) !important; }
-                :global(.dark) .bt__table td { color: #f1f5f9 !important; }
+                :global(.dark) .bt__table td { color: #f1f5f9 !important; background: #0b1329 !important; }
                 :global(.dark) .bt__guruName { color: #f1f5f9 !important; }
                 :global(.dark) .bt__jurnalDate { color: #f1f5f9 !important; }
                 :global(.dark) .bt__kelasChip {
-                    background: #000000 !important;
-                    border-color: rgba(59, 130, 246, 0.25) !important;
+                    background: #0b1329 !important;
+                    border-color: rgba(26, 115, 232, 0.35) !important;
                     color: #38bdf8 !important;
                 }
                 :global(.dark) .bt__jurnalJam {
@@ -512,8 +517,8 @@ export default function BandingTable({ bandings, isReviewer, onRowClick, onDelet
                 }
                 :global(.dark) .bt__reviewerInfo { color: #f1f5f9 !important; }
                 :global(.dark) .bt__detailBtn {
-                    background: #000000 !important;
-                    border-color: rgba(59, 130, 246, 0.35) !important;
+                    background: #0b1329 !important;
+                    border-color: rgba(26, 115, 232, 0.35) !important;
                     color: #38bdf8 !important;
                 }
                 :global(.dark) .bt__detailBtn:hover {
@@ -522,7 +527,7 @@ export default function BandingTable({ bandings, isReviewer, onRowClick, onDelet
                     border-color: #3b82f6 !important;
                 }
                 :global(.dark) .bt__deleteBtn {
-                    background: #000000 !important;
+                    background: #0b1329 !important;
                     border-color: rgba(239, 68, 68, 0.35) !important;
                     color: #f87171 !important;
                 }
@@ -694,22 +699,23 @@ export default function BandingTable({ bandings, isReviewer, onRowClick, onDelet
 
                 /* Dark mobile */
                 :global(.dark) .bt__card {
-                    background: #000000 !important;
-                    border: 1px solid rgba(37, 99, 235, 0.4) !important;
-                    box-shadow: 0 4px 16px rgba(0,0,0,0.5) !important;
+                    background: #0b1329 !important;
+                    border: 1px solid rgba(26, 115, 232, 0.35) !important;
+                    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4) !important;
+                    transition: all 0.2s ease !important;
                 }
                 :global(.dark) .bt__cardHead {
-                    background: #000000 !important;
-                    border-bottom: 1px solid rgba(59, 130, 246, 0.2) !important;
+                    background: #0b1329 !important;
+                    border-bottom: 1px solid rgba(26, 115, 232, 0.2) !important;
                 }
                 :global(.dark) .bt__cardFoot {
-                    background: #000000 !important;
-                    border-top: 1px solid rgba(59, 130, 246, 0.2) !important;
+                    background: #0b1329 !important;
+                    border-top: 1px solid rgba(26, 115, 232, 0.2) !important;
                 }
                 :global(.dark) .bt__cardValue { color: #f1f5f9 !important; }
                 :global(.dark) .bt__card:hover {
-                    border-color: #3b82f6 !important;
-                    box-shadow: 0 4px 16px rgba(26, 115, 232, 0.3) !important;
+                    border-color: rgba(59, 130, 246, 0.6) !important;
+                    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.5), 0 0 15px rgba(26, 115, 232, 0.15) !important;
                 }
                 :global(.dark) .bt__cardTap { color: #38bdf8 !important; }
             `}</style>

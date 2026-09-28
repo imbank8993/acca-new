@@ -495,7 +495,7 @@ export default function NilaiIjazahTab({
       {/* ── Matrix Table Content ─────────────────────────────────────── */}
       {loadingData ? (
         <div className="um__tableWrap" style={{ padding: '40px 0', textAlign: 'center' }}>
-          <Spinner variant="trace" label="Memuat kalkulasi nilai ijazah..." />
+          <Spinner variant="buble" label="Memuat kalkulasi nilai ijazah..." />
         </div>
       ) : mapelList.length === 0 ? (
         <div className="um__tableWrap">

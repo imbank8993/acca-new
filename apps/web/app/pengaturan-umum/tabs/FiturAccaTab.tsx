@@ -542,24 +542,31 @@ export default function FiturAccaTab() {
 
         /* Dark Mode */
         :global(.dark) .fitur-tab {
-          background: #000000 !important;
-          border: 1px solid rgba(37, 99, 235, 0.4) !important;
+          background: #0b1329 !important;
+          border: 1px solid rgba(26, 115, 232, 0.35) !important;
           border-radius: 16px !important;
-          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6) !important;
+          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5) !important;
+          transition: all 0.2s ease !important;
+        }
+        :global(.dark) .fitur-tab:hover {
+          border-color: rgba(59, 130, 246, 0.6) !important;
+          box-shadow: 0 8px 25px rgba(0, 0, 0, 0.5), 0 0 15px rgba(26, 115, 232, 0.15) !important;
         }
         :global(.dark) .fitur-header h3 {
           color: #e2e8f0 !important;
         }
         :global(.dark) .fitur-table-wrap {
-          border-color: rgba(26, 115, 232, 0.4) !important;
+          border: 1px solid rgba(26, 115, 232, 0.35) !important;
           border-radius: 12px !important;
+          overflow: hidden !important;
         }
         :global(.dark) .fitur-table th {
-          background: linear-gradient(135deg, rgba(26, 115, 232, 0.15), rgba(0, 40, 122, 0.25)) !important;
-          border-bottom: 1px solid rgba(37, 99, 235, 0.4) !important;
+          background: rgba(37, 99, 235, 0.15) !important;
+          border-bottom: 1px solid rgba(26, 115, 232, 0.35) !important;
           color: #94a3b8 !important;
         }
         :global(.dark) .fitur-table td {
+          background: #0b1329 !important;
           border-bottom: 1px solid rgba(26, 115, 232, 0.2) !important;
           color: #cbd5e1 !important;
         }
@@ -588,20 +595,20 @@ export default function FiturAccaTab() {
           border: 1px solid rgba(255, 255, 255, 0.1) !important;
         }
         :global(.dark) .btn-icon {
-          background: #000000 !important;
-          border: 1px solid rgba(26, 115, 232, 0.4) !important;
+          background: #0b1329 !important;
+          border: 1px solid rgba(26, 115, 232, 0.35) !important;
         }
         :global(.dark) .btn-edit {
-          background: #000000 !important;
+          background: #0b1329 !important;
           color: #60a5fa !important;
-          border: 1px solid rgba(37, 99, 235, 0.4) !important;
+          border: 1px solid rgba(26, 115, 232, 0.35) !important;
         }
         :global(.dark) .btn-edit:hover {
           background: rgba(26, 115, 232, 0.25) !important;
           color: #ffffff !important;
         }
         :global(.dark) .btn-toggle {
-          background: #000000 !important;
+          background: #0b1329 !important;
           color: #38bdf8 !important;
           border: 1px solid rgba(56, 189, 248, 0.5) !important;
         }
@@ -610,7 +617,7 @@ export default function FiturAccaTab() {
           color: #ffffff !important;
         }
         :global(.dark) .btn-delete {
-          background: #000000 !important;
+          background: #0b1329 !important;
           color: #f87171 !important;
           border: 1px solid rgba(239, 68, 68, 0.4) !important;
         }
@@ -619,8 +626,8 @@ export default function FiturAccaTab() {
           color: #ffffff !important;
         }
         :global(.dark) .modal-content {
-          background: #000000 !important;
-          border: 1px solid rgba(37, 99, 235, 0.4) !important;
+          background: #0b1329 !important;
+          border: 1px solid rgba(26, 115, 232, 0.35) !important;
           box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8) !important;
         }
         :global(.dark) .form-group label {
@@ -628,8 +635,8 @@ export default function FiturAccaTab() {
         }
         :global(.dark) .form-control {
           height: 40px !important;
-          background: #000000 !important;
-          border: 1px solid rgba(37, 99, 235, 0.4) !important;
+          background: #0b1329 !important;
+          border: 1px solid rgba(26, 115, 232, 0.35) !important;
           border-radius: 12px !important;
           color: #ffffff !important;
         }
@@ -637,16 +644,16 @@ export default function FiturAccaTab() {
           height: auto !important;
         }
         :global(.dark) .image-upload-box {
-          background: #000000 !important;
-          border: 1px dashed rgba(26, 115, 232, 0.5) !important;
+          background: #0b1329 !important;
+          border: 1px dashed rgba(26, 115, 232, 0.35) !important;
           border-radius: 12px !important;
         }
         :global(.dark) .modal-footer {
-          border-top-color: rgba(26, 115, 232, 0.4) !important;
+          border-top-color: rgba(26, 115, 232, 0.35) !important;
         }
         :global(.dark) .btn-cancel {
-          background: #000000 !important;
-          border: 1px solid rgba(37, 99, 235, 0.4) !important;
+          background: #0b1329 !important;
+          border: 1px solid rgba(26, 115, 232, 0.35) !important;
           color: #94a3b8 !important;
         }
         :global(.dark) .btn-save {

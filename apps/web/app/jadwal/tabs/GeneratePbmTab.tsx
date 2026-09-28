@@ -1175,7 +1175,7 @@ export default function GeneratePbmTab({ user, bolehKelola }: GeneratePbmTabProp
                         {loading ? (
                             <tr>
                                 <td colSpan={8} className="sk__empty" style={{ border: 'none' }}>
-                                    <Spinner variant="trace" />
+                                    <Spinner variant="buble" />
                                 </td>
                             </tr>
                         ) : pageRows.length === 0 ? (
@@ -1222,7 +1222,7 @@ export default function GeneratePbmTab({ user, bolehKelola }: GeneratePbmTabProp
             >
                 {loading ? (
                     <div className="sk__cardLoading" style={{ padding: '36px', display: 'flex', justifyContent: 'center' }}>
-                        <Spinner variant="trace" />
+                        <Spinner variant="buble" />
                     </div>
                 ) : pageRows.length === 0 ? (
                     <div className="sk__cardEmpty" style={{ padding: '36px 16px', textAlign: 'center' }}>
@@ -1410,7 +1410,7 @@ export default function GeneratePbmTab({ user, bolehKelola }: GeneratePbmTabProp
                                 </div>
                             </div>
                             {availableDates.length === 0 ? (
-                                <Spinner variant="trace" />
+                                <Spinner variant="buble" />
                             ) : (
                                 <div className="sk__dateList">
                                     {availableDates.map(date => (

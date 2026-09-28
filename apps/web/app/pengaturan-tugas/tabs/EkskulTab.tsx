@@ -375,7 +375,7 @@ export default function EkskulTab(_props: { user?: unknown }) {
             {/* Loading / Empty State */}
             {loading ? (
                 <div className="ptt__loading">
-                    <Spinner variant="trace" />
+                    <Spinner variant="buble" />
                 </div>
             ) : Object.keys(groupedByEkskul).length === 0 ? (
                 <div className="ptt__empty">

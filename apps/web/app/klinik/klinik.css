@@ -581,28 +581,41 @@
 .dark .klinik-table-container,
 .dark .rekap-card,
 .dark .laporan-approval-card {
-    background: #000000 !important;
-    border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
+    background: #0b1329 !important;
+    border: 1px solid rgba(26, 115, 232, 0.35) !important;
     border-radius: 16px !important;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5) !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4) !important;
+    transition: all 0.2s ease !important;
+}
+
+.dark .slot-card:hover,
+.dark .rekap-card:hover,
+.dark .laporan-approval-card:hover {
+    border-color: rgba(59, 130, 246, 0.6) !important;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.5), 0 0 15px rgba(26, 115, 232, 0.15) !important;
 }
 
 .dark .slot-header,
 .dark .slot-footer,
-.dark .rekap-head,
+.dark .rekap-head {
+    background: #0b1329 !important;
+    border-color: rgba(26, 115, 232, 0.25) !important;
+}
+
 .dark .klinik-table th {
-    background: #000000 !important;
-    border-color: rgba(59, 130, 246, 0.25) !important;
+    background: rgba(37, 99, 235, 0.15) !important;
+    color: #93c5fd !important;
+    border-bottom: 1px solid rgba(26, 115, 232, 0.35) !important;
 }
 
 .dark .klinik-table td {
-    background: #000000 !important;
+    background: #0b1329 !important;
     color: #f1f5f9 !important;
-    border-bottom: 1px solid rgba(59, 130, 246, 0.12) !important;
+    border-bottom: 1px solid rgba(26, 115, 232, 0.2) !important;
 }
 
 .dark .klinik-table tr:hover:not(.active-row):not(.detail-row) td {
-    background: rgba(26, 115, 232, 0.06) !important;
+    background: rgba(26, 115, 232, 0.08) !important;
 }
 
 .dark .topic-box {
@@ -611,8 +624,8 @@
 }
 
 .dark .quota-badge {
-    background: #000000 !important;
-    border: 1px solid rgba(59, 130, 246, 0.4) !important;
+    background: #0b1329 !important;
+    border: 1px solid rgba(26, 115, 232, 0.35) !important;
     color: #93c5fd !important;
 }
 
@@ -651,7 +664,7 @@
 
 .dark .detail-teks { color: #f1f5f9 !important; }
 .dark .detail-teks--catatan { background: rgba(239, 68, 68, 0.15) !important; border-color: rgba(239, 68, 68, 0.3) !important; color: #f87171 !important; }
-.dark .detail-fotos button { background: #000000 !important; border-color: rgba(59, 130, 246, 0.3) !important; }
+.dark .detail-fotos button { background: #0b1329 !important; border-color: rgba(26, 115, 232, 0.35) !important; }
 
 .dark .upload-drop {
     background: rgba(26, 115, 232, 0.05) !important;
@@ -669,9 +682,9 @@
 .dark .jp__input,
 .dark .teman-search input,
 .dark .laporan-approval-note {
-    background-color: #000000 !important;
-    background: #000000 !important;
-    border: 2px solid rgba(59, 130, 246, 0.5) !important;
+    background-color: #0b1329 !important;
+    background: #0b1329 !important;
+    border: 1px solid rgba(26, 115, 232, 0.35) !important;
     color: #f1f5f9 !important;
     border-radius: 10px !important;
 }
@@ -683,12 +696,12 @@
 .dark .teman-search input:focus,
 .dark .laporan-approval-note:focus {
     border-color: #3b82f6 !important;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25) !important;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15) !important;
 }
 
 .dark .tingkat-chip {
-    background: #000000 !important;
-    border: 1.5px solid rgba(59, 130, 246, 0.4) !important;
+    background: #0b1329 !important;
+    border: 1px solid rgba(26, 115, 232, 0.35) !important;
     color: #94a3b8 !important;
 }
 .dark .tingkat-chip.selected {
@@ -714,8 +727,8 @@
 }
 .dark .laporan-approval-empty,
 .dark .empty-state {
-    background: #000000 !important;
-    border: 1px solid rgba(59, 130, 246, 0.25) !important;
+    background: #0b1329 !important;
+    border: 1px solid rgba(26, 115, 232, 0.35) !important;
     color: #94a3b8 !important;
 }
 

@@ -121,7 +121,7 @@ export default function TimezoneTab({ user }: { user?: any }) {
     if (loading) {
         return (
             <div className="tz-loading">
-                <Spinner variant="trace" />
+                <Spinner variant="buble" />
             </div>
         )
     }
@@ -334,16 +334,26 @@ export default function TimezoneTab({ user }: { user?: any }) {
                     border-radius: 8px !important;
                 }
                 :global(.dark) .tz-current {
-                    background: #000000 !important;
-                    border: 1px solid rgba(37, 99, 235, 0.4) !important;
+                    background: #0b1329 !important;
+                    border: 1px solid rgba(26, 115, 232, 0.35) !important;
                     border-radius: 16px !important;
-                    box-shadow: 0 4px 20px rgba(0,0,0,0.6) !important;
+                    box-shadow: 0 4px 20px rgba(0,0,0,0.5) !important;
+                    transition: all 0.2s ease !important;
+                }
+                :global(.dark) .tz-current:hover {
+                    border-color: rgba(59, 130, 246, 0.6) !important;
+                    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.5), 0 0 15px rgba(26, 115, 232, 0.15) !important;
                 }
                 :global(.dark) .tz-options {
-                    background: #000000 !important;
-                    border: 1px solid rgba(37, 99, 235, 0.4) !important;
+                    background: #0b1329 !important;
+                    border: 1px solid rgba(26, 115, 232, 0.35) !important;
                     border-radius: 16px !important;
-                    box-shadow: 0 4px 20px rgba(0,0,0,0.6) !important;
+                    box-shadow: 0 4px 20px rgba(0,0,0,0.5) !important;
+                    transition: all 0.2s ease !important;
+                }
+                :global(.dark) .tz-options:hover {
+                    border-color: rgba(59, 130, 246, 0.6) !important;
+                    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.5), 0 0 15px rgba(26, 115, 232, 0.15) !important;
                 }
                 :global(.dark) .tz-label, :global(.dark) .tz-options-label {
                     color: #94a3b8 !important;
@@ -353,8 +363,8 @@ export default function TimezoneTab({ user }: { user?: any }) {
                     color: #94a3b8 !important;
                 }
                 :global(.dark) .tz-option {
-                    background: #000000 !important;
-                    border: 1px solid rgba(37, 99, 235, 0.4) !important;
+                    background: #0b1329 !important;
+                    border: 1px solid rgba(26, 115, 232, 0.35) !important;
                     border-radius: 12px !important;
                 }
                 :global(.dark) .tz-option input[type="radio"] {

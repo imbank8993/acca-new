@@ -620,15 +620,15 @@
 }
 
 /* =========================================================
-   DARK MODE — GOOGLE ONE PITCH BLACK THEME
+   DARK MODE — THEME OVERRIDES
 ========================================================= */
 
 /* Hero Banner */
 .dark .bk-hero {
-    background: #000000 !important;
-    border: 2px solid #1a73e8 !important;
+    background: #0b1329 !important;
+    border: 1px solid rgba(26, 115, 232, 0.35) !important;
     border-radius: 24px !important;
-    box-shadow: 0 0 30px rgba(26, 115, 232, 0.25) !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4) !important;
 }
 
 .dark .bk-hero-title {
@@ -646,9 +646,10 @@
 
 /* Toolbar & Filters */
 .dark .bk-toolbar {
-    background: #000000 !important;
-    border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
+    background: #0b1329 !important;
+    border: 1px solid rgba(26, 115, 232, 0.35) !important;
     border-radius: 18px !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4) !important;
 }
 
 .dark .bk-field label {
@@ -657,9 +658,9 @@
 
 .dark .bk-field select,
 .dark .bk-field input {
-    background-color: #000000 !important;
-    background: #000000 !important;
-    border: 2px solid rgba(59, 130, 246, 0.5) !important;
+    background-color: #0b1329 !important;
+    background: #0b1329 !important;
+    border: 1px solid rgba(26, 115, 232, 0.35) !important;
     color: #f1f5f9 !important;
     border-radius: 10px !important;
 }
@@ -682,25 +683,26 @@
 
 /* Table Container & Table */
 .dark .bk-table-wrap {
-    background: #000000 !important;
-    border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
+    background: #0b1329 !important;
+    border: 1px solid rgba(26, 115, 232, 0.35) !important;
     border-radius: 18px !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4) !important;
 }
 
 .dark .bk-table th {
-    background: rgba(26, 115, 232, 0.1) !important;
+    background: rgba(37, 99, 235, 0.15) !important;
     color: #93c5fd !important;
-    border-bottom: 1.5px solid rgba(59, 130, 246, 0.25) !important;
+    border-bottom: 1px solid rgba(26, 115, 232, 0.35) !important;
 }
 
 .dark .bk-table td {
-    background: #000000 !important;
-    border-bottom: 1px solid rgba(59, 130, 246, 0.12) !important;
+    background: #0b1329 !important;
+    border-bottom: 1px solid rgba(26, 115, 232, 0.2) !important;
     color: #f1f5f9 !important;
 }
 
 .dark .bk-table tbody tr:hover td {
-    background: rgba(26, 115, 232, 0.06) !important;
+    background: rgba(26, 115, 232, 0.08) !important;
 }
 
 .dark .bk-siswa-nama {
@@ -746,7 +748,7 @@
 /* Detail Button */
 .dark .bk-btn-detail {
     background: rgba(59, 130, 246, 0.12) !important;
-    border: 1.5px solid rgba(59, 130, 246, 0.35) !important;
+    border: 1px solid rgba(59, 130, 246, 0.35) !important;
     color: #60a5fa !important;
     border-radius: 8px !important;
 }
@@ -760,10 +762,16 @@
 
 /* Mobile Cards Dark Mode */
 .dark .bk-card-item {
-    background: #000000 !important;
-    border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
+    background: #0b1329 !important;
+    border: 1px solid rgba(26, 115, 232, 0.35) !important;
     border-radius: 18px !important;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4) !important;
+    transition: all 0.2s ease !important;
+}
+
+.dark .bk-card-item:hover {
+    border-color: rgba(59, 130, 246, 0.6) !important;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.5), 0 0 15px rgba(26, 115, 232, 0.15) !important;
 }
 
 .dark .bk-card-nama {
@@ -795,15 +803,15 @@
 }
 
 .dark .bk-modal {
-    background: #000000 !important;
-    border: 1.8px solid #1a73e8 !important;
+    background: #0b1329 !important;
+    border: 1px solid rgba(26, 115, 232, 0.35) !important;
     border-radius: 20px !important;
-    box-shadow: 0 0 40px rgba(26, 115, 232, 0.35) !important;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.7) !important;
 }
 
 .dark .bk-modal-hdr {
-    background: #000000 !important;
-    border-bottom: 1px solid rgba(59, 130, 246, 0.25) !important;
+    background: #0b1329 !important;
+    border-bottom: 1px solid rgba(26, 115, 232, 0.25) !important;
 }
 
 .dark .bk-modal-hdr h3 {
@@ -873,9 +881,9 @@
 }
 
 .dark .bk-form textarea {
-    background-color: #000000 !important;
-    background: #000000 !important;
-    border: 1.8px solid rgba(59, 130, 246, 0.4) !important;
+    background-color: #0b1329 !important;
+    background: #0b1329 !important;
+    border: 1px solid rgba(26, 115, 232, 0.35) !important;
     color: #f1f5f9 !important;
     border-radius: 10px !important;
 }
@@ -886,9 +894,9 @@
 }
 
 .dark .bk-form-row select {
-    background-color: #000000 !important;
-    background: #000000 !important;
-    border: 1.8px solid rgba(59, 130, 246, 0.4) !important;
+    background-color: #0b1329 !important;
+    background: #0b1329 !important;
+    border: 1px solid rgba(26, 115, 232, 0.35) !important;
     color: #f1f5f9 !important;
     border-radius: 10px !important;
     appearance: none !important;

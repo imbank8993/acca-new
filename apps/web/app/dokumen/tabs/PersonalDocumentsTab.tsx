@@ -981,7 +981,7 @@ export default function PersonalDocumentsPage({ user }: { user: any }) {
                     {loading ? (
 
                         <div className="pd-loading-center">
-                            <Spinner variant="trace" />
+                            <Spinner variant="buble" />
                         </div>
 
                     ) : filteredDocuments.length > 0 ? (

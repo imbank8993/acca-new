@@ -63,7 +63,7 @@ export default function JadwalPbmTab({
         />
 
         {loadingJadwal ? (
-          <div className="db__loading"><Spinner variant="trace" /></div>
+          <div className="db__loading"><Spinner variant="buble" /></div>
         ) : libur ? (
           <LiburSehariPenuh libur={libur} jenis="PBM" />
         ) : jadwalHariIni.length > 0 ? (

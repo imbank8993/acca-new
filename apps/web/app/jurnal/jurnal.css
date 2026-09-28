@@ -50,8 +50,9 @@
 }
 
 .dark .modal-portal-loading {
-  background: #0f172a;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: #0b1329 !important;
+  border: 1px solid rgba(26, 115, 232, 0.35) !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4) !important;
 }
 
 .dark .modal-portal-loading-text {
@@ -92,12 +93,13 @@
 }
 
 .dark .jt__select [class*="-menu"] {
-  background: #0f172a !important;
-  border-color: rgba(255, 255, 255, 0.1) !important;
+  background: #0b1329 !important;
+  border: 1px solid rgba(26, 115, 232, 0.35) !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4) !important;
 }
 
 .dark .jt__select [class*="-option"] {
-  background: var(--n-card) !important;
+  background: #0b1329 !important;
   color: #e8edf5 !important;
 }
 
@@ -116,6 +118,6 @@
 }
 
 .dark .jt__select [class*="-control"] {
-  background: var(--n-card) !important;
-  border-color: var(--n-line) !important;
+  background: #0b1329 !important;
+  border: 1px solid rgba(26, 115, 232, 0.35) !important;
 }

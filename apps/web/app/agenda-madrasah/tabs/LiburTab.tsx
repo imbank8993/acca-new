@@ -630,7 +630,7 @@ export default function LiburTab({
                 </td>
               </tr>
             ))}
-            {loading && <tr><td colSpan={6} className="lb__empty" style={{ textAlign: 'center' }}><Spinner variant="trace" /></td></tr>}
+            {loading && <tr><td colSpan={6} className="lb__empty" style={{ textAlign: 'center' }}><Spinner variant="buble" /></td></tr>}
             {!loading && list.length === 0 && <tr><td colSpan={6} className="lb__empty lb__muted">Tidak ada data.</td></tr>}
           </tbody>
         </table>
@@ -641,7 +641,7 @@ export default function LiburTab({
         {loading ? (
           <div className="sk__card sk__cardLoading">
             <div className="sk__cardBody" style={{ padding: '24px', display: 'flex', justifyContent: 'center' }}>
-              <Spinner variant="trace" />
+              <Spinner variant="buble" />
             </div>
           </div>
         ) : list.length === 0 ? (

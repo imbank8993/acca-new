@@ -447,7 +447,7 @@ export default function FormDashboard() {
                     <div style={{ padding: 0 }}>
                         {loading ? (
                             <div className="py-12 flex flex-col items-center justify-center">
-                                <Spinner variant="trace" size={36} />
+                                <Spinner variant="buble" size={36} />
                             </div>
                         ) : forms.length === 0 ? (
                             <div className="text-slate-400 dark:text-slate-500" style={{ padding: '64px', textAlign: 'center' }}>

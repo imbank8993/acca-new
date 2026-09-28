@@ -1474,7 +1474,7 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
       <div className="klinik-content">
         {loading ? (
           <div style={{ padding: '60px 0', textAlign: 'center' }}>
-            <Spinner variant="trace" label="Memuat jadwal klinik pembelajaran..." />
+            <Spinner variant="buble" label="Memuat jadwal klinik pembelajaran..." />
           </div>
         ) : tabAktif === 'rekap' ? (
           /* Rekap bulanan kolektif */

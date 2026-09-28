@@ -234,12 +234,13 @@ export default function KeteranganModal({
                 }
 
                 :global(.dark) .ktm-modal {
-                    background: #000000 !important;
-                    border: 1px solid rgba(59, 130, 246, 0.35) !important;
+                    background: #0b1329 !important;
+                    border: 1px solid rgba(26, 115, 232, 0.35) !important;
+                    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4) !important;
                 }
                 :global(.dark) .ktm-header {
-                    background: #000000 !important;
-                    border-bottom: 1px solid rgba(59, 130, 246, 0.25) !important;
+                    background: #0b1329 !important;
+                    border-bottom: 1px solid rgba(26, 115, 232, 0.25) !important;
                 }
                 :global(.dark) .ktm-header-icon {
                     background: #1a73e8 !important;
@@ -255,15 +256,15 @@ export default function KeteranganModal({
                     background: rgba(239, 68, 68, 0.2) !important;
                     color: #f87171 !important;
                 }
-                :global(.dark) .ktm-body { background: #000000 !important; }
+                :global(.dark) .ktm-body { background: #0b1329 !important; }
                 :global(.dark) .ktm-textarea {
-                    background: #000000 !important;
-                    border: 1.5px solid rgba(59, 130, 246, 0.35) !important;
+                    background: #0b1329 !important;
+                    border: 1px solid rgba(26, 115, 232, 0.35) !important;
                     color: #f1f5f9 !important;
                 }
                 :global(.dark) .ktm-readonly {
-                    background: #000000 !important;
-                    border: 1px solid rgba(59, 130, 246, 0.25) !important;
+                    background: #0b1329 !important;
+                    border: 1px solid rgba(26, 115, 232, 0.25) !important;
                     color: #f1f5f9 !important;
                 }
                 :global(.dark) .ktm-submit {

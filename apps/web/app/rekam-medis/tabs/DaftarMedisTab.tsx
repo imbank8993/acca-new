@@ -90,7 +90,7 @@ export default function DaftarMedisTab({
             <div className="kh-table-wrap" style={{ padding: '0', background: 'transparent', border: 'none' }}>
                 {loadingList ? (
                     <div style={{ textAlign: 'center', padding: '40px', background: 'var(--n-card)', borderRadius: '16px', border: '1px solid var(--kh-tb-border)' }}>
-                        <Spinner variant="trace" />
+                        <Spinner variant="buble" />
                     </div>
                 ) : filteredRows.length === 0 ? (
                     <div style={{ textAlign: 'center', padding: '40px', color: 'var(--kh-text-secondary)', background: 'var(--n-card)', borderRadius: '16px', border: '1px solid var(--kh-tb-border)' }}>

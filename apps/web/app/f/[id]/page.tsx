@@ -520,7 +520,7 @@ export default function FormViewerPage() {
     if (loading) {
         return (
             <div className={embedded ? 'bg-transparent flex flex-col items-center justify-center py-24' : 'min-h-screen bg-slate-50 dark:bg-black flex flex-col items-center justify-center'}>
-                <Spinner variant="trace" size={44} />
+                <Spinner variant="buble" size={44} />
             </div>
         );
     }

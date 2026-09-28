@@ -1080,8 +1080,8 @@ export default function JournalModal({
                 }
                 :global(.dark) .jm__input,
                 :global(.dark) .jm__textarea {
-                    background: #000000 !important;
-                    border: 1.5px solid rgba(59, 130, 246, 0.35) !important;
+                    background: #0b1329 !important;
+                    border: 1px solid rgba(26, 115, 232, 0.35) !important;
                     color: #f1f5f9 !important;
                 }
                 :global(.dark) .jm__input:focus,
@@ -1094,12 +1094,12 @@ export default function JournalModal({
                     color: #64748b !important;
                 }
                 :global(.dark) .jm__subSection {
-                    background: #000000 !important;
-                    border: 1px solid rgba(59, 130, 246, 0.25) !important;
+                    background: #0b1329 !important;
+                    border: 1px solid rgba(26, 115, 232, 0.35) !important;
                 }
                 :global(.dark) .jm__autoFill {
                     background: rgba(26, 115, 232, 0.15) !important;
-                    border-color: rgba(59, 130, 246, 0.35) !important;
+                    border-color: rgba(26, 115, 232, 0.35) !important;
                     color: #38bdf8 !important;
                 }
             `}</style>

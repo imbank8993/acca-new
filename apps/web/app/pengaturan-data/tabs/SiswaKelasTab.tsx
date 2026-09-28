@@ -1151,7 +1151,7 @@ export default function SiswaKelasTab(_props: { user?: unknown }) {
             {loading ? (
               <tr>
                 <td colSpan={8} className="sk__empty" style={{ border: 'none' }}>
-                  <Spinner variant="trace" />
+                  <Spinner variant="buble" />
                 </td>
               </tr>
             ) : list.length === 0 ? (
@@ -1248,7 +1248,7 @@ export default function SiswaKelasTab(_props: { user?: unknown }) {
       >
         {loading ? (
           <div style={{ padding: '40px 20px', display: 'flex', justifyContent: 'center' }}>
-            <Spinner variant="trace" />
+            <Spinner variant="buble" />
           </div>
         ) : list.length === 0 ? (
           <div className="sk__emptyCard">Tidak ada data siswa kelas.</div>

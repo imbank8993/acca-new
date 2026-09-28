@@ -48,7 +48,7 @@ export default function RiwayatTab() {
   };
 
   if (loading) {
-    return <div className="bd-loading"><Spinner variant="trace" label="Memuat riwayat..." /></div>;
+    return <div className="bd-loading"><Spinner variant="buble" label="Memuat riwayat..." /></div>;
   }
 
   return (

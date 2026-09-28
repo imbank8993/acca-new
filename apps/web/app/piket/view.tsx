@@ -445,7 +445,7 @@ export default function PiketPage({ user, initialTab }: { user?: User; initialTa
 
                 {/* ── Tab: Input ───────────────────────────────────────────────── */}
                 {activeTab === 'input' && (
-                    <Suspense fallback={<div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '200px', gap: '12px' }}><Spinner variant="trace" /><p style={{ color: 'var(--n-muted)', fontSize: '0.875rem' }}>Memuat Form Input...</p></div>}>
+                    <Suspense fallback={<div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '200px', gap: '12px' }}><Spinner variant="buble" /><p style={{ color: 'var(--n-muted)', fontSize: '0.875rem' }}>Memuat Form Input...</p></div>}>
                         <PiketInputPage isTabMode={true} />
                     </Suspense>
                 )}
@@ -1177,14 +1177,20 @@ export default function PiketPage({ user, initialTab }: { user?: User; initialTa
                 .doc-lb-info i { color: var(--n-primary); font-size: 0.8rem; }
 
                 /* =========================================================
-                   DARK MODE — GOOGLE ONE PITCH BLACK THEME
+                   DARK MODE — THEME OVERRIDES
                 ========================================================= */
 
                 /* Stats Cards */
                 .dark .piket-stat-card {
-                    background: #000000 !important;
-                    border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
+                    background: #0b1329 !important;
+                    border: 1px solid rgba(26, 115, 232, 0.35) !important;
                     border-radius: 16px !important;
+                    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4) !important;
+                    transition: all 0.2s ease !important;
+                }
+                .dark .piket-stat-card:hover {
+                    border-color: rgba(59, 130, 246, 0.6) !important;
+                    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.5), 0 0 15px rgba(26, 115, 232, 0.15) !important;
                 }
                 .dark .piket-stat-num {
                     color: #f1f5f9 !important;
@@ -1205,23 +1211,24 @@ export default function PiketPage({ user, initialTab }: { user?: User; initialTa
 
                 /* Table */
                 .dark .table-wrapper {
-                    background: #000000 !important;
-                    border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
+                    background: #0b1329 !important;
+                    border: 1px solid rgba(26, 115, 232, 0.35) !important;
                     border-radius: 20px !important;
+                    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4) !important;
                 }
                 .dark .data-table thead tr {
-                    background: rgba(26, 115, 232, 0.1) !important;
-                    border-bottom: 1.5px solid rgba(59, 130, 246, 0.25) !important;
+                    background: rgba(37, 99, 235, 0.15) !important;
+                    border-bottom: 1px solid rgba(26, 115, 232, 0.35) !important;
                 }
                 .dark .data-table th {
                     color: #93c5fd !important;
                 }
                 .dark .data-table tbody tr {
-                    background: #000000 !important;
-                    border-bottom: 1px solid rgba(59, 130, 246, 0.12) !important;
+                    background: #0b1329 !important;
+                    border-bottom: 1px solid rgba(26, 115, 232, 0.2) !important;
                 }
                 .dark .data-table tbody tr:hover td {
-                    background: rgba(26, 115, 232, 0.06) !important;
+                    background: rgba(26, 115, 232, 0.08) !important;
                 }
                 .dark .data-table td {
                     color: #f1f5f9 !important;
@@ -1257,21 +1264,24 @@ export default function PiketPage({ user, initialTab }: { user?: User; initialTa
 
                 /* Dokumentasi Grid */
                 .dark .doc-grid-wrapper {
-                    background: #000000 !important;
-                    border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
+                    background: #0b1329 !important;
+                    border: 1px solid rgba(26, 115, 232, 0.35) !important;
                     border-radius: 18px !important;
+                    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4) !important;
                 }
                 .dark .doc-card {
-                    background: #000000 !important;
-                    border: 1px solid rgba(37, 99, 235, 0.4) !important;
+                    background: #0b1329 !important;
+                    border: 1px solid rgba(26, 115, 232, 0.35) !important;
                     border-radius: 14px !important;
+                    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4) !important;
+                    transition: all 0.2s ease !important;
                 }
                 .dark .doc-card:hover {
-                    border-color: #3b82f6 !important;
-                    box-shadow: 0 0 20px rgba(26, 115, 232, 0.3) !important;
+                    border-color: rgba(59, 130, 246, 0.6) !important;
+                    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.5), 0 0 15px rgba(26, 115, 232, 0.15) !important;
                 }
                 .dark .doc-card-body {
-                    background: #000000 !important;
+                    background: #0b1329 !important;
                 }
                 .dark .doc-card-kelas {
                     color: #f1f5f9 !important;
@@ -1301,8 +1311,8 @@ export default function PiketPage({ user, initialTab }: { user?: User; initialTa
                     color: #f1f5f9 !important;
                 }
                 .dark .doc-empty-icon {
-                    background: #000000 !important;
-                    border-color: rgba(59, 130, 246, 0.3) !important;
+                    background: #0b1329 !important;
+                    border: 1px solid rgba(26, 115, 232, 0.35) !important;
                     color: #60a5fa !important;
                 }
 
@@ -1311,8 +1321,8 @@ export default function PiketPage({ user, initialTab }: { user?: User; initialTa
                     border-top-color: rgba(59, 130, 246, 0.25) !important;
                 }
                 .dark .doc-page-btn {
-                    background: #000000 !important;
-                    border-color: rgba(59, 130, 246, 0.35) !important;
+                    background: #0b1329 !important;
+                    border: 1px solid rgba(26, 115, 232, 0.35) !important;
                     color: #60a5fa !important;
                 }
                 .dark .doc-page-num {
@@ -1331,15 +1341,15 @@ export default function PiketPage({ user, initialTab }: { user?: User; initialTa
 
                 /* Lightbox */
                 .dark .doc-lightbox-panel {
-                    background: #000000 !important;
-                    border: 1.8px solid #1a73e8 !important;
+                    background: #0b1329 !important;
+                    border: 1px solid rgba(26, 115, 232, 0.35) !important;
                     border-radius: 20px !important;
-                    box-shadow: 0 0 40px rgba(26, 115, 232, 0.35) !important;
+                    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.7) !important;
                 }
                 .dark .doc-lightbox-topbar,
                 .dark .doc-lightbox-footer {
-                    background: #000000 !important;
-                    border-color: rgba(59, 130, 246, 0.25) !important;
+                    background: #0b1329 !important;
+                    border-color: rgba(26, 115, 232, 0.25) !important;
                 }
                 .dark .doc-lb-kelas {
                     color: #f1f5f9 !important;
@@ -1348,8 +1358,8 @@ export default function PiketPage({ user, initialTab }: { user?: User; initialTa
                     color: #94a3b8 !important;
                 }
                 .dark .doc-lb-dl {
-                    background: #000000 !important;
-                    border-color: rgba(59, 130, 246, 0.35) !important;
+                    background: #0b1329 !important;
+                    border: 1px solid rgba(26, 115, 232, 0.35) !important;
                     color: #60a5fa !important;
                 }
                 .dark .doc-lb-info span {
@@ -1372,13 +1382,13 @@ export default function PiketPage({ user, initialTab }: { user?: User; initialTa
                     color: #f1f5f9 !important;
                 }
                 .dark .details-table th {
-                    background: rgba(26, 115, 232, 0.1) !important;
+                    background: rgba(37, 99, 235, 0.15) !important;
                     color: #93c5fd !important;
-                    border-bottom: 1.5px solid rgba(59, 130, 246, 0.25) !important;
+                    border-bottom: 1px solid rgba(26, 115, 232, 0.35) !important;
                 }
                 .dark .details-table td {
-                    background: #000000 !important;
-                    border-bottom: 1px solid rgba(59, 130, 246, 0.12) !important;
+                    background: #0b1329 !important;
+                    border-bottom: 1px solid rgba(26, 115, 232, 0.2) !important;
                     color: #f1f5f9 !important;
                 }
                 .dark .img-link {
@@ -1389,9 +1399,9 @@ export default function PiketPage({ user, initialTab }: { user?: User; initialTa
                 }
                 .dark .form-group input,
                 .dark .form-group textarea {
-                    background-color: #000000 !important;
-                    background: #000000 !important;
-                    border: 1.8px solid rgba(59, 130, 246, 0.4) !important;
+                    background-color: #0b1329 !important;
+                    background: #0b1329 !important;
+                    border: 1px solid rgba(26, 115, 232, 0.35) !important;
                     color: #f1f5f9 !important;
                     border-radius: 10px !important;
                 }

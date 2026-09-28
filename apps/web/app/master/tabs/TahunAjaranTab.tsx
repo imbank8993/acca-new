@@ -280,7 +280,7 @@ export default function TahunAjaranTab({ user }: { user?: any }) {
             </div>
 
             {loading ? (
-                <div className="mui-loading"><Spinner variant="trace" /></div>
+                <div className="mui-loading"><Spinner variant="buble" /></div>
             ) : filteredList.length === 0 ? (
                 <MobileEmpty
                     icon="calendar3"
@@ -372,7 +372,7 @@ export default function TahunAjaranTab({ user }: { user?: any }) {
                     </thead>
                     <tbody>
                         {loading ? (
-                            <tr><td colSpan={isAdmin ? 5 : 4} className="sk__loadingCell"><Spinner variant="trace" /></td></tr>
+                            <tr><td colSpan={isAdmin ? 5 : 4} className="sk__loadingCell"><Spinner variant="buble" /></td></tr>
                         ) : filteredList.length === 0 ? (
                             <tr><td colSpan={isAdmin ? 5 : 4} className="sk__empty sk__muted">Belum ada data tahun ajaran.</td></tr>
                         ) : (
@@ -673,10 +673,20 @@ export default function TahunAjaranTab({ user }: { user?: any }) {
 
                 .ta__empty { padding: 40px; text-align: center; color: var(--n-muted); font-style: italic; }
 
-                :global(.dark) .ta__tableWrap { background: var(--n-card); border-color: var(--n-border); }
-                :global(.dark) .ta__table th { background: rgba(255,255,255,0.05); color: var(--n-muted); border-bottom-color: var(--n-border); }
-                :global(.dark) .ta__table td { background: var(--n-card); color: var(--n-ink); border-bottom-color: var(--n-border); }
-                :global(.dark) .ta__table tbody tr:hover td { background: rgba(79,142,247,0.05); }
+                :global(.dark) .ta__tableWrap {
+                  background: #0b1329 !important;
+                  border: 1px solid rgba(26, 115, 232, 0.35) !important;
+                  border-radius: 16px !important;
+                  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5) !important;
+                  transition: all 0.2s ease !important;
+                }
+                :global(.dark) .ta__tableWrap:hover {
+                  border-color: rgba(59, 130, 246, 0.6) !important;
+                  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.5), 0 0 15px rgba(26, 115, 232, 0.15) !important;
+                }
+                :global(.dark) .ta__table th { background: rgba(37, 99, 235, 0.15) !important; color: var(--n-muted) !important; border-bottom: 1px solid rgba(26, 115, 232, 0.35) !important; }
+                :global(.dark) .ta__table td { background: #0b1329 !important; color: var(--n-ink) !important; border-bottom: 1px solid rgba(26, 115, 232, 0.2) !important; }
+                :global(.dark) .ta__table tbody tr:hover td { background: rgba(37, 99, 235, 0.08) !important; }
                 :global(.dark) .ta__name { color: var(--n-ink); }
 
                 :global(.dark .sk__readInput) {

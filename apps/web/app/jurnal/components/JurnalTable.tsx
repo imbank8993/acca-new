@@ -253,10 +253,15 @@ export default function JurnalTable({
                 }
 
                 :global(.dark) .jt__tableWrap {
-                    background: #000000 !important;
-                    border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
+                    background: #0b1329 !important;
+                    border: 1px solid rgba(26, 115, 232, 0.35) !important;
                     border-radius: 20px !important;
-                    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5) !important;
+                    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4) !important;
+                    transition: all 0.2s ease !important;
+                }
+                :global(.dark) .jt__tableWrap:hover {
+                    border-color: rgba(59, 130, 246, 0.6) !important;
+                    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.5), 0 0 15px rgba(26, 115, 232, 0.15) !important;
                 }
 
                 .jt__table {
@@ -338,13 +343,14 @@ export default function JurnalTable({
                 .jt__iconBtn.danger:hover { background: rgba(239, 68, 68, 0.15); border-color: rgba(239, 68, 68, 0.3); }
 
                 :global(.dark) .jt__table thead th {
-                    background: #000000 !important;
+                    background: rgba(37, 99, 235, 0.15) !important;
                     color: #93c5fd !important;
-                    border-bottom: 2px solid rgba(59, 130, 246, 0.35) !important;
+                    border-bottom: 1px solid rgba(26, 115, 232, 0.35) !important;
                 }
                 :global(.dark) .jt__table td {
+                    background: #0b1329 !important;
                     color: #f1f5f9 !important;
-                    border-bottom: 1px solid rgba(59, 130, 246, 0.15) !important;
+                    border-bottom: 1px solid rgba(26, 115, 232, 0.2) !important;
                 }
                 :global(.dark) .jt__table tbody tr:hover td {
                     background: rgba(26, 115, 232, 0.08) !important;
@@ -353,8 +359,8 @@ export default function JurnalTable({
                 :global(.dark) .jt__mapel { color: #94a3b8 !important; }
                 :global(.dark) .jt__jamMain { color: #38bdf8 !important; }
                 :global(.dark) .jt__iconBtn {
-                    background: #000000 !important;
-                    border: 1px solid rgba(59, 130, 246, 0.35) !important;
+                    background: #0b1329 !important;
+                    border: 1px solid rgba(26, 115, 232, 0.35) !important;
                     color: #38bdf8 !important;
                 }
                 :global(.dark) .jt__iconBtn:hover {

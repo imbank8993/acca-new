@@ -525,7 +525,7 @@ export default function InputMedisTab({
                                     padding: '3px 10px', boxShadow: '0 2px 8px rgba(0, 56, 168, 0.15)',
                                     pointerEvents: 'none', zIndex: 10
                                 }}>
-                                    <Spinner variant="trace" size={24} />
+                                    <Spinner variant="buble" size={24} />
                                     <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--kh-accent)', letterSpacing: '0.02em' }}>
                                         Mencari siswa...
                                     </span>

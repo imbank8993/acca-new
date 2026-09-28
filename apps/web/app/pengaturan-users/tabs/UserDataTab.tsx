@@ -703,7 +703,7 @@ export default function UserDataTab({ user }: { user?: User }) {
       <div className="udt-content">
         {loading ? (
           <div className="udt-empty">
-            <Spinner variant="trace" />
+            <Spinner variant="buble" />
           </div>
         ) : filteredUsers.length === 0 ? (
           <div className="udt-empty">

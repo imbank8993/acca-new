@@ -34,7 +34,7 @@ export default function LayananPTSPPage() {
     if (loading) {
         return (
             <div style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Spinner variant="trace" />
+                <Spinner variant="buble" />
             </div>
         )
     }

@@ -377,7 +377,7 @@ export default function PTSPClient({ user }: { user: any }) {
                                 <tr>
                                     <td colSpan={cols.length + 2} style={{ padding: '60px 0', textAlign: 'center' }}>
                                         {/* 6. Spinner trace tanpa label */}
-                                        <Spinner variant="trace" />
+                                        <Spinner variant="buble" />
                                     </td>
                                 </tr>
                             ) : rows.length === 0 ? (
@@ -493,7 +493,7 @@ export default function PTSPClient({ user }: { user: any }) {
                 <div className="ptsp-mobile-cards">
                     {loading ? (
                         <div style={{ padding: '40px 0', textAlign: 'center' }}>
-                            <Spinner variant="trace" />
+                            <Spinner variant="buble" />
                         </div>
                     ) : rows.length === 0 ? (
                         <div className="ptsp-mobile-empty">

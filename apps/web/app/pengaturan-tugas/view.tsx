@@ -61,7 +61,7 @@ export default function TaskSettingsPage({ user }: { user?: any }) {
   }, [allowedTabs, activeTab])
 
   if (akses.memuat) {
-    return <PageLoader variant="trace" size={56} />
+    return <PageLoader variant="buble" size={56} />
   }
 
   if (!user) {

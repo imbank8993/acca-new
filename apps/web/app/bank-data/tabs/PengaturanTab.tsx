@@ -139,7 +139,7 @@ export default function PengaturanTab({ onTersimpan }: { onTersimpan?: () => voi
   );
 
   if (loading) {
-    return <div className="bd-loading"><Spinner variant="trace" label="Memuat pengaturan..." /></div>;
+    return <div className="bd-loading"><Spinner variant="buble" label="Memuat pengaturan..." /></div>;
   }
 
   return (

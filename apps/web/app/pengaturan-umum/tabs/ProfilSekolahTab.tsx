@@ -632,21 +632,27 @@ export default function ProfilSekolahTab() {
                 /* DARK MODE SUPPORT */
                 :global(.dark) .ps-logo-card,
                 :global(.dark) .ps-form-card {
-                    background: #000000 !important;
-                    border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
+                    background: #0b1329 !important;
+                    border: 1px solid rgba(26, 115, 232, 0.35) !important;
                     border-radius: 16px !important;
-                    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6) !important;
+                    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5) !important;
+                    transition: all 0.2s ease !important;
+                }
+                :global(.dark) .ps-logo-card:hover,
+                :global(.dark) .ps-form-card:hover {
+                    border-color: rgba(59, 130, 246, 0.6) !important;
+                    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.5), 0 0 15px rgba(26, 115, 232, 0.15) !important;
                 }
                 :global(.dark) .ps-section-title,
                 :global(.dark) .ps-form-header h4 {
                     color: #ffffff !important;
                 }
                 :global(.dark) .ps-logo-inner {
-                    background: #000000 !important;
-                    border-color: rgba(26, 115, 232, 0.6) !important;
+                    background: #0b1329 !important;
+                    border-color: rgba(26, 115, 232, 0.35) !important;
                 }
                 :global(.dark) .ps-logo-wrapper {
-                    background: linear-gradient(135deg, rgba(26, 115, 232, 0.2) 0%, #000000 100%) !important;
+                    background: linear-gradient(135deg, rgba(26, 115, 232, 0.2) 0%, #0b1329 100%) !important;
                 }
                 :global(.dark) .ps-logo-btn-delete {
                     background: rgba(239, 68, 68, 0.15) !important;
@@ -658,13 +664,13 @@ export default function ProfilSekolahTab() {
                 }
                 :global(.dark) .ps-input {
                     height: 40px !important;
-                    background: #000000 !important;
-                    border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
+                    background: #0b1329 !important;
+                    border: 1px solid rgba(26, 115, 232, 0.35) !important;
                     border-radius: 12px !important;
                     color: #ffffff !important;
                 }
                 :global(.dark) select.ps-input {
-                    background-color: #000000 !important;
+                    background-color: #0b1329 !important;
                     background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiM2MGE1ZmEiIHN0cm9rZS13aWR0aD0iMi41IiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiPjxwb2x5bGluZSBwb2ludHM9IjYgOSAxMiAxNSAxOCA5Ij48L3BvbHlsaW5lPjwvc3ZnPg==") !important;
                     background-repeat: no-repeat !important;
                     background-position: right 12px center !important;
@@ -677,7 +683,7 @@ export default function ProfilSekolahTab() {
                     height: auto !important;
                 }
                 :global(.dark) .ps-input:focus {
-                    background: #000000 !important;
+                    background: #0b1329 !important;
                     border-color: #3b82f6 !important;
                     box-shadow: 0 0 12px rgba(26, 115, 232, 0.4) !important;
                 }
