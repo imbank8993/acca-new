@@ -46,7 +46,6 @@ const LAZY_PAGES: Record<string, () => Promise<any>> = {
   'catatan-keuangan': () => import('@/app/catatan-keuangan/view'),
   'layanan-ptsp': () => import('@/app/layanan-ptsp/view'),
   'klinik': () => import('@/app/klinik/view'),
-  'rekap-jurnal': () => import('@/app/rekap-jurnal/view'),
   'e-supervisi': () => import('@/app/e-supervisi/view'),
   'dokumen': () => import('@/app/dokumen/view'),
 }
@@ -84,7 +83,6 @@ const PAGE_LABELS: Record<string, string> = {
   'catatan-keuangan': 'Catatan Keuangan',
   'layanan-ptsp': 'Layanan PTSP',
   'klinik': 'Klinik Pembelajaran',
-  'rekap-jurnal': 'Rekap Jurnal',
   'e-supervisi': 'E-Supervisi',
   'dokumen': 'Pusat Dokumen',
 }

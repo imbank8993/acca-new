@@ -22,6 +22,7 @@ import { useTabParam } from '@/hooks/useTabParam';
 import BandingPage from './banding/view';
 import GenerateJurnalTab from './components/GenerateJurnalTab';
 import JurnalInputPage from './input/view';
+import RekapJurnalTab from './components/RekapJurnalTab';
 import { checkFeatureAccess, parseKonfigurasiAksesClient } from '@/lib/feature-access-client';
 import './jurnal.css';
 
@@ -652,6 +653,7 @@ export default function JurnalPage({ user }: { user?: any }) {
     const isOPJurnal = roles.includes('OP_JURNAL') || role === 'OP_JURNAL';
     const isSiswa = roles.includes('SISWA') || role === 'SISWA' || roles.includes('PENGURUS_KELAS') || role === 'PENGURUS_KELAS' || roles.includes('PENGURUS KELAS');
     const canViewDaftarJurnal = isAdmin || isGuru || isSiswa;
+    const canViewRekap = !isSiswa;
 
     const [inputConfig, setInputConfig] = useState<any>(null);
     const [reviewConfig, setReviewConfig] = useState<any>(null);
@@ -693,12 +695,15 @@ export default function JurnalPage({ user }: { user?: any }) {
     const [bandingPending, setBandingPending] = useState(0);
 
     const availableTabs = useMemo(() => {
-        const list: { key: 'jurnal' | 'input' | 'banding_saya' | 'review_banding' | 'generate'; label: string; icon: string }[] = [];
+        const list: { key: 'jurnal' | 'input' | 'rekap' | 'banding_saya' | 'review_banding' | 'generate'; label: string; icon: string }[] = [];
         if (canViewDaftarJurnal) {
             list.push({ key: 'jurnal', label: 'Daftar Jurnal', icon: 'journal-text' });
         }
         if (canInput) {
             list.push({ key: 'input', label: 'Input Jurnal', icon: 'pencil-square' });
+        }
+        if (canViewRekap) {
+            list.push({ key: 'rekap', label: 'Rekap Jurnal', icon: 'bar-chart' });
         }
         if (isGuru) {
             list.push({ key: 'banding_saya', label: 'Banding Saya', icon: 'person-badge' });
@@ -714,13 +719,13 @@ export default function JurnalPage({ user }: { user?: any }) {
             list.push({ key: 'generate', label: 'Generate', icon: 'magic' });
         }
         return list;
-    }, [canViewDaftarJurnal, canInput, isGuru, canReview, canGenerate, bandingPending]);
+    }, [canViewDaftarJurnal, canInput, canViewRekap, isGuru, canReview, canGenerate, bandingPending]);
 
     const allowedTabKeys = useMemo(() => availableTabs.map(t => t.key), [availableTabs]);
 
     const [activeTab, setActiveTab] = useTabParam<
-        'jurnal' | 'input' | 'banding_saya' | 'review_banding' | 'generate'
-    >('jurnal', ['jurnal', 'input', 'banding_saya', 'review_banding', 'generate'] as const);
+        'jurnal' | 'input' | 'rekap' | 'banding_saya' | 'review_banding' | 'generate'
+    >('jurnal', ['jurnal', 'input', 'rekap', 'banding_saya', 'review_banding', 'generate'] as const);
 
     // Fallback if activeTab is not permitted for the user's role
     useEffect(() => {
@@ -749,6 +754,8 @@ export default function JurnalPage({ user }: { user?: any }) {
                 setActiveTab(e.detail);
             } else if ((e.detail === 'input_jurnal' || e.detail === 'jurnal-input' || e.detail === 'input-jurnal') && allowedTabKeys.includes('input')) {
                 setActiveTab('input');
+            } else if ((e.detail === 'rekap' || e.detail === 'rekap-jurnal' || e.detail === 'rekap_jurnal') && allowedTabKeys.includes('rekap')) {
+                setActiveTab('rekap');
             } else if (e.detail === 'jurnal-banding') {
                 if (allowedTabKeys.includes('banding_saya')) {
                     setActiveTab('banding_saya');
@@ -761,6 +768,16 @@ export default function JurnalPage({ user }: { user?: any }) {
         return () => {
             window.removeEventListener('acca:switch-page-tab' as any, handleSwitchTab);
         };
+    }, [setActiveTab, allowedTabKeys]);
+
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            const params = new URLSearchParams(window.location.search);
+            const t = params.get('tab');
+            if ((t === 'rekap-jurnal' || t === 'rekap_jurnal') && allowedTabKeys.includes('rekap')) {
+                setActiveTab('rekap');
+            }
+        }
     }, [setActiveTab, allowedTabKeys]);
 
     useEffect(() => {
@@ -808,6 +825,11 @@ export default function JurnalPage({ user }: { user?: any }) {
                 {activeTab === 'input' && canInput && (
                     <Suspense fallback={<div className="p-12 text-center jp-loading-text">Memuat form input...</div>}>
                         <JurnalInputPage />
+                    </Suspense>
+                )}
+                {activeTab === 'rekap' && canViewRekap && (
+                    <Suspense fallback={<div className="p-12 text-center jp-loading-text">Memuat rekapitulasi jurnal...</div>}>
+                        <RekapJurnalTab user={user} />
                     </Suspense>
                 )}
                 {activeTab === 'banding_saya' && isGuru && (

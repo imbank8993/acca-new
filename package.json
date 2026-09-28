@@ -15,7 +15,8 @@
     "build:frontend": "npm run build --workspace=apps/web",
     "build:backend": "npm run build --workspace=apps/api",
     "lint": "npm run lint --workspace=apps/web && npm run lint --workspace=apps/api",
-    "typecheck": "npx tsc --noEmit -p apps/web/tsconfig.json"
+    "typecheck": "npx tsc --noEmit -p apps/web/tsconfig.json",
+    "db:studio": "npm --workspace=@acca/api exec prisma studio"
   },
   "devDependencies": {
     "@types/jest": "^30.0.0",

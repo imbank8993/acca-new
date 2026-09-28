@@ -75,7 +75,7 @@ export const MENU_GROUPS: MenuGroupDef[] = [
     label: 'Laporan & Monitoring',
     icon: 'fa-chart-line',
     pages: [
-      'rekap-jurnal', 'kinerja-guru', 'monitoring',
+      'kinerja-guru', 'monitoring',
       'e-supervisi', 'observasi-kelas', 'lckh-approval', 'pembayaran', 'um-kelulusan', 'catatan-keuangan', 'keuangan'
     ],
   },
@@ -135,7 +135,6 @@ export const PAGE_LABELS: Record<string, string> = {
   'kokurikuler': 'Kokurikuler',
   'nilai-siswa': 'Nilai Siswa',
   'tugas-siswa': 'Tugas Siswa',
-  'rekap-jurnal': 'Rekap Jurnal',
   'kinerja-guru': 'Kinerja Guru',
   'monitoring': 'Monitoring',
   'e-supervisi': 'E-Supervisi',

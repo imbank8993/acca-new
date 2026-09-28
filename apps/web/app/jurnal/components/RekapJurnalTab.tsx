@@ -26,7 +26,7 @@ ChartJS.register(
     Legend
 );
 
-export default function RekapJurnalPage() {
+export default function RekapJurnalTab({ user }: { user?: any } = {}) {
     const [filterMonth, setFilterMonth] = useState<string>(String(new Date().getMonth() + 1));
     const [filterYear, setFilterYear] = useState<string>(String(new Date().getFullYear()));
     const [showAll, setShowAll] = useState<boolean>(false);

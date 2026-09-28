@@ -43,7 +43,6 @@ const DEFAULT_PAGE_CONFIG: Record<string, PageConfig> = {
   'audit-log': { id: 'audit-log', label: 'Log Audit', icon: 'bi-shield-check', color: '#6366f1' },
   'monitoring': { id: 'monitoring', label: 'Monitoring', icon: 'bi-eye', color: '#0ea5e9' },
   'tugas-tambahan': { id: 'tugas-tambahan', label: 'Tugas Tambahan', icon: 'bi-star', color: '#eab308' },
-  'rekap-jurnal': { id: 'rekap-jurnal', label: 'Rekap Jurnal', icon: 'bi-bar-chart', color: 'var(--n-muted)' },
   'kinerja-guru': { id: 'kinerja-guru', label: 'Kinerja Guru', icon: 'bi-graph-up-arrow', color: '#f97316' },
   'guru-asuh': { id: 'guru-asuh', label: 'Guru Asuh', icon: 'bi-person-heart', color: '#06b6d4' },
   'wali-kelas': { id: 'wali-kelas', label: 'Wali Kelas', icon: 'bi-mortarboard-fill', color: '#8b5cf6' },
@@ -164,7 +163,6 @@ const getMenuIcon = (page: string | null | undefined, title: string) => {
     if (pp.includes('monitoring')) return 'fa-desktop'
     if (pp.includes('kinerja-guru')) return 'fa-chart-line'
     if (pp.includes('e-supervisi')) return 'fa-clipboard-list'
-    if (pp.includes('rekap-jurnal')) return 'fa-file-lines'
     if (pp.includes('tugas-siswa')) return 'fa-clipboard'
     if (pp.includes('ptsp') || pp.includes('layanan-ptsp')) return 'fa-file-lines'
     if (pp.includes('um-kelulusan')) return 'fa-files'

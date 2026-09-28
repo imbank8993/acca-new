@@ -77,7 +77,12 @@ export default function MaintenanceBanner({ pageKey, isAdmin = false, children }
     const hasAdminRole = daftarRole.some(r => r === 'ADMIN' || r === 'ADMINISTRATOR');
 
     const globalSetting = settings.find(s => s.key === 'maintenance_global');
-    const pageSetting = settings.find(s => s.key === pageKey);
+    const normalizedKey = pageKey.replace(/^maintenance_/, '');
+    const pageSetting = settings.find(s =>
+        s.key === pageKey ||
+        s.key === `maintenance_${normalizedKey}` ||
+        s.key.replace(/^maintenance_/, '') === normalizedKey
+    );
 
     if (isLoading) return <>{children}</>;
 

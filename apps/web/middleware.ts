@@ -122,7 +122,6 @@ export async function middleware(request: NextRequest) {
         '/personal-documents': '/dokumen?tab=pribadi',
         '/unggah-dokumen': '/dokumen?tab=sekolah',
         '/upload-dokumen': '/dokumen?tab=sekolah',
-        '/RekapJurnal': '/rekap-jurnal',
         '/Klinik': '/klinik',
         '/Keuangan': '/keuangan',
     }

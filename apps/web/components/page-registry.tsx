@@ -40,7 +40,6 @@ const JadwalPage = lazy(() => import('@/app/jadwal/view'))
 const OrangTuaWrapper = lazy(() => import('@/app/jadwal/OrangTuaWrapper'))
 const InformasiAkademikPage = lazy(() => import('@/app/informasi/view'))
 const InformasiKelolaPage = lazy(() => import('@/app/informasi/kelola/view'))
-const RekapJurnalPage = lazy(() => import('@/app/rekap-jurnal/view'))
 const MonitoringPage = lazy(() => import('@/app/monitoring/view'))
 const KinerjaGuruPage = lazy(() => import('@/app/kinerja-guru/view'))
 const AgendaAkademikPage = lazy(() => import('@/app/agenda-madrasah/view'))
@@ -150,9 +149,6 @@ export const PAGE_COMPONENTS: Record<string, (user: User, onRefreshUser: () => P
     'Nilai': (user) => <NilaiPage />,
     'GuruAsuh': (user) => <GuruAsuhPage user={user} />,
     'WaliKelas': (user) => <WaliKelasPage user={user} />,
-
-    // REKAP DATA
-    'RekapJurnal': () => <RekapJurnalPage />,
 
     // MONITORING
     'monitoring': () => <MonitoringPage />,

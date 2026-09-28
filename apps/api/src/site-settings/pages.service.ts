@@ -26,7 +26,6 @@ const ICON_MAP: Record<string, string> = {
   'pengaturan-users': 'bi-people',
   'monitoring': 'bi-eye',
   'tugas-tambahan': 'bi-star',
-  'rekap-jurnal': 'bi-bar-chart',
   'kinerja-guru': 'bi-graph-up-arrow',
   'guru-asuh': 'bi-person-heart',
   'wali-kelas': 'bi-mortarboard-fill',

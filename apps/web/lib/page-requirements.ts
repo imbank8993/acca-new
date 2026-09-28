@@ -107,7 +107,6 @@ export const PAGE_ROLE_REQUIREMENTS: Record<string, PageRequirement> = {
         roleActions: { 'ADMIN': 'manage', 'OP_UKS': 'manage', 'GURU': 'view', 'WALI_KELAS': 'view' },
         description: 'Rekam Medis Siswa'
     },
-    'rekap-jurnal': { allowedRoles: ['ADMIN'], defaultAction: 'view', description: 'Rekap Jurnal' },
     'kinerja-guru': { allowedRoles: ['ADMIN'], defaultAction: 'view', description: 'Kinerja Guru' },
     'laporan': { allowedRoles: ['ADMIN'], defaultAction: 'view', description: 'Laporan' },
     'laporan:pengembangan_diri': { allowedRoles: ['ADMIN'], defaultAction: 'view', description: 'Laporan Pengembangan Diri' },

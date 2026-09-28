@@ -92,7 +92,6 @@ const ROLE_FUNCTION_DESCRIPTIONS: Record<string, Record<string, { action?: Actio
     'e-supervisi': { action: 'edit', desc: 'Melakukan supervisi akademik, observasi kelas, dan evaluasi hasil kinerja PBM guru.' },
     'lckh-approval': { action: 'manage', desc: 'Verifikasi & menyetujui (approval) laporan capaian kinerja harian guru/pegawai.' },
     'monitoring': { action: 'view', desc: 'Memantau metrik keterisian jurnal, kehadiran guru/siswa, dan rekapitulasi madrasah.' },
-    'rekap-jurnal': { action: 'view', desc: 'Memantau rekap progres mengajar seluruh guru madrasah.' },
     'kinerja-guru': { action: 'view', desc: 'Melihat evaluasi komprehensif performa dan kedisiplinan guru.' },
   },
   SUPERVISOR: {

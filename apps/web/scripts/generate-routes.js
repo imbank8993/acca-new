@@ -50,7 +50,6 @@ export default function Page() {
   { path: 'sanggar-kurikulum', importPath: '@/app/sanggar-kurikulum/view' },
 
   // REKAP & MONITORING
-  { path: 'rekap-jurnal', importPath: '@/app/rekap-jurnal/view' },
   { path: 'monitoring', importPath: '@/app/monitoring/view' },
   { path: 'kinerja-guru', importPath: '@/app/kinerja-guru/view' },
   { path: 'agenda-madrasah', importPath: '@/app/agenda-madrasah/view' },

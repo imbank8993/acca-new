@@ -81,3 +81,5 @@ temp_old.tsx
 *.dump
 *.bak
 .git_backup/
+docs/*.csv
+docs/*.json
