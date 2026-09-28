@@ -1737,9 +1737,34 @@ export class SettingsService {
       this.prisma.guru_asuh.count({ where }),
     ]);
 
+    const nisns = Array.from(new Set(data.map((d: any) => d.nisn_siswa).filter(Boolean))) as string[];
+    const photoMap = new Map<string, string>();
+    if (nisns.length > 0) {
+      const userProfiles = await this.prisma.public_users.findMany({
+        where: {
+          OR: [
+            { username: { in: nisns } },
+            { nip: { in: nisns } },
+          ],
+          foto_profil: { not: null },
+        },
+        select: { username: true, nip: true, foto_profil: true },
+      });
+      for (const up of userProfiles) {
+        if (up.foto_profil) {
+          if (up.username) photoMap.set(up.username, up.foto_profil);
+          if (up.nip) photoMap.set(up.nip, up.foto_profil);
+        }
+      }
+    }
+
     return { 
       ok: true, 
-      data: data.map(d => ({ ...d, id: d.id.toString() })), 
+      data: data.map(d => ({ 
+        ...d, 
+        id: d.id.toString(),
+        foto_profil: photoMap.get(d.nisn_siswa) || null,
+      })), 
       total 
     };
   }

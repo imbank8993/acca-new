@@ -513,9 +513,10 @@ export default function FilterToolbar({
                    Palet biru bersama (sama di semua halaman): aksen #60a5fa
                    diletakkan paling akhir agar menang atas aturan dark di
                    atasnya (urutan cascade + !important). -- */
-                :global(.dark) .ft__container { background: #000000 !important; border: 1.8px solid rgba(26, 115, 232, 0.75) !important; border-radius: 16px !important; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6) !important; }
+                :global(.dark) .ft__container { background: var(--n-card) !important; border: 1px solid rgba(26, 115, 232, 0.35) !important; border-radius: 16px !important; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4) !important; }
                 :global(.dark) .ft__label { color: #94a3b8 !important; }
-                :global(.dark) .ft__search, :global(.dark) .ft__dateInput { background: #000000 !important; border: 1.8px solid rgba(26, 115, 232, 0.75) !important; border-radius: 12px !important; color: #ffffff !important; color-scheme: dark; }
+                :global(.dark) .ft__search, :global(.dark) .ft__dateInput { background: var(--n-card) !important; border: 1px solid rgba(26, 115, 232, 0.35) !important; border-radius: 12px !important; color: #ffffff !important; color-scheme: dark; }
+                :global(.dark) .ft__container :global(.ss__trigger) { border: 1px solid rgba(26, 115, 232, 0.35) !important; }
                 :global(.dark) .ft__search:focus, :global(.dark) .ft__dateInput:focus { border-color: #60a5fa !important; box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.2) !important; }
                 :global(.dark) .ft__search::placeholder { color: #64748b !important; }
                 :global(.dark) .ft__clearSearch { color: #94a3b8 !important; }

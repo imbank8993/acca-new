@@ -239,9 +239,6 @@ export function applyThemeColor(): void {
     // 1. Perbarui semua meta theme-color di <head> jika ada perubahan
     const metas = getThemeColorMetas()
     metas.forEach(meta => {
-        if (meta.hasAttribute('media')) {
-            meta.removeAttribute('media')
-        }
         if (meta.content !== next) {
             meta.setAttribute('content', next)
             meta.content = next

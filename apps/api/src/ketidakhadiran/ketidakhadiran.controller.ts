@@ -74,7 +74,7 @@ export class KetidakhadiranController {
       apiUser.isAdmin ||
       apiUser.roles.includes('OP_IZIN') ||
       apiUser.roles.includes('OP_UKS');
-    return boleh && queryNip ? queryNip : apiUser.nip;
+    return boleh && queryNip ? queryNip : (apiUser.nip || apiUser.username || queryNip || '');
   }
 
   // --- LOG ROUTES ---

@@ -452,7 +452,7 @@ export default function JadwalLengkapModal({ open, onClose, type = 'mengajar' }:
                     justify-content: center;
                     padding: 6px 16px;
                     border-radius: 999px;
-                    border: 1.5px solid var(--n-border);
+                    border: 1px solid var(--n-border);
                     background: var(--n-card);
                     color: var(--n-muted);
                     font-size: 0.82rem;
@@ -531,7 +531,7 @@ export default function JadwalLengkapModal({ open, onClose, type = 'mengajar' }:
                         max-height: 88vh !important;
                         max-height: 88dvh !important;
                         border-radius: 24px 24px 0 0 !important;
-                        border-top: 1.5px solid var(--n-border) !important;
+                        border-top: 1px solid var(--n-border) !important;
                         border-left: none !important;
                         border-right: none !important;
                         border-bottom: none !important;

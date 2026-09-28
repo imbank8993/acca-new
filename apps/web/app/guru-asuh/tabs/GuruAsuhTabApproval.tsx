@@ -7,6 +7,7 @@ import HtmlPreviewModal from '@/components/ui/HtmlPreviewModal';
 import { FilterToolbar, FilterSelect, FilterSearch } from '@/components/ui/FilterToolbar';
 import { useModalBlur } from '@/components/ModalBlurProvider';
 import { Spinner } from '@/components/ui/Spinner';
+import { getProxiedImageUrl } from '@/lib/image-utils';
 
 const BULAN = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
 
@@ -15,6 +16,7 @@ interface Submission {
     status: 'Submitted' | 'Approved' | 'Revisi'; total_laporan: number;
     catatan_reviewer?: string | null; approved_by_name?: string | null; approved_at?: string | null;
     submitted_at?: string | null; pdf_url?: string | null; dibayarkan?: boolean;
+    foto_profil?: string | null;
 }
 interface LaporanEntry {
     id: string; tanggal: string; kegiatan: string; foto_url?: string;
@@ -256,7 +258,17 @@ export default function GuruAsuhTabApproval({ user }: { user?: any }) {
                             const st = getStatusStyle(sub.status);
                             return (
                                 <div key={sub.id} className={`gta__item ${selected?.id === sub.id ? 'gta__item--active' : ''}`} onClick={() => setSelected(sub)}>
-                                    <div className="gta__itemAvatar">{(sub.nama_guru_snap || 'G')[0]}</div>
+                                    <div className="gta__itemAvatar">
+                                        {sub.foto_profil && (
+                                            <img
+                                                src={getProxiedImageUrl(sub.foto_profil)}
+                                                alt={sub.nama_guru_snap || 'Guru'}
+                                                className="gta__avatarImg"
+                                                onError={(e) => { (e.currentTarget as HTMLElement).style.display = 'none'; }}
+                                            />
+                                        )}
+                                        <span>{(sub.nama_guru_snap || 'G')[0]}</span>
+                                    </div>
                                     <div className="gta__itemBody">
                                         <div className="gta__itemName">{sub.nama_guru_snap || 'Guru'}</div>
                                         <div className="gta__itemRow">
@@ -422,7 +434,8 @@ export default function GuruAsuhTabApproval({ user }: { user?: any }) {
                 .gta__item { display: flex; gap: 10px; padding: 12px 14px; border-bottom: 1px solid var(--n-border); cursor: pointer; transition: background 0.15s; }
                 .gta__item:hover { background: var(--n-soft); }
                 .gta__item--active { background: var(--n-soft); border-left: 3px solid var(--n-primary); }
-                .gta__itemAvatar { width: 34px; height: 34px; border-radius: 10px; background: rgba(26, 115, 232, 0.08); border: 1.8px solid #1a73e8; color: #1a73e8; display: flex; align-items: center; justify-content: center; font-weight: 800; flex-shrink: 0; }
+                .gta__itemAvatar { width: 34px; height: 34px; border-radius: 10px; background: rgba(26, 115, 232, 0.08); border: 1.8px solid #1a73e8; color: #1a73e8; display: flex; align-items: center; justify-content: center; font-weight: 800; flex-shrink: 0; position: relative; overflow: hidden; }
+                .gta__avatarImg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; border-radius: inherit; }
                 .gta__itemBody { flex: 1; min-width: 0; }
                 .gta__itemName { font-size: 0.83rem; font-weight: 700; color: var(--n-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
                 .gta__itemRow { display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-top: 2px; }

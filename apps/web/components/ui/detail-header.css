@@ -50,6 +50,17 @@
     font-weight: 800;
     flex-shrink: 0;
     box-shadow: 0 3px 10px rgba(0, 56, 168, 0.25);
+    position: relative;
+    overflow: hidden;
+}
+
+.dh-avatarImg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: inherit;
 }
 
 .dh-info {

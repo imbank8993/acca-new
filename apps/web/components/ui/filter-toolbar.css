@@ -455,7 +455,7 @@ html.dark .ftb-backBtn:hover {
 .ftb-btn--ghost {
     background: var(--n-soft);
     color: var(--n-ink);
-    border: 1.5px solid var(--n-border);
+    border: 1px solid var(--n-border);
 }
 
 .ftb-actions .ftb-btn--ghost:hover:not(:disabled),
@@ -1483,7 +1483,7 @@ html.dark .ftb-backBtn:hover {
 
 .dark .ftb-toolbar {
     background-color: #0b1329;
-    border: 1.8px solid rgba(26, 115, 232, 0.75);
+    border: 1px solid rgba(26, 115, 232, 0.35);
     border-radius: 16px;
 }
 
@@ -1537,7 +1537,7 @@ html.dark .ftb-backBtn:hover {
     html.dark .ftb-mobile-inlineActions .sk__more > .ui-btn,
     html.dark .ftb-mobile-inlineActions .sk__menuWrap > button {
         background: #0b1329 !important;
-        border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
+        border: 1px solid rgba(26, 115, 232, 0.35) !important;
         color: #60a5fa !important;
         box-shadow: none !important;
     }
@@ -1613,13 +1613,13 @@ html.dark .ftb-backBtn:hover {
 
 .dark .ftb-box {
     background-color: #0b1329;
-    border: 1.8px solid rgba(26, 115, 232, 0.75);
+    border: 1px solid rgba(26, 115, 232, 0.35);
 }
 
 .dark .ftb-field--search .ftb-box {
     border-radius: 9999px;
     background-color: #0b1329;
-    border: 1.8px solid rgba(26, 115, 232, 0.75);
+    border: 1px solid rgba(26, 115, 232, 0.35);
 }
 
 .dark .ftb-box:focus-within {
@@ -1662,14 +1662,14 @@ html.dark .ftb-backBtn:hover {
 
 .dark .ftb-toolbar .ftb-field .dpk-trigger {
     background-color: #0b1329;
-    border: 1.8px solid rgba(26, 115, 232, 0.75);
+    border: 1px solid rgba(26, 115, 232, 0.35);
     color: #ffffff;
 }
 
 .dark .ftb-actions button:not(.ui-btn),
 .dark .ftb-btn--ghost {
     background-color: #0b1329;
-    border: 1.8px solid rgba(26, 115, 232, 0.75);
+    border: 1px solid rgba(26, 115, 232, 0.35);
     color: #60a5fa;
     border-radius: 12px;
 }
@@ -1678,7 +1678,7 @@ html.dark .ftb-backBtn:hover {
 .dark .ftb-actions button.ui-btn--primary,
 .dark .ftb-actions .btn-action-primary {
     background-color: rgba(26, 115, 232, 0.16) !important;
-    border: 1.5px solid rgba(26, 115, 232, 0.75) !important;
+    border: 1px solid rgba(26, 115, 232, 0.35) !important;
     color: #60a5fa !important;
 }
 
@@ -1704,7 +1704,7 @@ html.dark .ftb-backBtn:hover {
 
 .dark .ftb-toggle {
     background-color: #0b1329;
-    border: 1.8px solid rgba(26, 115, 232, 0.75);
+    border: 1px solid rgba(26, 115, 232, 0.35);
     color: #ffffff;
 }
 
@@ -1718,7 +1718,7 @@ html.dark .ftb-backBtn:hover {
 
 .dark .ftb-mobile-filter-btn {
     background-color: #0b1329;
-    border: 1.8px solid rgba(26, 115, 232, 0.75);
+    border: 1px solid rgba(26, 115, 232, 0.35);
     color: #60a5fa;
 }
 

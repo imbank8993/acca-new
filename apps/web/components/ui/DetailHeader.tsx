@@ -30,12 +30,14 @@ interface DetailHeaderProps {
     meta?: string;
     /** true (default) = tampilkan lingkaran inisial nama di kiri, warna gradient brand */
     avatar?: boolean;
+    /** URL foto profil (jika ada, akan menimpa inisial dengan foto) */
+    avatarSrc?: string | null;
     /** slot aksi/filter di kanan, mis. dropdown tahun ajaran & semester */
     children?: ReactNode;
     className?: string;
 }
 
-export function DetailHeader({ onBack, backLabel = 'Kembali', name, meta, avatar = true, children, className = '' }: DetailHeaderProps) {
+export function DetailHeader({ onBack, backLabel = 'Kembali', name, meta, avatar = true, avatarSrc, children, className = '' }: DetailHeaderProps) {
     const initial = (name || '?').trim().charAt(0).toUpperCase() || '?';
 
     return (
@@ -46,7 +48,19 @@ export function DetailHeader({ onBack, backLabel = 'Kembali', name, meta, avatar
                 </button>
             )}
 
-            {avatar && <div className="dh-avatar" aria-hidden="true">{initial}</div>}
+            {avatar && (
+                <div className="dh-avatar" aria-hidden="true">
+                    {avatarSrc && (
+                        <img
+                            src={avatarSrc}
+                            alt={name}
+                            className="dh-avatarImg"
+                            onError={(e) => { (e.currentTarget as HTMLElement).style.display = 'none'; }}
+                        />
+                    )}
+                    <span>{initial}</span>
+                </div>
+            )}
 
             <div className="dh-info">
                 <h2 className="dh-name">{name || '...'}</h2>

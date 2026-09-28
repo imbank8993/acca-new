@@ -133,9 +133,9 @@
 /* Dark mode — Pitch Black & Electric Blue Standard */
 .dark .actab-wrap {
     background: #0b1329 !important;
-    border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
+    border: 1px solid rgba(26, 115, 232, 0.35) !important;
     border-radius: 20px !important;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6) !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4) !important;
     overflow: hidden !important;
 }
 .dark .actab-tab {
@@ -497,8 +497,8 @@
 
     .dark .actab-wrap.actab-wrap--slider.actab-wrap--few {
         background: #0b1329 !important;
-        border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6) !important;
+        border: 1px solid rgba(26, 115, 232, 0.35) !important;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4) !important;
     }
 
     .actab-wrap.actab-wrap--slider.actab-wrap--few .actab-tabs {

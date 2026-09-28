@@ -53,7 +53,9 @@ export default function RootLayout({
             #ffffff / #000000) supaya chrome browser — bilah status di atas dan
             bilah alamat di bawah — menyatu dengan bilah yang bersebelahan
             dengannya, bukan dengan kanvas halaman. */}
-        <meta name="color-scheme" content="light dark" id="color-scheme-meta" />
+        <meta name="color-scheme" content="light" id="color-scheme-meta" />
+        <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" id="theme-color-light-meta" />
+        <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: dark)" id="theme-color-dark-meta" />
         <meta name="theme-color" content="#ffffff" id="theme-color-meta" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
@@ -63,7 +65,7 @@ export default function RootLayout({
       <body>
         {/* Terapkan preferensi dark mode & theme-color sebelum paint agar persist saat refresh tanpa flash */}
         <Script id="dark-mode-init" strategy="beforeInteractive">
-          {`try{var d=localStorage.getItem('darkMode')==='1';if(d){document.documentElement.classList.add('dark');}var c=d?'#0b1329':'#ffffff';document.documentElement.style.backgroundColor=c;document.documentElement.style.colorScheme=d?'dark':'light';var tc=document.getElementById('theme-color-meta');if(tc){tc.content=c;tc.setAttribute('content',c);}var cs=document.getElementById('color-scheme-meta');if(cs){cs.content=d?'dark':'light';cs.setAttribute('content',d?'dark':'light');}}catch(e){}`}
+          {`try{var d=localStorage.getItem('darkMode')==='1';if(d){document.documentElement.classList.add('dark');}var c=d?'#0b1329':'#ffffff';var s=d?'dark':'light';document.documentElement.style.backgroundColor=c;document.documentElement.style.colorScheme=s;var metas=['theme-color-meta','theme-color-light-meta','theme-color-dark-meta'];for(var i=0;i<metas.length;i++){var el=document.getElementById(metas[i]);if(el){el.content=c;el.setAttribute('content',c);}}var cs=document.getElementById('color-scheme-meta');if(cs){cs.content=s;cs.setAttribute('content',s);}}catch(e){}`}
         </Script>
         {/* Redirect recovery tokens to /update-password (hash fragments are invisible to server) */}
         <Script id="recovery-redirect" strategy="beforeInteractive">

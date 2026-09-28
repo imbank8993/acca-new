@@ -351,9 +351,9 @@ export default function MobileCards({
 
                 /* Dark Mode */
                 :global(.dark) .mc__listItem {
-                    background: #000000 !important;
-                    border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
-                    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5) !important;
+                    background: var(--n-card) !important;
+                    border: 1px solid rgba(26, 115, 232, 0.35) !important;
+                    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3) !important;
                 }
                 :global(.dark) .mc__listTitle {
                     color: #ffffff !important;
@@ -374,7 +374,7 @@ export default function MobileCards({
                     color: #60a5fa !important;
                     border-color: #3b82f6 !important;
                 }
-                :global(.dark) .mc__empty { background: #000000 !important; }
+                :global(.dark) .mc__empty { background: var(--n-card) !important; }
                 :global(.dark) .mc__emptyTitle { color: #ffffff !important; }
                 :global(.dark) .mc__emptySub { color: #64748b !important; }
                 :global(.dark) .mc__emptyCircle, :global(.dark) .mc__emptyBadge { background: rgba(96, 165, 250, 0.15) !important; color: #60a5fa !important; }

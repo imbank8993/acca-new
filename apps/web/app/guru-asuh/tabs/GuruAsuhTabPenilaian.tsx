@@ -1,16 +1,19 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import Pagination from '@/components/ui/Pagination';
 import { PageLoader } from '@/components/ui/Spinner';
 import { DetailHeader, DetailHeaderSelect } from '@/components/ui/DetailHeader';
 import { useTahunAjaranFilter } from '@/hooks/use-tahun-ajaran-filter';
+import { ActionButton } from '@/components/ui/ActionButtons';
+import { FilterToolbar, FilterSelect, FilterSearch } from '@/components/ui/FilterToolbar';
+import { getProxiedImageUrl } from '@/lib/image-utils';
 
 interface SiswaAsuh {
     nisn: string;
     nama: string;
     kelas: string;
     tahun_ajaran: string;
+    foto_profil?: string | null;
 }
 
 interface NilaiItem {
@@ -39,7 +42,6 @@ interface GroupedData {
 }
 
 export default function GuruAsuhTabPenilaian({ user }: { user?: any }) {
-    const [limit, setLimit] = useState(10);
     const nip = user?.nip || user?.username || '';
     const ta = useTahunAjaranFilter();
 
@@ -62,7 +64,6 @@ export default function GuruAsuhTabPenilaian({ user }: { user?: any }) {
     const [availableTahunAjaran, setAvailableTahunAjaran] = useState<string[]>([]);
     const [availableSemesters, setAvailableSemesters] = useState<string[]>([]);
     const [searchQuery, setSearchQuery] = useState('');
-    const [currentPage, setCurrentPage] = useState(1);
 
     const loadData = useCallback(async () => {
         if (!nip) { setLoading(false); setError('NIP guru tidak ditemukan.'); return; }
@@ -111,11 +112,26 @@ export default function GuruAsuhTabPenilaian({ user }: { user?: any }) {
         finally { setNilaiLoading(false); }
     }, [ta.selected]);
 
-    const handleSelectSiswa = (s: SiswaAsuh) => {
-        setSelectedNisn(s.nisn);
-        setSelectedSiswa(s);
+    const allYearOptions: string[] = useMemo(() => {
+        const set = new Set<string>();
+        (ta.years || []).filter(y => y !== 'Semua').forEach(y => set.add(y));
+        ((data as any)?.available_tahun_ajaran || []).filter(Boolean).forEach((y: string) => set.add(y));
+        return Array.from(set).sort((a, b) => b.localeCompare(a));
+    }, [ta.years, data]);
+
+    const handleSelectSiswa = (s: any) => {
+        const nisn = s.nisn || s.nisn_siswa || '';
+        const nama = s.nama || s.nama_siswa || '';
+        setSelectedNisn(nisn);
+        setSelectedSiswa({
+            nisn,
+            nama,
+            kelas: s.kelas || '',
+            tahun_ajaran: s.tahun_ajaran || '',
+            foto_profil: s.foto_profil || null,
+        });
         setView('detail');
-        fetchNilai(s.nisn);
+        fetchNilai(nisn);
     };
 
     const handleBack = () => {
@@ -124,7 +140,6 @@ export default function GuruAsuhTabPenilaian({ user }: { user?: any }) {
         setSelectedSiswa(null);
         setNilaiData(null);
         setSearchQuery('');
-        setCurrentPage(1);
         setAvailableSemesters([]);
     };
 
@@ -132,16 +147,13 @@ export default function GuruAsuhTabPenilaian({ user }: { user?: any }) {
         if (!data?.siswa_list) return [];
         if (!searchQuery) return data.siswa_list;
         const q = searchQuery.toLowerCase();
-        return data.siswa_list.filter(s => s.nisn.toLowerCase().includes(q) || s.nama.toLowerCase().includes(q));
+        return data.siswa_list.filter(s => {
+            const nisn = (s.nisn || (s as any).nisn_siswa || '').toLowerCase();
+            const nama = (s.nama || (s as any).nama_siswa || '').toLowerCase();
+            const kelas = (s.kelas || '').toLowerCase();
+            return nisn.includes(q) || nama.includes(q) || kelas.includes(q);
+        });
     }, [data?.siswa_list, searchQuery]);
-
-    const totalPages = Math.ceil(filteredStudents.length / limit);
-    const paginatedStudents = useMemo(() => {
-        const start = (currentPage - 1) * limit;
-        return filteredStudents.slice(start, start + limit);
-    }, [filteredStudents, currentPage, limit]);
-
-    useEffect(() => { setCurrentPage(1); }, [searchQuery]);
 
     const currentItems = useMemo(() => {
         if (!nilaiData?.grouped || !selectedTahunAjaran || !selectedSemester) return nilaiData?.all || [];
@@ -264,22 +276,17 @@ export default function GuruAsuhTabPenilaian({ user }: { user?: any }) {
         </div>
     );
 
-    if (!data?.has_asuhan) return (
-        <div className="gan-empty">
-            <i className="bi bi-person-hearts" />
-            <h3>Belum ada anak asuh</h3>
-            <p>Klaim siswa sebagai anak asuh di tab "Klaim Anak Asuh" terlebih dahulu.</p>
-        </div>
-    );
 
     if (view === 'detail') {
+        const studentPhoto = selectedSiswa?.foto_profil || nilaiData?.siswa?.foto_profil;
         return (
             <div className="gan-detail">
                 <DetailHeader
                     onBack={handleBack}
                     backLabel="Kembali ke Daftar Siswa"
-                    name={selectedSiswa?.nama || '...'}
-                    meta={`NISN: ${selectedNisn} - ${selectedSiswa?.kelas}`}
+                    name={selectedSiswa?.nama || (selectedSiswa as any)?.nama_siswa || '...'}
+                    meta={`NISN: ${selectedNisn} - ${selectedSiswa?.kelas || ''}`}
+                    avatarSrc={studentPhoto ? getProxiedImageUrl(studentPhoto) : undefined}
                 >
                     <DetailHeaderSelect
                         icon="mortarboard"
@@ -446,124 +453,138 @@ export default function GuruAsuhTabPenilaian({ user }: { user?: any }) {
         );
     }
 
-    return (
-        <div className="gan-wrap">
-            <div className="gan-filters">
-                {ta.years.length > 0 && (
-                    <div className="gan-select-wrap">
-                        <i className="bi bi-calendar3" />
-                        <select
-                            value={ta.selected}
-                            onChange={e => ta.setSelected(e.target.value)}
-                        >
-                            <option value="Semua">Semua TA</option>
-                            {ta.years.filter(opt => opt !== 'Semua').map(opt => (
-                                <option key={opt} value={opt}>{opt}</option>
-                            ))}
-                        </select>
-                    </div>
-                )}
-                <div className="search-wrap">
-                    <i className="bi bi-search" />
-                    <input type="text" placeholder="Cari nama / NISN..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
-                    {searchQuery && <button className="clear-btn" onClick={() => setSearchQuery('')}><i className="bi bi-x" /></button>}
-                </div>
-                <div className="gan-count-badge">
-                    {data?.siswa_list?.length || 0} anak asuh
+    const toolbarNode = (
+        <FilterToolbar actionsInline>
+            {allYearOptions.length > 0 && (
+                <FilterSelect
+                    label="Tahun Ajaran"
+                    icon="mortarboard"
+                    value={ta.selected || 'Semua'}
+                    onChange={ta.setSelected}
+                    title="Tahun Ajaran"
+                    options={[
+                        { value: 'Semua', label: 'Semua TA' },
+                        ...allYearOptions.map(y => ({ value: y, label: `TA ${y}` }))
+                    ]}
+                />
+            )}
+            <FilterSearch
+                value={searchQuery}
+                onChange={setSearchQuery}
+                placeholder="Cari nama / NISN..."
+            />
+        </FilterToolbar>
+    );
+
+    if (!data?.has_asuhan) {
+        return (
+            <div className="gan__wrap">
+                {toolbarNode}
+                <div className="gan__empty">
+                    <div className="gan__empty-icon"><i className="bi bi-person-hearts" /></div>
+                    <h3>Anda belum mengklaim anak asuh untuk tahun ajaran ini</h3>
+                    <p>Pilih tahun ajaran lain di atas atau buka tab "Klaim Anak Asuh" untuk mengklaim siswa yang akan menjadi anak asuh Anda.</p>
                 </div>
             </div>
+        );
+    }
+
+    return (
+        <div className="gan__wrap">
+            {toolbarNode}
 
             {filteredStudents.length === 0 ? (
-                <div className="empty-state">
-                    <i className="bi bi-people" />
-                    <p>Tidak ada anak asuh</p>
+                <div className="gan__empty">
+                    <div className="gan__empty-icon"><i className="bi bi-people" /></div>
+                    <h3>Tidak ada siswa yang cocok</h3>
+                    <p>Coba gunakan kata kunci pencarian yang lain.</p>
                 </div>
             ) : (
-                <>
-                    <div className="student-grid">
-                        {paginatedStudents.map((siswa, idx) => (
-                            <div key={`siswa-${idx}`} className="student-card" onClick={() => handleSelectSiswa(siswa)}>
-                                <div className="card-avatar">{siswa.nama.charAt(0).toUpperCase()}</div>
-                                <div className="card-info">
-                                    <span className="card-name">{siswa.nama}</span>
-                                    <span className="card-meta">{siswa.nisn} - {siswa.kelas}</span>
+                <div className="gan__siswaList">
+                    {filteredStudents.map((siswa, idx) => {
+                        const sName = siswa.nama || (siswa as any).nama_siswa || '-';
+                        const sNisn = siswa.nisn || (siswa as any).nisn_siswa || '';
+                        return (
+                            <div
+                                key={`siswa-${idx}`}
+                                className="gan__siswaCard"
+                                onClick={() => handleSelectSiswa(siswa)}
+                            >
+                                <div className="gan__siswaAvatar">
+                                    {siswa.foto_profil && (
+                                        <img
+                                            src={getProxiedImageUrl(siswa.foto_profil)}
+                                            alt={sName}
+                                            className="gan__avatarImg"
+                                            onError={(e) => { (e.currentTarget as HTMLElement).style.display = 'none'; }}
+                                        />
+                                    )}
+                                    <span>{(sName.charAt(0) || '?').toUpperCase()}</span>
                                 </div>
-                                <i className="bi bi-chevron-right card-arrow" />
+                                <div className="gan__siswaInfo">
+                                    <div className="gan__siswaNama">{sName}</div>
+                                    <div className="gan__siswaMeta">
+                                        <span className="gan__kelasChip">{siswa.kelas}</span>
+                                        <span className="gan__nisnChip">NISN: {sNisn}</span>
+                                    </div>
+                                </div>
+                                <div className="gan__siswaFooter">
+                                    <div className="gan__siswaActions">
+                                        <ActionButton
+                                            action="view"
+                                            label="Lihat Nilai"
+                                            iconOnly={false}
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleSelectSiswa(siswa);
+                                            }}
+                                            title="Lihat Detail Nilai Siswa"
+                                        />
+                                    </div>
+                                </div>
                             </div>
-                        ))}
-                    </div>
-
-                    <Pagination
-                    currentPage={currentPage}
-                    totalPages={totalPages}
-                    limit={limit}
-                    totalItems={filteredStudents.length}
-                    onPageChange={setCurrentPage}
-                    onLimitChange={setLimit}
-                    itemLabel="siswa"
-                />
-                </>
+                        );
+                    })}
+                </div>
             )}
 
             <style jsx>{`
                 .gan-loading { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: 48px 24px; color: var(--n-muted); }
-                .gan-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 60px 24px; text-align: center; background: var(--n-card); border: 1px solid var(--n-border); border-radius: 24px; }
-                .gan-empty i { font-size: 3rem; color: var(--n-primary); margin-bottom: 16px; }
-                .gan-empty h3 { font-size: 1.2rem; font-weight: 800; color: var(--n-ink); margin: 0 0 8px; }
-                .gan-empty p { font-size: 0.9rem; color: var(--n-muted); max-width: 360px; line-height: 1.5; margin: 0; }
 
-                .gan-wrap { display: flex; flex-direction: column; gap: 20px; }
+                .gan__wrap { display: flex; flex-direction: column; gap: 16px; animation: ganFadeIn 0.4s ease-out; }
+                @keyframes ganFadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-                .gan-filters { display: flex; align-items: stretch; gap: 12px; }
-                .search-wrap { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; background: var(--n-card); border: 1px solid var(--n-border); border-radius: 12px; padding: 10px 14px; }
-                .search-wrap i { color: var(--n-muted); font-size: 0.9rem; flex-shrink: 0; }
-                .search-wrap input { flex: 1; min-width: 0; border: none; background: transparent; font-size: 0.85rem; color: var(--n-text); outline: none; }
-                .search-wrap input::placeholder { color: #cbd5e1; }
-                .clear-btn { border: none; background: none; color: var(--n-muted); cursor: pointer; padding: 0; font-size: 0.9rem; }
-                .gan-count-badge { display: flex; align-items: center; font-size: 0.85rem; font-weight: 800; color: #3083FF; background: rgba(0, 56, 168, 0.05); padding: 0 16px; border-radius: 12px; white-space: nowrap; flex-shrink: 0; border: 1px solid rgba(0, 56, 168, 0.1); }
+                .gan__empty { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 48px 24px; text-align: center; background: var(--n-card); border: 1px solid var(--n-border); border-radius: 20px; }
+                .gan__empty-icon { width: 64px; height: 64px; border-radius: 50%; background: #eff6ff; display: flex; align-items: center; justify-content: center; font-size: 1.8rem; color: var(--n-primary); margin-bottom: 14px; }
+                .gan__empty h3 { font-size: 1.05rem; font-weight: 800; color: var(--n-ink); margin: 0 0 6px; }
+                .gan__empty p { font-size: 0.85rem; color: var(--n-muted); max-width: 380px; line-height: 1.5; margin: 0; }
 
-                .empty-state { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 48px; text-align: center; color: var(--n-muted); }
-                .empty-state i { font-size: 3rem; }
-                .student-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
-                .student-card { display: flex; align-items: center; gap: 14px; padding: 14px 18px; background: var(--n-card); border: 1px solid var(--n-border); border-radius: 14px; cursor: pointer; transition: all 0.2s; }
-                .student-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.08); border-color: #3083FF; }
-                .card-avatar { width: 44px; height: 44px; border-radius: 12px; background: linear-gradient(135deg, #3083FF, #3b82f6); color: white; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; font-weight: 800; flex-shrink: 0; }
-                .card-info { flex: 1; min-width: 0; }
-                .card-name { display: block; font-size: 0.9rem; font-weight: 800; color: var(--n-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-                .card-meta { font-size: 0.72rem; color: var(--n-muted); }
-                .card-arrow { color: #cbd5e1; font-size: 1rem; }
-                .pagination { display: flex; align-items: center; justify-content: center; gap: 12px; padding: 16px; }
-                .page-btn { width: 36px; height: 36px; border-radius: 10px; border: 1px solid var(--n-border); background: var(--n-card); color: var(--n-muted); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
-                .page-btn:hover:not(:disabled) { background: var(--n-soft); color: var(--n-text); }
-                .page-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-                .page-info { font-size: 0.82rem; font-weight: 700; color: var(--n-muted); }
-                .gan-select-wrap { display: flex; align-items: center; gap: 8px; background: var(--n-card); border: 1px solid var(--n-border); border-radius: 12px; padding: 0 12px; min-width: 140px; }
-                .gan-select-wrap i { color: var(--n-muted); font-size: 0.9rem; flex-shrink: 0; }
-                .gan-select-wrap select { border: none; background: transparent; color: var(--n-text); font-size: 0.85rem; font-weight: 600; outline: none; cursor: pointer; width: 100%; height: 100%; padding: 10px 0; }
-                :global(.dark) .gan-select-wrap { background: #000000 !important; border: 1.8px solid rgba(26, 115, 232, 0.75) !important; }
-                :global(.dark) .gan-select-wrap i { color: #60a5fa !important; }
-                :global(.dark) .gan-select-wrap select { color: #ffffff !important; background: #000000 !important; }
-                :global(.dark) .gan-select-wrap select option { background: #000000 !important; color: #ffffff !important; }
-                :global(.dark) .student-card,
-                :global(.dark) .mapel-section,
-                :global(.dark) .search-wrap { background: #000000 !important; border: 1.8px solid rgba(26, 115, 232, 0.75) !important; border-radius: 12px !important; color: #ffffff !important; }
-                :global(.dark) .search-wrap i { color: #60a5fa !important; }
-                :global(.dark) .search-wrap input { background: transparent !important; border: none !important; color: #ffffff !important; }
-                :global(.dark) .card-name,
-                :global(.dark) .mapel-name { color: #ffffff !important; }
-                :global(.dark) .card-meta { color: #94a3b8 !important; }
-                :global(.dark) .mapel-header,
-                :global(.dark) .nilai-table thead tr { background: linear-gradient(135deg, rgba(26, 115, 232, 0.15), rgba(0, 40, 122, 0.25)) !important; border-bottom: 1.5px solid rgba(26, 115, 232, 0.4) !important; }
-                :global(.dark) .nilai-table th { color: #94a3b8 !important; border-bottom-color: rgba(26, 115, 232, 0.4) !important; }
-                :global(.dark) .nilai-table td { color: #ffffff !important; border-bottom-color: rgba(26, 115, 232, 0.2) !important; }
-                :global(.dark) .td-sumatif { background: rgba(26, 115, 232, 0.1) !important; border-right-color: rgba(26, 115, 232, 0.3) !important; }
-                :global(.dark) .sumatif-name { color: #ffffff !important; }
-                :global(.dark) .sumatif-topic,
-                :global(.dark) .td-topik,
-                :global(.dark) .td-muted { color: #94a3b8 !important; }
-                :global(.dark) .student-card:hover { background: rgba(26, 115, 232, 0.12) !important; }
-                :global(.dark) .page-btn { background: #000000 !important; border: 1px solid rgba(26, 115, 232, 0.4) !important; color: #60a5fa !important; }
-                :global(.dark) .gan-count-badge { background: rgba(96, 165, 250, 0.15) !important; border-color: rgba(96, 165, 250, 0.3) !important; color: #60a5fa !important; }
+                .gan__siswaList { display: flex; flex-direction: column; gap: 10px; }
+                .gan__siswaCard { display: grid; grid-template-columns: 44px 1fr auto; gap: 12px 18px; align-items: center; padding: 12px 18px; border-radius: 16px; border: 1px solid var(--n-border); background: var(--n-card); cursor: pointer; transition: all 0.2s; position: relative; }
+                .gan__siswaCard:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.06); transform: translateY(-1px); border-color: #3083FF; }
+                .gan__siswaAvatar { width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; color: white; background: linear-gradient(135deg, #3083FF, #3b82f6); flex-shrink: 0; position: relative; overflow: hidden; }
+                .gan__avatarImg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; border-radius: inherit; }
+                .gan__siswaInfo { display: flex; flex-direction: column; gap: 4px; }
+                .gan__siswaNama { font-size: 0.95rem; font-weight: 800; color: var(--n-ink); line-height: 1.2; }
+                .gan__siswaMeta { display: flex; align-items: center; gap: 7px; }
+                .gan__kelasChip { font-size: 0.72rem; font-weight: 700; background: #eff6ff; color: #1e40af; padding: 2px 8px; border-radius: 50px; }
+                .gan__nisnChip { font-size: 0.72rem; color: var(--n-muted); font-weight: 500; }
+                .gan__siswaFooter { display: contents; }
+                .gan__siswaActions { display: flex; align-items: center; justify-content: flex-end; }
+
+                :global(.dark) .gan__empty { background: #000000 !important; border: 1px solid rgba(37, 99, 235, 0.4) !important; border-radius: 20px !important; }
+                :global(.dark) .gan__empty-icon { background: rgba(26, 115, 232, 0.15) !important; color: #60a5fa !important; }
+                :global(.dark) .gan__empty h3 { color: #ffffff !important; }
+                :global(.dark) .gan__siswaCard { background: #000000 !important; border: 1px solid rgba(37, 99, 235, 0.4) !important; border-radius: 16px !important; }
+                :global(.dark) .gan__siswaCard:hover { background: rgba(26, 115, 232, 0.12) !important; }
+                :global(.dark) .gan__siswaNama { color: #ffffff !important; }
+                :global(.dark) .gan__kelasChip { background: rgba(59,130,246,0.15) !important; color: #60a5fa !important; }
+
+                @media (max-width: 640px) {
+                    .gan__siswaCard { grid-template-columns: 36px 1fr; grid-template-rows: auto auto; gap: 6px 12px; padding: 12px 14px; }
+                    .gan__siswaFooter { display: flex; grid-column: 2; justify-content: flex-start; align-items: center; gap: 8px; margin-top: 2px; }
+                    .gan__siswaNama { font-weight: 600; font-size: 0.9rem; }
+                }
             `}</style>
         </div>
     );

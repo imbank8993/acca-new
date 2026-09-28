@@ -1513,7 +1513,7 @@ export default function GeneratePiketTab({ bolehKelola }: GeneratePiketTabProps)
                 .sk__search input:focus { border-color: var(--n-primary); }
                 .sk__filters { display: flex; gap: 8px; flex-wrap: nowrap; flex: 1 1 auto; align-items: center; }
                 .sk__filters select, .sk__filters .sk__dateInput {
-                    height: 38px; padding: 0 12px; border: 1.5px solid var(--n-border); border-radius: 10px;
+                    height: 38px; padding: 0 12px; border: 1px solid var(--n-border); border-radius: 10px;
                     font-size: 0.82rem; font-weight: 600; color: var(--n-text); background: var(--n-card);
                     outline: none; transition: border-color 0.2s; cursor: pointer;
                     flex: 1 1 auto;
@@ -1740,13 +1740,13 @@ export default function GeneratePiketTab({ bolehKelola }: GeneratePiketTabProps)
                 }
                 .sk__btnPrimary { background: var(--banner-bg, var(--banner-bg, linear-gradient(135deg, var(--n-primary) 0%, #c2185b 100%))); color: white; box-shadow: 0 3px 10px rgba(0,56,168,0.2); }
                 .sk__btnPrimary:hover { opacity: 0.92; transform: translateY(-1px); }
-                .sk__btnGenerate { background: rgba(99, 102, 241, 0.1); color: #002a7a; border: 1.5px solid #c7d2fe; }
+                .sk__btnGenerate { background: rgba(99, 102, 241, 0.1); color: #002a7a; border: 1px solid #c7d2fe; }
                 .sk__btnGenerate:hover { background: rgba(99, 102, 241, 0.15); }
-                .sk__btnExport { background: rgba(16, 185, 129, 0.1); color: #059669; border: 1.5px solid #a7f3d0; }
+                .sk__btnExport { background: rgba(16, 185, 129, 0.1); color: #059669; border: 1px solid #a7f3d0; }
                 .sk__btnExport:hover { background: rgba(16, 185, 129, 0.15); }
-                .sk__btnDanger { background: rgba(239, 68, 68, 0.1); color: #dc2626; border: 1.5px solid #fecaca; }
+                .sk__btnDanger { background: rgba(239, 68, 68, 0.1); color: #dc2626; border: 1px solid #fecaca; }
                 .sk__btnDanger:hover { background: rgba(239, 68, 68, 0.15); }
-                .sk__btnGhost { background: var(--n-card); color: var(--n-muted); border: 1.5px solid var(--n-border); }
+                .sk__btnGhost { background: var(--n-card); color: var(--n-muted); border: 1px solid var(--n-border); }
                 .sk__btnGhost:hover { background: var(--n-soft); }
                 .sk__btnWarning { background: linear-gradient(135deg, #d97706, #f59e0b); color: #fff; }
                 .sk__btnWarning:hover { background: linear-gradient(135deg, #b45309, #d97706); }
@@ -1816,10 +1816,10 @@ export default function GeneratePiketTab({ bolehKelola }: GeneratePiketTabProps)
 :global(.dark) .sk__day.selasa { background: #14532d; color: #86efac; }
 :global(.dark) .sk__day.rabu { background: #422006; color: #fde047; }
 :global(.dark) .sk__day.kamis { background: #3b0764; color: #d8b4fe; }
-:global(.dark) .sk__iconBtn { background: rgba(26, 115, 232, 0.15) !important; border: 1.5px solid rgba(26, 115, 232, 0.6) !important; color: #60a5fa !important; }
-:global(.dark) .sk__iconBtn:hover { background: #1a73e8 !important; border-color: #3b82f6 !important; color: #ffffff !important; box-shadow: 0 0 12px rgba(26, 115, 232, 0.5) !important; }
-:global(.dark) .sk__iconBtn.danger { background: rgba(239, 68, 68, 0.15) !important; border: 1.5px solid rgba(239, 68, 68, 0.6) !important; color: #f87171 !important; }
-:global(.dark) .sk__iconBtn.danger:hover { background: #ef4444 !important; border-color: #f87171 !important; color: #ffffff !important; box-shadow: 0 0 12px rgba(239, 68, 68, 0.5) !important; }
+:global(.dark) .sk__iconBtn { background: rgba(26, 115, 232, 0.15) !important; border: 1px solid rgba(26, 115, 232, 0.4) !important; color: #60a5fa !important; }
+:global(.dark) .sk__iconBtn:hover { background: #1a73e8 !important; border-color: #3b82f6 !important; color: #ffffff !important; box-shadow: 0 0 12px rgba(26, 115, 232, 0.3) !important; }
+:global(.dark) .sk__iconBtn.danger { background: rgba(239, 68, 68, 0.15) !important; border: 1px solid rgba(239, 68, 68, 0.4) !important; color: #f87171 !important; }
+:global(.dark) .sk__iconBtn.danger:hover { background: #ef4444 !important; border-color: #f87171 !important; color: #ffffff !important; box-shadow: 0 0 12px rgba(239, 68, 68, 0.3) !important; }
 
                 /* Row Actions */
                 .sk__rowActions { display: flex; justify-content: center; gap: 6px; }
@@ -1953,11 +1953,11 @@ export default function GeneratePiketTab({ bolehKelola }: GeneratePiketTabProps)
                 .sk__sheetName { font-weight: 800; font-size: 1rem; color: var(--n-text); }
                 .sk__sheetSub { font-size: 0.8rem; color: var(--n-muted); margin-top: 2px; }
                 .sk__sheetActions { display: flex; flex-direction: row; gap: 10px; margin-bottom: 16px; }
-                .sk__sheetBtn { flex: 1 1 0; width: auto; padding: 12px 14px; background: #E0ECFF; border: 1.5px solid #E1E2E9; border-radius: 12px; font-weight: 700; font-size: 0.88rem; color: #112E59; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.15s; white-space: nowrap; }
+                .sk__sheetBtn { flex: 1 1 0; width: auto; padding: 12px 14px; background: #E0ECFF; border: 1px solid #E1E2E9; border-radius: 12px; font-weight: 700; font-size: 0.88rem; color: #112E59; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.15s; white-space: nowrap; }
                 .sk__sheetBtn:hover { background: #d0e3ff; }
                 .sk__sheetBtn.danger { background: #fef2f2; border-color: #fee2e2; color: #ef4444; }
                 .sk__sheetBtn.danger:hover { background: #fee2e2; }
-                .sk__sheetCancel { width: 100%; padding: 12px; background: var(--n-card); border: 1.5px solid var(--n-border); border-radius: 12px; font-weight: 700; color: var(--n-muted); cursor: pointer; }
+                .sk__sheetCancel { width: 100%; padding: 12px; background: var(--n-card); border: 1px solid var(--n-border); border-radius: 12px; font-weight: 700; color: var(--n-muted); cursor: pointer; }
 
                 /* Generate Modal */
                 .sk__modalOverlay { position: fixed; inset: 0; background: rgba(15,23,42,0.5); backdrop-filter: blur(4px); z-index: 200; display: flex; align-items: center; justify-content: center; padding: 20px; pointer-events: auto; }
@@ -1981,7 +1981,7 @@ export default function GeneratePiketTab({ bolehKelola }: GeneratePiketTabProps)
                 .sk__modalBody .sk__grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
                 .sk__field { display: flex; flex-direction: column; gap: 6px; }
                 .sk__field label { font-size: 0.72rem; font-weight: 800; color: var(--n-muted); text-transform: uppercase; letter-spacing: 0.05em; }
-                .sk__field input { padding: 10px 14px; border: 2px solid var(--n-border); border-radius: 12px; font-size: 0.8rem; font-weight: 600; color: var(--n-text); background: var(--n-card); outline: none; transition: border-color 0.2s; }
+                .sk__field input { padding: 10px 14px; border: 1px solid var(--n-border); border-radius: 12px; font-size: 0.8rem; font-weight: 600; color: var(--n-text); background: var(--n-card); outline: none; transition: border-color 0.2s; }
                 .sk__field select {
                     appearance: none;
                     -webkit-appearance: none;
@@ -1991,7 +1991,7 @@ export default function GeneratePiketTab({ bolehKelola }: GeneratePiketTabProps)
                     background-size: 13px;
                     padding: 10px 14px;
                     padding-right: 36px;
-                    border: 2px solid var(--n-border);
+                    border: 1px solid var(--n-border);
                     border-radius: 12px;
                     font-size: 0.8rem;
                     font-weight: 600;
@@ -2047,8 +2047,8 @@ export default function GeneratePiketTab({ bolehKelola }: GeneratePiketTabProps)
                     .sk__modalFoot .sk__btn { width: 100%; justify-content: center; }
                 }
             /* ===== DARK MODE FULL ===== */
-:global(.dark) .sk__dateList { background: #000000 !important; border-color: rgba(26, 115, 232, 0.4) !important; }
-:global(.dark) .sk__dateItem { background: #090d16 !important; border-color: rgba(26, 115, 232, 0.3) !important; color: #e2e8f0 !important; }
+:global(.dark) .sk__dateList { background: var(--n-card) !important; border: 1px solid rgba(26, 115, 232, 0.35) !important; }
+:global(.dark) .sk__dateItem { background: var(--n-surface-2) !important; border: 1px solid rgba(26, 115, 232, 0.25) !important; color: #e2e8f0 !important; }
 :global(.dark) .sk__dateItem:hover { background: rgba(26, 115, 232, 0.12) !important; border-color: #3b82f6 !important; }
 :global(.dark) .sk__dateItem.selected { background: rgba(239, 68, 68, 0.15) !important; border: 1px solid #ef4444 !important; color: #ffffff !important; box-shadow: 0 0 10px rgba(239, 68, 68, 0.25) !important; }
 :global(.dark) .sk__dateItemLabel { color: #e2e8f0 !important; }
@@ -2062,32 +2062,33 @@ export default function GeneratePiketTab({ bolehKelola }: GeneratePiketTabProps)
 /* ROOT */
 :global(.dark) .sk { background: rgba(255,255,255,0.03) !important; }
 /* TABLE */
+:global(.dark) .sk__tableWrap { background: var(--n-card) !important; border: 1px solid rgba(26, 115, 232, 0.35) !important; border-radius: 16px !important; }
 :global(.dark) .sk__table { background: var(--n-card) !important; border-color: var(--n-border) !important; }
 :global(.dark) .sk__table thead th { background: rgba(255,255,255,0.05) !important; color: var(--n-muted) !important; border-bottom-color: var(--n-border) !important; }
 :global(.dark) .sk__table tbody td { background: var(--n-card) !important; color: var(--n-ink) !important; border-bottom-color: var(--n-border) !important; }
 :global(.dark) .sk__table tbody tr:nth-child(even) td { background: rgba(255,255,255,0.025) !important; }
 :global(.dark) .sk__table tbody tr:hover td { background: rgba(79,142,247,0.06) !important; }
 /* TOOLBAR */
-:global(.dark) .sk__bar { background: var(--n-card) !important; border: 1px solid var(--n-border) !important; border-radius: 16px !important; }
+:global(.dark) .sk__bar { background: var(--n-card) !important; border: 1px solid rgba(26, 115, 232, 0.35) !important; border-radius: 16px !important; }
 :global(.dark) .sk__search { background: transparent !important; border: none !important; box-shadow: none !important; }
-:global(.dark) .sk__search input[type="text"], :global(.dark) .sk__search input { height: 40px !important; background: var(--n-card) !important; border: 1px solid var(--n-border) !important; border-radius: 12px !important; color: var(--n-ink) !important; padding-left: 36px !important; }
+:global(.dark) .sk__search input[type="text"], :global(.dark) .sk__search input { height: 40px !important; background: var(--n-surface-2) !important; border: 1px solid rgba(26, 115, 232, 0.35) !important; border-radius: 12px !important; color: var(--n-ink) !important; padding-left: 36px !important; }
 :global(.dark) .sk__search i { color: var(--n-primary) !important; }
-:global(.dark) .sk__filters select, :global(.dark) select { height: 40px !important; box-sizing: border-box !important; background-color: var(--n-card) !important; padding-right: 36px !important; -webkit-appearance: none !important; appearance: none !important; border: 1px solid var(--n-border) !important; color: var(--n-ink) !important; }
-:global(.dark) .sk__moreMenu { background: var(--n-card) !important; border-color: var(--n-border) !important; }
+:global(.dark) .sk__filters select, :global(.dark) select { height: 40px !important; box-sizing: border-box !important; background-color: var(--n-surface-2) !important; padding-right: 36px !important; -webkit-appearance: none !important; appearance: none !important; border: 1px solid rgba(26, 115, 232, 0.35) !important; color: var(--n-ink) !important; }
+:global(.dark) .sk__moreMenu { background: var(--n-card) !important; border: 1px solid rgba(26, 115, 232, 0.35) !important; }
 :global(.dark) .sk__moreMenu button { color: var(--n-ink) !important; }
 :global(.dark) .sk__moreMenu button:hover { background: var(--n-soft) !important; }
 /* BUTTONS */
-:global(.dark) .sk__btn { background: var(--n-card) !important; color: var(--n-ink) !important; border: 1px solid var(--n-border) !important; }
+:global(.dark) .sk__btn { background: var(--n-surface-2) !important; color: var(--n-ink) !important; border: 1px solid rgba(26, 115, 232, 0.35) !important; }
 :global(.dark) .sk__btn:hover { background: var(--n-soft) !important; border-color: var(--n-primary) !important; }
-:global(.dark) .sk__btnGhost { background: var(--n-card) !important; color: var(--n-ink) !important; border: 1px solid var(--n-border) !important; }
+:global(.dark) .sk__btnGhost { background: transparent !important; color: var(--n-ink) !important; border: 1px solid rgba(26, 115, 232, 0.35) !important; }
 :global(.dark) .sk__btnGhost:hover { background: var(--n-soft) !important; border-color: var(--n-primary) !important; }
-:global(.dark) .sk__btnGenerate { background: var(--n-soft) !important; color: var(--n-primary) !important; border: 1px solid var(--n-border) !important; }
+:global(.dark) .sk__btnGenerate { background: var(--n-soft) !important; color: var(--n-primary) !important; border: 1px solid rgba(26, 115, 232, 0.35) !important; }
 :global(.dark) .sk__btnPrimary { background: var(--n-primary) !important; color: #ffffff !important; border: 1px solid var(--n-primary) !important; }
 /* EMPTY / LOADING */
 :global(.dark) .sk__empty, :global(.dark) .sk__muted { color: var(--n-muted) !important; }
 /* CARDS / GROUP */
-:global(.dark) .sk__group { background: var(--n-card) !important; border-color: var(--n-border) !important; }
-:global(.dark) .sk__card { background: rgba(255,255,255,0.05) !important; border-color: var(--n-border) !important; }
+:global(.dark) .sk__group { background: var(--n-card) !important; border: 1px solid rgba(26, 115, 232, 0.35) !important; }
+:global(.dark) .sk__card { background: var(--n-card) !important; border: 1px solid rgba(26, 115, 232, 0.35) !important; }
 :global(.dark) .sk__kv, :global(.dark) .sk__k, :global(.dark) .sk__v { color: var(--n-ink) !important; }
 :global(.dark) .sk__k { color: var(--n-muted) !important; }
 :global(.dark) .sk__v { color: var(--n-ink) !important; }

@@ -73,7 +73,33 @@ export class GuruAsuhService {
       orderBy: { submitted_at: 'desc' },
     });
 
-    return { ok: true, data: serializeBigInt(data) };
+    const nips = Array.from(new Set(data.map((d: any) => d.nip).filter(Boolean))) as string[];
+    const photoMap = new Map<string, string>();
+    if (nips.length > 0) {
+      const userProfiles = await this.prisma.public_users.findMany({
+        where: {
+          OR: [
+            { nip: { in: nips } },
+            { username: { in: nips } },
+          ],
+          foto_profil: { not: null },
+        },
+        select: { nip: true, username: true, foto_profil: true },
+      });
+      for (const up of userProfiles) {
+        if (up.foto_profil) {
+          if (up.nip) photoMap.set(up.nip, up.foto_profil);
+          if (up.username) photoMap.set(up.username, up.foto_profil);
+        }
+      }
+    }
+
+    const withPhotos = data.map((d: any) => ({
+      ...d,
+      foto_profil: photoMap.get(d.nip) || null,
+    }));
+
+    return { ok: true, data: serializeBigInt(withPhotos) };
   }
 
   async postSubmission(user: any, body: any) {
@@ -713,10 +739,32 @@ export class GuruAsuhService {
       });
     }
 
+    const nisns = Array.from(new Set(siswaList.map((s) => s.nisn).filter(Boolean))) as string[];
+    const photoMap = new Map<string, string>();
+    if (nisns.length > 0) {
+      const userProfiles = await this.prisma.public_users.findMany({
+        where: {
+          OR: [
+            { username: { in: nisns } },
+            { nip: { in: nisns } },
+          ],
+          foto_profil: { not: null },
+        },
+        select: { username: true, nip: true, foto_profil: true },
+      });
+      for (const up of userProfiles) {
+        if (up.foto_profil) {
+          if (up.username) photoMap.set(up.username, up.foto_profil);
+          if (up.nip) photoMap.set(up.nip, up.foto_profil);
+        }
+      }
+    }
+
     const resultData = siswaList.map((siswa) => ({
       nisn: siswa.nisn,
       nama: siswa.nama_lengkap,
       kelas: siswa.kelas || '-',
+      foto_profil: photoMap.get(siswa.nisn) || null,
       ekskul: ekskulMap[siswa.id] || [],
     }));
 
@@ -749,7 +797,33 @@ export class GuruAsuhService {
     );
     uniqueSiswa.sort((a, b) => a.nama.localeCompare(b.nama));
 
-    return { ok: true, nip, siswa: uniqueSiswa };
+    const kokuNisns = Array.from(new Set(uniqueSiswa.map((s) => s.nisn).filter(Boolean))) as string[];
+    const kokuPhotoMap = new Map<string, string>();
+    if (kokuNisns.length > 0) {
+      const userProfiles = await this.prisma.public_users.findMany({
+        where: {
+          OR: [
+            { username: { in: kokuNisns } },
+            { nip: { in: kokuNisns } },
+          ],
+          foto_profil: { not: null },
+        },
+        select: { username: true, nip: true, foto_profil: true },
+      });
+      for (const up of userProfiles) {
+        if (up.foto_profil) {
+          if (up.username) kokuPhotoMap.set(up.username, up.foto_profil);
+          if (up.nip) kokuPhotoMap.set(up.nip, up.foto_profil);
+        }
+      }
+    }
+
+    const siswaWithPhotos = uniqueSiswa.map((s) => ({
+      ...s,
+      foto_profil: kokuPhotoMap.get(s.nisn) || null,
+    }));
+
+    return { ok: true, nip, siswa: siswaWithPhotos };
   }
 
   async getLaporan(user: any, query: any) {

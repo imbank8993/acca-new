@@ -25,6 +25,10 @@
 @import "./kinerja-guru/kinerja-guru.css";
 
 /* Global Typography & Font Family */
+:root {
+  color-scheme: light;
+}
+
 html, body, button, input, select, textarea, table, th, td {
   font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
 }
@@ -142,6 +146,20 @@ body, .header, .sidebar, .main-content, .card, .p-card, .modal-box {
 
   .content-container {
     padding: 0;
+  }
+
+  /* Sembunyikan scrollbar di mobile agar tidak menyentuh header & bottomnav */
+  html,
+  body {
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+  }
+
+  html::-webkit-scrollbar,
+  body::-webkit-scrollbar {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
   }
 
   /* =========================================================
@@ -6495,79 +6513,107 @@ input[type="month"]::-webkit-calendar-picker-indicator {
 }
 
 /* =========================================================
-   GLOBAL CUSTOM SCROLLBAR (LIGHT & DARK MODE)
+   GLOBAL CUSTOM SCROLLBAR (DESKTOP >= 1024px)
 ========================================================= */
-/* Firefox / Standards */
-* {
-  scrollbar-width: thin;
-  scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
+@media (min-width: 1024px) {
+  /* Firefox / Standards */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
+  }
+
+  .dark,
+  .dark * {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(59, 130, 246, 0.45) rgba(0, 0, 0, 0.35);
+  }
+
+  /* WebKit (Chrome, Edge, Safari, Opera) */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 9999px;
+    transition: background 0.2s ease;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 0, 0, 0.35);
+  }
+
+  ::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-button {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+  }
+
+  /* Dark Mode WebKit Scrollbar */
+  .dark ::-webkit-scrollbar,
+  html.dark ::-webkit-scrollbar,
+  body.dark ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  .dark ::-webkit-scrollbar-track,
+  html.dark ::-webkit-scrollbar-track,
+  body.dark ::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.4);
+    border-radius: 9999px;
+  }
+
+  .dark ::-webkit-scrollbar-thumb,
+  html.dark ::-webkit-scrollbar-thumb,
+  body.dark ::-webkit-scrollbar-thumb {
+    background: rgba(59, 130, 246, 0.45);
+    border-radius: 9999px;
+    border: 1px solid rgba(0, 0, 0, 0.3);
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .dark ::-webkit-scrollbar-thumb:hover,
+  html.dark ::-webkit-scrollbar-thumb:hover,
+  body.dark ::-webkit-scrollbar-thumb:hover {
+    background: #1a73e8;
+    box-shadow: 0 0 10px rgba(26, 115, 232, 0.6);
+  }
 }
 
-.dark,
-.dark * {
-  scrollbar-width: thin;
-  scrollbar-color: rgba(59, 130, 246, 0.45) rgba(0, 0, 0, 0.35);
-}
+/* =========================================================
+   MOBILE SCROLLBAR (CLEAN APP / PWA FEEL, NO OVERLAP)
+========================================================= */
+@media (max-width: 1023.98px) {
+  html,
+  body,
+  .dashboard-layout,
+  .dashboard-content-wrapper,
+  .main-content,
+  .content-area {
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+  }
 
-/* WebKit (Chrome, Edge, Safari, Opera) */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.2);
-  border-radius: 9999px;
-  transition: background 0.2s ease;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(0, 0, 0, 0.35);
-}
-
-::-webkit-scrollbar-corner {
-  background: transparent;
-}
-
-::-webkit-scrollbar-button {
-  display: none !important;
-  width: 0 !important;
-  height: 0 !important;
-}
-
-/* Dark Mode WebKit Scrollbar */
-.dark ::-webkit-scrollbar,
-html.dark ::-webkit-scrollbar,
-body.dark ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-
-.dark ::-webkit-scrollbar-track,
-html.dark ::-webkit-scrollbar-track,
-body.dark ::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0.4);
-  border-radius: 9999px;
-}
-
-.dark ::-webkit-scrollbar-thumb,
-html.dark ::-webkit-scrollbar-thumb,
-body.dark ::-webkit-scrollbar-thumb {
-  background: rgba(59, 130, 246, 0.45);
-  border-radius: 9999px;
-  border: 1px solid rgba(0, 0, 0, 0.3);
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.dark ::-webkit-scrollbar-thumb:hover,
-html.dark ::-webkit-scrollbar-thumb:hover,
-body.dark ::-webkit-scrollbar-thumb:hover {
-  background: #1a73e8;
-  box-shadow: 0 0 10px rgba(26, 115, 232, 0.6);
+  html::-webkit-scrollbar,
+  body::-webkit-scrollbar,
+  .dashboard-layout::-webkit-scrollbar,
+  .dashboard-content-wrapper::-webkit-scrollbar,
+  .main-content::-webkit-scrollbar,
+  .content-area::-webkit-scrollbar {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+  }
 }
 
 /* =========================================================

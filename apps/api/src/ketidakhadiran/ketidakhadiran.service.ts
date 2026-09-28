@@ -908,6 +908,16 @@ export class KetidakhadiranService {
       throw new NotFoundException('NIP wajib diisi');
     }
 
+    const allYearsForGuru = await this.prisma.guru_asuh.findMany({
+      where: { nip, aktif: true },
+      distinct: ['tahun_ajaran'],
+      select: { tahun_ajaran: true },
+      orderBy: { tahun_ajaran: 'desc' },
+    });
+    const availableTahunAjaran = allYearsForGuru
+      .map((y) => y.tahun_ajaran)
+      .filter(Boolean) as string[];
+
     const whereAsuh: any = {
       nip,
       aktif: true,
@@ -916,7 +926,7 @@ export class KetidakhadiranService {
       whereAsuh.tahun_ajaran = tahunAjaran;
     }
 
-    const siswaAsuh = await this.prisma.guru_asuh.findMany({
+    const rawSiswaAsuh = await this.prisma.guru_asuh.findMany({
       where: whereAsuh,
       select: {
         nisn_siswa: true,
@@ -926,35 +936,84 @@ export class KetidakhadiranService {
         nama_guru: true,
         tahun_ajaran: true,
       },
+      orderBy: [{ tahun_ajaran: 'desc' }, { nama_siswa: 'asc' }],
     });
 
-    if (!siswaAsuh || siswaAsuh.length === 0) {
+    const todayStr = new Date().toISOString().split('T')[0];
+    const todayDate = new Date(todayStr);
+
+    if (!rawSiswaAsuh || rawSiswaAsuh.length === 0) {
       return {
         success: true,
         has_asuhan: false,
+        has_any_asuhan: availableTahunAjaran.length > 0,
+        available_tahun_ajaran: availableTahunAjaran,
         guru_info: null,
         siswa_list: [],
         ketidakhadiran: [],
-        summary: null,
+        summary: {
+          total_siswa_asuh: 0,
+          total_tidak_hadir: 0,
+          total_izin: 0,
+          total_sakit: 0,
+          total_pending: 0,
+          hadir: 0,
+          total_asuhan: 0,
+          izin_hari_ini: 0,
+          sakit_hari_ini: 0,
+        },
+        today: todayStr,
       };
+    }
+
+    // Jika 'Semua' TA, deduplikasi siswa berdasarkan nisn (ambil tahun_ajaran terbaru)
+    const siswaAsuh: typeof rawSiswaAsuh = [];
+    const seenNisn = new Set<string>();
+    for (const s of rawSiswaAsuh) {
+      if (!s.nisn_siswa) continue;
+      if (!whereAsuh.tahun_ajaran) {
+        if (!seenNisn.has(s.nisn_siswa)) {
+          seenNisn.add(s.nisn_siswa);
+          siswaAsuh.push(s);
+        }
+      } else {
+        siswaAsuh.push(s);
+      }
     }
 
     const nisnList = Array.from(new Set(siswaAsuh.map((s) => s.nisn_siswa).filter(Boolean))) as string[];
     const actualTa = siswaAsuh[0]?.tahun_ajaran || tahunAjaran || '';
     const guruNama = siswaAsuh[0]?.nama_guru || '';
 
-    const todayStr = new Date().toISOString().split('T')[0];
-    const todayDate = new Date(todayStr);
+    const [activeKetidakhadiran, userProfiles] = await Promise.all([
+      this.prisma.ketidakhadiran.findMany({
+        where: {
+          nisn: { in: nisnList },
+          aktif: true,
+          tgl_mulai: { lte: todayDate },
+          tgl_selesai: { gte: todayDate },
+        },
+        orderBy: { tgl_mulai: 'desc' },
+      }),
+      this.prisma.public_users.findMany({
+        where: {
+          OR: [
+            { username: { in: nisnList } },
+            { nip: { in: nisnList } },
+          ],
+          foto_profil: { not: null },
+        },
+        select: { username: true, nip: true, foto_profil: true },
+      }),
+    ]);
 
-    const activeKetidakhadiran = await this.prisma.ketidakhadiran.findMany({
-      where: {
-        nisn: { in: nisnList },
-        aktif: true,
-        tgl_mulai: { lte: todayDate },
-        tgl_selesai: { gte: todayDate },
-      },
-      orderBy: { tgl_mulai: 'desc' },
-    });
+    const photoMap = new Map<string, string>();
+    for (const up of userProfiles) {
+      if (up.foto_profil) {
+        if (up.username) photoMap.set(up.username, up.foto_profil);
+        if (up.nip) photoMap.set(up.nip, up.foto_profil);
+      }
+    }
 
     const formattedKetidakhadiran = activeKetidakhadiran.map((r: any) => ({
       ...r,
@@ -966,24 +1025,71 @@ export class KetidakhadiranService {
       display_hari: `${calcHariKalender(r.tgl_mulai, r.tgl_selesai)} Hari`,
     }));
 
+    const khByNisn = new Map<string, any[]>();
+    for (const kh of formattedKetidakhadiran) {
+      if (!kh.nisn) continue;
+      const list = khByNisn.get(kh.nisn) || [];
+      list.push(kh);
+      khByNisn.set(kh.nisn, list);
+    }
+
+    const formattedSiswaList = siswaAsuh.map((s) => {
+      const studentKh = khByNisn.get(s.nisn_siswa) || [];
+      const totalIzin = studentKh.filter((r: any) => (r.jenis || '').toUpperCase() === 'IZIN').length;
+      const totalSakit = studentKh.filter((r: any) => (r.jenis || '').toUpperCase() === 'SAKIT').length;
+      const status: 'hadir' | 'tidak_hadir' = studentKh.length > 0 ? 'tidak_hadir' : 'hadir';
+
+      return {
+        nisn: s.nisn_siswa,
+        nisn_siswa: s.nisn_siswa,
+        nama: s.nama_siswa,
+        nama_siswa: s.nama_siswa,
+        kelas: s.kelas,
+        nip: s.nip,
+        nama_guru: s.nama_guru,
+        tahun_ajaran: s.tahun_ajaran,
+        status,
+        foto_profil: photoMap.get(s.nisn_siswa) || null,
+        ketidakhadiran: studentKh,
+        active_ketidakhadiran: studentKh,
+        total_izin: totalIzin,
+        total_sakit: totalSakit,
+        total_entries: studentKh.length,
+      };
+    });
+
+    const totalSiswaAsuh = formattedSiswaList.length;
+    const tidakHadirCount = formattedSiswaList.filter((s) => s.status === 'tidak_hadir').length;
+    const hadirCount = Math.max(0, totalSiswaAsuh - tidakHadirCount);
+    const totalIzin = formattedKetidakhadiran.filter((r: any) => (r.jenis || '').toUpperCase() === 'IZIN').length;
+    const totalSakit = formattedKetidakhadiran.filter((r: any) => (r.jenis || '').toUpperCase() === 'SAKIT').length;
+
     const summary = {
-      total_asuhan: nisnList.length,
-      total_tidak_hadir: formattedKetidakhadiran.length,
-      izin_hari_ini: formattedKetidakhadiran.filter((r) => r.jenis === 'IZIN').length,
-      sakit_hari_ini: formattedKetidakhadiran.filter((r) => r.jenis === 'SAKIT').length,
+      total_siswa_asuh: totalSiswaAsuh,
+      total_tidak_hadir: tidakHadirCount,
+      total_izin: totalIzin,
+      total_sakit: totalSakit,
+      total_pending: 0,
+      hadir: hadirCount,
+      total_asuhan: totalSiswaAsuh,
+      izin_hari_ini: totalIzin,
+      sakit_hari_ini: totalSakit,
     };
 
     return {
       success: true,
       has_asuhan: true,
+      has_any_asuhan: availableTahunAjaran.length > 0,
+      available_tahun_ajaran: availableTahunAjaran,
       guru_info: {
         nip,
         nama: guruNama,
         tahun_ajaran: actualTa,
       },
-      siswa_list: siswaAsuh,
+      siswa_list: formattedSiswaList,
       ketidakhadiran: formattedKetidakhadiran,
       summary,
+      today: todayStr,
     };
   }
 

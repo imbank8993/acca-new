@@ -1403,7 +1403,7 @@ export default function DashboardContent({ user, headerExtra }: { user: User; he
                     height: 34px;
                     border-radius: 10px;
                     background: rgba(255, 255, 255, 0.18);
-                    border: 1.5px solid rgba(255, 255, 255, 0.35);
+                    border: 1px solid rgba(255, 255, 255, 0.35);
                     color: #ffffff;
                     display: flex;
                     align-items: center;
@@ -1461,7 +1461,7 @@ export default function DashboardContent({ user, headerExtra }: { user: User; he
                 }
                 :global(.dark) .db__hero {
                     background: #0b1329 !important;
-                    border-bottom: 1.5px solid rgba(26, 115, 232, 0.45) !important;
+                    border-bottom: 1px solid rgba(26, 115, 232, 0.35) !important;
                     border-radius: 0 0 24px 24px !important;
                     box-shadow: 0 10px 30px rgba(0,0,0,0.5) !important;
                 }
@@ -1555,30 +1555,32 @@ export default function DashboardContent({ user, headerExtra }: { user: User; he
 
 
                 /* Widgets */
+                .db__top-announcements {
+                    width: 100%;
+                }
                 .db__widget-card {
                     background: var(--n-card);
-                    border: 1.75px solid var(--n-border);
+                    border: 1px solid var(--n-border);
                     border-radius: 16px;
                     padding: 16px 18px;
                     box-shadow: 0 4px 24px rgba(0,0,0,0.03), 0 1px 2px rgba(0,0,0,0.02);
                     color: var(--n-ink);
-                    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                    transition: border-color 0.25s ease, box-shadow 0.25s ease;
                 }
                 .db__widget-card:hover {
                     box-shadow: 0 12px 32px rgba(0,0,0,0.06), 0 2px 4px rgba(0,0,0,0.03);
-                    transform: translateY(-2px);
                     border-color: rgba(99, 102, 241, 0.3);
                 }
                 :global(.dark) .db__widget-card {
                     background: #0b1329 !important;
-                    border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
+                    border: 1px solid rgba(26, 115, 232, 0.35) !important;
                     border-radius: 16px !important;
                     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5) !important;
-                    backdrop-filter: blur(16px);
                 }
                 :global(.dark) .db__widget-card:hover {
                     border-color: #60a5fa !important;
                     box-shadow: 0 8px 28px rgba(26, 115, 232, 0.3) !important;
+                    transform: none !important;
                 }
                 .db__widgetIcon {
                     width: 38px;
@@ -1717,7 +1719,7 @@ export default function DashboardContent({ user, headerExtra }: { user: User; he
                 }
                 :global(.dark) .db__agenda-time-card {
                     background: #0b1329 !important;
-                    border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
+                    border: 1px solid rgba(26, 115, 232, 0.35) !important;
                     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5) !important;
                 }
                 :global(.dark .db__day-cell) {
@@ -2344,7 +2346,7 @@ export default function DashboardContent({ user, headerExtra }: { user: User; he
                     box-sizing: border-box;
                 }
                 :global(.dark) .db__info-item {
-                    border-bottom: 1.5px dashed rgba(59, 130, 246, 0.45) !important;
+                    border-bottom: 1px dashed rgba(59, 130, 246, 0.3) !important;
                 }
                 .db__info-item:last-child {
                     border-bottom: none !important;
@@ -2498,7 +2500,7 @@ export default function DashboardContent({ user, headerExtra }: { user: User; he
                 }
                 :global(.dark) .db__stat-box {
                     background: #0b1329 !important;
-                    border: 1.5px solid rgba(26, 115, 232, 0.6) !important;
+                    border: 1px solid rgba(26, 115, 232, 0.35) !important;
                 }
                 :global(.dark) .db__stat-box.danger {
                     background: linear-gradient(135deg, #0b1329 0%, rgba(225, 29, 72, 0.15) 100%) !important;
@@ -2940,7 +2942,7 @@ export default function DashboardContent({ user, headerExtra }: { user: User; he
                 }
                 :global(.dark) .db__table-wrap {
                     background: #0b1329 !important;
-                    border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
+                    border: 1px solid rgba(26, 115, 232, 0.35) !important;
                     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.04) !important;
                 }
                 .db__table {
@@ -3484,7 +3486,7 @@ export default function DashboardContent({ user, headerExtra }: { user: User; he
                            halaman lain — itulah gap lebar yang terlihat. */
                         padding: 0 !important;
                         box-sizing: border-box !important;
-                        overflow-x: hidden !important;
+                        overflow-x: clip !important;
                         animation: none !important;
                     }
                     .db__widget-card {
@@ -3528,7 +3530,7 @@ export default function DashboardContent({ user, headerExtra }: { user: User; he
                     }
                     :global(.dark) .db__mobile-ann-capsule {
                         background: #0b1329 !important;
-                        border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
+                        border: 1px solid rgba(26, 115, 232, 0.35) !important;
                         border-radius: 6px !important;
                         box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5) !important;
                     }
@@ -3631,7 +3633,7 @@ export default function DashboardContent({ user, headerExtra }: { user: User; he
                     }
                     :global(.dark) .db__bento-stat-card {
                         background: #0b1329 !important;
-                        border: 1.5px solid rgba(26, 115, 232, 0.5) !important;
+                        border: 1px solid rgba(26, 115, 232, 0.35) !important;
                     }
                     .db__bento-stat-label {
                         font-size: 0.65rem !important;
@@ -3878,10 +3880,14 @@ export default function DashboardContent({ user, headerExtra }: { user: User; he
                     }
                     :global(.dark) .db__widget-card {
                         background: #0b1329 !important;
-                        border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
+                        border: 1px solid rgba(26, 115, 232, 0.35) !important;
                         border-radius: 16px !important;
                         box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5) !important;
-                        backdrop-filter: blur(16px);
+                    }
+                    :global(.dark) .db__widget-card:hover {
+                        border-color: #60a5fa !important;
+                        box-shadow: 0 8px 28px rgba(26, 115, 232, 0.3) !important;
+                        transform: none !important;
                     }
                     :global(.dark) .db__widget-header {
                         border-bottom-color: rgba(37, 99, 235, 0.25) !important;

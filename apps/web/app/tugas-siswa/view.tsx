@@ -1553,15 +1553,19 @@ export default function TugasSiswaPage({ user: propUser }: TugasSiswaPageProps) 
                    Sebelumnya #1a2235 — slate di luar palet, membuat kartu halaman
                    ini terlihat lebih terang dari halaman lain. */
                 :global(.dark) .tsp__statCard {
-                    background: #000000;
-                    border: 1.8px solid rgba(26, 115, 232, 0.6);
-                    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+                    background: var(--n-card);
+                    border: 1px solid rgba(26, 115, 232, 0.35);
+                    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+                }
+                :global(.dark) .tsp__statCard:hover {
+                    border-color: rgba(26, 115, 232, 0.7);
+                    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4), 0 0 12px rgba(26, 115, 232, 0.2);
                 }
                 :global(.dark) .tsp__content {
-                    background: #000000;
-                    border: 1.8px solid rgba(26, 115, 232, 0.75);
+                    background: var(--n-card);
+                    border: 1px solid rgba(26, 115, 232, 0.35);
                     border-radius: 16px;
-                    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+                    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
                     overflow: hidden;
                 }
                 @media (max-width: 640px) {
@@ -1578,21 +1582,21 @@ export default function TugasSiswaPage({ user: propUser }: TugasSiswaPageProps) 
                     color: #60a5fa;
                 }
                 :global(.dark) .tsp__fab {
-                    background: #000000 !important;
-                    border: 1.8px solid rgba(26, 115, 232, 0.85) !important;
+                    background: var(--n-card) !important;
+                    border: 1px solid rgba(26, 115, 232, 0.5) !important;
                     border-radius: 12px !important;
                     color: #ffffff !important;
-                    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.9), 0 0 14px rgba(26, 115, 232, 0.3) !important;
+                    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6), 0 0 14px rgba(26, 115, 232, 0.3) !important;
                 }
                 :global(.dark) .tsp__fab:hover {
-                    background: #000000 !important;
+                    background: var(--n-surface-2) !important;
                     color: #60a5fa !important;
                     border-color: #3b82f6 !important;
                     box-shadow: 0 6px 24px rgba(26, 115, 232, 0.6) !important;
                 }
                 :global(.dark) .tsp__loadingMaster {
-                    background: #000000;
-                    border: 1.8px solid rgba(26, 115, 232, 0.75);
+                    background: var(--n-card);
+                    border: 1px solid rgba(26, 115, 232, 0.35);
                     border-radius: 16px;
                     color: #94a3b8;
                 }
@@ -1609,14 +1613,12 @@ export default function TugasSiswaPage({ user: propUser }: TugasSiswaPageProps) 
                     background: #dc2626;
                 }
 
-                /* HERO — diseragamkan dengan Master Data: kartu hitam + bingkai
-                   #1a73e8 + judul bergradasi biru. Gradasi memakai aksen halaman
-                   Gradasi judul sama persis dengan Master Data di semua halaman. */
+                /* HERO — diseragamkan dengan Master Data */
                 :global(.dark) .tsp__hero {
-                  background: #000000 !important;
-                  border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
+                  background: var(--n-card) !important;
+                  border: 1px solid rgba(26, 115, 232, 0.35) !important;
                   border-radius: 18px !important;
-                  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5) !important;
+                  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3) !important;
                 }
                 :global(.dark) .tsp__hero::before, :global(.dark) .tsp__hero::after { display: none !important; }
                 :global(.dark) .tsp__heroTitle {

@@ -531,7 +531,7 @@ export default function SearchableSelect({
         /* Dark mode overrides */
         :global(.dark) .ss__trigger {
           background: #0b1329 !important;
-          border: 1.5px solid rgba(59, 130, 246, 0.45) !important;
+          border: 1px solid rgba(59, 130, 246, 0.35) !important;
         }
         :global(.dark) .ss__mainInput {
           color: #f1f5f9 !important;
@@ -548,7 +548,7 @@ export default function SearchableSelect({
         }
         :global(.dark) .ss__drop {
           background: #0b1329 !important;
-          border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
+          border: 1px solid rgba(26, 115, 232, 0.4) !important;
           box-shadow: 0 16px 36px rgba(0, 0, 0, 0.6) !important;
         }
         :global(.dark) .ss__quickActions {

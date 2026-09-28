@@ -418,6 +418,28 @@ export default function DashboardShellLayout({ children }: { children: React.Rea
             background: transparent !important;
           }
 
+          /* Tampilan Mobile Bersih: Sembunyikan scrollbar agar tidak menyentuh/menabrak Header & BottomNav */
+          :global(html),
+          :global(body),
+          .dashboard-layout,
+          .dashboard-content-wrapper,
+          .main-content,
+          .content-area {
+            scrollbar-width: none !important;
+            -ms-overflow-style: none !important;
+          }
+
+          :global(html::-webkit-scrollbar),
+          :global(body::-webkit-scrollbar),
+          .dashboard-layout::-webkit-scrollbar,
+          .dashboard-content-wrapper::-webkit-scrollbar,
+          .main-content::-webkit-scrollbar,
+          .content-area::-webkit-scrollbar {
+            display: none !important;
+            width: 0 !important;
+            height: 0 !important;
+          }
+
           .dashboard-content-wrapper {
             position: relative;
             width: 100%;

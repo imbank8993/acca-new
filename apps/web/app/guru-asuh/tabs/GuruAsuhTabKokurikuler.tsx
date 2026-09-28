@@ -10,6 +10,7 @@ import { Modal, ModalBody, ModalFooter, ModalHeader } from '@/components/ui/Moda
 import { Button } from '@/components/ui/Button';
 import { useModalBlur } from '@/components/ModalBlurProvider';
 import { ActionButton } from '@/components/ui/ActionButtons';
+import { getProxiedImageUrl } from '@/lib/image-utils';
 
 const MONTH_NAMES = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
 
@@ -19,6 +20,7 @@ interface SiswaList {
     nisn: string;
     nama: string;
     kelas: string;
+    foto_profil?: string | null;
 }
 
 export default function GuruAsuhTabKokurikuler({ user }: GuruAsuhTabProps) {
@@ -164,7 +166,15 @@ export default function GuruAsuhTabKokurikuler({ user }: GuruAsuhTabProps) {
                                 <div key={s.nisn} className="gakk-item">
                                     <div className="gakk-item-left">
                                         <div className="gakk-item-avatar">
-                                            {s.nama.split(' ').map((n: string) => n[0]).slice(0, 2).join('')}
+                                            {s.foto_profil && (
+                                                <img
+                                                    src={getProxiedImageUrl(s.foto_profil)}
+                                                    alt={s.nama}
+                                                    className="gakk-avatar-img"
+                                                    onError={(e) => { (e.currentTarget as HTMLElement).style.display = 'none'; }}
+                                                />
+                                            )}
+                                            <span>{s.nama.split(' ').map((n: string) => n[0]).slice(0, 2).join('')}</span>
                                         </div>
                                         <div className="gakk-item-info">
                                             <span className="gakk-item-name">{s.nama}</span>
@@ -253,7 +263,8 @@ export default function GuruAsuhTabKokurikuler({ user }: GuruAsuhTabProps) {
                 .gakk-item { display: flex; justify-content: space-between; align-items: center; padding: 16px; border-bottom: 1px solid var(--n-border); transition: all 0.2s; }
                 .gakk-item:hover { background: var(--n-soft); }
                 .gakk-item-left { display: flex; align-items: center; gap: 14px; flex: 1; min-width: 0; }
-                .gakk-item-avatar { width: 42px; height: 42px; border-radius: 12px; background: linear-gradient(135deg, #3083FF, #3b82f6); color: white; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; font-weight: 800; text-transform: uppercase; }
+                .gakk-item-avatar { width: 42px; height: 42px; border-radius: 12px; background: linear-gradient(135deg, #3083FF, #3b82f6); color: white; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; font-weight: 800; text-transform: uppercase; position: relative; overflow: hidden; flex-shrink: 0; }
+                .gakk-avatar-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; border-radius: inherit; }
                 .gakk-item-info { display: flex; flex-direction: column; gap: 3px; overflow: hidden; }
                 .gakk-item-name { font-size: 0.95rem; font-weight: 700; color: var(--n-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
                 .gakk-item-nisn { font-size: 0.75rem; color: var(--n-muted); }

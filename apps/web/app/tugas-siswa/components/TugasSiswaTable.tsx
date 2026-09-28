@@ -656,8 +656,8 @@ export default function TugasSiswaTable({
                 :global(.dark) .tst__jenisIcon--pengingat { color: #60a5fa; }
 
                 :global(.dark) .tst__checkBtn {
-                    background: #000000 !important;
-                    border: 1.5px solid rgba(26, 115, 232, 0.4) !important;
+                    background: var(--n-card) !important;
+                    border: 1px solid rgba(26, 115, 232, 0.35) !important;
                     color: var(--n-muted);
                 }
 
@@ -1388,7 +1388,7 @@ export default function TugasSiswaTable({
                 /* ===== DARK MODE STANDARD ===== */
                 :global(.dark) .tst__wrapper { background: transparent !important; border: none !important; border-radius: 0 !important; box-shadow: none !important; }
                 :global(.dark) .tst__tableWrap { background: transparent !important; border: none !important; box-shadow: none !important; }
-                :global(.dark) .tst__th, :global(.dark) .tst__thAksi, :global(.dark) .tst__thCheck, :global(.dark) .tst__thInfoMapel, :global(.dark) .tst__thLampiran, :global(.dark) .tst__thTanggal, :global(.dark) .tst__thTugas { background: linear-gradient(135deg, rgba(26, 115, 232, 0.15), rgba(0, 40, 122, 0.25)) !important; color: #94a3b8 !important; border-bottom: 1.5px solid rgba(26, 115, 232, 0.4) !important; }
+                :global(.dark) .tst__th, :global(.dark) .tst__thAksi, :global(.dark) .tst__thCheck, :global(.dark) .tst__thInfoMapel, :global(.dark) .tst__thLampiran, :global(.dark) .tst__thTanggal, :global(.dark) .tst__thTugas { background: linear-gradient(135deg, rgba(26, 115, 232, 0.15), rgba(0, 40, 122, 0.25)) !important; color: #94a3b8 !important; border-bottom: 1px solid rgba(26, 115, 232, 0.35) !important; }
                 :global(.dark) .tst__td { color: #ffffff !important; border-bottom-color: rgba(26, 115, 232, 0.2) !important; }
                 :global(.dark) .tst__row:hover .tst__td { background: rgba(26, 115, 232, 0.08) !important; }
                 :global(.dark) .tst__judul, :global(.dark) .tst__guruName, :global(.dark) .tst__mapelName { color: #ffffff !important; }
@@ -1402,11 +1402,11 @@ export default function TugasSiswaTable({
                 :global(.dark) .tst__btnEdit:hover { background: rgba(14, 165, 233, 0.3) !important; color: #ffffff !important; }
                 :global(.dark) .tst__btnDelete { color: #f87171 !important; }
                 :global(.dark) .tst__btnDelete:hover { background: rgba(239, 68, 68, 0.15) !important; }
-                :global(.dark) .tst__kelasPopover { background: #000000 !important; border: 1.8px solid rgba(26, 115, 232, 0.75) !important; border-radius: 16px !important; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8) !important; }
-                :global(.dark) .tst__kelasPopoverHeader { background: linear-gradient(135deg, rgba(26, 115, 232, 0.15), rgba(0, 40, 122, 0.25)) !important; border-bottom: 1.5px solid rgba(26, 115, 232, 0.4) !important; color: #ffffff !important; }
+                :global(.dark) .tst__kelasPopover { background: var(--n-card) !important; border: 1px solid rgba(26, 115, 232, 0.35) !important; border-radius: 16px !important; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8) !important; }
+                :global(.dark) .tst__kelasPopoverHeader { background: linear-gradient(135deg, rgba(26, 115, 232, 0.15), rgba(0, 40, 122, 0.25)) !important; border-bottom: 1px solid rgba(26, 115, 232, 0.3) !important; color: #ffffff !important; }
                 :global(.dark) .tst__kelasPopoverItem { color: #ffffff !important; border-bottom-color: rgba(26, 115, 232, 0.2) !important; }
                 :global(.dark) .tst__kelasPopoverCount { color: #60a5fa !important; }
-                :global(.dark) .tst__emptyState, :global(.dark) .tst__loadingState { background: #000000 !important; }
+                :global(.dark) .tst__emptyState, :global(.dark) .tst__loadingState { background: var(--n-card) !important; }
                 :global(.dark) .tst__emptyTitle { color: #ffffff !important; }
                 :global(.dark) .tst__emptySub { color: #64748b !important; }
                 :global(.dark) .tst__emptyCircle, :global(.dark) .tst__emptyBadge { background: rgba(96, 165, 250, 0.15) !important; color: #60a5fa !important; }

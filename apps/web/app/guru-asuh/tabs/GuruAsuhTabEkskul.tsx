@@ -6,6 +6,7 @@ import { getActiveSettings } from '@/lib/settings-client';
 import { useTahunAjaranFilter } from '@/hooks/use-tahun-ajaran-filter';
 
 import { FilterToolbar, FilterSelect, FilterSearch, FilterActions } from '@/components/ui/FilterToolbar';
+import { getProxiedImageUrl } from '@/lib/image-utils';
 
 interface GuruAsuhTabProps { user?: any; }
 
@@ -13,6 +14,7 @@ interface SiswaEkskul {
     nisn: string;
     nama: string;
     kelas: string;
+    foto_profil?: string | null;
     ekskul: { nama_ekskul: string }[];
 }
 
@@ -221,7 +223,17 @@ export default function GuruAsuhTabEkskul({ user }: GuruAsuhTabProps) {
                         }).map((s, idx) => (
                             <div key={s.nisn} className="gae-item">
                                 <div className="gae-item-left">
-                                    <div className="gae-item-avatar">{s.nama.charAt(0).toUpperCase()}</div>
+                                    <div className="gae-item-avatar">
+                                        {s.foto_profil && (
+                                            <img
+                                                src={getProxiedImageUrl(s.foto_profil)}
+                                                alt={s.nama}
+                                                className="gae-avatar-img"
+                                                onError={(e) => { (e.currentTarget as HTMLElement).style.display = 'none'; }}
+                                            />
+                                        )}
+                                        <span>{s.nama.charAt(0).toUpperCase()}</span>
+                                    </div>
                                     <div className="gae-item-info">
                                         <span className="gae-item-name">{s.nama}</span>
                                         <span className="gae-item-nisn">{s.nisn} • Kelas {s.kelas}</span>
@@ -262,7 +274,8 @@ export default function GuruAsuhTabEkskul({ user }: GuruAsuhTabProps) {
                 .gae-item { display: flex; justify-content: space-between; align-items: center; padding: 16px; border-bottom: 1px solid var(--n-border); transition: all 0.2s; }
                 .gae-item:hover { background: var(--n-soft); }
                 .gae-item-left { display: flex; align-items: center; gap: 14px; flex: 1; min-width: 0; }
-                .gae-item-avatar { width: 42px; height: 42px; border-radius: 12px; background: rgba(26, 115, 232, 0.08); border: 1.8px solid #1a73e8; color: #1a73e8; display: flex; align-items: center; justify-content: center; font-size: 1rem; font-weight: 800; text-transform: uppercase; }
+                .gae-item-avatar { width: 42px; height: 42px; border-radius: 12px; background: rgba(26, 115, 232, 0.08); border: 1.8px solid #1a73e8; color: #1a73e8; display: flex; align-items: center; justify-content: center; font-size: 1rem; font-weight: 800; text-transform: uppercase; position: relative; overflow: hidden; flex-shrink: 0; }
+                .gae-avatar-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; border-radius: inherit; }
                 .gae-item-info { display: flex; flex-direction: column; gap: 2px; overflow: hidden; }
                 .gae-item-name { font-weight: 700; color: var(--n-ink); font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
                 .gae-item-nisn { font-size: 0.75rem; color: var(--n-muted); }

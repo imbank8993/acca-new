@@ -1587,40 +1587,37 @@ export default function TugasSiswaForm({
                     user-select: none;
                 }
 
-                /* -- Dark Mode: pola referensi master/pengaturan-data.
-                   Palet biru bersama (sama di semua halaman): aksen #60a5fa
-                   diletakkan paling akhir agar menang atas aturan dark di
-                   atasnya (urutan cascade + !important). -- */
-                :global(.dark) .tcf__modal { background: #000000 !important; border: 1.8px solid rgba(26, 115, 232, 0.75) !important; border-radius: 20px !important; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8) !important; }
-                :global(.dark) .tcf__header { background: linear-gradient(135deg, rgba(26, 115, 232, 0.15), rgba(0, 40, 122, 0.25)) !important; border-bottom: 1.8px solid rgba(26, 115, 232, 0.75) !important; }
+                /* -- Dark Mode -- */
+                :global(.dark) .tcf__modal { background: var(--n-card) !important; border: 1px solid rgba(26, 115, 232, 0.35) !important; border-radius: 20px !important; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8) !important; }
+                :global(.dark) .tcf__header { background: linear-gradient(135deg, rgba(26, 115, 232, 0.15), rgba(0, 40, 122, 0.25)) !important; border-bottom: 1px solid rgba(26, 115, 232, 0.35) !important; }
                 :global(.dark) .tcf__title { color: #ffffff !important; }
                 :global(.dark) .tcf__close { color: #94a3b8 !important; }
                 :global(.dark) .tcf__close:hover { background: rgba(26, 115, 232, 0.15) !important; color: #ffffff !important; }
-                :global(.dark) .tcf__body { background: #000000 !important; }
-                :global(.dark) .tcf__footer { background: #000000 !important; border-top: 1.8px solid rgba(26, 115, 232, 0.75) !important; }
+                :global(.dark) .tcf__body { background: var(--n-card) !important; }
+                :global(.dark) .tcf__footer { background: var(--n-card) !important; border-top: 1px solid rgba(26, 115, 232, 0.35) !important; }
                 :global(.dark) .tcf__label, :global(.dark) .tcf__dateLabel, :global(.dark) .tcf__hint, :global(.dark) .tcf__multiHint, :global(.dark) .tcf__uploadHint, :global(.dark) .tcf__kelasInfo { color: #94a3b8 !important; }
-                :global(.dark) .tcf__input, :global(.dark) .tcf__textarea, :global(.dark) .tcf__jenisSelect, :global(.dark) .ss__trigger { background: #000000 !important; border: 1.8px solid rgba(26, 115, 232, 0.75) !important; border-radius: 12px !important; color: #ffffff !important; color-scheme: dark; }
+                :global(.dark) .tcf__input, :global(.dark) .tcf__textarea, :global(.dark) .tcf__jenisSelect, :global(.dark) .ss__trigger { background: var(--n-surface-2, #162a4d) !important; border: 1px solid rgba(26, 115, 232, 0.35) !important; border-radius: 12px !important; color: #ffffff !important; color-scheme: dark; }
                 :global(.dark) .dpk-root.tcf__input, :global(.dark) .tcf__dateSection, :global(.dark) .tcf__dateToggle, :global(.dark) .tcf__jenisDropdown, :global(.dark) .tcf__kelasDropdownContainer { background: transparent !important; border: none !important; box-shadow: none !important; padding: 0 !important; }
                 :global(.dark) .tcf__input:focus, :global(.dark) .tcf__textarea:focus, :global(.dark) .tcf__jenisSelect:focus, :global(.dark) .ss__trigger:focus { border-color: #60a5fa !important; box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.2) !important; }
                 :global(.dark) .tcf__input::placeholder, :global(.dark) .tcf__textarea::placeholder { color: #64748b !important; }
-                :global(.dark) .tcf__jenisDropdownBtn, :global(.dark) .tcf__kelasDropdownBtn, :global(.dark) .tcf__toggleBtn { background: #000000 !important; border: 1.8px solid rgba(26, 115, 232, 0.75) !important; border-radius: 12px !important; color: #ffffff !important; }
+                :global(.dark) .tcf__jenisDropdownBtn, :global(.dark) .tcf__kelasDropdownBtn, :global(.dark) .tcf__toggleBtn { background: var(--n-surface-2, #162a4d) !important; border: 1px solid rgba(26, 115, 232, 0.35) !important; border-radius: 12px !important; color: #ffffff !important; }
                 :global(.dark) .tcf__toggleBtn.active { background: rgba(26, 115, 232, 0.25) !important; border-color: #3b82f6 !important; color: #60a5fa !important; }
-                :global(.dark) .tcf__kelasDropdownMenu { background: #000000 !important; border: 1.8px solid rgba(26, 115, 232, 0.75) !important; border-radius: 16px !important; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8) !important; }
-                :global(.dark) .tcf__kelasDropdownItem, :global(.dark) .tcf__kelasItem, :global(.dark) .tcf__sifatItem { color: #ffffff !important; border: 1.8px solid rgba(26, 115, 232, 0.75) !important; }
+                :global(.dark) .tcf__kelasDropdownMenu { background: var(--n-card) !important; border: 1px solid rgba(26, 115, 232, 0.35) !important; border-radius: 16px !important; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8) !important; }
+                :global(.dark) .tcf__kelasDropdownItem, :global(.dark) .tcf__kelasItem, :global(.dark) .tcf__sifatItem { color: #ffffff !important; border: 1px solid rgba(26, 115, 232, 0.35) !important; }
                 :global(.dark) .tcf__kelasDropdownItem:hover, :global(.dark) .tcf__kelasItem:hover, :global(.dark) .tcf__sifatItem:hover { background: rgba(26, 115, 232, 0.08) !important; }
                 :global(.dark) .tcf__kelasLabel, :global(.dark) .tcf__kelasCheckboxLabel, :global(.dark) .tcf__studentCheckboxLabel { color: #ffffff !important; }
                 :global(.dark) .tcf__kelasStudentCount, :global(.dark) .tcf__kelasSelectedSummary, :global(.dark) .tcf__dateSummary { background: rgba(96, 165, 250, 0.15) !important; color: #60a5fa !important; }
                 :global(.dark) .tcf__chevron { color: #60a5fa !important; }
                 :global(.dark) .tcf__required { color: #f87171 !important; }
-                :global(.dark) .tcf__uploadZone { background: #000000 !important; border: 1.8px solid rgba(26, 115, 232, 0.75) !important; }
+                :global(.dark) .tcf__uploadZone { background: var(--n-card) !important; border: 1px solid rgba(26, 115, 232, 0.35) !important; }
                 :global(.dark) .tcf__uploadZone:hover { background: rgba(96, 165, 250, 0.15) !important; border-color: #60a5fa !important; }
                 :global(.dark) .tcf__uploadContent i { color: #60a5fa !important; }
-                :global(.dark) .tcf__filePreview, :global(.dark) .tcf__fileInfo { background: #000000 !important; border: 1.8px solid rgba(26, 115, 232, 0.75) !important; border-radius: 12px !important; color: #ffffff !important; }
+                :global(.dark) .tcf__filePreview, :global(.dark) .tcf__fileInfo { background: var(--n-card) !important; border: 1px solid rgba(26, 115, 232, 0.35) !important; border-radius: 12px !important; color: #ffffff !important; }
                 :global(.dark) .tcf__fileBtnView { color: #60a5fa !important; }
                 :global(.dark) .tcf__fileBtnRemove { color: #f87171 !important; }
-                :global(.dark) .tcf__pengingatSection { background: #000000 !important; border: 1.8px solid rgba(26, 115, 232, 0.75) !important; border-radius: 12px !important; }
+                :global(.dark) .tcf__pengingatSection { background: var(--n-card) !important; border: 1px solid rgba(26, 115, 232, 0.35) !important; border-radius: 12px !important; }
                 :global(.dark) .tcf__pengingatHeader { color: #ffffff !important; }
-                :global(.dark) .tcf__btnCancel { background: #000000 !important; border: 1.8px solid rgba(26, 115, 232, 0.75) !important; color: #94a3b8 !important; }
+                :global(.dark) .tcf__btnCancel { background: var(--n-card) !important; border: 1px solid rgba(26, 115, 232, 0.35) !important; color: #94a3b8 !important; }
                 :global(.dark) .tcf__btnCancel:hover { background: rgba(26, 115, 232, 0.12) !important; color: #ffffff !important; }
             `}</style>
 

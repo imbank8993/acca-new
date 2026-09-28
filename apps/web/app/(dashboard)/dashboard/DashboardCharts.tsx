@@ -295,7 +295,7 @@ export default function DashboardCharts({
 
                 :global(.dark) .db-chart-card {
                     background: #0b1329 !important;
-                    border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
+                    border: 1px solid rgba(26, 115, 232, 0.35) !important;
                     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5) !important;
                 }
 

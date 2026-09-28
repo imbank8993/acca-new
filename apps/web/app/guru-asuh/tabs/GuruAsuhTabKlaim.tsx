@@ -15,6 +15,7 @@ import { Modal, ModalFooter, ModalHeader } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { DesktopFab } from '@/components/ui/DesktopFab';
 import { MobileFab } from '@/components/mobile';
+import { getProxiedImageUrl } from '@/lib/image-utils';
 
 interface GuruAsuhTabKlaimProps { user?: any; }
 
@@ -27,6 +28,7 @@ interface GuruAsuh {
     kelas: string;
     tahun_ajaran: string;
     aktif: boolean;
+    foto_profil?: string | null;
 }
 
 
@@ -343,7 +345,17 @@ export default function GuruAsuhTabKlaim({ user: propUser }: GuruAsuhTabKlaimPro
                         <div className="gakl__cards">
                             {paginatedList.map((item) => (
                                 <div key={item.id} className="gakl__card">
-                                    <div className="gakl__cardAvatar">{item.nama_siswa[0]}</div>
+                                    <div className="gakl__cardAvatar">
+                                        {item.foto_profil && (
+                                            <img
+                                                src={getProxiedImageUrl(item.foto_profil)}
+                                                alt={item.nama_siswa}
+                                                className="gakl__avatarImg"
+                                                onError={(e) => { (e.currentTarget as HTMLElement).style.display = 'none'; }}
+                                            />
+                                        )}
+                                        <span>{item.nama_siswa[0]}</span>
+                                    </div>
                                     <div className="gakl__cardInfo">
                                         <div className="gakl__cardNama">{item.nama_siswa}</div>
                                         <div className="gakl__cardMeta">
@@ -463,7 +475,8 @@ export default function GuruAsuhTabKlaim({ user: propUser }: GuruAsuhTabKlaimPro
                 /* Mobile Cards */
                 .gakl__cards { display: none; flex-direction: column; gap: 8px; }
                 .gakl__card { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 14px; border: 1px solid var(--n-border); background: var(--n-card); }
-                .gakl__cardAvatar { width: 44px; height: 44px; border-radius: 14px; background: rgba(26, 115, 232, 0.08); border: 1.8px solid #1a73e8; display: flex; align-items: center; justify-content: center; color: #1a73e8; font-weight: 800; font-size: 1.1rem; flex-shrink: 0; }
+                .gakl__cardAvatar { width: 44px; height: 44px; border-radius: 14px; background: rgba(26, 115, 232, 0.08); border: 1.8px solid #1a73e8; display: flex; align-items: center; justify-content: center; color: #1a73e8; font-weight: 800; font-size: 1.1rem; flex-shrink: 0; position: relative; overflow: hidden; }
+                .gakl__avatarImg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; border-radius: inherit; }
                 .gakl__cardInfo { flex: 1; }
                 .gakl__cardNama { font-size: 0.9rem; font-weight: 700; color: var(--n-ink); }
                 .gakl__cardMeta { display: flex; align-items: center; gap: 6px; margin-top: 3px; }
