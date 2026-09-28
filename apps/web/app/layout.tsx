@@ -63,7 +63,7 @@ export default function RootLayout({
       <body>
         {/* Terapkan preferensi dark mode & theme-color sebelum paint agar persist saat refresh tanpa flash */}
         <Script id="dark-mode-init" strategy="beforeInteractive">
-          {`try{var d=localStorage.getItem('darkMode')==='1';if(d){document.documentElement.classList.add('dark');}var c=d?'#000000':'#ffffff';document.documentElement.style.backgroundColor=c;document.documentElement.style.colorScheme=d?'dark':'light';var tc=document.getElementById('theme-color-meta');if(tc){tc.content=c;tc.setAttribute('content',c);}var cs=document.getElementById('color-scheme-meta');if(cs){cs.content=d?'dark':'light';cs.setAttribute('content',d?'dark':'light');}}catch(e){}`}
+          {`try{var d=localStorage.getItem('darkMode')==='1';if(d){document.documentElement.classList.add('dark');}var c=d?'#0b1329':'#ffffff';document.documentElement.style.backgroundColor=c;document.documentElement.style.colorScheme=d?'dark':'light';var tc=document.getElementById('theme-color-meta');if(tc){tc.content=c;tc.setAttribute('content',c);}var cs=document.getElementById('color-scheme-meta');if(cs){cs.content=d?'dark':'light';cs.setAttribute('content',d?'dark':'light');}}catch(e){}`}
         </Script>
         {/* Redirect recovery tokens to /update-password (hash fragments are invisible to server) */}
         <Script id="recovery-redirect" strategy="beforeInteractive">

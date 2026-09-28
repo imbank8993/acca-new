@@ -64,6 +64,12 @@ function toHex({ r, g, b }: Rgba): string {
 function baseColor(): Rgba {
     const dark = document.documentElement.classList.contains('dark')
 
+    // Paksa browser menghitung ulang gaya SEBELUM membaca --bnav-face.
+    // Setelah classList berubah, Safari iOS bisa menunda recalc; membaca
+    // properti layout memaksanya menyelesaikan antrian gaya yang tertunda.
+    // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+    document.documentElement.offsetHeight
+
     // Yang ditiru adalah BILAH NAV BAWAH, bukan kanvas halaman.
     //
     // Chrome browser berdempetan dengan bilah, bukan dengan kanvas: bilah
@@ -102,7 +108,7 @@ function baseColor(): Rgba {
     // dipakai. Dipakai sebagai cadangan untuk halaman TANPA bilah nav — mis.
     // login, form publik, halaman info-link.
     const ambient = document.querySelector('.acca-ambient-bg')
-    const navDefault = dark ? '#000000' : '#ffffff'
+    const navDefault = dark ? '#0b1329' : '#ffffff'
     const candidates = [
         sidebarBg,
         navFace,
@@ -115,7 +121,10 @@ function baseColor(): Rgba {
         if (parsed && parsed.a > 0.95) return parsed
     }
     // Cadangan terakhir disamakan dengan `--bnav-face`, bukan warna kanvas.
-    return dark ? { r: 0, g: 0, b: 0, a: 1 } : { r: 255, g: 255, b: 255, a: 1 }
+    // #0b1329 = --bnav-face dark (components/bottom-nav.css), bukan #000000.
+    // Dulu #000000 sehingga jika --bnav-face gagal terbaca (race condition),
+    // chrome browser mendapat hitam murni padahal bilah nav biru tua gelap.
+    return dark ? { r: 11, g: 19, b: 41, a: 1 } : { r: 255, g: 255, b: 255, a: 1 }
 }
 
 /**

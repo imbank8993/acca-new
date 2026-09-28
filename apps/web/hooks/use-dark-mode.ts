@@ -37,7 +37,12 @@ export function useDarkMode(user: User | null | undefined) {
         } else {
             setIsDark(document.documentElement.classList.contains('dark'))
         }
-        applyThemeColor()
+        // Satu frame setelah classList berubah: CSS cascade perlu dihitung ulang
+        // sebelum getComputedStyle membaca --bnav-face. Tanpa jeda ini Safari iOS
+        // bisa mendapat nilai tema LAMA dan chrome browser-nya tidak ikut berubah.
+        // Pola yang sama sudah dipakai ModalBlurProvider (baris 83).
+        const raf = requestAnimationFrame(() => applyThemeColor())
+        return () => cancelAnimationFrame(raf)
     }, [forcedTheme, canUseDarkMode])
 
     const toggleDarkMode = () => {
@@ -50,7 +55,9 @@ export function useDarkMode(user: User | null | undefined) {
             document.documentElement.classList.remove('dark')
             localStorage.setItem('darkMode', '0')
         }
-        applyThemeColor()
+        // Lihat catatan di useEffect di atas: satu frame jeda agar CSS cascade
+        // selesai dihitung ulang sebelum --bnav-face dibaca.
+        requestAnimationFrame(() => applyThemeColor())
         setIsDark(nextDark)
     }
 
