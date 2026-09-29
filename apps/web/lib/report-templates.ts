@@ -112,7 +112,8 @@ const SHELL_STYLE = `
   
   .rp-num { color: #94a3b8; font-weight: 600; width: 40px; text-align: center; }
   .rp-foot { padding: 18px 32px; background: #fff; border-top: 1px solid #f1f5f9; font-size: 13px; color: #64748b; display: flex; justify-content: space-between; align-items: center; }
-  .rp-foot-brand { display: flex; align-items: center; gap: 8px; font-weight: 700; color: #1e3a8a; }
+  .rp-foot-brand { display: flex; align-items: center; gap: 6px; font-weight: 700; color: #1e3a8a; line-height: 1; }
+  .rp-foot-brand img { height: 14px; width: auto; object-fit: contain; display: block; }
   .rp-note { padding: 16px 32px; background: #fffbeb; border-top: 1px solid #fde68a; font-size: 14px; color: #92400e; display: flex; gap: 8px; }
 `
 
@@ -198,7 +199,7 @@ export function piketReportHtml(
       <div class="rp-foot">
         <span style="font-weight:600;color:#64748b">Total: ${escapeHtml(String(rows.length))} kelas</span>
         <div class="rp-foot-brand">
-            <img src="${ACCA_LOGO_B64}" alt="ACCA" width="20" height="20" style="object-fit:contain" />
+            <img src="${ACCA_LOGO_B64}" alt="ACCA" height="14" style="height:14px;width:auto;object-fit:contain;display:block" />
             <span>acca.icgowa.sch.id</span>
         </div>
       </div>
@@ -267,7 +268,7 @@ export function ketidakhadiranReportHtml(
       <div class="rp-foot">
         <span style="font-weight:600;color:#64748b">Total: ${escapeHtml(data.total || String(rows.length))} siswa${data.bagian ? ` — ${escapeHtml(data.bagian)}` : ''}</span>
         <div class="rp-foot-brand">
-            <img src="${ACCA_LOGO_B64}" alt="ACCA" width="22" height="22" style="object-fit:contain;vertical-align:middle" />
+            <img src="${ACCA_LOGO_B64}" alt="ACCA" height="14" style="height:14px;width:auto;object-fit:contain;display:block" />
             <span>acca.icgowa.sch.id</span>
         </div>
       </div>
