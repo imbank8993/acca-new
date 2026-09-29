@@ -32,7 +32,10 @@ function fmtTanggalPanjang(d: Date): string {
 }
 
 function jam(v?: string | null): string {
-    return (v || '').slice(0, 5);
+    if (!v) return '';
+    const s = String(v).trim();
+    if (s.includes('T')) return (s.split('T')[1] || '').slice(0, 5);
+    return s.slice(0, 5);
 }
 
 export interface RekapKlinikInput {

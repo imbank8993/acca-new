@@ -2,6 +2,7 @@
 
 import { Modal, ModalBody, ModalFooter } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
+import { formatJam } from '../view';
 
 interface ViewReportModalProps {
   isOpen: boolean;
@@ -77,7 +78,7 @@ export default function ViewReportModal({
                 <td className="kdt-label">Waktu</td>
                 <td className="kdt-colon">:</td>
                 <td className="kdt-value">
-                  {slot.jam_mulai?.slice(0, 5)} – {slot.jam_selesai?.slice(0, 5)}
+                  {formatJam(slot.jam_mulai)} – {formatJam(slot.jam_selesai)}
                 </td>
               </tr>
               <tr>

@@ -40,7 +40,11 @@ const getCurrentDateTimeInTz = async () => waktuDindingMadrasah();
  * dengan `jendelaAbsensi()` di apps/web/app/klinik/view.tsx.
  */
 const geserWaktuDinding = (tanggal: string, jam: string, offset: number) => {
-    const d = new Date(`${tanggal}T${jam}:00Z`);
+    const rawJam = String(jam || '').trim();
+    const jamNorm = rawJam.includes('T') ? (rawJam.split('T')[1] || '').slice(0, 5) : rawJam.slice(0, 5);
+    const rawTgl = String(tanggal || '').includes('T') ? String(tanggal).split('T')[0] : String(tanggal || '').slice(0, 10);
+    if (!rawTgl || !jamNorm) return '';
+    const d = new Date(`${rawTgl}T${jamNorm}:00Z`);
     if (Number.isNaN(d.getTime())) return '';
     d.setMinutes(d.getMinutes() + offset);
     return d.toISOString().slice(0, 16);

@@ -1,5 +1,39 @@
 import { prisma } from './prisma';
 
+function isTimeColumn(colName: string): boolean {
+  const c = colName.toLowerCase();
+  return (
+    c === 'jam_mulai' ||
+    c === 'jam_selesai' ||
+    c === 'waktu_mulai' ||
+    c === 'waktu_selesai' ||
+    c === 'waktu_mulai_real' ||
+    c === 'waktu_selesai_real' ||
+    c === 'waktu' ||
+    c === 'start_time' ||
+    c === 'end_time' ||
+    c === 'scheduled_time' ||
+    c === 'window_end_time' ||
+    c === 'quiet_hours_start' ||
+    c === 'quiet_hours_end'
+  );
+}
+
+function formatTimeString(v: any): string {
+  if (v instanceof Date) {
+    return v.toISOString().slice(11, 16);
+  }
+  if (typeof v === 'string') {
+    const s = v.trim();
+    if (s.includes('T')) {
+      const parts = s.split('T');
+      return (parts[1] || '').slice(0, 5);
+    }
+    return s.slice(0, 5);
+  }
+  return v;
+}
+
 function serializeBigInt(obj: any): any {
   if (obj === null || obj === undefined) return obj;
   if (typeof obj === 'bigint') return obj.toString();
@@ -8,7 +42,11 @@ function serializeBigInt(obj: any): any {
   if (typeof obj === 'object') {
     const res: Record<string, any> = {};
     for (const [k, v] of Object.entries(obj)) {
-      res[k] = serializeBigInt(v);
+      if (isTimeColumn(k) && (v instanceof Date || typeof v === 'string')) {
+        res[k] = formatTimeString(v);
+      } else {
+        res[k] = serializeBigInt(v);
+      }
     }
     return res;
   }

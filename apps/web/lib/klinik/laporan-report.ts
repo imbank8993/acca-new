@@ -20,6 +20,13 @@ export function fmtDate(d?: string | Date | null): string {
     }
 }
 
+function fmtJam(v?: string | null): string {
+    if (!v) return '-';
+    const s = String(v).trim();
+    if (s.includes('T')) return (s.split('T')[1] || '').slice(0, 5);
+    return s.slice(0, 5);
+}
+
 async function generateQrDataUrl(data: string): Promise<string> {
     try {
         return await QRCode.toDataURL(data, { errorCorrectionLevel: 'M', margin: 1, width: 160 });
@@ -229,7 +236,7 @@ export async function buildKlinikReport(input: KlinikReportInput): Promise<Klini
       <tr><td>Mata Pelajaran</td><td>:</td><td>${esc(slot.mapel)}</td></tr>
       <tr><td>Topik</td><td>:</td><td>${esc(slot.topik)}</td></tr>
       <tr><td>Tanggal Pelaksanaan</td><td>:</td><td>${fmtDate(slot.tanggal)}</td></tr>
-      <tr><td>Waktu</td><td>:</td><td>${esc(slot.jam_mulai)} - ${esc(slot.jam_selesai)}</td></tr>
+      <tr><td>Waktu</td><td>:</td><td>${esc(fmtJam(slot.jam_mulai))} - ${esc(fmtJam(slot.jam_selesai))}</td></tr>
       <tr><td>Kehadiran</td><td>:</td><td>${jumlahHadir} dari ${peserta.length} peserta terdaftar</td></tr>
       <tr><td>Status</td><td>:</td><td><span class="status-text">${statusInfo.iconHtml}${statusInfo.label}</span></td></tr>
     </table>

@@ -145,10 +145,28 @@ function waktuDindingSekarang(skewMs: number): string {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
 }
 
+/**
+ * Memformat string jam agar selalu berbentuk "HH:mm".
+ * Menangani format murni ("HH:mm", "HH:mm:ss") maupun ISO DateTime ("1970-01-01THH:mm:ss.000Z")
+ * yang dihasilkan serialisasi tipe TIME PostgreSQL.
+ */
+export function formatJam(val?: string | null): string {
+  if (!val) return '';
+  const s = String(val).trim();
+  if (s.includes('T')) {
+    const parts = s.split('T');
+    return (parts[1] || '').slice(0, 5);
+  }
+  return s.slice(0, 5);
+}
+
 /** Jendela absensi sebuah sesi sebagai waktu dinding, sepadan dgn jendelaAbsensi() di API. */
 function jendelaAbsensi(slot: KlinikSlot): { mulai: string; selesai: string } {
   const geser = (jam: string, menit: number) => {
-    const dasar = new Date(`${slot.tanggal}T${(jam || '').slice(0, 5)}:00Z`);
+    const tgl = (slot.tanggal || '').includes('T') ? slot.tanggal.split('T')[0] : (slot.tanggal || '').slice(0, 10);
+    const jm = formatJam(jam);
+    if (!tgl || !jm) return '';
+    const dasar = new Date(`${tgl}T${jm}:00Z`);
     if (Number.isNaN(dasar.getTime())) return '';
     return new Date(dasar.getTime() + menit * 60_000).toISOString().slice(0, 16);
   };
@@ -170,8 +188,9 @@ function parseTanggalTampil(tanggal?: string | null): Date {
 /** Sesi yang jam selesainya sudah lewat (menurut jam perangkat pengguna). */
 function sesiSudahLewat(slot: KlinikSlot): boolean {
   if (!slot.tanggal) return false;
-  const jam = (slot.jam_selesai || '23:59').slice(0, 5);
-  const selesai = new Date(`${slot.tanggal}T${jam}`);
+  const tgl = slot.tanggal.includes('T') ? slot.tanggal.split('T')[0] : slot.tanggal.slice(0, 10);
+  const jam = formatJam(slot.jam_selesai) || '23:59';
+  const selesai = new Date(`${tgl}T${jam}:00`);
   return !Number.isNaN(selesai.getTime()) && selesai.getTime() < Date.now();
 }
 
@@ -419,9 +438,9 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
     setForm({
       mapel: slot.mapel,
       topik: slot.topik,
-      tanggal: slot.tanggal,
-      jam_mulai: slot.jam_mulai?.slice(0, 5) || '',
-      jam_selesai: slot.jam_selesai?.slice(0, 5) || '',
+      tanggal: slot.tanggal ? (slot.tanggal.includes('T') ? slot.tanggal.split('T')[0] : slot.tanggal.slice(0, 10)) : '',
+      jam_mulai: formatJam(slot.jam_mulai),
+      jam_selesai: formatJam(slot.jam_selesai),
       max_siswa: slot.max_siswa,
       guru_nip: slot.guru?.nip || '',
       target_kelas: slot.target_kelas || [],
@@ -709,9 +728,9 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
       mapel: slot.mapel,
       guru_nip: slot.guru?.nip || '',
       topik: slot.topik,
-      tanggal: slot.tanggal,
-      jam_mulai: slot.jam_mulai?.slice(0, 5) || '',
-      jam_selesai: slot.jam_selesai?.slice(0, 5) || '',
+      tanggal: slot.tanggal ? (slot.tanggal.includes('T') ? slot.tanggal.split('T')[0] : slot.tanggal.slice(0, 10)) : '',
+      jam_mulai: formatJam(slot.jam_mulai),
+      jam_selesai: formatJam(slot.jam_selesai),
       max_siswa: slot.max_siswa,
     });
     const pesertaAwal = (slot.klinik_peserta || []).map((p) => ({
@@ -1649,7 +1668,7 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
                                   {parseTanggalTampil(slot.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
                                 </span>
                                 <span className="time">
-                                  {slot.jam_mulai?.slice(0, 5)} – {slot.jam_selesai?.slice(0, 5)}
+                                  {formatJam(slot.jam_mulai)} – {formatJam(slot.jam_selesai)}
                                 </span>
                               </div>
                             </td>
@@ -1901,7 +1920,7 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
                           </div>
                           <div className="info-chip">
                             <i className="bi bi-clock" />
-                            {slot.jam_mulai?.slice(0, 5)} - {slot.jam_selesai?.slice(0, 5)}
+                            {formatJam(slot.jam_mulai)} - {formatJam(slot.jam_selesai)}
                           </div>
                         </div>
                       </div>
