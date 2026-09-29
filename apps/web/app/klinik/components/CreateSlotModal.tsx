@@ -81,6 +81,27 @@ export default function CreateSlotModal({
     ? 'Pilih guru pengampu dan teman sekelompok Anda'
     : 'Buka slot klinik untuk diikuti siswa';
 
+  const getKeteranganWaktu = (jamStr: string) => {
+    if (!jamStr || !jamStr.includes(':')) return null;
+    const h = parseInt(jamStr.split(':')[0], 10);
+    if (isNaN(h)) return null;
+    if (h < 12) return { text: 'Pagi', icon: '☀️', canShiftToNight: true };
+    if (h < 15) return { text: 'Siang', icon: '☀️', canShiftToNight: false };
+    if (h < 18) return { text: 'Sore', icon: '🌤️', canShiftToNight: false };
+    return { text: 'Malam', icon: '🌙', canShiftToNight: false };
+  };
+
+  const shiftToNight = (field: 'jam_mulai' | 'jam_selesai') => {
+    const val = form[field];
+    if (!val || !val.includes(':')) return;
+    const [h, m] = val.split(':');
+    const numH = parseInt(h, 10);
+    if (numH < 12) {
+      const newH = String(numH + 12).padStart(2, '0');
+      setForm((prev: any) => ({ ...prev, [field]: `${newH}:${m}` }));
+    }
+  };
+
   return (
     <Modal
       open={isOpen}
@@ -193,7 +214,18 @@ export default function CreateSlotModal({
                   </div>
                 )}
                 <div className="form-group">
-                  <label>Jam Mulai</label>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <label>Jam Mulai</label>
+                    {form.jam_mulai && (() => {
+                      const ket = getKeteranganWaktu(form.jam_mulai);
+                      if (!ket) return null;
+                      return (
+                        <span style={{ fontSize: '0.72rem', color: ket.canShiftToNight ? '#d97706' : '#16a34a', fontWeight: 600 }}>
+                          {ket.icon} {ket.text} ({form.jam_mulai})
+                        </span>
+                      );
+                    })()}
+                  </div>
                   <input
                     type="time"
                     value={form.jam_mulai}
@@ -201,9 +233,47 @@ export default function CreateSlotModal({
                       setForm({ ...form, jam_mulai: e.target.value })
                     }
                   />
+                  {form.jam_mulai && (() => {
+                    const h = parseInt(form.jam_mulai.split(':')[0], 10);
+                    if (h < 12) {
+                      const targetH = String(h + 12).padStart(2, '0');
+                      const m = form.jam_mulai.split(':')[1] || '00';
+                      return (
+                        <button
+                          type="button"
+                          onClick={() => shiftToNight('jam_mulai')}
+                          style={{
+                            marginTop: 4,
+                            fontSize: '0.72rem',
+                            color: '#2563eb',
+                            background: 'none',
+                            border: 'none',
+                            padding: 0,
+                            cursor: 'pointer',
+                            textAlign: 'left',
+                            fontWeight: 500,
+                          }}
+                        >
+                          🌙 Maksudnya malam ({targetH}:{m})? Klik di sini
+                        </button>
+                      );
+                    }
+                    return null;
+                  })()}
                 </div>
                 <div className="form-group">
-                  <label>Jam Selesai</label>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <label>Jam Selesai</label>
+                    {form.jam_selesai && (() => {
+                      const ket = getKeteranganWaktu(form.jam_selesai);
+                      if (!ket) return null;
+                      return (
+                        <span style={{ fontSize: '0.72rem', color: ket.canShiftToNight ? '#d97706' : '#16a34a', fontWeight: 600 }}>
+                          {ket.icon} {ket.text} ({form.jam_selesai})
+                        </span>
+                      );
+                    })()}
+                  </div>
                   <input
                     type="time"
                     value={form.jam_selesai}
@@ -211,6 +281,38 @@ export default function CreateSlotModal({
                       setForm({ ...form, jam_selesai: e.target.value })
                     }
                   />
+                  {form.jam_selesai && (() => {
+                    const h = parseInt(form.jam_selesai.split(':')[0], 10);
+                    if (h < 12) {
+                      const targetH = String(h + 12).padStart(2, '0');
+                      const m = form.jam_selesai.split(':')[1] || '00';
+                      return (
+                        <button
+                          type="button"
+                          onClick={() => shiftToNight('jam_selesai')}
+                          style={{
+                            marginTop: 4,
+                            fontSize: '0.72rem',
+                            color: '#2563eb',
+                            background: 'none',
+                            border: 'none',
+                            padding: 0,
+                            cursor: 'pointer',
+                            textAlign: 'left',
+                            fontWeight: 500,
+                          }}
+                        >
+                          🌙 Maksudnya malam ({targetH}:{m})? Klik di sini
+                        </button>
+                      );
+                    }
+                    return null;
+                  })()}
+                </div>
+                <div style={{ gridColumn: '1 / -1', marginTop: -4 }}>
+                  <p style={{ margin: 0, fontSize: '0.72rem', color: '#64748b' }}>
+                    💡 Tips: Gunakan format 24 jam (misal <strong>20:00</strong> untuk jam 8 malam), atau pilih <strong>PM</strong> jika di HP Anda muncul opsi AM/PM.
+                  </p>
                 </div>
               </div>
             </section>
