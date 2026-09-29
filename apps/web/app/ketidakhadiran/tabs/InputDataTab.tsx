@@ -537,7 +537,7 @@ export function InputDataTab() {
         // Catatan hanya tampil di pratinjau, tidak ikut ke pesan WhatsApp.
         const excludedCount = allDateRows.length - filteredRows.length;
         const excludedNote = excludedCount > 0
-            ? `<div class="kh-swal-line kh-swal-sub"><i>${excludedCount} data tidak disertakan karena jam selesainya sudah lewat (sekarang ${nowHM}).</i></div>`
+            ? `<div class="kh-swal-line kh-swal-sub" style="font-size:0.78rem;line-height:1.4;margin-bottom:3px"><i>${excludedCount} data tidak disertakan karena jam selesainya sudah lewat (sekarang ${nowHM}).</i></div>`
             : '';
 
         const escapeHtml = (s: string) => String(s ?? '').replace(/[<>&]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c] as string));
@@ -548,7 +548,7 @@ export function InputDataTab() {
                 : '';
             if (part.imageDataUrl) {
                 return `${heading}<img src="${part.imageDataUrl}" alt="Pratinjau laporan" style="width:100%;border-radius:10px;border:1px solid rgba(148,163,184,.35)" />` +
-                    (part.caption ? `<div class="kh-swal-line kh-swal-sub" style="margin-top:6px">${escapeHtml(part.caption)}</div>` : '');
+                    (part.caption ? `<div class="kh-swal-line kh-swal-sub" style="margin-top:6px;font-size:0.78rem;line-height:1.4">${escapeHtml(part.caption)}</div>` : '');
             }
             return `${heading}<div class="kh-swal-preview">${escapeHtml(part.text || '').split('\n').map((line: string) =>
                 `<div class="kh-swal-line kh-swal-meta">${line || '&nbsp;'}</div>`
@@ -556,7 +556,7 @@ export function InputDataTab() {
         }).join('<div style="height:12px"></div>');
 
         const modeNote = preview.mode === 'image'
-            ? '<div class="kh-swal-line kh-swal-sub">Dikirim sebagai gambar ke grup WhatsApp.</div>'
+            ? '<div class="kh-swal-line kh-swal-sub" style="font-size:0.78rem;line-height:1.4;margin-bottom:10px">Dikirim sebagai gambar ke grup WhatsApp.</div>'
             : '';
 
         await Swal.fire({

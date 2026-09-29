@@ -3617,7 +3617,13 @@ body.dark .pm-hint--blocked i,
 }
 
 .kh-swal-sub {
-  color: var(--kh-text-primary) !important;
+  color: var(--kh-text-secondary, #64748b) !important;
+  font-size: 0.78rem !important;
+  line-height: 1.4 !important;
+}
+
+.dark .kh-swal-sub {
+  color: #94a3b8 !important;
 }
 
 .kh-swal-footer {
