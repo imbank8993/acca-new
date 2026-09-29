@@ -491,16 +491,18 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
   const bisaApproveLaporan = can('klinik.approve_laporan');
   const bisaRekap = can('klinik.rekap');
 
+  const isSameId = (a: any, b: any) => a !== null && a !== undefined && b !== null && b !== undefined && String(a) === String(b);
+
   const bisaLihatLaporan = (slot: KlinikSlot) =>
-    bisaRekap || slot.guru_id === user?.id || (slot.klinik_peserta || []).some((p) => p.siswa_id === user?.id);
+    bisaRekap || isSameId(slot.guru_id, user?.id) || (slot.klinik_peserta || []).some((p) => isSameId(p.siswa_id, user?.id));
 
   /** Baris peserta milik pengguna yang sedang login pada sebuah sesi. */
   const pesertaSaya = (slot: KlinikSlot) =>
-    (slot.klinik_peserta || []).find((p) => p.siswa_id === user?.id);
+    (slot.klinik_peserta || []).find((p) => isSameId(p.siswa_id, user?.id));
 
   /** Guru pengampu sesi ini atau pengelola klinik — berhak mengisi absensi. */
   const bisaKelolaAbsensi = (slot: KlinikSlot) =>
-    bisaKelolaSesi || (isGuru && slot.guru_id === user?.id);
+    bisaKelolaSesi || (isGuru && isSameId(slot.guru_id, user?.id));
 
   /**
    * Jendela absensi sesi ini sedang terbuka? Keputusan finalnya tetap di server;
@@ -883,6 +885,9 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
           'success'
         );
         closeCreateModal();
+        if (!editSlotId) {
+          setActiveTab(isSiswa && !isGuru ? 'kelompok' : 'my_sessions');
+        }
         fetchUserAndSlots();
       } else {
         Swal.fire('Gagal', json.error || 'Gagal menyimpan jadwal klinik', 'error');
@@ -1284,7 +1289,7 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
       if (tabAktif === 'available') {
         if (s.status !== 'open' && s.status !== 'full') return false;
       } else if (tabAktif === 'my_sessions') {
-        if (s.guru_id !== user?.id) return false;
+        if (!isSameId(s.guru_id, user?.id)) return false;
       } else if (tabAktif === 'kelompok') {
         if (!(s.initiator_type === 'SISWA' && STATUS_PENGAJUAN.includes(s.status))) return false;
       } else if (tabAktif === 'approval') {
@@ -1589,7 +1594,7 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
                     </tr>
                   ) : (
                     displayedSlots.map((slot) => {
-                      const isCreator = slot.guru_id === user?.id || (slot.initiator_type === 'SISWA' && slot.initiator_siswa_id === user?.id);
+                      const isCreator = isSameId(slot.guru_id, user?.id) || (slot.initiator_type === 'SISWA' && isSameId(slot.initiator_siswa_id, user?.id));
                       const sesiAdmin = slot.initiator_type === 'ADMIN';
                       // Sesi bentukan admin lahir langsung 'open'; kalau syarat editnya
                       // tetap "masih pengajuan", sesi itu tak akan pernah bisa disunting.
@@ -1698,7 +1703,7 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
 
                                 {/* Gerbang pertama: guru pengampu yang ditunjuk siswa
                                     menyatakan kesediaannya sebelum reviewer menilai. */}
-                                {isGuru && slot.status === 'pending_guru' && slot.guru_id === user?.id && (
+                                {isGuru && slot.status === 'pending_guru' && isSameId(slot.guru_id, user?.id) && (
                                   <>
                                     <button
                                       type="button"
@@ -1721,7 +1726,7 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
                                   </>
                                 )}
 
-                                {isGuru && tabAktif === 'my_sessions' && user?.id === slot.guru_id && (slot.status === 'open' || slot.status === 'full') && (
+                                {isGuru && tabAktif === 'my_sessions' && isSameId(user?.id, slot.guru_id) && (slot.status === 'open' || slot.status === 'full') && (
                                   kurang > 0 ? (
                                     <span className={`act-note ${batal ? 'act-note--batal' : ''}`}>
                                       {batal ? 'Klinik batal · laporan ditutup' : `Butuh ${kurang} siswa lagi`}
@@ -1755,7 +1760,7 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
                                 {isSiswa && tabAktif === 'kelompok' && STATUS_PENGAJUAN.includes(slot.status) && (
                                   (slot.klinik_peserta?.length || 0) >= slot.max_siswa ? (
                                     <span className="act-note">Kuota Penuh</span>
-                                  ) : slot.klinik_peserta?.some((p) => p.siswa_id === user?.id) ? (
+                                  ) : slot.klinik_peserta?.some((p) => isSameId(p.siswa_id, user?.id)) ? (
                                     <span className="act-note act-note--ok">
                                       <i className="bi bi-check-circle-fill" /> Sudah Gabung
                                     </span>
@@ -1830,7 +1835,7 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
                 </div>
               ) : (
                 displayedSlots.map((slot) => {
-                  const isCreator = slot.guru_id === user?.id || (slot.initiator_type === 'SISWA' && slot.initiator_siswa_id === user?.id);
+                  const isCreator = isSameId(slot.guru_id, user?.id) || (slot.initiator_type === 'SISWA' && isSameId(slot.initiator_siswa_id, user?.id));
                   const sesiAdmin = slot.initiator_type === 'ADMIN';
                   const canEdit = (STATUS_PENGAJUAN.includes(slot.status) && (bisaKelolaSesi || isCreator))
                     || (bisaKelolaSesi && STATUS_BERJALAN.includes(slot.status));
@@ -1943,7 +1948,7 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
                           {isSiswa && tabAktif === 'kelompok' && STATUS_PENGAJUAN.includes(slot.status) && (
                             (slot.klinik_peserta?.length || 0) >= slot.max_siswa ? (
                               <span className="act-note">Kuota Penuh</span>
-                            ) : slot.klinik_peserta?.some((p) => p.siswa_id === user?.id) ? (
+                            ) : slot.klinik_peserta?.some((p) => isSameId(p.siswa_id, user?.id)) ? (
                               <span className="act-note act-note--ok">
                                 <i className="bi bi-check-circle-fill" /> Sudah Gabung
                               </span>
@@ -1963,7 +1968,7 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
                               </Button>
                             </div>
                           )}
-                          {isGuru && slot.status === 'pending_guru' && slot.guru_id === user?.id && (
+                          {isGuru && slot.status === 'pending_guru' && isSameId(slot.guru_id, user?.id) && (
                             <div className="flex gap-2">
                               <Button size="sm" variant="primary" onClick={() => handleApproveGuru(slot.id, 'terima')} leftIcon={<i className="bi bi-check-lg" />}>
                                 Bersedia
@@ -1973,7 +1978,7 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
                               </Button>
                             </div>
                           )}
-                          {isGuru && tabAktif === 'my_sessions' && user?.id === slot.guru_id && (slot.status === 'open' || slot.status === 'full') && (
+                          {isGuru && tabAktif === 'my_sessions' && isSameId(user?.id, slot.guru_id) && (slot.status === 'open' || slot.status === 'full') && (
                             kurang > 0 ? (
                               <span className={`act-note ${batal ? 'act-note--batal' : ''}`}>
                                 {batal ? 'Klinik batal · laporan ditutup' : `Butuh ${kurang} siswa lagi`}

@@ -125,6 +125,8 @@ function getColumnCast(table: string, column: string): string {
 
   // 4. Kolom UUID
   if (
+    c === 'auth_id' ||
+    c === 'cbt_auth_id' ||
     c === 'slot_id' ||
     c === 'ekskul_id' ||
     c === 'pertemuan_id' ||
@@ -400,12 +402,14 @@ export class PostgresQueryBuilder {
     if (current.trim()) tokens.push(current.trim());
 
     const result: string[] = [];
-    for (const token of tokens) {
-      const relMatch = token.match(/^(?:([a-zA-Z0-9_]+):)?([a-zA-Z0-9_]+)\((.*)\)$/);
+    for (const rawToken of tokens) {
+      const token = rawToken.replace(/\s+/g, ' ').trim();
+      const relMatch = token.match(/^(?:([a-zA-Z0-9_]+):)?([a-zA-Z0-9_]+)(?:!([a-zA-Z0-9_]+))?\s*\((.*)\)$/);
       if (relMatch) {
         const alias = relMatch[1] || relMatch[2];
         const relOrFk = relMatch[2];
-        const innerColsStr = relMatch[3].trim();
+        const fkCol = relMatch[3];
+        const innerColsStr = relMatch[4].trim();
         const innerCols = innerColsStr === '*' ? ['*'] : innerColsStr.split(',').map((c) => c.trim()).filter(Boolean);
 
         const subJson =
@@ -433,13 +437,19 @@ export class PostgresQueryBuilder {
           result.push(`(SELECT COALESCE(json_agg(${subJson}), '[]'::json) FROM public."${alias}" sub_${alias} WHERE sub_${alias}.budget_request_id = "${table}".id) as "${alias}"`);
         } else if (table === 'klinik_slots' && alias === 'klinik_peserta') {
           result.push(`(SELECT COALESCE(json_agg(${subJson}), '[]'::json) FROM public.klinik_peserta sub_${alias} WHERE sub_${alias}.slot_id = "${table}".id) as "${alias}"`);
+        } else if (table === 'klinik_slots' && alias === 'klinik_laporan') {
+          result.push(`(SELECT COALESCE(json_agg(${subJson}), '[]'::json) FROM public.klinik_laporan sub_${alias} WHERE sub_${alias}.slot_id = "${table}".id) as "${alias}"`);
+        } else if (table === 'klinik_slots' && (alias === 'guru' || alias === 'users') && (fkCol === 'guru_id' || !fkCol)) {
+          result.push(`(SELECT ${subJson} FROM public.users sub_${alias} WHERE sub_${alias}.id = "${table}".guru_id) as "${alias}"`);
+        } else if (fkCol) {
+          result.push(`(SELECT ${subJson} FROM public."${relOrFk}" sub_${alias} WHERE sub_${alias}.id = "${table}"."${fkCol}") as "${alias}"`);
         } else {
           result.push(`(SELECT ${subJson} FROM public."${relOrFk}" sub_${alias} WHERE sub_${alias}.id = "${table}"."${relOrFk}_id") as "${alias}"`);
         }
-      } else if (token === '*') {
+      } else if (rawToken === '*') {
         result.push(`"${table}".*`);
       } else {
-        result.push(`"${table}"."${token}"`);
+        result.push(`"${table}"."${rawToken}"`);
       }
     }
     return result;

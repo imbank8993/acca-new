@@ -115,10 +115,21 @@ export default function Header({ user, onMenuToggle, onNavigate, isCollapsed, on
             await fetch('/api/auth/logout', { method: 'POST' })
         } catch { }
 
-        // Single logout: also clear the ACCA TOOLS session, which then returns
-        // the browser to /login here. Falls back to /login if TOOLS_URL unset.
-        const toolsUrl = process.env.NEXT_PUBLIC_TOOLS_URL
-        window.location.href = toolsUrl ? `${toolsUrl.replace(/\/$/, '')}/logout` : '/login'
+        // Arahkan ke login lokal saat di localhost, atau ke acca.icgowa.sch.id jika di produksi
+        const isLocal =
+            process.env.NODE_ENV === 'development' ||
+            (typeof window !== 'undefined' && (
+                window.location.hostname === 'localhost' ||
+                window.location.hostname === '127.0.0.1' ||
+                window.location.hostname.endsWith('.local') ||
+                window.location.hostname.startsWith('192.168.')
+            ))
+
+        const targetUrl = isLocal
+            ? '/login'
+            : (process.env.NEXT_PUBLIC_LOGIN_URL || 'https://acca.icgowa.sch.id/login')
+
+        window.location.href = targetUrl
     }
 
     const handleBack = () => {

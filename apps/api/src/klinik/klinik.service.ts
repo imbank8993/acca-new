@@ -148,10 +148,12 @@ function jendelaAbsensi(slot: { tanggal: string; jam_mulai: string; jam_selesai:
  * baris auth_id tidak ketemu — beberapa akun siswa ternyata tidak selalu
  * punya `auth_id` konsisten dgn sesi login mereka.
  */
-async function resolveUserRecord(db: PrismaDbAdapter, authId: string, nip?: string) {
-    const { data: byAuthId } = await db.from('users')
-        .select('id, nama, nip, username').eq('auth_id', authId).maybeSingle();
-    if (byAuthId) return byAuthId;
+async function resolveUserRecord(db: PrismaDbAdapter, authId?: string, nip?: string) {
+    if (authId) {
+        const { data: byAuthId } = await db.from('users')
+            .select('id, nama, nip, username').eq('auth_id', authId).maybeSingle();
+        if (byAuthId) return byAuthId;
+    }
 
     if (nip) {
         const { data: byNip } = await db.from('users')
@@ -771,7 +773,7 @@ export async function handleGet(req: any, action: string, searchParams: URLSearc
         // sudah terverifikasi di server; parameter dari klien tidak dipakai lagi.
         const isBendaharaOrAdmin = user.roles?.includes('ADMIN') || user.roles?.includes('BENDAHARA_KOMITE') || user.role === 'ADMIN';
         if (!can(user, 'klinik.kelola_sesi') && !isBendaharaOrAdmin && user.roles?.includes('GURU')) {
-            const guruRecord = await resolveUserRecord(db, user.authId, user.nip);
+            const guruRecord = await resolveUserRecord(db, user.auth_id || user.authId, user.nip);
             // Tanpa baris user yang cocok, jangan bocorkan apa pun.
             query = query.eq('guru_id', guruRecord?.id ?? -1);
         }
@@ -887,7 +889,7 @@ export async function handlePost(req: any, action: string, payload: any, db: Pri
             if (salahJadwal) throw new HttpException({ ok: false, error: salahJadwal }, 400);
 
             // Bug 9: Get actual user ID from auth session, not from body
-            const userRecord = await resolveUserRecord(db, user.authId, user.nip);
+            const userRecord = await resolveUserRecord(db, user.auth_id || user.authId, user.nip);
             if (!userRecord) throw new ForbiddenException('User tidak ditemukan');
 
             // Aturannya sengaja identik dengan `isPengajuanSiswa` di view.tsx
@@ -1058,7 +1060,7 @@ export async function handlePost(req: any, action: string, payload: any, db: Pri
                 throw new HttpException({ ok: false, error: 'Mata pelajaran dan topik wajib diisi' }, 400);
             }
 
-            const pembuat = await resolveUserRecord(db, user.authId, user.nip);
+            const pembuat = await resolveUserRecord(db, user.auth_id || user.authId, user.nip);
             if (!pembuat) throw new ForbiddenException('User tidak ditemukan');
 
             // guru_mapel menyimpan NIP (bukan users.id), jadi form mengirim NIP.
@@ -1846,7 +1848,7 @@ export async function handlePatch(req: any, action: string, id: any, payload: an
                 }, 409);
             }
 
-            const reviewerRecord = await resolveUserRecord(db, user.authId, user.nip);
+            const reviewerRecord = await resolveUserRecord(db, user.auth_id || user.authId, user.nip);
 
             const updatePayload: any = { catatan_reviewer: catatan || null };
             if (laporanAction === 'approve') {
@@ -1943,7 +1945,7 @@ export async function handlePatch(req: any, action: string, id: any, payload: an
             // jaring pengaman untuk siswa yang hadir tapi lupa absen mandiri,
             // dan satu-satunya cara mencatat S/I/A.
             const slotId = payload.slot_id || id;
-            const callerRecord = await resolveUserRecord(db, user.authId, user.nip);
+            const callerRecord = await resolveUserRecord(db, user.auth_id || user.authId, user.nip);
 
             const { data: slot } = await db.from('klinik_slots')
                 .select('id, status, guru_id').eq('id', slotId).maybeSingle();
