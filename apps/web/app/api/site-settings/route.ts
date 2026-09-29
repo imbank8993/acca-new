@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { extractRequestToken } from '@/lib/app-jwt';
 import { nestFetchAsUser } from '@/lib/nest-api';
+import { clearWAConfigCache } from '@/lib/wa-sender';
+import { clearFileStorageConfigCache } from '@/lib/file-storage';
 
 export async function GET(request: NextRequest) {
     const token = extractRequestToken(request);
@@ -20,5 +22,11 @@ export async function PUT(request: NextRequest) {
         method: 'PUT',
         body: JSON.stringify(payload)
     });
+
+    if (status === 200 || status === 201) {
+        clearWAConfigCache();
+        clearFileStorageConfigCache();
+    }
+
     return NextResponse.json(body, { status });
 }

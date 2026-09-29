@@ -197,10 +197,13 @@ export async function logoutBaileys(): Promise<void> {
 async function waitForOpen(timeoutMs = 12000): Promise<boolean> {
     const s = store()
     if (s.connection === 'open' && s.sock) return true
+    if (s.qrDataUrl || s.qr) return false
     await startBaileys()
+    if (store().qrDataUrl || store().qr) return false
     const deadline = Date.now() + timeoutMs
     while (Date.now() < deadline) {
         if (store().connection === 'open' && store().sock) return true
+        if (store().qrDataUrl || store().qr) return false
         await new Promise(r => setTimeout(r, 400))
     }
     return store().connection === 'open' && !!store().sock

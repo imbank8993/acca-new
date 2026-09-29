@@ -95,12 +95,11 @@ export async function getFileStorageConfig(): Promise<FileStorageConfig | null> 
     }
 
     try {
-        const res = await fetch(`${NEST_API_URL}/site-settings/file-storage-config`, { cache: 'no-store' });
-        if (!res.ok) return null;
-        const json = await res.json();
-        if (!json.ok || !json.data) return null;
+        const { nestFetch } = await import('./nest-api');
+        const { status, body } = await nestFetch('/site-settings/file-storage-config');
+        if (status !== 200 || !body?.ok || !body?.data) return null;
 
-        configCache = json.data as FileStorageConfig;
+        configCache = body.data as FileStorageConfig;
         configCacheTime = Date.now();
         return configCache;
     } catch (e) {

@@ -29,31 +29,37 @@ export async function POST(request: NextRequest) {
     }
 
     // Call WhatsApp logic here
+    let waResult: { ok: boolean; status: string; error?: string } | null = null;
     try {
-        const { details, guruPiket, piketDate, keteranganTambahan, timestamp } = body;
+        const { details, guruPiket, keteranganTambahan, timestamp } = body;
+        const piketDate = body.piketDate || body.tanggal || new Date().toISOString().split('T')[0];
         
         let jams: string[] = [];
         if (details && Array.isArray(details)) {
-            jams = [...new Set(details.map(d => String(d.jam_ke)))];
-            jams.sort((a, b) => parseInt(a) - parseInt(b));
+            jams = [...new Set(details.map((d: any) => String(d.jam_ke)))];
+            jams.sort((a: string, b: string) => parseInt(a) - parseInt(b));
         }
-        const jamDisplay = jams.length > 0 ? jams.join(', ') : '';
+        const jamDisplay = jams.length > 0 ? jams.join(', ') : (body.jamPiket ? String(body.jamPiket) : '');
 
         const waData = {
             piketId: resBody?.data?.id || 0,
             guruPiket,
-            piketDate: piketDate || new Date().toISOString().split('T')[0],
+            piketDate,
             jamPiket: jamDisplay,
             keteranganTambahan: keteranganTambahan || '',
             details,
             timestamp: timestamp || Date.now()
         };
-        await sendWhatsAppPiket(waData);
-    } catch (e) {
+        waResult = await sendWhatsAppPiket(waData);
+    } catch (e: any) {
         console.error('WhatsApp Error:', e);
+        waResult = { ok: false, status: 'failed', error: e?.message || 'Gagal mengirim notifikasi WhatsApp' };
     }
 
-    return NextResponse.json(resBody);
+    return NextResponse.json({
+        ...resBody,
+        wa: waResult
+    });
 }
 
 export async function PATCH(request: NextRequest) {

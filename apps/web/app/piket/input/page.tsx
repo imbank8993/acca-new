@@ -874,12 +874,27 @@ export default function PiketInputPage(props?: any) {
             const result = await res.json();
 
             if (result.ok) {
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Berhasil',
-                    text: result.message || 'Laporan Piket berhasil disimpan!',
-                    timer: 3000
-                });
+                if (result.wa && result.wa.status === 'failed') {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Tersimpan (WA Gagal Terkirim)',
+                        html: `Laporan Piket berhasil disimpan ke database.<br/><br/><div style="text-align:left;background:#fef2f2;border:1px solid #fecaca;padding:10px 12px;border-radius:6px;font-size:0.85rem;color:#b91c1c;"><strong>Notifikasi WA tidak terkirim:</strong><br/>${result.wa.error || 'Provider WhatsApp belum terhubung atau gagal.'}</div>`,
+                    });
+                } else if (result.wa && result.wa.status === 'skipped') {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Berhasil',
+                        text: result.message || 'Laporan Piket berhasil disimpan (Notifikasi WA nonaktif).',
+                        timer: 3000
+                    });
+                } else {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Berhasil',
+                        text: result.message || 'Laporan Piket berhasil disimpan!',
+                        timer: 3000
+                    });
+                }
                 setSelectedJam('');
                 setKeteranganTambahan('');
                 setClassData({});

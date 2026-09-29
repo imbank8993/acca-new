@@ -100,8 +100,8 @@ const SHELL_STYLE = `
   .rp-meta-item b { font-weight: 700; color: #0f172a; white-space: nowrap; }
   
   table { width: 100%; border-collapse: separate; border-spacing: 0; }
-  thead th { background: #f8fafc; color: #64748b; font-size: 12px; font-weight: 600; text-align: left; padding: 16px 20px; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #e2e8f0; border-top: 1px solid #e2e8f0; }
-  tbody td { padding: 16px 20px; font-size: 14px; color: #1e293b; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
+  thead th { background: #f8fafc; color: #64748b; font-size: 12px; font-weight: 600; text-align: left; padding: 15px 16px; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #e2e8f0; border-top: 1px solid #e2e8f0; }
+  tbody td { padding: 15px 16px; font-size: 14px; color: #1e293b; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
   tbody tr:hover { background: #f8fafc; }
   
   .user-cell { display: flex; align-items: center; gap: 12px; }
@@ -112,8 +112,8 @@ const SHELL_STYLE = `
   
   .rp-num { color: #94a3b8; font-weight: 600; width: 40px; text-align: center; }
   .rp-foot { padding: 18px 32px; background: #fff; border-top: 1px solid #f1f5f9; font-size: 13px; color: #64748b; display: flex; justify-content: space-between; align-items: center; }
-  .rp-foot-brand { display: flex; align-items: center; gap: 6px; font-weight: 700; color: #1e3a8a; line-height: 1; }
-  .rp-foot-brand img { height: 14px; width: auto; object-fit: contain; display: block; }
+  .rp-foot-brand { display: flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 500; color: #1e3a8a; line-height: 1; }
+  .rp-foot-brand img { height: 11px; width: auto; object-fit: contain; display: block; }
   .rp-note { padding: 16px 32px; background: #fffbeb; border-top: 1px solid #fde68a; font-size: 14px; color: #92400e; display: flex; gap: 8px; }
 `
 
@@ -199,7 +199,7 @@ export function piketReportHtml(
       <div class="rp-foot">
         <span style="font-weight:600;color:#64748b">Total: ${escapeHtml(String(rows.length))} kelas</span>
         <div class="rp-foot-brand">
-            <img src="${ACCA_LOGO_B64}" alt="ACCA" height="14" style="height:14px;width:auto;object-fit:contain;display:block" />
+            <img src="${ACCA_LOGO_B64}" alt="ACCA" height="11" style="height:11px;width:auto;object-fit:contain;display:block" />
             <span>acca.icgowa.sch.id</span>
         </div>
       </div>
@@ -224,7 +224,7 @@ export function ketidakhadiranReportHtml(
     const bodyRows = rows.map((r, i) => {
         return `<tr>
       <td class="rp-num">${escapeHtml(r.no || String(i + 1))}</td>
-      <td style="font-weight:600;color:#0f172a">${escapeHtml(r.nama || '-')}</td>
+      <td style="font-weight:600;color:#0f172a;white-space:nowrap">${escapeHtml(r.nama || '-')}</td>
       <td style="font-weight:500;color:#475569">${escapeHtml(r.kelas || '-')}</td>
       <td style="color:#475569;white-space:nowrap">${escapeHtml(r.waktu || '-')}</td>
       <td>${statusBadges(r.status || '-', ketidakhadiranStatusColor)}</td>
@@ -262,13 +262,13 @@ export function ketidakhadiranReportHtml(
         </div>
       </div>
       <table style="margin-top: -1px;">
-        <thead><tr><th>No</th><th>Siswa</th><th>Kelas</th><th>Waktu</th><th>Status</th><th>Keterangan</th></tr></thead>
+        <thead><tr><th style="width:48px;text-align:center">No</th><th style="min-width:240px;width:28%">Siswa</th><th style="width:85px">Kelas</th><th style="width:130px">Waktu</th><th style="width:145px">Status</th><th>Keterangan</th></tr></thead>
         <tbody>${bodyRows || '<tr><td colspan="6" style="text-align:center;color:#94a3b8;padding:40px">Tidak ada data ketidakhadiran hari ini</td></tr>'}</tbody>
       </table>
       <div class="rp-foot">
         <span style="font-weight:600;color:#64748b">Total: ${escapeHtml(data.total || String(rows.length))} siswa${data.bagian ? ` — ${escapeHtml(data.bagian)}` : ''}</span>
         <div class="rp-foot-brand">
-            <img src="${ACCA_LOGO_B64}" alt="ACCA" height="14" style="height:14px;width:auto;object-fit:contain;display:block" />
+            <img src="${ACCA_LOGO_B64}" alt="ACCA" height="11" style="height:11px;width:auto;object-fit:contain;display:block" />
             <span>acca.icgowa.sch.id</span>
         </div>
       </div>

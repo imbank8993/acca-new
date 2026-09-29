@@ -25,6 +25,12 @@ import { REPORT_IMAGE_EXT } from './report-image';
 
 export type WASendStatus = 'sent' | 'skipped' | 'failed';
 
+export interface WASendPiketResult {
+    ok: boolean;
+    status: WASendStatus;
+    error?: string;
+}
+
 function kelasSortKey(nama: string): string {
     const map: Record<string, string> = { X: '1', XI: '2', XII: '3' };
     return (nama || '').replace(/^(XII|XI|X)/i, (m) => map[m.toUpperCase()] || '4');
@@ -57,7 +63,7 @@ function isEligibleForIzinCheck(status: string): boolean {
     return false;
 }
 
-export async function sendWhatsAppPiket(data: any): Promise<WASendStatus> {
+export async function sendWhatsAppPiket(data: any): Promise<WASendPiketResult> {
     try {
         console.log("=== WHATSAPP PIKET ===");
         console.log("Sending data:", JSON.stringify(data, null, 2));
@@ -66,13 +72,13 @@ export async function sendWhatsAppPiket(data: any): Promise<WASendStatus> {
 
         if (!timestamp) {
             console.error("No timestamp provided!");
-            return 'failed';
+            return { ok: false, status: 'failed', error: 'Timestamp tidak ditemukan' };
         }
 
         const isEnabled = await isWAToggleEnabled('notif_wa_piket');
         if (!isEnabled) {
             console.log("[WA Piket] Notifications disabled (notif_wa_piket != true)");
-            return 'skipped';
+            return { ok: false, status: 'skipped', error: 'Notifikasi WhatsApp piket dinonaktifkan di pengaturan' };
         }
 
         const tz = await getTimezone();
@@ -202,6 +208,7 @@ export async function sendWhatsAppPiket(data: any): Promise<WASendStatus> {
         console.log("Template data:", templateData);
         console.log("Rows:", rows);
 
+        let imageError: string | undefined;
         if (await isWAImageMode('piket')) {
             const html = piketReportHtml(templateData, rows);
 
@@ -211,8 +218,9 @@ export async function sendWhatsAppPiket(data: any): Promise<WASendStatus> {
             const imgResult = await sendReportAsImage('piket', html, fileName, caption);
             if (imgResult.ok) {
                 console.log("[WA Piket] Sent as image!");
-                return 'sent';
+                return { ok: true, status: 'sent' };
             }
+            imageError = imgResult.error;
             console.error("[WA Piket] Image mode failed, fallback ke teks:", imgResult.error);
         }
 
@@ -227,14 +235,15 @@ export async function sendWhatsAppPiket(data: any): Promise<WASendStatus> {
 
         if (result.ok) {
             console.log("[WA Piket] Sent successfully!");
+            return { ok: true, status: 'sent' };
         } else {
             console.error("[WA Piket] Failed:", result.error);
+            const combinedError = imageError ? `Mode gambar: ${imageError} | Teks: ${result.error || 'gagal'}` : (result.error || 'Gagal mengirim pesan WhatsApp');
+            return { ok: false, status: 'failed', error: combinedError };
         }
 
-        return result.ok ? 'sent' : 'failed';
-
-    } catch (error) {
+    } catch (error: any) {
         console.error("[WA Piket] Failed to send WhatsApp:", error);
-        return 'failed';
+        return { ok: false, status: 'failed', error: error?.message || String(error) };
     }
 }
