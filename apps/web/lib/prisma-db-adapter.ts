@@ -49,11 +49,14 @@ function getColumnCast(table: string, column: string): string {
   const c = column.toLowerCase();
   const t = table.toLowerCase();
 
+  // 1. Kolom DATE
   if (
     c === 'tanggal' ||
     c === 'tanggal_lahir' ||
     c === 'tanggal_surat' ||
     c === 'tanggal_ttd' ||
+    c === 'tanggal_mulai' ||
+    c === 'tanggal_selesai' ||
     (t === 'perizinan' && (c === 'tanggal_mulai' || c === 'tanggal_selesai')) ||
     (t === 'klinik_slots' && c === 'tanggal') ||
     (t === 'catatan_siswa' && c === 'tanggal') ||
@@ -67,12 +70,88 @@ function getColumnCast(table: string, column: string): string {
     return '::date';
   }
 
+  // 2. Kolom TIME
   if (
     c === 'jam_mulai' ||
     c === 'jam_selesai' ||
     (t === 'catatan_pelanggaran' && c === 'waktu')
   ) {
     return '::time';
+  }
+
+  // 3. Kolom BIGINT
+  if (
+    c === 'guru_id' ||
+    c === 'siswa_id' ||
+    c === 'user_id' ||
+    c === 'initiator_siswa_id' ||
+    c === 'dibuat_oleh' ||
+    c === 'kehadiran_oleh' ||
+    c === 'shared_with_user_id' ||
+    c === 'guru_asuh_id' ||
+    c === 'pj_user_id' ||
+    c === 'jadwal_id' ||
+    c === 'jurnal_id' ||
+    c === 'jadwal_versi_id' ||
+    c === 'tahun_ajaran_id' ||
+    c === 'tugas_id' ||
+    c === 'size_bytes' ||
+    c === 'file_size' ||
+    (t === 'klinik_laporan' && c === 'approved_by') ||
+    (t === 'budget_mutations' && c === 'created_by') ||
+    ((t === 'users' ||
+      t === 'public_users' ||
+      t === 'master_siswa' ||
+      t === 'master_guru' ||
+      t === 'master_kelas' ||
+      t === 'master_mapel' ||
+      t === 'master_tahun_ajaran' ||
+      t === 'master_waktu' ||
+      t === 'siswa_kelas' ||
+      t === 'siswa_kelompok' ||
+      t === 'wali_kelas' ||
+      t === 'guru_mapel' ||
+      t === 'guru_asuh' ||
+      t === 'jadwal_guru' ||
+      t === 'jadwal_versi' ||
+      t === 'jadwal_piket' ||
+      t === 'libur' ||
+      t === 'pengumuman' ||
+      t === 'tugas_siswa') &&
+      c === 'id')
+  ) {
+    return '::bigint';
+  }
+
+  // 4. Kolom UUID
+  if (
+    c === 'slot_id' ||
+    c === 'ekskul_id' ||
+    c === 'pertemuan_id' ||
+    c === 'division_id' ||
+    c === 'counterpart_division_id' ||
+    c === 'budget_request_id' ||
+    c === 'recipient_user_id' ||
+    (t === 'laporan_ekskul_submissions' && c === 'approved_by') ||
+    ((t === 'klinik_slots' ||
+      t === 'klinik_peserta' ||
+      t === 'klinik_laporan' ||
+      t === 'notifications' ||
+      t === 'divisions' ||
+      t === 'division_budgets' ||
+      t === 'budget_mutations' ||
+      t === 'budget_requests' ||
+      t === 'budget_request_items' ||
+      t === 'approval_logs' ||
+      t === 'budget_request_registers' ||
+      t === 'disbursements' ||
+      t === 'receipt_submissions' ||
+      t === 'ekskul' ||
+      t === 'ekskul_pertemuan' ||
+      t === 'laporan_ekskul_submissions') &&
+      c === 'id')
+  ) {
+    return '::uuid';
   }
 
   return '';
