@@ -106,7 +106,7 @@ export default function KonfigurasiMedisTab({
                     </div>
                     <div style={{ maxHeight: '240px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '6px' }}>
                         {presetPenyakit.map(item => (
-                            <div key={item} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--n-card)', padding: '6px 12px', borderRadius: '8px', border: '1.5px solid rgba(26, 115, 232, 0.75)', fontSize: '0.82rem' }}>
+                            <div key={item} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--n-card)', padding: '6px 12px', borderRadius: '8px', border: '1px solid var(--kh-tb-border)', fontSize: '0.82rem' }}>
                                 <span style={{ color: 'var(--kh-text-primary)' }}>{item}</span>
                                 <ActionGroup>
                                     <ActionButton action="edit" title="Edit" tooltipPos="left" onClick={() => handleEditPreset('penyakit', item)} />
@@ -143,7 +143,7 @@ export default function KonfigurasiMedisTab({
                     </div>
                     <div style={{ maxHeight: '240px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '6px' }}>
                         {presetAlergi.map(item => (
-                            <div key={item} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--n-card)', padding: '6px 12px', borderRadius: '8px', border: '1.5px solid rgba(26, 115, 232, 0.75)', fontSize: '0.82rem' }}>
+                            <div key={item} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--n-card)', padding: '6px 12px', borderRadius: '8px', border: '1px solid var(--kh-tb-border)', fontSize: '0.82rem' }}>
                                 <span style={{ color: 'var(--kh-text-primary)' }}>{item}</span>
                                 <ActionGroup>
                                     <ActionButton action="edit" title="Edit" tooltipPos="left" onClick={() => handleEditPreset('alergi', item)} />
@@ -180,7 +180,7 @@ export default function KonfigurasiMedisTab({
                     </div>
                     <div style={{ maxHeight: '240px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '6px' }}>
                         {presetKeluhan.map(item => (
-                            <div key={item} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--n-card)', padding: '6px 12px', borderRadius: '8px', border: '1.5px solid rgba(26, 115, 232, 0.75)', fontSize: '0.82rem' }}>
+                            <div key={item} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--n-card)', padding: '6px 12px', borderRadius: '8px', border: '1px solid var(--kh-tb-border)', fontSize: '0.82rem' }}>
                                 <span style={{ color: 'var(--kh-text-primary)' }}>{item}</span>
                                 <ActionGroup>
                                     <ActionButton action="edit" title="Edit" tooltipPos="left" onClick={() => handleEditPreset('keluhan', item)} />
@@ -217,7 +217,7 @@ export default function KonfigurasiMedisTab({
                     </div>
                     <div style={{ maxHeight: '240px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '6px' }}>
                         {presetTataLaksana.map(item => (
-                            <div key={item} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--n-card)', padding: '6px 12px', borderRadius: '8px', border: '1.5px solid rgba(26, 115, 232, 0.75)', fontSize: '0.82rem' }}>
+                            <div key={item} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--n-card)', padding: '6px 12px', borderRadius: '8px', border: '1px solid var(--kh-tb-border)', fontSize: '0.82rem' }}>
                                 <span style={{ color: 'var(--kh-text-primary)' }}>{item}</span>
                                 <ActionGroup>
                                     <ActionButton action="edit" title="Edit" tooltipPos="left" onClick={() => handleEditPreset('tataLaksana', item)} />
@@ -254,7 +254,7 @@ export default function KonfigurasiMedisTab({
                     </div>
                     <div style={{ maxHeight: '240px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '6px' }}>
                         {presetTindakan.map(item => (
-                            <div key={item} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--n-card)', padding: '6px 12px', borderRadius: '8px', border: '1.5px solid rgba(26, 115, 232, 0.75)', fontSize: '0.82rem' }}>
+                            <div key={item} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--n-card)', padding: '6px 12px', borderRadius: '8px', border: '1px solid var(--kh-tb-border)', fontSize: '0.82rem' }}>
                                 <span style={{ color: 'var(--kh-text-primary)' }}>{item}</span>
                                 <ActionGroup>
                                     <ActionButton action="edit" title="Edit" tooltipPos="left" onClick={() => handleEditPreset('tindakan', item)} />
@@ -311,12 +311,12 @@ export default function KonfigurasiMedisTab({
                             const statusVal = mapObj?.status || (item.toLowerCase().includes('kembali ke kelas') ? 'NONE' : 'Ringan');
 
                             return (
-                                <div key={item} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--n-card)', padding: '8px 12px', borderRadius: '8px', border: '1.5px solid rgba(26, 115, 232, 0.75)', fontSize: '0.82rem' }}>
+                                <div key={item} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--n-card)', padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--kh-tb-border)', fontSize: '0.82rem' }}>
                                     <div>
                                         <span style={{ color: 'var(--kh-text-primary)', fontWeight: 600 }}>{item}</span>
                                         <span className="surat-badge" style={{
                                             marginLeft: '8px', fontSize: '0.7rem',
-                                            background: statusVal === 'NONE' ? 'rgba(0,0,0,0.05)' : statusVal === 'Ringan' ? 'rgba(59,130,246,0.1)' : statusVal === 'Sedang' ? 'rgba(217,119,6,0.1)' : statusVal === 'Berat' ? 'rgba(220,38,38,0.1)' : 'rgba(147,51,234,0.1)',
+                                            background: statusVal === 'NONE' ? 'var(--n-soft)' : statusVal === 'Ringan' ? 'rgba(59,130,246,0.1)' : statusVal === 'Sedang' ? 'rgba(217,119,6,0.1)' : statusVal === 'Berat' ? 'rgba(220,38,38,0.1)' : 'rgba(147,51,234,0.1)',
                                             color: statusVal === 'NONE' ? 'var(--kh-text-muted)' : statusVal === 'Ringan' ? '#2563eb' : statusVal === 'Sedang' ? '#d97706' : statusVal === 'Berat' ? '#dc2626' : '#9333ea'
                                         }}>
                                             {statusVal === 'NONE' ? 'Tanpa Absensi' : `Sakit ${statusVal}`}

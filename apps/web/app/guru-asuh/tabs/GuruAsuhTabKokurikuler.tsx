@@ -308,7 +308,7 @@ export default function GuruAsuhTabKokurikuler({ user }: GuruAsuhTabProps) {
                 /* Isi modal detail; kerangka berasal dari components/modal.css. */
                 .gakk-modal-filter { padding: 0 0 16px; background: transparent; border-bottom: 1px solid #f1f5f9; display: flex; align-items: center; gap: 12px; }
                 .gakk-modal-filter label { font-size: 0.85rem; font-weight: 700; color: #475569; }
-                .gakk-modal-filter input { flex: 1; padding: 8px 12px; border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 0.9rem; color: #1e293b; font-weight: 600; outline: none; transition: border-color 0.2s; }
+                .gakk-modal-filter input { flex: 1; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 0.9rem; color: #1e293b; font-weight: 600; outline: none; transition: border-color 0.2s; }
                 .gakk-modal-filter input:focus { border-color: #3b82f6; }
                 
                 .gakk-badge { padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 800; }
@@ -316,14 +316,14 @@ export default function GuruAsuhTabKokurikuler({ user }: GuruAsuhTabProps) {
                 .gakk-badge-ditolak { background: #fee2e2; color: #991b1b; }
                 .gakk-badge-pending { background: #fef9c3; color: #854d0e; }
 
-                :global(.dark) .gakk-daily { background: #000000 !important; border: 1.8px solid rgba(26, 115, 232, 0.75) !important; border-radius: 16px !important; }
-                :global(.dark) .gakk-daily-hdr { background: linear-gradient(135deg, rgba(26, 115, 232, 0.15), rgba(0, 40, 122, 0.25)) !important; border-bottom: 1.5px solid rgba(26, 115, 232, 0.4) !important; }
+                :global(.dark) .gakk-daily { background: #0b1329 !important; border: 1px solid rgba(26, 115, 232, 0.35) !important; border-radius: 16px !important; }
+                :global(.dark) .gakk-daily-hdr { background: linear-gradient(135deg, rgba(26, 115, 232, 0.15), rgba(0, 40, 122, 0.25)) !important; border-bottom: 1px solid rgba(26, 115, 232, 0.35) !important; }
                 :global(.dark) .gakk-item { border-bottom-color: rgba(26, 115, 232, 0.2) !important; }
                 :global(.dark) .gakk-item:hover { background: rgba(26, 115, 232, 0.08) !important; }
                 :global(.dark) .gakk-item-name { color: #ffffff !important; }
                 :global(.dark) .gakk-item-nisn { color: #94a3b8 !important; }
                 :global(.dark) .gakk-search input,
-                :global(.dark) .gakk-select-group { background: #000000 !important; border: 1.5px solid rgba(26, 115, 232, 0.75) !important; border-radius: 12px !important; color: #ffffff !important; }
+                :global(.dark) .gakk-select-group { background: #0b1329 !important; border: 1px solid rgba(26, 115, 232, 0.35) !important; border-radius: 12px !important; color: #ffffff !important; }
                 :global(.dark) .gakk-select-group i { color: #60a5fa !important; }
                 :global(.dark) .gakk-select-group select {
                     background-color: transparent !important;

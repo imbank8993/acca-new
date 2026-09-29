@@ -274,7 +274,7 @@ export default function GuruAsuhTabEkskul({ user }: GuruAsuhTabProps) {
                 .gae-item { display: flex; justify-content: space-between; align-items: center; padding: 16px; border-bottom: 1px solid var(--n-border); transition: all 0.2s; }
                 .gae-item:hover { background: var(--n-soft); }
                 .gae-item-left { display: flex; align-items: center; gap: 14px; flex: 1; min-width: 0; }
-                .gae-item-avatar { width: 42px; height: 42px; border-radius: 12px; background: rgba(26, 115, 232, 0.08); border: 1.8px solid #1a73e8; color: #1a73e8; display: flex; align-items: center; justify-content: center; font-size: 1rem; font-weight: 800; text-transform: uppercase; position: relative; overflow: hidden; flex-shrink: 0; }
+                .gae-item-avatar { width: 42px; height: 42px; border-radius: 12px; background: rgba(26, 115, 232, 0.08); border: 1px solid #1a73e8; color: #1a73e8; display: flex; align-items: center; justify-content: center; font-size: 1rem; font-weight: 800; text-transform: uppercase; position: relative; overflow: hidden; flex-shrink: 0; }
                 .gae-avatar-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; border-radius: inherit; }
                 .gae-item-info { display: flex; flex-direction: column; gap: 2px; overflow: hidden; }
                 .gae-item-name { font-weight: 700; color: var(--n-ink); font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -326,14 +326,14 @@ export default function GuruAsuhTabEkskul({ user }: GuruAsuhTabProps) {
                     .gae-btn-export { width: auto; order: 10; margin-left: auto; }
                 }
 
-                :global(.dark) .gae-content { background: #000000 !important; border: 1.8px solid rgba(26, 115, 232, 0.75) !important; border-radius: 16px !important; }
+                :global(.dark) .gae-content { background: #0b1329 !important; border: 1px solid rgba(26, 115, 232, 0.35) !important; border-radius: 16px !important; }
                 :global(.dark) .gae-item { border-bottom-color: rgba(26, 115, 232, 0.2) !important; }
                 :global(.dark) .gae-item:hover { background: rgba(26, 115, 232, 0.08) !important; }
-                :global(.dark) .gae-item-avatar { background: rgba(26, 115, 232, 0.15) !important; border: 1.8px solid rgba(26, 115, 232, 0.75) !important; color: #60a5fa !important; }
+                :global(.dark) .gae-item-avatar { background: rgba(26, 115, 232, 0.15) !important; border: 1px solid rgba(26, 115, 232, 0.35) !important; color: #60a5fa !important; }
                 :global(.dark) .gae-item-name { color: #ffffff !important; }
                 :global(.dark) .gae-item-nisn { color: #94a3b8 !important; }
                 :global(.dark) .gae-search input,
-                :global(.dark) .gae-select-group { background: #000000 !important; border: 1.5px solid rgba(26, 115, 232, 0.75) !important; border-radius: 12px !important; color: #ffffff !important; }
+                :global(.dark) .gae-select-group { background: #0b1329 !important; border: 1px solid rgba(26, 115, 232, 0.35) !important; border-radius: 12px !important; color: #ffffff !important; }
                 :global(.dark) .gae-select-group i { color: #60a5fa !important; }
                 :global(.dark) .gae-select-group select {
                     background-color: transparent !important;

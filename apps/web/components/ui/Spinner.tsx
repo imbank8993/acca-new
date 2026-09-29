@@ -43,7 +43,7 @@ export function Spinner({
     dotsOnly = false,
     variant,
 }: SpinnerProps) {
-    const resolvedVariant: SpinnerVariant = (variant === 'trace' ? 'buble' : variant) ?? 'buble';
+    const resolvedVariant: SpinnerVariant = variant ?? 'buble';
     const traceSize = TRACE_SIZE;
 
     return (

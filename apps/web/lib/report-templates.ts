@@ -84,20 +84,17 @@ function statusBadges(statusText: string, colorOf: (s: string) => BadgeColor): s
 const SHELL_STYLE = `
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'Inter', sans-serif; background: #f8fafc; padding: 20px; }
-  #report { width: 100%; max-width: 1000px; background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1); margin: 0 auto; }
+  body { font-family: 'Inter', sans-serif; background: #ffffff; padding: 0; margin: 0; }
+  #report { width: 100%; max-width: 1000px; background: #ffffff; border-radius: 0; overflow: hidden; margin: 0 auto; }
   .rp-head { padding: 24px 32px; color: #fff; display: flex; align-items: center; gap: 16px; }
-  .rp-head-icon { width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; background: rgba(255, 255, 255, 0.1); border-radius: 12px; backdrop-filter: blur(4px); }
-  .rp-head-icon svg { width: 28px; height: 28px; color: #fff; }
-  .rp-title { font-size: 24px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 4px; }
-  .rp-school { font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.8); letter-spacing: 0.5px; text-transform: uppercase; margin: 0; }
+  .rp-head-icon { width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; background: rgba(255, 255, 255, 0.15); border: 1px solid rgba(255, 255, 255, 0.25); border-radius: 12px; backdrop-filter: blur(8px); flex-shrink: 0; }
+  .rp-head-icon svg { width: 26px; height: 26px; color: #fff; }
+  .rp-title { font-size: 22px; font-weight: 800; letter-spacing: -0.3px; margin: 0; color: #ffffff; }
   
-  .rp-meta { display: flex; flex-wrap: nowrap; gap: 16px; padding: 24px 32px; background: #fff; border-bottom: 1px solid #f1f5f9; }
-  .rp-meta-card { display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; }
-  .rp-meta-icon { width: 36px; height: 36px; border-radius: 8px; background: #fff; display: flex; align-items: center; justify-content: center; box-shadow: 0 1px 2px rgba(0,0,0,0.05); color: #64748b; }
-  .rp-meta-info { display: flex; flex-direction: column; }
-  .rp-meta-info span { font-size: 11px; color: #64748b; text-transform: uppercase; font-weight: 600; letter-spacing: 0.5px; margin-bottom: 2px; }
-  .rp-meta-info b { font-size: 14px; color: #0f172a; font-weight: 700; white-space: nowrap; }
+  .rp-meta { display: flex; flex-wrap: nowrap; align-items: center; gap: 28px; padding: 18px 32px; background: #ffffff; border-bottom: 1px solid #e2e8f0; }
+  .rp-meta-item { display: flex; align-items: center; gap: 10px; font-size: 14px; color: #1e293b; }
+  .rp-meta-item svg { width: 18px; height: 18px; color: #2563eb; flex-shrink: 0; }
+  .rp-meta-item b { font-weight: 700; color: #0f172a; white-space: nowrap; }
   
   table { width: 100%; border-collapse: separate; border-spacing: 0; }
   thead th { background: #f8fafc; color: #64748b; font-size: 12px; font-weight: 600; text-align: left; padding: 16px 20px; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #e2e8f0; border-top: 1px solid #e2e8f0; }
@@ -111,8 +108,8 @@ const SHELL_STYLE = `
   .user-nisn { font-size: 12px; color: #94a3b8; }
   
   .rp-num { color: #94a3b8; font-weight: 600; width: 40px; text-align: center; }
-  .rp-foot { padding: 20px 32px; background: #fff; border-top: 1px solid #f1f5f9; font-size: 12px; color: #94a3b8; display: flex; justify-content: space-between; align-items: center; }
-  .rp-foot-brand { display: flex; align-items: center; gap: 8px; font-weight: 500; }
+  .rp-foot { padding: 18px 32px; background: #fff; border-top: 1px solid #f1f5f9; font-size: 13px; color: #64748b; display: flex; justify-content: space-between; align-items: center; }
+  .rp-foot-brand { display: flex; align-items: center; gap: 8px; font-weight: 700; color: #1e3a8a; }
   .rp-note { padding: 16px 32px; background: #fffbeb; border-top: 1px solid #fde68a; font-size: 14px; color: #92400e; display: flex; gap: 8px; }
 `
 
@@ -174,27 +171,20 @@ export function piketReportHtml(
         </div>
         <div>
             <div class="rp-title">Laporan Piket Harian</div>
-            <div class="rp-school">${escapeHtml(data.nama_sekolah || 'Sekolah')}</div>
         </div>
       </div>
       <div class="rp-meta">
-        <div class="rp-meta-card" style="flex: 0 0 auto;">
-          <div class="rp-meta-icon"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg></div>
-          <div class="rp-meta-info">
-            <b>${escapeHtml(data.hari || '')}${data.hari ? ', ' : ''}${escapeHtml(data.tanggal || '')}</b>
-          </div>
+        <div class="rp-meta-item">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+          <b>${escapeHtml(data.hari || '')}${data.hari ? ', ' : ''}${escapeHtml(data.tanggal || '')}</b>
         </div>
-        <div class="rp-meta-card" style="flex: 1 1 auto;">
-          <div class="rp-meta-icon"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg></div>
-          <div class="rp-meta-info">
-            <b>${escapeHtml(data.nama_guru_piket || '-')}</b>
-          </div>
+        <div class="rp-meta-item">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+          <b>${escapeHtml(data.nama_guru_piket || '-')}</b>
         </div>
-        <div class="rp-meta-card" style="flex: 0 0 auto;">
-          <div class="rp-meta-icon"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg></div>
-          <div class="rp-meta-info">
-            <b>Jam ke-${escapeHtml(data.jam_ke || '-')}</b>
-          </div>
+        <div class="rp-meta-item">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+          <b>Jam ke-${escapeHtml(data.jam_ke || '-')}</b>
         </div>
       </div>
       <table style="margin-top: -1px;">
@@ -205,8 +195,8 @@ export function piketReportHtml(
       <div class="rp-foot">
         <span style="font-weight:600;color:#64748b">Total: ${escapeHtml(String(rows.length))} kelas</span>
         <div class="rp-foot-brand">
-            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"></path><path d="M2 17l10 5 10-5"></path><path d="M2 12l10 5 10-5"></path></svg>
-            Sistem ACCA
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"></path><path d="M2 17l10 5 10-5"></path><path d="M2 12l10 5 10-5"></path></svg>
+            <span>acca.icgowa.sch.id</span>
         </div>
       </div>
     </div>
@@ -265,27 +255,20 @@ export function ketidakhadiranReportHtml(
         </div>
         <div>
             <div class="rp-title">Laporan Ketidakhadiran Siswa</div>
-            <div class="rp-school">${escapeHtml(data.nama_sekolah || 'Sekolah')}</div>
         </div>
       </div>
       <div class="rp-meta">
-        <div class="rp-meta-card" style="flex: 0 0 auto;">
-          <div class="rp-meta-icon"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg></div>
-          <div class="rp-meta-info">
-            <b>${escapeHtml(data.tanggal || '')}</b>
-          </div>
+        <div class="rp-meta-item">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+          <b>${escapeHtml(data.tanggal || '')}</b>
         </div>
-        <div class="rp-meta-card" style="flex: 1 1 auto;">
-          <div class="rp-meta-icon"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg></div>
-          <div class="rp-meta-info">
-            <b>${escapeHtml(data.petugas_nama || '-')}</b>
-          </div>
+        <div class="rp-meta-item">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+          <b>${escapeHtml(data.petugas_nama || '-')}</b>
         </div>
-        <div class="rp-meta-card" style="flex: 0 0 auto;">
-          <div class="rp-meta-icon"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg></div>
-          <div class="rp-meta-info">
-            <b>${escapeHtml(data.jenis || '-')}</b>
-          </div>
+        <div class="rp-meta-item">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+          <b>${escapeHtml(data.jenis || '-')}</b>
         </div>
       </div>
       <table style="margin-top: -1px;">
@@ -295,8 +278,8 @@ export function ketidakhadiranReportHtml(
       <div class="rp-foot">
         <span style="font-weight:600;color:#64748b">Total: ${escapeHtml(data.total || String(rows.length))} siswa${data.bagian ? ` — ${escapeHtml(data.bagian)}` : ''}</span>
         <div class="rp-foot-brand">
-            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"></path><path d="M2 17l10 5 10-5"></path><path d="M2 12l10 5 10-5"></path></svg>
-            Sistem ACCA
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"></path><path d="M2 17l10 5 10-5"></path><path d="M2 12l10 5 10-5"></path></svg>
+            <span>acca.icgowa.sch.id</span>
         </div>
       </div>
     </div>

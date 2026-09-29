@@ -435,7 +435,7 @@ export default function GuruAsuhTabKlaim({ user: propUser }: GuruAsuhTabKlaimPro
                 .gakl__select-group { position: relative; display: flex; align-items: center; background: var(--n-card); border: 1px solid var(--n-border); border-radius: 12px; padding: 0 12px; gap: 8px; min-height: 42px; transition: all 0.2s; }
                 .gakl__select-group i { font-size: 0.9rem; color: var(--n-muted); flex-shrink: 0; }
                 .gakl__select-group select { flex: 1; border: none; background: transparent; padding: 10px 28px 10px 4px; font-size: 0.85rem; font-weight: 600; color: var(--n-ink); outline: none; appearance: none; -webkit-appearance: none; -moz-appearance: none; cursor: pointer; }
-                .gakl__btnAdd { display: flex; align-items: center; gap: 8px; padding: 10px 20px; border-radius: 12px; border: 1.8px solid #1a73e8; background: var(--banner-bg, linear-gradient(135deg, var(--n-primary) 0%, #1d6bf3 100%)); color: white; font-size: 0.85rem; font-weight: 700; cursor: pointer; box-shadow: 0 4px 12px rgba(26,115,232,0.25); transition: all 0.2s; }
+                .gakl__btnAdd { display: flex; align-items: center; gap: 8px; padding: 10px 20px; border-radius: 12px; border: 1px solid #1a73e8; background: var(--banner-bg, linear-gradient(135deg, var(--n-primary) 0%, #1d6bf3 100%)); color: white; font-size: 0.85rem; font-weight: 700; cursor: pointer; box-shadow: 0 4px 12px rgba(26,115,232,0.25); transition: all 0.2s; }
                 .gakl__btnAdd:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(26,115,232,0.35); filter: brightness(1.05); }
                 .gakl__btnCopy { display: flex; align-items: center; gap: 8px; padding: 10px 20px; border-radius: 12px; border: 1px solid var(--n-border); background: var(--n-card); color: var(--n-ink); font-size: 0.85rem; font-weight: 700; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.05); transition: all 0.2s; }
                 .gakl__btnCopy:hover:not(:disabled) { border-color: var(--n-primary); color: var(--n-primary); transform: translateY(-2px); }
@@ -452,7 +452,7 @@ export default function GuruAsuhTabKlaim({ user: propUser }: GuruAsuhTabKlaimPro
                 .gakl__emptyIcon { width: 72px; height: 72px; border-radius: 50%; background: linear-gradient(135deg, var(--n-primary) 0%, #1d6bf3 100%); display: flex; align-items: center; justify-content: center; font-size: 2rem; color: white; }
                 .gakl__empty h3 { font-size: 1rem; font-weight: 800; color: var(--n-ink); margin: 0; }
                 .gakl__empty p { font-size: 0.82rem; color: var(--n-muted); margin: 0; max-width: 320px; line-height: 1.6; }
-                .gakl__btnEmpty { display: flex; align-items: center; gap: 7px; padding: 10px 20px; border-radius: 12px; border: 1.8px solid #1a73e8; background: var(--banner-bg, linear-gradient(135deg, var(--n-primary) 0%, #1d6bf3 100%)); color: white; font-size: 0.85rem; font-weight: 700; cursor: pointer; margin-top: 6px; box-shadow: 0 4px 12px rgba(26,115,232,0.25); }
+                .gakl__btnEmpty { display: flex; align-items: center; gap: 7px; padding: 10px 20px; border-radius: 12px; border: 1px solid #1a73e8; background: var(--banner-bg, linear-gradient(135deg, var(--n-primary) 0%, #1d6bf3 100%)); color: white; font-size: 0.85rem; font-weight: 700; cursor: pointer; margin-top: 6px; box-shadow: 0 4px 12px rgba(26,115,232,0.25); }
 
                 /* Table */
                 .gakl__tableWrap { overflow-x: auto; border-radius: 16px; border: 1px solid var(--n-border); background: var(--n-card); }
@@ -475,7 +475,7 @@ export default function GuruAsuhTabKlaim({ user: propUser }: GuruAsuhTabKlaimPro
                 /* Mobile Cards */
                 .gakl__cards { display: none; flex-direction: column; gap: 8px; }
                 .gakl__card { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 14px; border: 1px solid var(--n-border); background: var(--n-card); }
-                .gakl__cardAvatar { width: 44px; height: 44px; border-radius: 14px; background: rgba(26, 115, 232, 0.08); border: 1.8px solid #1a73e8; display: flex; align-items: center; justify-content: center; color: #1a73e8; font-weight: 800; font-size: 1.1rem; flex-shrink: 0; position: relative; overflow: hidden; }
+                .gakl__cardAvatar { width: 44px; height: 44px; border-radius: 14px; background: rgba(26, 115, 232, 0.08); border: 1px solid #1a73e8; display: flex; align-items: center; justify-content: center; color: #1a73e8; font-weight: 800; font-size: 1.1rem; flex-shrink: 0; position: relative; overflow: hidden; }
                 .gakl__avatarImg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; border-radius: inherit; }
                 .gakl__cardInfo { flex: 1; }
                 .gakl__cardNama { font-size: 0.9rem; font-weight: 700; color: var(--n-ink); }
@@ -483,13 +483,13 @@ export default function GuruAsuhTabKlaim({ user: propUser }: GuruAsuhTabKlaimPro
                 .gakl__cardActions { display: flex; gap: 5px; }
 
                 /* Dark */
-                :global(.dark) .gakl__statCard { background: #000000 !important; border: 1.8px solid rgba(26, 115, 232, 0.75) !important; border-radius: 16px !important; }
+                :global(.dark) .gakl__statCard { background: #0b1329 !important; border: 1px solid rgba(26, 115, 232, 0.35) !important; border-radius: 16px !important; }
                 :global(.dark) .gakl__statNum { color: #60a5fa !important; }
                 :global(.dark) .gakl__statActive .gakl__statNum { color: #1d6bf3 !important; }
                 :global(.dark) .gakl__statLbl { color: #94a3b8 !important; }
                 :global(.dark) .gakl__select-group {
-                    background-color: #000000 !important;
-                    border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
+                    background-color: #0b1329 !important;
+                    border: 1px solid rgba(26, 115, 232, 0.35) !important;
                     border-radius: 12px !important;
                     color: #ffffff !important;
                 }
@@ -512,23 +512,23 @@ export default function GuruAsuhTabKlaim({ user: propUser }: GuruAsuhTabKlaimPro
                     cursor: pointer !important;
                 }
                 :global(.dark) .gakl__select-group select option {
-                    background-color: #000000 !important;
+                    background-color: #0b1329 !important;
                     color: #ffffff !important;
                 }
-                :global(.dark) .gakl__btnCopy { background: #000000 !important; border: 1.8px solid rgba(26, 115, 232, 0.75) !important; color: #60a5fa !important; }
+                :global(.dark) .gakl__btnCopy { background: #0b1329 !important; border: 1px solid rgba(26, 115, 232, 0.35) !important; color: #60a5fa !important; }
                 :global(.dark) .gakl__btnAdd,
-                :global(.dark) .gakl__btnEmpty { background: #000000 !important; border: 1.8px solid rgba(26, 115, 232, 0.75) !important; color: #ffffff !important; box-shadow: 0 4px 14px rgba(26, 115, 232, 0.25) !important; }
+                :global(.dark) .gakl__btnEmpty { background: #0b1329 !important; border: 1px solid rgba(26, 115, 232, 0.35) !important; color: #ffffff !important; box-shadow: 0 4px 14px rgba(26, 115, 232, 0.25) !important; }
                 :global(.dark) .gakl__btnAdd:hover,
                 :global(.dark) .gakl__btnEmpty:hover { background: rgba(26, 115, 232, 0.15) !important; border-color: #60a5fa !important; color: #ffffff !important; }
-                :global(.dark) .gakl__tableWrap { background: #000000 !important; border: 1.8px solid rgba(26, 115, 232, 0.75) !important; border-radius: 16px !important; }
-                :global(.dark) .gakl__table { background: #000000 !important; }
-                :global(.dark) .gakl__table th { background: linear-gradient(135deg, rgba(26, 115, 232, 0.15), rgba(0, 40, 122, 0.25)) !important; border-bottom: 1.5px solid rgba(26, 115, 232, 0.4) !important; color: #94a3b8 !important; }
+                :global(.dark) .gakl__tableWrap { background: #0b1329 !important; border: 1px solid rgba(26, 115, 232, 0.35) !important; border-radius: 16px !important; }
+                :global(.dark) .gakl__table { background: #0b1329 !important; }
+                :global(.dark) .gakl__table th { background: linear-gradient(135deg, rgba(26, 115, 232, 0.15), rgba(0, 40, 122, 0.25)) !important; border-bottom: 1px solid rgba(26, 115, 232, 0.35) !important; color: #94a3b8 !important; }
                 :global(.dark) .gakl__table td { border-bottom-color: rgba(26, 115, 232, 0.2) !important; color: #ffffff !important; }
                 :global(.dark) .gakl__table tr:hover td { background: rgba(26, 115, 232, 0.08) !important; }
                 :global(.dark) .gakl__studentName { color: #ffffff !important; }
-                :global(.dark) .gakl__btnEdit, :global(.dark) .gakl__btnDelete { background: #000000 !important; border-color: rgba(26, 115, 232, 0.4) !important; }
-                :global(.dark) .gakl__card { background: #000000 !important; border: 1.8px solid rgba(26, 115, 232, 0.75) !important; border-radius: 16px !important; }
-                :global(.dark) .gakl__cardAvatar { background: rgba(26, 115, 232, 0.15) !important; border: 1.8px solid rgba(26, 115, 232, 0.75) !important; color: #60a5fa !important; }
+                :global(.dark) .gakl__btnEdit, :global(.dark) .gakl__btnDelete { background: #0b1329 !important; border-color: rgba(26, 115, 232, 0.35) !important; }
+                :global(.dark) .gakl__card { background: #0b1329 !important; border: 1px solid rgba(26, 115, 232, 0.35) !important; border-radius: 16px !important; }
+                :global(.dark) .gakl__cardAvatar { background: rgba(26, 115, 232, 0.15) !important; border: 1px solid rgba(26, 115, 232, 0.35) !important; color: #60a5fa !important; }
                 :global(.dark) .gakl__cardNama { color: #ffffff !important; }
 
                 /* Responsive */

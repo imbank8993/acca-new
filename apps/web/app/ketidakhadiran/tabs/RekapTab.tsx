@@ -1212,32 +1212,32 @@ export default function RekapTab({ type }: RekapTabProps) {
                    bagian dari palet aplikasi. */
                 /* Pola referensi master/pengaturan-data. Palet biru bersama, aksen #60a5fa (sama di semua halaman). */
                 :global(.dark) .rekap-toolbar {
-                    background: #000000;
-                    border: 1.8px solid rgba(26, 115, 232, 0.75);
+                    background: #0b1329;
+                    border: 1px solid rgba(26, 115, 232, 0.35);
                     border-radius: 16px;
                     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
                 }
-                :global(.dark) .action-btn { background: #000000; color: #94a3b8; border-color: rgba(26, 115, 232, 0.5); }
+                :global(.dark) .action-btn { background: #0b1329; color: #94a3b8; border-color: rgba(26, 115, 232, 0.35); }
                 :global(.dark) .action-btn:hover { background: rgba(96, 165, 250, 0.15); color: #60a5fa; border-color: #60a5fa; }
-                :global(.dark) .filter-tabs { background: #000000; border: 1.5px solid rgba(26, 115, 232, 0.5); }
+                :global(.dark) .filter-tabs { background: #0b1329; border: 1px solid rgba(26, 115, 232, 0.35); }
                 :global(.dark) .filter-tab { color: #94a3b8; }
                 :global(.dark) .filter-tab:hover { color: #60a5fa; background: rgba(96, 165, 250, 0.12); }
                 :global(.dark) .filter-tab.active {
                     background: rgba(96, 165, 250, 0.18);
                     color: #60a5fa;
-                    box-shadow: inset 0 0 0 1.5px rgba(96, 165, 250, 0.55);
+                    box-shadow: inset 0 0 0 1px rgba(96, 165, 250, 0.45);
                 }
                 /* select & input[type=date] dipaksa var(--n-surface) !important oleh
                    globals.css, jadi warna kontrol di sini disamakan ke sana supaya
                    satu baris toolbar tidak belang. */
                 :global(.dark) .filter-select {
-                    background: #000000; color: #ffffff;
-                    border: 1.8px solid rgba(26, 115, 232, 0.75); border-radius: 12px; color-scheme: dark;
+                    background: #0b1329; color: #ffffff;
+                    border: 1px solid rgba(26, 115, 232, 0.35); border-radius: 12px; color-scheme: dark;
                     padding: 0 32px 0 14px !important;
                 }
                 :global(.dark) .period-select-wrap {
-                    background: #000000 !important;
-                    border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
+                    background: #0b1329 !important;
+                    border: 1px solid rgba(26, 115, 232, 0.35) !important;
                     border-radius: 12px !important;
                     padding: 0 4px 0 12px !important;
                 }
@@ -1249,33 +1249,33 @@ export default function RekapTab({ type }: RekapTabProps) {
                     padding: 0 32px 0 4px !important;
                 }
                 :global(.dark) .date-range {
-                    background: #000000;
-                    border: 1.8px solid rgba(26, 115, 232, 0.75); border-radius: 12px;
+                    background: #0b1329;
+                    border: 1px solid rgba(26, 115, 232, 0.35); border-radius: 12px;
                     padding: 0 12px !important;
                 }
                 :global(.dark) .date-range input { background: transparent !important; border-color: transparent !important; color: #ffffff; color-scheme: dark; }
                 :global(.dark) .date-range input::-webkit-calendar-picker-indicator { filter: invert(1); opacity: 0.55; }
                 :global(.dark) .status-select {
-                    background: #000000;
-                    border: 1.8px solid rgba(26, 115, 232, 0.75); border-radius: 12px; color-scheme: dark;
+                    background: #0b1329;
+                    border: 1px solid rgba(26, 115, 232, 0.35); border-radius: 12px; color-scheme: dark;
                     padding: 0 32px 0 14px !important;
                 }
                 :global(.dark) .summary-card {
-                    background: #000000 !important;
-                    border: 2.2px solid rgba(26, 115, 232, 0.85) !important;
+                    background: #0b1329 !important;
+                    border: 1px solid rgba(26, 115, 232, 0.35) !important;
                     border-radius: 16px !important;
                     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6) !important;
                 }
                 :global(.dark) .summary-value { color: #60a5fa; }
                 :global(.dark) .chart-section {
-                    background: #000000 !important;
-                    border: 2.2px solid rgba(26, 115, 232, 0.85) !important;
+                    background: #0b1329 !important;
+                    border: 1px solid rgba(26, 115, 232, 0.35) !important;
                     border-radius: 16px !important;
                     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6) !important;
                 }
                 :global(.dark) .table-section {
-                    background: #000000 !important;
-                    border: 2.2px solid rgba(26, 115, 232, 0.85) !important;
+                    background: #0b1329 !important;
+                    border: 1px solid rgba(26, 115, 232, 0.35) !important;
                     border-radius: 16px !important;
                     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6) !important;
                 }
@@ -1284,16 +1284,16 @@ export default function RekapTab({ type }: RekapTabProps) {
                 :global(.dark) th {
                     background: linear-gradient(135deg, rgba(26, 115, 232, 0.15), rgba(0, 40, 122, 0.25));
                     color: #94a3b8;
-                    border-bottom-color: rgba(26, 115, 232, 0.4);
+                    border-bottom-color: rgba(26, 115, 232, 0.35);
                 }
                 :global(.dark) td { color: #ffffff; border-color: rgba(26, 115, 232, 0.2); }
                 :global(.dark) tr:hover td { background: rgba(26, 115, 232, 0.08); }
                 :global(.dark) .count-badge { background: rgba(96, 165, 250, 0.15); color: #60a5fa; }
-                :global(.dark) .detail-btn { background: #000000; border: 1px solid rgba(26, 115, 232, 0.4); color: #94a3b8; }
+                :global(.dark) .detail-btn { background: #0b1329; border: 1px solid rgba(26, 115, 232, 0.35); color: #94a3b8; }
                 :global(.dark) .detail-btn:hover { background: rgba(96, 165, 250, 0.15); color: #60a5fa; }
                 :global(.dark) .modal-content {
-                    background: #000000;
-                    border: 1.8px solid rgba(26, 115, 232, 0.75);
+                    background: #0b1329;
+                    border: 1px solid rgba(26, 115, 232, 0.35);
                     border-radius: 20px;
                     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8);
                 }
@@ -1302,11 +1302,11 @@ export default function RekapTab({ type }: RekapTabProps) {
                     border-bottom-color: rgba(26, 115, 232, 0.4);
                 }
                 :global(.dark) .modal-header h3 { color: #ffffff; }
-                :global(.dark) .modal-body { background: #000000; }
+                :global(.dark) .modal-body { background: #0b1329; }
                 :global(.dark) .student-info { background: rgba(26, 115, 232, 0.08); }
                 :global(.dark) .student-info span { color: #ffffff; }
                 :global(.dark) .entry-item {
-                    background: #000000;
+                    background: #0b1329;
                     border: 1px solid rgba(37, 99, 235, 0.4);
                     border-radius: 12px;
                 }

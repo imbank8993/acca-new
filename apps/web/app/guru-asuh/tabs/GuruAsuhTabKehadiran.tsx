@@ -223,10 +223,10 @@ export default function GuruAsuhTabKehadiran({ user }: GuruAsuhTabKehadiranProps
                 .gak__siswaSummary { justify-content: flex-end; }
                 .gak__siswaActions { display: flex; align-items: center; }
 
-                :global(.dark) .gak__empty { background: #000000 !important; border: 1px solid rgba(37, 99, 235, 0.4) !important; border-radius: 20px !important; }
+                :global(.dark) .gak__empty { background: #0b1329 !important; border: 1px solid rgba(26, 115, 232, 0.35) !important; border-radius: 20px !important; }
                 :global(.dark) .gak__empty-icon { background: rgba(26, 115, 232, 0.15) !important; color: #60a5fa !important; }
                 :global(.dark) .gak__empty h3 { color: #ffffff !important; }
-                :global(.dark) .gak__siswaCard { background: #000000 !important; border: 1px solid rgba(37, 99, 235, 0.4) !important; border-radius: 16px !important; }
+                :global(.dark) .gak__siswaCard { background: #0b1329 !important; border: 1px solid rgba(26, 115, 232, 0.35) !important; border-radius: 16px !important; }
                 :global(.dark) .gak__siswaNama { color: #ffffff !important; }
                 :global(.dark) .gak__kelasChip { background: rgba(59,130,246,0.15) !important; color: #60a5fa !important; }
 

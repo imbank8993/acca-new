@@ -10,6 +10,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     openssl \
     curl \
     ca-certificates \
+    chromium \
+    fonts-freefont-ttf \
+    fonts-ipafont-gothic \
+    fonts-wqy-zenhei \
+    libxss1 \
     && rm -rf /var/lib/apt/lists/*
 
 # ── 2. Dependencies & Build Stage ─────────────────────────────────────────────
@@ -61,6 +66,8 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=3006
 ENV NEXT_TELEMETRY_DISABLED=1
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
 
 # Create non-root system user for security
 RUN groupadd -g 1001 nodejs && \

@@ -247,7 +247,7 @@ export default function KetidakhadiranCards({ rows, hideKeterangan = false, onVi
 
                 /* Dark */
                 :global(.dark) .kc__card {
-                    background: #000000;
+                    background: #0b1329;
                     border: 1.8px solid rgba(26, 115, 232, 0.75);
                     border-radius: 16px;
                     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);

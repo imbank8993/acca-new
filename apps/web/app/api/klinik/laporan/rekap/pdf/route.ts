@@ -1,14 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import puppeteer from 'puppeteer';
 import { getApiUser, unauthorizedResponse, forbiddenResponse } from '@/lib/api-auth';
 import { buildRekapKlinik, BULAN } from '@/lib/klinik/rekap-report';
 import { isReviewerKlinik } from '@/lib/klinik/laporan-report';
+import { launchPuppeteerBrowser } from '@/lib/puppeteer-launcher';
 
 async function convertHtmlToPdf(html: string): Promise<Buffer> {
-    const browser = await puppeteer.launch({
-        headless: true,
-        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
-    });
+    const browser = await launchPuppeteerBrowser();
     try {
         const page = await browser.newPage();
         await page.setContent(html, { waitUntil: 'domcontentloaded' });

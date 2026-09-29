@@ -47,17 +47,8 @@ export async function renderHtmlToImage(html: string, width = 1000): Promise<Buf
 
     let browser: Browser | null = null
     try {
-        browser = await puppeteer.launch({
-            headless: true,
-            executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
-            args: [
-                '--no-sandbox',
-                '--disable-setuid-sandbox',
-                '--disable-dev-shm-usage',
-                '--disable-gpu',
-                '--font-render-hinting=none',
-            ],
-        })
+        const { launchPuppeteerBrowser } = await import('./puppeteer-launcher')
+        browser = await launchPuppeteerBrowser()
 
         const page = await browser.newPage()
         // deviceScaleFactor 2 → gambar tajam saat dibuka di WhatsApp.

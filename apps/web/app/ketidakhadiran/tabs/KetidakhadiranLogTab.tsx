@@ -303,7 +303,7 @@ export function KetidakhadiranLogTab(props: { user?: any }) {
                 .klog__pageDots { display: flex; align-items: center; gap: 4px; }
 
                 :global(.dark) .klog__statStrip {
-                    background: #000000 !important;
+                    background: #0b1329 !important;
                     border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
                     border-radius: 16px !important;
                     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6) !important;
@@ -316,7 +316,7 @@ export function KetidakhadiranLogTab(props: { user?: any }) {
                 :global(.dark) .klog__statLain .klog__statNum { color: #fb923c !important; }
 
                 :global(.dark) .klog__modeSeg {
-                    background: #000000 !important;
+                    background: #0b1329 !important;
                     border: 1.5px solid rgba(26, 115, 232, 0.5) !important;
                 }
                 :global(.dark) .klog__segBtn { color: #94a3b8 !important; }

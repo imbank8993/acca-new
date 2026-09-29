@@ -120,7 +120,7 @@ export default function DaftarMedisTab({
                                             const span = studentSpanInfo[idx];
                                             const isLastInGroup = (idx === filteredRows.length - 1) || studentSpanInfo[idx + 1]?.showStudentCell;
                                             return (
-                                                <tr key={row.id} style={{ borderBottom: isLastInGroup ? '2px solid rgba(59, 130, 246, 0.4)' : '1px solid var(--kh-tb-border)' }}>
+                                                <tr key={row.id} style={{ borderBottom: isLastInGroup ? '1px solid rgba(59, 130, 246, 0.35)' : '1px solid var(--kh-tb-border)' }}>
                                                     {span && span.showStudentCell && (
                                                         <td
                                                             rowSpan={span.rowSpan}
@@ -146,7 +146,7 @@ export default function DaftarMedisTab({
                                                             style={{
                                                                 verticalAlign: 'middle',
                                                                 background: span.rowSpan > 1 ? 'rgba(0, 56, 168, 0.02)' : 'transparent',
-                                                                borderRight: span.rowSpan > 1 ? '1.5px solid var(--kh-tb-border)' : undefined,
+                                                                borderRight: span.rowSpan > 1 ? '1px solid var(--kh-tb-border)' : undefined,
                                                                 padding: '6px 10px'
                                                             }}
                                                         >

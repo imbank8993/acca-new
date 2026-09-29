@@ -79,7 +79,7 @@ const AuditLogPage = lazy(() => import('@/app/audit-log/view'))
  */
 export const SPECIAL_PAGES = [
     'jurnal-banding', 'surat', 'surat-daftar',
-    'profile', 'ProfileSaya', 'dashboard', 'jadwal', 'pengumuman',
+    'profile', 'ProfileSaya', 'dashboard', 'jadwal',
     'sanggar-kurikulum', 'form/builder', 'form/responses', 'informasi/kelola',
     'audit-log',
 ]
@@ -87,7 +87,6 @@ export const SPECIAL_PAGES = [
 export const PAGE_COMPONENTS: Record<string, (user: User, onRefreshUser: () => Promise<void>, targetTab?: string) => React.ReactNode> = {
     'dashboard': (user) => <DashboardContent user={user} />,
     'jadwal': (user) => user.roles?.includes('ORANG_TUA') ? <OrangTuaWrapper user={user} /> : <JadwalPage user={user} />,
-    'pengumuman': (user) => <InformasiKelolaPage user={user} />,
 
     // OPERASIONAL
     'absensi': (user) => <AbsensiPage />,

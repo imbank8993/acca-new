@@ -1,7 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&display=swap');
-
 @import "tailwindcss" source("../");
-@custom-variant dark (&:is(.dark *));
 @import "./ketidakhadiran/ketidakhadiran.css";
 @import "./surat/surat.css";
 @import "./absensi/absensi.css";
@@ -23,6 +20,8 @@
 @import "./jurnal/jurnal.css";
 @import "./keuangan/keuangan.css";
 @import "./kinerja-guru/kinerja-guru.css";
+
+@custom-variant dark (&:is(.dark *));
 
 /* Global Typography & Font Family */
 :root {

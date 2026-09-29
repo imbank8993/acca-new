@@ -2808,14 +2808,6 @@ export default function AbsensiPage({ user }: { user?: any }) {
                                             {r.catatan && (
                                                 <div className="text-xs text-slate-500 mt-1 italic truncate max-w-[200px] flex items-center gap-1">
                                                     {r.ref_ketidakhadiran_id && <i className="bi bi-link-45deg text-blue-500"></i>}
-                                                    {r.source_type && (
-                                                        <span
-                                                            className="inline-flex items-center justify-center w-5 h-5 text-[10px] font-bold rounded bg-slate-200 text-slate-600 border border-slate-300"
-                                                            title={`Sumber: ${r.source_type}`}
-                                                        >
-                                                            {r.source_type.charAt(0).toUpperCase()}
-                                                        </span>
-                                                    )}
                                                     <span className="truncate">{r.catatan}</span>
                                                 </div>
                                             )}

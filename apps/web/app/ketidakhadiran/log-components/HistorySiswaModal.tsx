@@ -207,7 +207,7 @@ export default function HistorySiswaModal({ nisn, onClose }: HistorySiswaModalPr
                    palet, sehingga modal ini terlihat lebih terang & lebih biru
                    dingin dibanding halaman lain. */
                 :global(.dark) .hsm__content {
-                    background: #000000;
+                    background: #0b1329;
                     border: 1.8px solid rgba(26, 115, 232, 0.75);
                     border-radius: 20px;
                     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8);
@@ -223,10 +223,10 @@ export default function HistorySiswaModal({ nisn, onClose }: HistorySiswaModalPr
                     border-color: rgba(96, 165, 250, 0.4);
                     color: #60a5fa;
                 }
-                :global(.dark) .hsm__closeBtn { background: #000000; border: 1px solid rgba(26, 115, 232, 0.4); color: #94a3b8; }
+                :global(.dark) .hsm__closeBtn { background: #0b1329; border: 1px solid rgba(26, 115, 232, 0.4); color: #94a3b8; }
                 :global(.dark) .hsm__closeBtn:hover { background: rgba(26, 115, 232, 0.15); color: #ffffff; }
                 :global(.dark) .hsm__itemContent {
-                    background: #000000;
+                    background: #0b1329;
                     border: 1px solid rgba(37, 99, 235, 0.4);
                     border-radius: 12px;
                 }
@@ -244,7 +244,7 @@ export default function HistorySiswaModal({ nisn, onClose }: HistorySiswaModalPr
                 .hsm__taSelect option { color: #000; }
                 :global(.dark) .hsm__taFilterWrap { border-color: rgba(96, 165, 250, 0.4); }
                 :global(.dark) .hsm__taSelect { color: #ffffff; color-scheme: dark; }
-                :global(.dark) .hsm__taSelect option { color: #ffffff; background: #000000; }
+                :global(.dark) .hsm__taSelect option { color: #ffffff; background: #0b1329; }
             `}</style>
         </Modal>
     );

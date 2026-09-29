@@ -88,6 +88,32 @@
   font-weight: 700 !important;
 }
 
+.dark .surat-badge,
+html.dark .surat-badge,
+body.dark .surat-badge,
+[data-theme='dark'] .surat-badge {
+  background: rgba(37, 99, 235, 0.2) !important;
+  color: #60a5fa !important;
+  border: 1px solid rgba(96, 165, 250, 0.35) !important;
+  font-weight: 700 !important;
+}
+
+.dark .surat-badge[style*="220,38,38"],
+.dark .surat-badge[style*="220, 38, 38"],
+.dark .surat-badge[style*="dc2626"] {
+  background: rgba(239, 68, 68, 0.2) !important;
+  color: #f87171 !important;
+  border: 1px solid rgba(248, 113, 113, 0.35) !important;
+}
+
+.dark .surat-badge[style*="5,150,105"],
+.dark .surat-badge[style*="5, 150, 105"],
+.dark .surat-badge[style*="059669"] {
+  background: rgba(16, 185, 129, 0.2) !important;
+  color: #34d399 !important;
+  border: 1px solid rgba(52, 211, 153, 0.35) !important;
+}
+
 /* Equal width action buttons on mobile cards */
 .rm-mobile-actions {
   display: flex;
@@ -108,7 +134,7 @@
 /* Sharp & bold card box styling for Rekam Medis forms & modals */
 .rm-card-box {
   background: var(--n-card, #ffffff);
-  border: 1.8px solid rgba(26, 115, 232, 0.75);
+  border: 1px solid rgba(26, 115, 232, 0.35);
   border-radius: 14px;
   padding: 14px 16px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
@@ -119,8 +145,8 @@
 html.dark .rm-card-box,
 body.dark .rm-card-box,
 [data-theme='dark'] .rm-card-box {
-  background: #000000 !important;
-  border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
+  background: #0b1329 !important;
+  border: 1px solid rgba(26, 115, 232, 0.35) !important;
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45) !important;
 }
 
@@ -4178,14 +4204,14 @@ body.dark .pm-hint--blocked i,
 
 /* Dark Mode Overrides for ViewModal */
 .dark .vm-info-card {
-  background: #000000 !important;
-  border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
+  background: #0b1329 !important;
+  border: 1px solid rgba(26, 115, 232, 0.35) !important;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4) !important;
 }
 
 .dark .vm-section {
-  background: #000000 !important;
-  border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
+  background: #0b1329 !important;
+  border: 1px solid rgba(26, 115, 232, 0.35) !important;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4) !important;
 }
 
@@ -4199,7 +4225,7 @@ body.dark .pm-hint--blocked i,
 }
 
 .dark .vm-section-content {
-  background: #000000 !important;
+  background: #0b1329 !important;
 }
 
 .dark .vm-text {
@@ -4815,7 +4841,7 @@ body.dark .pm-header,
 html.dark .srt-modal-header,
 body.dark .srt-modal-header,
 [data-theme='dark'] .srt-modal-header {
-  background: #000000 !important;
+  background: #0b1329 !important;
   border: none !important;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
   border-radius: 18px 18px 0 0 !important;
@@ -4912,8 +4938,8 @@ body.dark .kh-modal,
 html.dark .pm-panel,
 body.dark .pm-panel,
 [data-theme='dark'] .pm-panel {
-  background: #000000 !important;
-  border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
+  background: #0b1329 !important;
+  border: 1px solid rgba(26, 115, 232, 0.35) !important;
   border-radius: 20px !important;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.85) !important;
   color: #ffffff !important;
@@ -4928,7 +4954,7 @@ body.dark .kh-modal__body,
 html.dark .pm-body,
 body.dark .pm-body,
 [data-theme='dark'] .pm-body {
-  background: #000000 !important;
+  background: #0b1329 !important;
   color: #ffffff !important;
 }
 
@@ -4941,8 +4967,8 @@ body.dark .kh-modal__footer,
 html.dark .pm-footer,
 body.dark .pm-footer,
 [data-theme='dark'] .pm-footer {
-  background: #000000 !important;
-  border-top: 1.8px solid rgba(26, 115, 232, 0.75) !important;
+  background: #0b1329 !important;
+  border-top: 1px solid rgba(26, 115, 232, 0.35) !important;
 }
 
 /* Refined Alert Danger Card in Dark Mode (Soft Rose-Crimson) */
@@ -5172,7 +5198,7 @@ body.dark .kh-rekam-medis-header,
 html.dark .kh-kpi,
 body.dark .kh-kpi,
 [data-theme='dark'] .kh-kpi {
-  background: #000000 !important;
+  background: #0b1329 !important;
   border: 1.5px solid #2563eb !important;
   border-radius: 16px !important;
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.6) !important;
@@ -5181,7 +5207,7 @@ body.dark .kh-kpi,
 html.dark .kh-kpi.is-active,
 body.dark .kh-kpi.is-active,
 [data-theme='dark'] .kh-kpi.is-active {
-  background: #000000 !important;
+  background: #0b1329 !important;
   border: 2px solid #3b82f6 !important;
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.35), 0 4px 16px rgba(0, 0, 0, 0.7) !important;
 }
@@ -5242,8 +5268,8 @@ body.dark .btn-kh-excel,
 [data-theme='dark'] .btn-kh-info,
 [data-theme='dark'] .btn-kh-success,
 [data-theme='dark'] .btn-kh-excel {
-  background: #000000 !important;
-  border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
+  background: #0b1329 !important;
+  border: 1px solid rgba(26, 115, 232, 0.35) !important;
   border-radius: 14px !important;
 }
 
@@ -5261,8 +5287,8 @@ html.dark .kh-tab,
 body.dark .kh-tab,
 [data-theme='dark'] .kh-tab {
   color: #94a3b8 !important;
-  background: #000000 !important;
-  border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
+  background: #0b1329 !important;
+  border: 1px solid rgba(26, 115, 232, 0.35) !important;
   border-radius: 16px !important;
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45) !important;
 }
@@ -5323,8 +5349,8 @@ body.dark .kh-tab.is-active .kh-tab-text,
   html.dark .kh-tabs,
   body.dark .kh-tabs,
   [data-theme='dark'] .kh-tabs {
-    background: #000000 !important;
-    border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
+    background: #0b1329 !important;
+    border: 1px solid rgba(26, 115, 232, 0.35) !important;
     border-radius: 16px !important;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6) !important;
   }
@@ -5371,8 +5397,8 @@ body.dark .kh-tab.is-active .kh-tab-text,
 html.dark .kh-filter-card,
 body.dark .kh-filter-card,
 [data-theme='dark'] .kh-filter-card {
-  background: #000000 !important;
-  border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
+  background: #0b1329 !important;
+  border: 1px solid rgba(26, 115, 232, 0.35) !important;
   border-radius: 16px !important;
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45) !important;
 }
@@ -5390,7 +5416,7 @@ body.dark .kh-pill-input,
 body.dark .kh-pill-select,
 [data-theme='dark'] .kh-pill-input,
 [data-theme='dark'] .kh-pill-select {
-  background-color: #000000 !important;
+  background-color: #0b1329 !important;
   border: 1.5px solid rgba(26, 115, 232, 0.75) !important;
   border-radius: 12px !important;
   color: #ffffff !important;
@@ -5400,8 +5426,8 @@ body.dark .kh-pill-select,
 html.dark .kh-month-trigger,
 body.dark .kh-month-trigger,
 [data-theme='dark'] .kh-month-trigger {
-  background-color: #000000;
-  border: 1.8px solid rgba(26, 115, 232, 0.75);
+  background-color: #0b1329;
+  border: 1px solid rgba(26, 115, 232, 0.35);
   color: #ffffff;
 }
 
@@ -5410,8 +5436,8 @@ body.dark .kh-month-trigger,
 html.dark .kh-table-card,
 body.dark .kh-table-card,
 [data-theme='dark'] .kh-table-card {
-  background: #000000 !important;
-  border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
+  background: #0b1329 !important;
+  border: 1px solid rgba(26, 115, 232, 0.35) !important;
   border-radius: 18px !important;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5) !important;
   overflow: hidden;
@@ -5420,15 +5446,15 @@ body.dark .kh-table-card,
 html.dark .kh-table th,
 body.dark .kh-table th,
 [data-theme='dark'] .kh-table th {
-  background: #000000 !important;
+  background: #0b1329 !important;
   color: #60a5fa !important;
-  border-bottom: 1.8px solid rgba(26, 115, 232, 0.75) !important;
+  border-bottom: 1px solid rgba(26, 115, 232, 0.35) !important;
 }
 .dark .kh-table td,
 html.dark .kh-table td,
 body.dark .kh-table td,
 [data-theme='dark'] .kh-table td {
-  background: #000000 !important;
+  background: #0b1329 !important;
   color: #ffffff !important;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
 }
@@ -5444,14 +5470,14 @@ body.dark .kh-table tr:hover td,
 html.dark .kh-table-footer,
 body.dark .kh-table-footer,
 [data-theme='dark'] .kh-table-footer {
-  background: #000000 !important;
+  background: #0b1329 !important;
   border-top: 1.5px solid rgba(26, 115, 232, 0.5) !important;
 }
 .dark .kh-pg-btn,
 html.dark .kh-pg-btn,
 body.dark .kh-pg-btn,
 [data-theme='dark'] .kh-pg-btn {
-  background: #000000 !important;
+  background: #0b1329 !important;
   border: 1.5px solid rgba(26, 115, 232, 0.75) !important;
   color: #60a5fa !important;
 }
@@ -5471,7 +5497,7 @@ body.dark .kh-pg-btn.is-active,
   background: var(--kh-tb-stripe);
   padding: 12px 18px;
   border-radius: 14px;
-  border: 1.8px solid rgba(26, 115, 232, 0.75);
+  border: 1px solid rgba(26, 115, 232, 0.35);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -5486,8 +5512,8 @@ body.dark .kh-pg-btn.is-active,
 html.dark .rm-form-footer,
 body.dark .rm-form-footer,
 [data-theme='dark'] .rm-form-footer {
-  background: #000000 !important;
-  border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
+  background: #0b1329 !important;
+  border: 1px solid rgba(26, 115, 232, 0.35) !important;
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45) !important;
 }
 
@@ -5746,7 +5772,7 @@ body.dark .rm-form-footer,
 
 .dark .kehadiran-page__stat-card {
   background: #0b1329 !important;
-  border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
+  border: 1px solid rgba(26, 115, 232, 0.35) !important;
   border-radius: 14px !important;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45) !important;
   transition: all 0.25s ease-in-out !important;
@@ -5801,7 +5827,7 @@ body.dark .rm-form-footer,
 .dark .kehadiran-page__input,
 .dark .kehadiran-page__select {
   background: #0b1329 !important;
-  border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
+  border: 1px solid rgba(26, 115, 232, 0.35) !important;
   border-radius: 12px !important;
   color: #ffffff !important;
   color-scheme: dark;
@@ -5917,7 +5943,7 @@ body.dark .rm-form-footer,
 
 .dark .kehadiran-page__mobile-card {
   background: #0b1329 !important;
-  border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
+  border: 1px solid rgba(26, 115, 232, 0.35) !important;
   border-radius: 16px !important;
 }
 .dark .kehadiran-page__mobile-card-header {
@@ -6108,7 +6134,7 @@ body.dark .rm-form-footer,
 .dark .kehadiran-page__btn,
 .dark .kehadiran-page__btn-table,
 .dark .kehadiran-page__back-btn {
-  background: #000000 !important;
+  background: #0b1329 !important;
   border: 1px solid rgba(26, 115, 232, 0.4) !important;
   color: #94a3b8 !important;
 }
@@ -6127,7 +6153,7 @@ body.dark .rm-form-footer,
 .dark .kehadiran-page__btn-icon { color: inherit !important; }
 
 .dark .kehadiran-page__page-btn {
-  background: #000000 !important;
+  background: #0b1329 !important;
   border: 1.5px solid rgba(26, 115, 232, 0.5) !important;
   color: #94a3b8 !important;
 }
@@ -6145,8 +6171,8 @@ body.dark .rm-form-footer,
 .dark .kehadiran-page__page-icon { color: inherit !important; }
 
 .dark .kehadiran-page__empty-state {
-  background: #000000 !important;
-  border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
+  background: #0b1329 !important;
+  border: 1px solid rgba(26, 115, 232, 0.35) !important;
   border-radius: 16px !important;
 }
 .dark .kehadiran-page__empty-icon { background: rgba(96, 165, 250, 0.12) !important; }
@@ -6159,8 +6185,8 @@ body.dark .rm-form-footer,
 .dark .kehadiran-page__error-msg { color: #94a3b8 !important; }
 
 .dark .kehadiran-page__hero {
-  background: #000000 !important;
-  border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
+  background: #0b1329 !important;
+  border: 1px solid rgba(26, 115, 232, 0.35) !important;
   border-radius: 18px !important;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5) !important;
 }

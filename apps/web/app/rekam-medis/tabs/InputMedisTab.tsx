@@ -885,7 +885,7 @@ export default function InputMedisTab({
 
                         <div style={{
                             background: currentMappedStatus === 'NONE' ? 'var(--n-card)' : 'rgba(5, 150, 105, 0.05)',
-                            border: currentMappedStatus === 'NONE' ? '1.8px solid rgba(26, 115, 232, 0.75)' : '1.8px solid rgba(5, 150, 105, 0.5)',
+                            border: currentMappedStatus === 'NONE' ? '1px solid rgba(26, 115, 232, 0.35)' : '1px solid rgba(5, 150, 105, 0.35)',
                             borderRadius: '12px', padding: '12px 16px'
                         }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>

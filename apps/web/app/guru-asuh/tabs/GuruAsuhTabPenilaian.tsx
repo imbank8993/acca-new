@@ -572,10 +572,10 @@ export default function GuruAsuhTabPenilaian({ user }: { user?: any }) {
                 .gan__siswaFooter { display: contents; }
                 .gan__siswaActions { display: flex; align-items: center; justify-content: flex-end; }
 
-                :global(.dark) .gan__empty { background: #000000 !important; border: 1px solid rgba(37, 99, 235, 0.4) !important; border-radius: 20px !important; }
+                :global(.dark) .gan__empty { background: #0b1329 !important; border: 1px solid rgba(37, 99, 235, 0.35) !important; border-radius: 20px !important; }
                 :global(.dark) .gan__empty-icon { background: rgba(26, 115, 232, 0.15) !important; color: #60a5fa !important; }
                 :global(.dark) .gan__empty h3 { color: #ffffff !important; }
-                :global(.dark) .gan__siswaCard { background: #000000 !important; border: 1px solid rgba(37, 99, 235, 0.4) !important; border-radius: 16px !important; }
+                :global(.dark) .gan__siswaCard { background: #0b1329 !important; border: 1px solid rgba(37, 99, 235, 0.35) !important; border-radius: 16px !important; }
                 :global(.dark) .gan__siswaCard:hover { background: rgba(26, 115, 232, 0.12) !important; }
                 :global(.dark) .gan__siswaNama { color: #ffffff !important; }
                 :global(.dark) .gan__kelasChip { background: rgba(59,130,246,0.15) !important; color: #60a5fa !important; }

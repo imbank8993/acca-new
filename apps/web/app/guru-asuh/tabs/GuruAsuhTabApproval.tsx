@@ -434,7 +434,7 @@ export default function GuruAsuhTabApproval({ user }: { user?: any }) {
                 .gta__item { display: flex; gap: 10px; padding: 12px 14px; border-bottom: 1px solid var(--n-border); cursor: pointer; transition: background 0.15s; }
                 .gta__item:hover { background: var(--n-soft); }
                 .gta__item--active { background: var(--n-soft); border-left: 3px solid var(--n-primary); }
-                .gta__itemAvatar { width: 34px; height: 34px; border-radius: 10px; background: rgba(26, 115, 232, 0.08); border: 1.8px solid #1a73e8; color: #1a73e8; display: flex; align-items: center; justify-content: center; font-weight: 800; flex-shrink: 0; position: relative; overflow: hidden; }
+                .gta__itemAvatar { width: 34px; height: 34px; border-radius: 10px; background: rgba(26, 115, 232, 0.08); border: 1px solid #1a73e8; color: #1a73e8; display: flex; align-items: center; justify-content: center; font-weight: 800; flex-shrink: 0; position: relative; overflow: hidden; }
                 .gta__avatarImg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; border-radius: inherit; }
                 .gta__itemBody { flex: 1; min-width: 0; }
                 .gta__itemName { font-size: 0.83rem; font-weight: 700; color: var(--n-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -466,7 +466,7 @@ export default function GuruAsuhTabApproval({ user }: { user?: any }) {
                 .gta__nowrap { white-space: nowrap; }
                 .gta__muted { color: var(--n-muted); font-size: 0.7rem; }
 
-                .gta__notes textarea { width: 100%; min-height: 76px; padding: 10px 12px; border-radius: 12px; border: 1.5px solid var(--n-border); background: var(--n-card); color: var(--n-ink); font-size: 0.83rem; resize: vertical; }
+                .gta__notes textarea { width: 100%; min-height: 76px; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--n-border); background: var(--n-card); color: var(--n-ink); font-size: 0.83rem; resize: vertical; }
                 .gta__notes textarea:disabled { opacity: 0.6; }
 
                 .gta__actions { display: flex; align-items: center; gap: 10px; padding: 12px 18px; border-top: 1px solid var(--n-border); background: var(--n-card); flex-shrink: 0; }
@@ -490,11 +490,11 @@ export default function GuruAsuhTabApproval({ user }: { user?: any }) {
                 .gta__placeholder p { font-size: 0.8rem; margin: 0; max-width: 300px; }
 
                 :global(.dark) .gta__left,
-                :global(.dark) .gta__content { background: #000000 !important; border: 1.8px solid rgba(26, 115, 232, 0.75) !important; border-radius: 16px !important; }
+                :global(.dark) .gta__content { background: #0b1329 !important; border: 1px solid rgba(26, 115, 232, 0.35) !important; border-radius: 16px !important; }
                 :global(.dark) .gta__select-group,
                 :global(.dark) .gta__searchWrap {
-                    background-color: #000000 !important;
-                    border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
+                    background-color: #0b1329 !important;
+                    border: 1px solid rgba(26, 115, 232, 0.35) !important;
                     border-radius: 12px !important;
                     color: #ffffff !important;
                 }
@@ -518,7 +518,7 @@ export default function GuruAsuhTabApproval({ user }: { user?: any }) {
                     cursor: pointer !important;
                 }
                 :global(.dark) .gta__select-group select option {
-                    background-color: #000000 !important;
+                    background-color: #0b1329 !important;
                     color: #ffffff !important;
                 }
                 :global(.dark) .gta__searchWrap input {
@@ -526,27 +526,27 @@ export default function GuruAsuhTabApproval({ user }: { user?: any }) {
                     border: none !important;
                     color: #ffffff !important;
                 }
-                :global(.dark) .gta__notes textarea { background: #000000 !important; border: 1.8px solid rgba(26, 115, 232, 0.75) !important; color: #ffffff !important; }
-                :global(.dark) .gta__metaItem { background: #000000 !important; border: 1px solid rgba(37, 99, 235, 0.4) !important; }
+                :global(.dark) .gta__notes textarea { background: #0b1329 !important; border: 1px solid rgba(26, 115, 232, 0.35) !important; color: #ffffff !important; }
+                :global(.dark) .gta__metaItem { background: #0b1329 !important; border: 1px solid rgba(37, 99, 235, 0.35) !important; }
                 :global(.dark) .gta__metaItem span { color: #94a3b8 !important; }
                 :global(.dark) .gta__metaItem strong { color: #ffffff !important; }
-                :global(.dark) .gta__tableWrap { background: #000000 !important; border: 1.8px solid rgba(26, 115, 232, 0.75) !important; }
-                :global(.dark) .gta__table { background: #000000 !important; }
-                :global(.dark) .gta__table th { background: linear-gradient(135deg, rgba(26, 115, 232, 0.15), rgba(0, 40, 122, 0.25)) !important; border-bottom: 1.5px solid rgba(26, 115, 232, 0.4) !important; color: #94a3b8 !important; }
+                :global(.dark) .gta__tableWrap { background: #0b1329 !important; border: 1px solid rgba(26, 115, 232, 0.35) !important; }
+                :global(.dark) .gta__table { background: #0b1329 !important; }
+                :global(.dark) .gta__table th { background: linear-gradient(135deg, rgba(26, 115, 232, 0.15), rgba(0, 40, 122, 0.25)) !important; border-bottom: 1px solid rgba(26, 115, 232, 0.35) !important; color: #94a3b8 !important; }
                 :global(.dark) .gta__table td { border-bottom-color: rgba(26, 115, 232, 0.2) !important; color: #ffffff !important; }
                 :global(.dark) .gta__item { border-bottom-color: rgba(26, 115, 232, 0.2) !important; }
                 :global(.dark) .gta__item:hover { background: rgba(26, 115, 232, 0.1) !important; }
                 :global(.dark) .gta__item--active { background: rgba(26, 115, 232, 0.2) !important; border-left-color: #60a5fa !important; }
-                :global(.dark) .gta__itemAvatar { background: rgba(26, 115, 232, 0.15) !important; border: 1.8px solid rgba(26, 115, 232, 0.75) !important; color: #60a5fa !important; }
+                :global(.dark) .gta__itemAvatar { background: rgba(26, 115, 232, 0.15) !important; border: 1px solid rgba(26, 115, 232, 0.35) !important; color: #60a5fa !important; }
                 :global(.dark) .gta__itemName { color: #ffffff !important; }
-                :global(.dark) .gta__btn--ghost { background: #000000 !important; border: 1px solid rgba(26, 115, 232, 0.4) !important; color: #60a5fa !important; }
+                :global(.dark) .gta__btn--ghost { background: #0b1329 !important; border: 1px solid rgba(26, 115, 232, 0.35) !important; color: #60a5fa !important; }
                 :global(.dark) .gta__btn--ghost:hover { background: rgba(26, 115, 232, 0.15) !important; color: #ffffff !important; }
                 :global(.dark) .gta__btn--reject,
-                :global(.dark) .gta__btn--soft-red { background: rgba(239, 68, 68, 0.18) !important; border: 1.5px solid rgba(239, 68, 68, 0.4) !important; color: #f87171 !important; }
+                :global(.dark) .gta__btn--soft-red { background: rgba(239, 68, 68, 0.18) !important; border: 1px solid rgba(239, 68, 68, 0.35) !important; color: #f87171 !important; }
                 :global(.dark) .gta__btn--reject:hover { background: rgba(239, 68, 68, 0.35) !important; color: #ffffff !important; }
-                :global(.dark) .gta__badge--revisi { background: rgba(239, 68, 68, 0.14) !important; color: #f87171 !important; border: 1px solid rgba(239, 68, 68, 0.45) !important; }
-                :global(.dark) .gta__badge--approved { background: rgba(59, 130, 246, 0.14) !important; color: #60a5fa !important; border: 1px solid rgba(26, 115, 232, 0.75) !important; }
-                :global(.dark) .gta__badge--pending { background: rgba(245, 158, 11, 0.14) !important; color: #fbbf24 !important; border: 1px solid rgba(245, 158, 11, 0.45) !important; }
+                :global(.dark) .gta__badge--revisi { background: rgba(239, 68, 68, 0.14) !important; color: #f87171 !important; border: 1px solid rgba(239, 68, 68, 0.35) !important; }
+                :global(.dark) .gta__badge--approved { background: rgba(59, 130, 246, 0.14) !important; color: #60a5fa !important; border: 1px solid rgba(26, 115, 232, 0.35) !important; }
+                :global(.dark) .gta__badge--pending { background: rgba(245, 158, 11, 0.14) !important; color: #fbbf24 !important; border: 1px solid rgba(245, 158, 11, 0.35) !important; }
 
                 .gta__mobileRow { display: none; }
 

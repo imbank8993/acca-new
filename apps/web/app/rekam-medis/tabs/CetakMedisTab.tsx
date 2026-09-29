@@ -139,7 +139,7 @@ export default function CetakMedisTab({
                                             {s.guru_asuh && s.guru_asuh !== '-' ? s.guru_asuh : '-'}
                                         </td>
                                         <td style={{ textAlign: 'center' }}>
-                                            <span style={{ background: 'rgba(0,56,168,0.1)', color: 'var(--kh-accent)', borderRadius: '20px', padding: '3px 10px', fontSize: '0.78rem', fontWeight: 700 }}>
+                                            <span className="surat-badge" style={{ background: 'rgba(0,56,168,0.1)', color: 'var(--kh-accent)', borderRadius: '20px', padding: '3px 10px', fontSize: '0.78rem', fontWeight: 700 }}>
                                                 {s.count} RM
                                             </span>
                                         </td>
@@ -198,7 +198,7 @@ export default function CetakMedisTab({
                                         <span>Kelas: <b>{s.kelas}</b></span>
                                     </div>
                                 </div>
-                                <span style={{ background: 'rgba(0,56,168,0.1)', color: 'var(--kh-accent)', borderRadius: '20px', padding: '3px 10px', fontSize: '0.78rem', fontWeight: 700, whiteSpace: 'nowrap' }}>
+                                <span className="surat-badge" style={{ background: 'rgba(0,56,168,0.1)', color: 'var(--kh-accent)', borderRadius: '20px', padding: '3px 10px', fontSize: '0.78rem', fontWeight: 700, whiteSpace: 'nowrap' }}>
                                     {s.count} RM
                                 </span>
                             </div>

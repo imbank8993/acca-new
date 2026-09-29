@@ -126,7 +126,7 @@ export default function KetidakhadiranTable({ rows, loading, hideKeterangan = fa
                     .kl__emptyIcon i { font-size: 2rem; color: var(--n-muted); }
                     .kl__emptyTitle { font-size: 0.95rem; font-weight: 700; color: var(--n-ink); margin: 0 0 4px; }
                     .kl__emptySub { font-size: 0.8rem; color: var(--n-muted); margin: 0; }
-                    :global(.dark) .kl__emptyIcon { background: #000000; border-color: rgba(26, 115, 232, 0.5); }
+                    :global(.dark) .kl__emptyIcon { background: #0b1329; border-color: rgba(26, 115, 232, 0.5); }
                     :global(.dark) .kl__emptyIcon i { color: #60a5fa; }
                     :global(.dark) .kl__emptyTitle { color: #ffffff; }
                 `}</style>

@@ -729,7 +729,7 @@ export default function GuruAsuhTabLaporan({ user }: { user?: any }) {
                             <div className="gal__fg">
                                 <label>Bukti Dokumen / Foto (Opsional)</label>
                                 {dokumenText ? (
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 14px', borderRadius: '12px', border: '1.5px solid var(--n-border)', background: 'var(--n-surface)' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 14px', borderRadius: '12px', border: '1px solid var(--n-border)', background: 'var(--n-surface)' }}>
                                         <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', color: 'var(--n-primary)', fontWeight: 600, fontSize: '0.85rem' }} onClick={() => setPreviewFileUrl(dokumenText)}>
                                             <i className="bi bi-file-earmark-check-fill" style={{ fontSize: '1.1rem' }}></i> Lihat Dokumen/Foto
                                         </div>
@@ -830,12 +830,12 @@ export default function GuruAsuhTabLaporan({ user }: { user?: any }) {
                 .gal__revisiBanner strong { display: block; font-size: 0.85rem; margin-bottom: 2px; }
                 .gal__revisiBanner p { margin: 0; font-size: 0.8rem; line-height: 1.5; }
                 :global(.dark) .gal__btn--ghost,
-                :global(.dark) .gal__btn--outline { background: #000000 !important; border: 1.8px solid rgba(26, 115, 232, 0.75) !important; color: #ffffff !important; border-radius: 12px !important; }
+                :global(.dark) .gal__btn--outline { background: #0b1329 !important; border: 1px solid rgba(26, 115, 232, 0.35) !important; color: #ffffff !important; border-radius: 12px !important; }
                 :global(.dark) .gal__btn--ghost:hover,
                 :global(.dark) .gal__btn--outline:hover { background: rgba(26, 115, 232, 0.12) !important; border-color: #60a5fa !important; color: #60a5fa !important; }
-                :global(.dark) .gal__statusBadge--revisi { background: rgba(239, 68, 68, 0.14) !important; color: #f87171 !important; border: 1.8px solid rgba(239, 68, 68, 0.45) !important; border-radius: 12px !important; }
-                :global(.dark) .gal__statusBadge--approved { background: rgba(59, 130, 246, 0.14) !important; color: #60a5fa !important; border: 1.8px solid rgba(26, 115, 232, 0.75) !important; border-radius: 12px !important; }
-                :global(.dark) .gal__statusBadge--pending { background: rgba(245, 158, 11, 0.14) !important; color: #fbbf24 !important; border: 1.8px solid rgba(245, 158, 11, 0.45) !important; border-radius: 12px !important; }
+                :global(.dark) .gal__statusBadge--revisi { background: rgba(239, 68, 68, 0.14) !important; color: #f87171 !important; border: 1px solid rgba(239, 68, 68, 0.35) !important; border-radius: 12px !important; }
+                :global(.dark) .gal__statusBadge--approved { background: rgba(59, 130, 246, 0.14) !important; color: #60a5fa !important; border: 1px solid rgba(26, 115, 232, 0.35) !important; border-radius: 12px !important; }
+                :global(.dark) .gal__statusBadge--pending { background: rgba(245, 158, 11, 0.14) !important; color: #fbbf24 !important; border: 1px solid rgba(245, 158, 11, 0.35) !important; border-radius: 12px !important; }
                 :global(.dark) .gal__revisiBanner { background: rgba(220,38,38,0.1); border-color: rgba(220,38,38,0.3); color: #fca5a5; }
 
                 @media (max-width: 800px) {
@@ -876,7 +876,7 @@ export default function GuruAsuhTabLaporan({ user }: { user?: any }) {
                 .gal__table td[rowspan] { vertical-align: top; padding-top: 16px; }
                 .gal__tdDate { white-space: nowrap; color: var(--n-muted); font-weight: 500; }
                 .gal__stuWrap { display: flex; align-items: center; gap: 10px; }
-                .gal__stuAvatar { width: 36px; height: 36px; border-radius: 10px; background: rgba(26, 115, 232, 0.08); border: 1.8px solid #1a73e8; display: flex; align-items: center; justify-content: center; color: #1a73e8; font-weight: 600; font-size: 0.9rem; flex-shrink: 0; }
+                .gal__stuAvatar { width: 36px; height: 36px; border-radius: 10px; background: rgba(26, 115, 232, 0.08); border: 1px solid #1a73e8; display: flex; align-items: center; justify-content: center; color: #1a73e8; font-weight: 600; font-size: 0.9rem; flex-shrink: 0; }
                 .gal__stuName { font-weight: 500; color: var(--n-ink); }
                 .gal__stuClass { font-size: 0.7rem; color: var(--n-muted); }
                 .gal__keg { font-weight: 500; color: var(--n-ink); margin-bottom: 2px; }
@@ -894,7 +894,7 @@ export default function GuruAsuhTabLaporan({ user }: { user?: any }) {
                 .gal__card { background: var(--n-card); border: 1px solid var(--n-border); border-radius: 16px; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; transition: box-shadow 0.2s; }
                 .gal__card:hover { box-shadow: 0 4px 14px rgba(0,0,0,0.07); transform: translateY(-1px); }
                 .gal__cardTop { display: flex; align-items: center; justify-content: space-between; border-bottom: 1px dashed var(--n-border); padding-bottom: 12px; margin-bottom: 4px; }
-                .gal__cardAvatar { width: 36px; height: 36px; border-radius: 10px; background: rgba(26, 115, 232, 0.08); border: 1.8px solid #1a73e8; display: flex; align-items: center; justify-content: center; color: #1a73e8; font-weight: 600; font-size: 0.9rem; flex-shrink: 0; }
+                .gal__cardAvatar { width: 36px; height: 36px; border-radius: 10px; background: rgba(26, 115, 232, 0.08); border: 1px solid #1a73e8; display: flex; align-items: center; justify-content: center; color: #1a73e8; font-weight: 600; font-size: 0.9rem; flex-shrink: 0; }
                 .gal__cardBody { flex: 1; }
                 .gal__cardName { font-size: 0.86rem; font-weight: 500; color: var(--n-ink); }
                 .gal__cardClass { font-size: 0.7rem; color: var(--n-muted); }
@@ -908,7 +908,7 @@ export default function GuruAsuhTabLaporan({ user }: { user?: any }) {
                 .gal__cardActions .gal__ibtn { width: 28px; height: 28px; }
 
                 /* Modal */
-                :global(.gal__cb) { appearance: none; -webkit-appearance: none; background: transparent; border: 1.5px solid var(--n-border); border-radius: 4px; width: 16px; height: 16px; margin-right: 12px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; position: relative; flex-shrink: 0; }
+                :global(.gal__cb) { appearance: none; -webkit-appearance: none; background: transparent; border: 1px solid var(--n-border); border-radius: 4px; width: 16px; height: 16px; margin-right: 12px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; position: relative; flex-shrink: 0; }
                 :global(.gal__cb:checked) { background: var(--n-primary); border-color: var(--n-primary); }
                 :global(.gal__cb:checked::after) { content: ''; position: absolute; width: 4px; height: 8px; border: solid white; border-width: 0 2px 2px 0; transform: rotate(45deg); margin-top: -2px; }
                 :global(:root) { --rs-hover: rgba(0,0,0,0.05); }
@@ -917,12 +917,12 @@ export default function GuruAsuhTabLaporan({ user }: { user?: any }) {
                 .gal__modalBd { display: flex; flex-direction: column; flex: 1; }
                 .gal__fg { margin-bottom: 14px; }
                 .gal__fg label { display: block; font-size: 0.7rem; font-weight: 700; color: var(--n-muted); margin-bottom: 6px; }
-                .gal__fi { width: 100%; height: 44px; padding: 10px 14px; border-radius: 12px; border: 1.5px solid var(--n-border); font-size: 0.88rem; background: var(--n-card); color: var(--n-ink); outline: none; transition: border-color 0.2s; }
+                .gal__fi { width: 100%; height: 44px; padding: 10px 14px; border-radius: 12px; border: 1px solid var(--n-border); font-size: 0.88rem; background: var(--n-card); color: var(--n-ink); outline: none; transition: border-color 0.2s; }
                 .gal__fi:focus { border-color: var(--n-primary); }
                 .gal__fi--ta { min-height: 90px; height: auto; resize: vertical; line-height: 1.5; }
                 .gal__fiRow { display: flex; gap: 8px; align-items: center; }
                 .gal__fi--flex { flex: 1; }
-                .gal__upbtn { width: 44px; height: 44px; border-radius: 12px; border: 1.5px solid var(--n-border); background: var(--n-surface); color: var(--n-muted); cursor: pointer; flex-shrink: 0; transition: all 0.2s; margin: 0; padding: 0; display: block; position: relative; }
+                .gal__upbtn { width: 44px; height: 44px; border-radius: 12px; border: 1px solid var(--n-border); background: var(--n-surface); color: var(--n-muted); cursor: pointer; flex-shrink: 0; transition: all 0.2s; margin: 0; padding: 0; display: block; position: relative; }
                 .gal__upbtnIcon { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; }
                 .gal__upbtn:hover { background: var(--n-border); color: var(--n-primary); }
                 :global(.gal__filePreview) { height: min(85vh, 800px); }
@@ -931,16 +931,16 @@ export default function GuruAsuhTabLaporan({ user }: { user?: any }) {
                 /* Dark */
                 :global(.dark) .gal__fi,
                 :global(.dark) .gal__upbtn,
-                :global(.dark .react-select__control) { background: #000000 !important; border: 1.8px solid rgba(26, 115, 232, 0.75) !important; color: #ffffff !important; }
+                :global(.dark .react-select__control) { background: #0b1329 !important; border: 1px solid rgba(26, 115, 232, 0.35) !important; color: #ffffff !important; }
                 :global(.dark) .gal__upbtn { color: #94a3b8; }
                 :global(.dark) .gal__upbtn:hover { border-color: #60a5fa !important; color: #60a5fa; }
-                :global(.dark) .gal__statCard { background: #000000 !important; border: 1.8px solid rgba(26, 115, 232, 0.75) !important; border-radius: 16px !important; }
+                :global(.dark) .gal__statCard { background: #0b1329 !important; border: 1px solid rgba(26, 115, 232, 0.35) !important; border-radius: 16px !important; }
                 :global(.dark) .gal__statNum { color: #60a5fa !important; }
                 :global(.dark) .gal__statFiltered .gal__statNum { color: #34d399 !important; }
                 :global(.dark) .gal__statLbl { color: #94a3b8 !important; }
                 :global(.dark) .gal__select-group {
-                    background-color: #000000 !important;
-                    border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
+                    background-color: #0b1329 !important;
+                    border: 1px solid rgba(26, 115, 232, 0.35) !important;
                     border-radius: 12px !important;
                     color: #ffffff !important;
                 }
@@ -963,27 +963,27 @@ export default function GuruAsuhTabLaporan({ user }: { user?: any }) {
                     cursor: pointer !important;
                 }
                 :global(.dark) .gal__select-group select option {
-                    background-color: #000000 !important;
+                    background-color: #0b1329 !important;
                     color: #ffffff !important;
                 }
-                :global(.dark .react-select__menu) { background: #000000 !important; border: 1.5px solid rgba(26, 115, 232, 0.75) !important; }
-                :global(.dark .react-select__option) { background: #000000 !important; color: #ffffff !important; cursor: pointer; }
+                :global(.dark .react-select__menu) { background: #0b1329 !important; border: 1px solid rgba(26, 115, 232, 0.35) !important; }
+                :global(.dark .react-select__option) { background: #0b1329 !important; color: #ffffff !important; cursor: pointer; }
                 :global(.dark .react-select__option--is-focused) { background: rgba(96, 165, 250, 0.15) !important; }
                 :global(.dark .react-select__option--is-selected) { background: #1d6bf3 !important; color: #fff !important; }
                 :global(.dark .react-select__single-value) { color: #ffffff !important; }
                 :global(.dark .react-select__multi-value) { background: rgba(96, 165, 250, 0.2) !important; border-radius: 6px; }
                 :global(.dark .react-select__multi-value__label) { color: #60a5fa !important; }
                 :global(.dark .react-select__input-container) { color: #ffffff !important; }
-                :global(.dark) .gal__tableWrap { background: #000000 !important; border: 1px solid rgba(37, 99, 235, 0.4) !important; border-radius: 16px !important; }
-                :global(.dark) .gal__table { background: #000000 !important; }
-                :global(.dark) .gal__table th { background: linear-gradient(135deg, rgba(26, 115, 232, 0.15), rgba(0, 40, 122, 0.25)) !important; border-bottom: 1.5px solid rgba(26, 115, 232, 0.4) !important; color: #94a3b8 !important; }
+                :global(.dark) .gal__tableWrap { background: #0b1329 !important; border: 1px solid rgba(37, 99, 235, 0.35) !important; border-radius: 16px !important; }
+                :global(.dark) .gal__table { background: #0b1329 !important; }
+                :global(.dark) .gal__table th { background: linear-gradient(135deg, rgba(26, 115, 232, 0.15), rgba(0, 40, 122, 0.25)) !important; border-bottom: 1px solid rgba(26, 115, 232, 0.35) !important; color: #94a3b8 !important; }
                 :global(.dark) .gal__table td { border-bottom-color: rgba(26, 115, 232, 0.2) !important; color: #ffffff !important; }
                 :global(.dark) .gal__table tr:hover td { background: rgba(26, 115, 232, 0.08) !important; }
-                :global(.dark) .gal__stuAvatar, :global(.dark) .gal__cardAvatar { background: rgba(26, 115, 232, 0.15) !important; border: 1.8px solid rgba(26, 115, 232, 0.75) !important; color: #60a5fa !important; }
+                :global(.dark) .gal__stuAvatar, :global(.dark) .gal__cardAvatar { background: rgba(26, 115, 232, 0.15) !important; border: 1px solid rgba(26, 115, 232, 0.35) !important; color: #60a5fa !important; }
                 :global(.dark) .gal__stuName { color: #ffffff !important; }
                 :global(.dark) .gal__keg { color: #ffffff !important; }
-                :global(.dark) .gal__ibtn { background: #000000 !important; border: 1px solid rgba(26, 115, 232, 0.4) !important; color: #60a5fa !important; }
-                :global(.dark) .gal__card { background: #000000 !important; border: 1px solid rgba(37, 99, 235, 0.4) !important; border-radius: 16px !important; }
+                :global(.dark) .gal__ibtn { background: #0b1329 !important; border: 1px solid rgba(26, 115, 232, 0.35) !important; color: #60a5fa !important; }
+                :global(.dark) .gal__card { background: #0b1329 !important; border: 1px solid rgba(37, 99, 235, 0.35) !important; border-radius: 16px !important; }
                 :global(.dark) .gal__cardName { color: #ffffff !important; }
                 :global(.dark) .gal__cardTxt { color: #ffffff !important; }
 
@@ -992,8 +992,8 @@ export default function GuruAsuhTabLaporan({ user }: { user?: any }) {
                 :global(.dark) .gal__btn--outline,
                 :global(.dark) .gal__btn--primary,
                 :global(.dark) .gal__btnEmpty {
-                    background: #000000 !important;
-                    border: 1.5px solid rgba(26, 115, 232, 0.75) !important;
+                    background: #0b1329 !important;
+                    border: 1px solid rgba(26, 115, 232, 0.35) !important;
                     border-radius: 12px !important;
                     color: #60a5fa !important;
                     font-weight: 600 !important;

@@ -1,15 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import puppeteer from 'puppeteer';
 import { extractRequestToken } from '@/lib/app-jwt';
 import { buildLaporanReport } from '@/lib/guru-asuh/laporan-report';
+import { launchPuppeteerBrowser } from '@/lib/puppeteer-launcher';
 
 export const dynamic = 'force-dynamic';
 
 async function convertHtmlToPdf(html: string): Promise<Buffer> {
-    const browser = await puppeteer.launch({
-        headless: true,
-        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
-    });
+    const browser = await launchPuppeteerBrowser();
     try {
         const page = await browser.newPage();
         await page.setContent(html, { waitUntil: 'networkidle0' as any });

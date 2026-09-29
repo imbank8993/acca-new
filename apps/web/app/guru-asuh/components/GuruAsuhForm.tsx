@@ -254,7 +254,7 @@ export default function GuruAsuhForm({ user, editData, onClose, onSuccess, onErr
         control: (base: any, state: any) => ({
             ...base,
             borderRadius: '14px',
-            border: state.isFocused ? '1.5px solid var(--n-primary)' : '1px solid var(--n-border)',
+            border: state.isFocused ? '1px solid var(--n-primary)' : '1px solid var(--n-border)',
             boxShadow: state.isFocused ? '0 0 0 3px rgba(59,130,246,0.1)' : 'none',
             '&:hover': { borderColor: 'var(--n-primary-light)' },
             padding: '2px 6px',
@@ -381,7 +381,7 @@ export default function GuruAsuhForm({ user, editData, onClose, onSuccess, onErr
                 .gaf__filterRow { display: flex; gap: 8px; }
                 .gaf__kelasSelect {
                     flex: 1; padding: 9px 12px;
-                    border-radius: 12px; border: 1.5px solid var(--n-border);
+                    border-radius: 12px; border: 1px solid var(--n-border);
                     background: var(--n-surface); color: var(--n-ink);
                     font-size: 0.85rem; font-weight: 600; cursor: pointer; outline: none;
                     transition: border-color 0.15s;
@@ -397,14 +397,14 @@ export default function GuruAsuhForm({ user, editData, onClose, onSuccess, onErr
                 .gaf__previewValue { font-size: 0.82rem; font-weight: 600; color: #166534; }
                 .gaf__actions { display: flex; gap: 10px; justify-content: flex-end; padding-top: 4px; }
                 .gaf__btnCancel {
-                    padding: 10px 20px; border-radius: 12px; border: 1.5px solid var(--n-border);
+                    padding: 10px 20px; border-radius: 12px; border: 1px solid var(--n-border);
                     background: transparent; color: var(--n-muted); font-size: 0.85rem; font-weight: 700;
                     cursor: pointer; transition: all 0.15s;
                 }
                 .gaf__btnCancel:hover { border-color: var(--n-primary); color: var(--n-primary); }
                 .gaf__btnSave {
                     display: flex; align-items: center; gap: 7px;
-                    padding: 10px 22px; border-radius: 12px; border: 1.8px solid #1a73e8;
+                    padding: 10px 22px; border-radius: 12px; border: 1px solid #1a73e8;
                     background: linear-gradient(135deg, #3083FF, #3083FF);
                     color: white; font-size: 0.85rem; font-weight: 700;
                     cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 12px rgba(96,165,250,0.3);
@@ -421,24 +421,24 @@ export default function GuruAsuhForm({ user, editData, onClose, onSuccess, onErr
                 :global(.dark) .gaf__closeBtn:hover { background: rgba(26, 115, 232, 0.3) !important; color: #ffffff !important; }
                 :global(.dark) .gaf__infoBar { background: rgba(26, 115, 232, 0.1) !important; border-color: rgba(26, 115, 232, 0.3) !important; }
                 :global(.dark) .gaf__infoItem { color: #60a5fa !important; }
-                :global(.dark) .gaf__btnSave { border: 1.8px solid rgba(26, 115, 232, 0.75) !important; }
+                :global(.dark) .gaf__btnSave { border: 1px solid rgba(26, 115, 232, 0.35) !important; }
                 :global(.dark) .gaf__preview { background: rgba(52,211,153,0.1) !important; border-color: rgba(52,211,153,0.3) !important; }
                 :global(.dark) .gaf__previewLabel { color: #34d399 !important; }
                 :global(.dark) .gaf__previewValue { color: #6ee7b7 !important; }
                 :global(.dark) .gaf__kelasSelect {
-                    background-color: #000000 !important;
+                    background-color: #0b1329 !important;
                     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%2360a5fa' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E") !important;
                     background-repeat: no-repeat !important;
                     background-position: right 10px center !important;
                     padding-right: 28px !important;
-                    border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
+                    border: 1px solid rgba(26, 115, 232, 0.35) !important;
                     border-radius: 12px !important;
                     color: #ffffff !important;
                     appearance: none !important;
                     -webkit-appearance: none !important;
                     -moz-appearance: none !important;
                 }
-                :global(.dark) .gaf__searchInput { background: #000000 !important; border: 1.8px solid rgba(26, 115, 232, 0.75) !important; color: #ffffff !important; }
+                :global(.dark) .gaf__searchInput { background: #0b1329 !important; border: 1px solid rgba(26, 115, 232, 0.35) !important; color: #ffffff !important; }
                 @media (max-width: 640px) {
                     .gaf__actions { flex-direction: column; }
                     .gaf__btnCancel, .gaf__btnSave { width: 100%; justify-content: center; }
