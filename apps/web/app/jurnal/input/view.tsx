@@ -398,7 +398,23 @@ export default function JurnalInputPage() {
                             w.hari === dayName &&
                             (w.program || 'Reguler') === (classProgram || 'Reguler')
                     );
-                    const timeStr = timeSlot ? `${timeSlot.mulai?.slice(0, 5)} - ${timeSlot.selesai?.slice(0, 5)}` : 'Waktu?';
+                    const formatTime = (t: any) => {
+                        if (!t) return '';
+                        if (t instanceof Date) {
+                            const hh = String(t.getUTCHours()).padStart(2, '0');
+                            const mm = String(t.getUTCMinutes()).padStart(2, '0');
+                            return `${hh}:${mm}`;
+                        }
+                        const str = String(t).trim();
+                        const isoMatch = str.match(/T(\d{2}):(\d{2})/);
+                        if (isoMatch) return `${isoMatch[1]}:${isoMatch[2]}`;
+                        const timeMatch = str.match(/^(\d{2}):(\d{2})/);
+                        if (timeMatch) return `${timeMatch[1]}:${timeMatch[2]}`;
+                        return str.substring(0, 5);
+                    };
+                    const mulaiStr = timeSlot ? formatTime(timeSlot.mulai) : '';
+                    const selesaiStr = timeSlot ? formatTime(timeSlot.selesai) : '';
+                    const timeStr = mulaiStr && selesaiStr ? `${mulaiStr} - ${selesaiStr}` : (mulaiStr || selesaiStr || '');
                     return { value: jamNum.toString(), label: `Jam Ke-${jamNum}`, id: jamNum, timeStr: timeStr };
                 });
             }
@@ -793,7 +809,7 @@ export default function JurnalInputPage() {
                                         <option value="">{jamOptions.length === 0 ? "-- Tidak ada jam tersedia --" : "-- Pilih Jam --"}</option>
                                         {jamOptions.map((opt: any) => (
                                             <option key={opt.value} value={opt.value}>
-                                                {opt.isAll ? opt.label : `${opt.label} (${opt.timeStr})`}
+                                                {opt.isAll ? opt.label : (opt.timeStr ? `${opt.label} (${opt.timeStr})` : opt.label)}
                                             </option>
                                         ))}
                                     </InlineSelect>
