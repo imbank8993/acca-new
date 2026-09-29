@@ -55,6 +55,46 @@ function kutipIdentifier(nama: string): string {
   return `"${bersih}"`;
 }
 
+/**
+ * Kolom PostgreSQL bertipe khusus (date, time) yang membutuhkan casting eksplisit
+ * saat nilainya dikirimkan sebagai teks/string melalui parameter Prisma $queryRawUnsafe.
+ *
+ * PostgreSQL melempar galat 42804 bila parameter string dimasukkan langsung ke kolom date/time:
+ * "ERROR: column "tanggal" is of type date but expression is of type text"
+ */
+function getColumnCast(table: string, column: string): string {
+  const c = column.toLowerCase();
+  const t = table.toLowerCase();
+
+  if (
+    c === 'tanggal' ||
+    c === 'tanggal_lahir' ||
+    c === 'tanggal_surat' ||
+    c === 'tanggal_ttd' ||
+    (t === 'perizinan' && (c === 'tanggal_mulai' || c === 'tanggal_selesai')) ||
+    (t === 'klinik_slots' && c === 'tanggal') ||
+    (t === 'catatan_siswa' && c === 'tanggal') ||
+    c === 'tgl_mulai' ||
+    c === 'tgl_selesai' ||
+    c === 'tgl_awal' ||
+    c === 'tgl_akhir' ||
+    c === 'tmt_tugas' ||
+    c === 'berlaku_mulai'
+  ) {
+    return '::date';
+  }
+
+  if (
+    c === 'jam_mulai' ||
+    c === 'jam_selesai' ||
+    (t === 'catatan_pelanggaran' && c === 'waktu')
+  ) {
+    return '::time';
+  }
+
+  return '';
+}
+
 export class PostgresQueryBuilder {
   private table: string;
   private prisma: PrismaService;
@@ -106,7 +146,8 @@ export class PostgresQueryBuilder {
       this.conditions.push(`${kutipIdentifier(column)} IS NULL`);
     } else {
       this.params.push(value);
-      this.conditions.push(`${kutipIdentifier(column)} = $${this.params.length}`);
+      const cast = getColumnCast(this.table, column);
+      this.conditions.push(`${kutipIdentifier(column)} = $${this.params.length}${cast}`);
     }
     return this;
   }
@@ -116,32 +157,37 @@ export class PostgresQueryBuilder {
       this.conditions.push(`${kutipIdentifier(column)} IS NOT NULL`);
     } else {
       this.params.push(value);
-      this.conditions.push(`${kutipIdentifier(column)} != $${this.params.length}`);
+      const cast = getColumnCast(this.table, column);
+      this.conditions.push(`${kutipIdentifier(column)} != $${this.params.length}${cast}`);
     }
     return this;
   }
 
   gt(column: string, value: any) {
     this.params.push(value);
-    this.conditions.push(`${kutipIdentifier(column)} > $${this.params.length}`);
+    const cast = getColumnCast(this.table, column);
+    this.conditions.push(`${kutipIdentifier(column)} > $${this.params.length}${cast}`);
     return this;
   }
 
   gte(column: string, value: any) {
     this.params.push(value);
-    this.conditions.push(`${kutipIdentifier(column)} >= $${this.params.length}`);
+    const cast = getColumnCast(this.table, column);
+    this.conditions.push(`${kutipIdentifier(column)} >= $${this.params.length}${cast}`);
     return this;
   }
 
   lt(column: string, value: any) {
     this.params.push(value);
-    this.conditions.push(`${kutipIdentifier(column)} < $${this.params.length}`);
+    const cast = getColumnCast(this.table, column);
+    this.conditions.push(`${kutipIdentifier(column)} < $${this.params.length}${cast}`);
     return this;
   }
 
   lte(column: string, value: any) {
     this.params.push(value);
-    this.conditions.push(`${kutipIdentifier(column)} <= $${this.params.length}`);
+    const cast = getColumnCast(this.table, column);
+    this.conditions.push(`${kutipIdentifier(column)} <= $${this.params.length}${cast}`);
     return this;
   }
 
@@ -151,9 +197,10 @@ export class PostgresQueryBuilder {
       this.conditions.push('1 = 0');
       return this;
     }
+    const cast = getColumnCast(this.table, column);
     const placeholders = arr.map((v) => {
       this.params.push(v);
-      return `$${this.params.length}`;
+      return `$${this.params.length}${cast}`;
     });
     this.conditions.push(`${kutipIdentifier(column)} IN (${placeholders.join(', ')})`);
     return this;
@@ -189,6 +236,7 @@ export class PostgresQueryBuilder {
       const match = part.match(/^([a-zA-Z0-9_]+)\.([a-z]+)\.(.*)$/);
       if (match) {
         const [, col, op, val] = match;
+        const cast = getColumnCast(this.table, col);
         // Operator yang tidak dikenal DILEWATI dengan sengaja di bawah, tapi
         // kalau SEMUA bagian terlewat, `or()` tidak menambahkan kondisi apa pun
         // dan filternya hilang diam-diam — query berubah jadi "ambil semua".
@@ -196,10 +244,10 @@ export class PostgresQueryBuilder {
         // siswa di klinik mengembalikan seluruh baris alih-alih yang cocok.
         if (op === 'eq') {
           this.params.push(val);
-          orSub.push(`${kutipIdentifier(col)} = $${this.params.length}`);
+          orSub.push(`${kutipIdentifier(col)} = $${this.params.length}${cast}`);
         } else if (op === 'neq') {
           this.params.push(val);
-          orSub.push(`${kutipIdentifier(col)} != $${this.params.length}`);
+          orSub.push(`${kutipIdentifier(col)} != $${this.params.length}${cast}`);
         } else if (op === 'ilike') {
           this.params.push(val);
           orSub.push(`${kutipIdentifier(col)} ILIKE $${this.params.length}`);
@@ -372,7 +420,8 @@ export class PostgresQueryBuilder {
           const placeholders = keys
             .map((k, idx) => {
               rowParams.push(row[k]);
-              return `$${idx + 1}`;
+              const cast = getColumnCast(this.table, k);
+              return `$${idx + 1}${cast}`;
             })
             .join(', ');
 
@@ -396,7 +445,8 @@ export class PostgresQueryBuilder {
         const updateParams: any[] = [];
         for (const k of keys) {
           updateParams.push(this.updateData[k]);
-          setClauses.push(`${kutipIdentifier(k)} = $${updateParams.length}`);
+          const cast = getColumnCast(this.table, k);
+          setClauses.push(`${kutipIdentifier(k)} = $${updateParams.length}${cast}`);
         }
 
         let sql = `UPDATE public.${kutipIdentifier(this.table)} SET ${setClauses.join(', ')}`;
