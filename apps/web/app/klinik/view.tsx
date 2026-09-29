@@ -1309,6 +1309,7 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
         if (s.status !== 'open' && s.status !== 'full') return false;
       } else if (tabAktif === 'my_sessions') {
         if (!isSameId(s.guru_id, user?.id)) return false;
+        if (s.status === 'cancelled') return false;
       } else if (tabAktif === 'kelompok') {
         if (!(s.initiator_type === 'SISWA' && STATUS_PENGAJUAN.includes(s.status))) return false;
       } else if (tabAktif === 'approval') {
