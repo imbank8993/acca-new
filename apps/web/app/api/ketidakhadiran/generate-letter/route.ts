@@ -9,8 +9,9 @@ import {
   formatDateId,
   buildSingleHtml,
   buildCollectiveHtml,
-  buildRekapanHtml,
 } from '@/app/ketidakhadiran/utils/letter-html';
+import { buildRekapPrintHtml } from '@/lib/print/rekam-medis-letter';
+import { getRekapLetterData } from '@/app/ketidakhadiran/utils/rekap-letter-data';
 
 async function resolvePejabat(pejabatId?: string, defaultJabatan?: string) {
   let nama = 'Imran, S.Si.';
@@ -212,26 +213,33 @@ export async function POST(request: NextRequest) {
       const yearNum = parseInt(String(year), 10) || currentYear;
       const monthNames = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
       const monthName = monthNames[monthNum - 1] || 'Bulan';
+      const jenisRekap = letterType === 'REKAPAN_IZIN' ? 'IZIN' : 'SAKIT';
+      const { rekamRows, penandatangan } = await getRekapLetterData(
+        jenisRekap,
+        monthNum,
+        yearNum,
+        petugasNama || pejabat.nama,
+      );
+      if (!qrCodeUrl) throw new Error('QR Code verifikasi rekap gagal dibuat.');
+      pejabat.nama = penandatangan.join(', ') || '-';
+      pejabat.jabatan = jenisRekap === 'SAKIT' ? 'Petugas UKS' : 'Petugas Izin';
       tglMulai = `${yearNum}-${String(monthNum).padStart(2, '0')}-01`;
-      tglSelesai = `${yearNum}-${String(monthNum).padStart(2, '0')}-28`;
+      tglSelesai = `${yearNum}-${String(monthNum).padStart(2, '0')}-${String(new Date(yearNum, monthNum, 0).getDate()).padStart(2, '0')}`;
       studentNama = `Rekapitulasi ${letterType === 'REKAPAN_IZIN' ? 'Izin' : 'Sakit'}`;
       studentNisn = 'REKAP';
       studentKelas = '-';
       keterangan = `Rekap ${String(monthNum).padStart(2, '0')}/${yearNum} (${monthName} ${yearNum})`;
 
-      letterHtml = buildRekapanHtml({
+      letterHtml = buildRekapPrintHtml({
+        jenis: jenisRekap,
         nomorSurat,
-        barcode,
-        letterType,
         monthName,
         year: yearNum,
-        pejabatNama: pejabat.nama,
-        pejabatJabatan: pejabat.jabatan,
-        pejabatNip: pejabat.nip,
-        scanUrl,
+        penandatangan,
+        rekamRows,
         qrCodeUrl,
         backgroundUrl,
-        autoPrint: true,
+        appBase: origin,
       });
     } else if (isCollective) {
       const firstRow = rows[0] || {};
@@ -280,6 +288,7 @@ export async function POST(request: NextRequest) {
         scanUrl,
         qrCodeUrl,
         letterType: letterType || 'MENINGGALKAN_ASRAMA',
+        status: row?.status,
         backgroundUrl,
         autoPrint: true,
       });

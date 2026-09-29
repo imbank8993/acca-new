@@ -189,6 +189,7 @@
 .status-tag.full { background: #fee2e2; color: #dc2626; }
 .status-tag.paid { background: #dbeafe; color: #1e40af; }
 .status-tag.cancelled { background: var(--n-soft); color: var(--n-muted); }
+.status-tag.rejected { background: #fee2e2; color: #b91c1c; }
 
 .status-stack {
     display: inline-flex;
@@ -215,6 +216,7 @@
 .status-pill.finished { background: #dbeafe; color: #3083FF; }
 .status-pill.paid { background: #dbeafe; color: #1e40af; }
 .status-pill.cancelled { background: var(--n-soft); color: var(--n-muted); }
+.status-pill.rejected { background: #fee2e2; color: #b91c1c; }
 
 /* Tahap pertama pengajuan kelompok siswa: menunggu kesediaan guru pengampu. */
 .status-pill.pending_guru,
@@ -651,6 +653,8 @@
 .dark .status-tag.kurang { background: rgba(217, 119, 6, 0.2) !important; color: #fbbf24 !important; border: 1.5px solid rgba(217, 119, 6, 0.45) !important; }
 .dark .status-pill.batal,
 .dark .status-tag.batal { background: rgba(220, 38, 38, 0.2) !important; color: #f87171 !important; border: 1.5px solid rgba(220, 38, 38, 0.45) !important; }
+.dark .status-pill.rejected,
+.dark .status-tag.rejected { background: rgba(220, 38, 38, 0.2) !important; color: #f87171 !important; border: 1.5px solid rgba(220, 38, 38, 0.45) !important; }
 .dark .act-note--batal { color: #f87171; }
 
 .dark .laporan-badge.submitted { background: rgba(37, 99, 235, 0.2) !important; color: #60a5fa !important; border: 1.5px solid rgba(59, 130, 246, 0.4) !important; }

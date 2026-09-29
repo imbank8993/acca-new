@@ -44,6 +44,7 @@ export interface BuildRekapHtmlParams {
    */
   penandatangan: string[];
   rekamRows: RekamMedisPrintRow[];
+  qrCodeUrl: string;
   /**
    * Background halaman — wajib ada. Diambil pemanggil dari template yang diunggah
    * admin (Rekap Izin ikut "Izin Keasramaan", Rekap Sakit ikut "Surat Rekomendasi");
@@ -256,6 +257,7 @@ export function buildRekapPrintHtml(params: BuildRekapHtmlParams): string {
     year,
     penandatangan,
     rekamRows,
+    qrCodeUrl,
     backgroundUrl,
     appBase,
   } = params;
@@ -301,9 +303,6 @@ export function buildRekapPrintHtml(params: BuildRekapHtmlParams): string {
 
       const isLast = pageIndex === pages.length - 1;
       const today = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
-      const qrData = encodeURIComponent(`REKAP ${jenis}\nPeriode: ${periodLabel}\nJumlah: ${rekamRows.length} siswa\n${signerLabel}: ${signers.join(', ') || '-'}\nDicetak: ${today}`);
-      const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=80x80&data=${qrData}&format=png`;
-
       // Blok tanda tangan: tempat & tanggal, QR tunggal, lalu label jabatan.
       // Nama petugas tidak diulang di sini — sudah terdaftar di atas tabel.
       const signArea = isLast
@@ -311,7 +310,7 @@ export function buildRekapPrintHtml(params: BuildRekapHtmlParams): string {
             <div class="sign-right">
               <div class="sign-date">Gowa, ${escapeHtml(today)}</div>
               <div class="sign-qr-box">
-                <img class="sign-qr-img" src="${qrUrl}" alt="QR Code" />
+                <img class="sign-qr-img" src="${escapeHtml(qrCodeUrl)}" alt="QR Code" />
                 <div class="sign-qr-caption">Pindai untuk verifikasi</div>
               </div>
               <div class="sign-label">${signerLabel}</div>

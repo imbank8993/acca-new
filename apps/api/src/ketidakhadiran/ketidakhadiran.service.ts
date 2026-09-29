@@ -20,7 +20,11 @@ const ASRAMA_STATUS = ['Sedang', 'Berat', 'Kontrol'];
 function toDateString(d: Date | string | null): string | null {
   if (!d) return null;
   if (typeof d === 'string') return d.split('T')[0];
-  return d.toISOString().split('T')[0];
+  if (d instanceof Date) {
+    if (isNaN(d.getTime())) return null;
+    return d.toISOString().split('T')[0];
+  }
+  return null;
 }
 
 function toTimeString(d: Date | string | null): string | null {
@@ -29,7 +33,24 @@ function toTimeString(d: Date | string | null): string | null {
     if (d.includes('T')) return d.split('T')[1].slice(0, 5);
     return d.slice(0, 5);
   }
-  return d.toTimeString().slice(0, 5);
+  if (d instanceof Date) {
+    if (isNaN(d.getTime())) return null;
+    return d.toISOString().split('T')[1].slice(0, 5);
+  }
+  return null;
+}
+
+function parseTimeToDate(t: string | Date | null | undefined): Date | null {
+  if (!t) return null;
+  if (t instanceof Date) {
+    if (isNaN(t.getTime())) return null;
+    return t;
+  }
+  const str = String(t).trim();
+  const timeOnly = str.includes('T') ? str.split('T')[1].slice(0, 8) : str.slice(0, 8);
+  const formatted = timeOnly.length === 5 ? `${timeOnly}:00` : timeOnly;
+  const d = new Date(`1970-01-01T${formatted}Z`);
+  return isNaN(d.getTime()) ? null : d;
 }
 
 function calcHariKalender(tglMulai: string | Date, tglSelesai: string | Date | null): number {
@@ -403,16 +424,8 @@ export class KetidakhadiranService {
             continue;
           }
 
-          let wMulai = null;
-          if (r.waktu_mulai_real) {
-            const t = String(r.waktu_mulai_real).slice(0, 8);
-            wMulai = new Date(`1970-01-01T${t.length === 5 ? t + ':00' : t}Z`);
-          }
-          let wSelesai = null;
-          if (r.waktu_selesai_real) {
-            const t = String(r.waktu_selesai_real).slice(0, 8);
-            wSelesai = new Date(`1970-01-01T${t.length === 5 ? t + ':00' : t}Z`);
-          }
+          const wMulai = parseTimeToDate(r.waktu_mulai_real);
+          const wSelesai = parseTimeToDate(r.waktu_selesai_real);
 
           const entry = await this.prisma.ketidakhadiran.create({
             data: {

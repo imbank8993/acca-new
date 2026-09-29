@@ -4,8 +4,9 @@ import QRCode from 'qrcode';
 import {
   buildSingleHtml,
   buildCollectiveHtml,
-  buildRekapanHtml,
 } from '@/app/ketidakhadiran/utils/letter-html';
+import { buildRekapPrintHtml } from '@/lib/print/rekam-medis-letter';
+import { getRekapLetterData } from '@/app/ketidakhadiran/utils/rekap-letter-data';
 
 export const dynamic = 'force-dynamic';
 
@@ -82,19 +83,25 @@ export async function GET(request: NextRequest) {
       const monthNames = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
       const monthName = monthNames[monthNum - 1] || 'Bulan';
 
-      html = buildRekapanHtml({
+      const jenis = letter.jenis_izin === 'REKAPAN_IZIN' ? 'IZIN' : 'SAKIT';
+      const { rekamRows, penandatangan } = await getRekapLetterData(
+        jenis,
+        monthNum,
+        yearNum,
+        letter.penjabat_nama || '',
+      );
+      if (!qrCodeUrl) throw new Error('QR Code verifikasi rekap gagal dibuat.');
+
+      html = buildRekapPrintHtml({
+        jenis,
         nomorSurat: letter.nomor_surat,
-        barcode: letter.barcode,
-        letterType: letter.jenis_izin,
         monthName,
         year: yearNum,
-        pejabatNama: letter.penjabat_nama || 'Imran, S.Si.',
-        pejabatJabatan: letter.penjabat_jabatan || 'Guru',
-        pejabatNip: '-',
-        scanUrl,
+        penandatangan,
+        rekamRows,
         qrCodeUrl,
         backgroundUrl,
-        autoPrint,
+        appBase: origin,
       });
     } else if (isCollective) {
       // Ambil data siswa kolektif dari ketidakhadiran / siswa_kelas jika memungkinkan
@@ -110,7 +117,7 @@ export async function GET(request: NextRequest) {
                     tgl_mulai: new Date(letter.tgl_mulai),
                     aktif: true,
                   },
-                  select: { nama: true, nisn: true, kelas: true },
+                  select: { nama: true, nisn: true, kelas: true, keterangan: true },
                 })
               : Promise.resolve([]),
             prisma.siswa_kelas.findMany({
@@ -136,7 +143,7 @@ export async function GET(request: NextRequest) {
             keterangan: letter.keterangan,
             aktif: true,
           },
-          select: { nama: true, nisn: true, kelas: true },
+          select: { nama: true, nisn: true, kelas: true, keterangan: true },
         });
         if (related.length > 0) rows = related;
       }
@@ -165,6 +172,12 @@ export async function GET(request: NextRequest) {
         autoPrint,
       });
     } else {
+      const linkedAbsence = letter.ketidakhadiran_id
+        ? await prisma.ketidakhadiran.findUnique({
+            where: { id: letter.ketidakhadiran_id },
+            select: { status: true },
+          })
+        : null;
       html = buildSingleHtml({
         nomorSurat: letter.nomor_surat,
         barcode: letter.barcode,
@@ -180,6 +193,7 @@ export async function GET(request: NextRequest) {
         scanUrl,
         qrCodeUrl,
         letterType: letter.jenis_izin,
+        status: linkedAbsence?.status || undefined,
         backgroundUrl,
         autoPrint,
       });

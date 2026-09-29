@@ -108,6 +108,9 @@ const LABEL_STATUS: Record<string, string> = {
 
 const labelStatus = (status: string) => LABEL_STATUS[status] || status;
 
+const pengajuanDitolak = (slot: KlinikSlot) =>
+  slot.status === 'cancelled' && Boolean(slot.catatan_penolakan?.trim());
+
 /** Kode kehadiran → label manusiawi. Sinkron dgn KEHADIRAN_VALID di API. */
 const LABEL_KEHADIRAN: Record<string, string> = {
   H: 'Hadir', S: 'Sakit', I: 'Izin', A: 'Alpa',
@@ -1313,7 +1316,7 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
       } else if (tabAktif === 'kelompok') {
         if (!(s.initiator_type === 'SISWA' && STATUS_PENGAJUAN.includes(s.status))) return false;
       } else if (tabAktif === 'approval') {
-        if (s.status !== 'pending') return false;
+        if (s.status !== 'pending' && !pengajuanDitolak(s)) return false;
       }
       // Tab 'kelola' sengaja tanpa saringan status: di situlah pengelola melihat
       // seluruh sesi, termasuk yang sudah selesai maupun dibatalkan.
@@ -1392,6 +1395,7 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
    * Tab lain tetap memakai tabel/kartu seperti biasa.
    */
   const sesiKosongDiApproval = tabAktif === 'approval' && displayedSlots.length === 0;
+  const jumlahMenungguSesiApproval = displayedSlots.filter((slot) => slot.status === 'pending').length;
 
   const tabs: TabItem<'available' | 'my_sessions' | 'kelompok' | 'approval' | 'kelola' | 'rekap'>[] = [
     { key: 'available', label: 'Klinik Tersedia', icon: 'bi-grid-fill' },
@@ -1575,8 +1579,8 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
                 nada="sesi"
                 ikon="bi-shield-check"
                 judul="Pengajuan Sesi"
-                deskripsi="Jadwal menunggu persetujuan"
-                jumlah={displayedSlots.length}
+                deskripsi="Jadwal menunggu persetujuan dan pengajuan yang ditolak"
+                jumlah={jumlahMenungguSesiApproval}
               />
             )}
 
@@ -1614,13 +1618,14 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
                     </tr>
                   ) : (
                     displayedSlots.map((slot) => {
+                      const isRejected = pengajuanDitolak(slot);
                       const isCreator = isSameId(slot.guru_id, user?.id) || (slot.initiator_type === 'SISWA' && isSameId(slot.initiator_siswa_id, user?.id));
                       const sesiAdmin = slot.initiator_type === 'ADMIN';
                       // Sesi bentukan admin lahir langsung 'open'; kalau syarat editnya
                       // tetap "masih pengajuan", sesi itu tak akan pernah bisa disunting.
-                      const canEdit = (STATUS_PENGAJUAN.includes(slot.status) && (bisaKelolaSesi || isCreator))
-                        || (bisaKelolaSesi && STATUS_BERJALAN.includes(slot.status));
-                      const canDelete = bisaKelolaSesi || (STATUS_PENGAJUAN.includes(slot.status) && isCreator);
+                      const canEdit = !isRejected && ((STATUS_PENGAJUAN.includes(slot.status) && (bisaKelolaSesi || isCreator))
+                        || (bisaKelolaSesi && STATUS_BERJALAN.includes(slot.status)));
+                      const canDelete = !isRejected && (bisaKelolaSesi || (STATUS_PENGAJUAN.includes(slot.status) && isCreator));
                       const canAbsensi = bisaKelolaAbsensi(slot) && STATUS_BERJALAN.includes(slot.status);
                       const canViewLaporan = bisaLihatLaporan(slot);
                       const perluRevisi = getLaporan(slot)?.status === 'Revisi';
@@ -1687,7 +1692,9 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
                             </td>
                             <td>
                               <div className="status-stack">
-                                <span className={`status-pill ${slot.status}`}>{labelStatus(slot.status)}</span>
+                                <span className={`status-pill ${isRejected ? 'rejected' : slot.status}`}>
+                                  {isRejected ? 'Ditolak' : labelStatus(slot.status)}
+                                </span>
                                 {getLaporan(slot)?.status && (
                                   <span className={`laporan-badge ${getLaporan(slot).status.toLowerCase()}`}>
                                     {getLaporan(slot).status}
@@ -1706,7 +1713,7 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
                             </td>
                             <td className="text-right">
                               <ActionGroup>
-                                {getLaporan(slot) && canViewLaporan && (
+                                {!isRejected && getLaporan(slot) && canViewLaporan && (
                                   <>
                                     <ActionButton
                                       action="view"
@@ -1835,6 +1842,11 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
                                     onClick={() => setSlotToDelete(slot)}
                                   />
                                 )}
+                                {isRejected && (
+                                  <span className="act-note act-note--batal" title={slot.catatan_penolakan || undefined}>
+                                    Ditolak
+                                  </span>
+                                )}
                               </ActionGroup>
                             </td>
                           </tr>
@@ -1855,11 +1867,12 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
                 </div>
               ) : (
                 displayedSlots.map((slot) => {
+                  const isRejected = pengajuanDitolak(slot);
                   const isCreator = isSameId(slot.guru_id, user?.id) || (slot.initiator_type === 'SISWA' && isSameId(slot.initiator_siswa_id, user?.id));
                   const sesiAdmin = slot.initiator_type === 'ADMIN';
-                  const canEdit = (STATUS_PENGAJUAN.includes(slot.status) && (bisaKelolaSesi || isCreator))
-                    || (bisaKelolaSesi && STATUS_BERJALAN.includes(slot.status));
-                  const canDelete = bisaKelolaSesi || (STATUS_PENGAJUAN.includes(slot.status) && isCreator);
+                  const canEdit = !isRejected && ((STATUS_PENGAJUAN.includes(slot.status) && (bisaKelolaSesi || isCreator))
+                    || (bisaKelolaSesi && STATUS_BERJALAN.includes(slot.status)));
+                  const canDelete = !isRejected && (bisaKelolaSesi || (STATUS_PENGAJUAN.includes(slot.status) && isCreator));
                   const canAbsensi = bisaKelolaAbsensi(slot) && STATUS_BERJALAN.includes(slot.status);
                   const canViewLaporan = bisaLihatLaporan(slot);
                   const perluRevisi = getLaporan(slot)?.status === 'Revisi';
@@ -1874,7 +1887,9 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
                           <h3>{slot.nama_guru}</h3>
                         </div>
                         <div className="status-stack" style={{ alignItems: 'flex-end' }}>
-                          <span className={`status-tag ${slot.status}`}>{labelStatus(slot.status)}</span>
+                          <span className={`status-tag ${isRejected ? 'rejected' : slot.status}`}>
+                            {isRejected ? 'Ditolak' : labelStatus(slot.status)}
+                          </span>
                           {getLaporan(slot)?.status && (
                             <span className={`laporan-badge ${getLaporan(slot).status.toLowerCase()}`}>
                               {getLaporan(slot).status}
@@ -2013,6 +2028,11 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
                             <Button size="sm" variant="outline" onClick={() => setShowViewReportModal(slot)} leftIcon={<i className="bi bi-journal-text" />}>
                               Laporan
                             </Button>
+                          )}
+                          {isRejected && (
+                            <span className="act-note act-note--batal" title={slot.catatan_penolakan || undefined}>
+                              Ditolak
+                            </span>
                           )}
                         </div>
                       </div>
@@ -2297,5 +2317,3 @@ export default function MaintenanceWrappedKlinikPage(props: any) {
     </>
   );
 }
-
-
