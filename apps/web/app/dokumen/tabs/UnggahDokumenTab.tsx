@@ -40,12 +40,14 @@ export default function UnggahDokumenTab({
         const isOrangTua = rolesList.some((r: string) => ['ORANG_TUA', 'ORANGTUA', 'WALI'].includes(r));
 
         const displayName = user.nama_lengkap || user.name || 'Unknown'
+        const effectiveNisn = user.nisn || (isSiswa ? user.nip : null) || null
+        const effectiveNip = isSiswa ? null : (user.nip || null)
 
         return {
             name: displayName,
             role: user.roles?.[0] || user.role || 'UNKNOWN',
-            nip: user.nip || null,
-            nisn: user.nisn || null,
+            nip: effectiveNip,
+            nisn: effectiveNisn,
             isGuru,
             isSiswa,
             isStaf,
@@ -90,10 +92,10 @@ export default function UnggahDokumenTab({
         if (!user) return
         try {
             const params = new URLSearchParams()
-            if (userInfo.nip) {
-                params.set('uploaderNip', userInfo.nip)
-            } else if (userInfo.nisn) {
+            if (userInfo.isSiswa && userInfo.nisn) {
                 params.set('uploaderNisn', userInfo.nisn)
+            } else if (userInfo.nip) {
+                params.set('uploaderNip', userInfo.nip)
             }
             const res = await fetch('/api/uploaded-documents?' + params.toString())
             const data = await res.json()

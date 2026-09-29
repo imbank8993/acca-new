@@ -94,8 +94,17 @@ export class EkskulService {
 
   async resolveOwnSiswaId(nisn: string): Promise<bigint | null> {
     if (!nisn) return null;
+    const cleanNisn = String(nisn).trim();
+    const unpadded = cleanNisn.replace(/^0+/, '');
+    const padded = unpadded ? unpadded.padStart(10, '0') : cleanNisn;
     const siswa = await this.prisma.master_siswa.findFirst({
-      where: { nisn },
+      where: {
+        OR: [
+          { nisn: cleanNisn },
+          { nisn: padded },
+          { nisn: unpadded },
+        ],
+      },
       select: { id: true },
     });
     return siswa ? siswa.id : null;

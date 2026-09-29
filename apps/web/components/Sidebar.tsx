@@ -57,6 +57,7 @@ const DEFAULT_PAGE_CONFIG: Record<string, PageConfig> = {
   'catatan-keuangan': { id: 'catatan-keuangan', label: 'Catatan Keuangan', icon: 'bi-wallet2', color: '#10b981' },
   'e-supervisi': { id: 'e-supervisi', label: 'E-Supervisi', icon: 'bi-clipboard-data', color: '#7c3aed' },
   'layanan-ptsp': { id: 'layanan-ptsp', label: 'Layanan PTSP', icon: 'bi-file-text', color: '#3083FF' },
+  'ekstrakurikuler': { id: 'ekstrakurikuler', label: 'Ekstrakurikuler', icon: 'bi-trophy', color: '#f59e0b' },
   'klinik': { id: 'klinik', label: 'Klinik Pembelajaran', icon: 'bi-plus-square', color: '#ef4444' },
   'observasi-kelas': { id: 'observasi-kelas', label: 'Observasi Kelas', icon: 'bi-clipboard-check', color: '#10b981' },
 }
@@ -138,6 +139,7 @@ const getMenuIcon = (page: string | null | undefined, title: string) => {
     if (pp === 'informasi') return 'fa-graduation-cap'
     if (pp.includes('manage-dokumen') || pp.includes('manage-file') || pp.includes('penyimpanan-file')) return 'fa-folder-open'
     if (pp.includes('lckh-approval')) return 'fa-clipboard-check'
+    if (pp === 'ekstrakurikuler') return 'fa-trophy'
     if (pp.includes('klinik')) return 'fa-square-plus'
     if (pp.includes('lckh')) return 'fa-file-lines'
     if (pp.includes('izin-guru')) return 'fa-calendar'

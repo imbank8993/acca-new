@@ -145,3 +145,42 @@ export function isUserAdmin(user: any): boolean {
     const roles = getUserRoles(user);
     return roles.includes('ADMIN') || roles.includes('ADMINISTRATOR') || roles.includes('SUPERADMIN');
 }
+
+/**
+ * Periksa apakah user adalah Guru/Tenaga Kependidikan/Pegawai yang berhak atas fitur Dokumen Pribadi (Master Guru).
+ * Siswa, Pengurus Kelas, Orang Tua/Wali, dan Tamu TIDAK memiliki akses ke Dokumen Pribadi.
+ */
+export function isMasterGuruUser(user: any): boolean {
+    if (!user) return false;
+    const roles = getUserRoles(user);
+
+    // Siswa, wali siswa, atau tamu tidak pernah menjadi Master Guru
+    const isSiswaOrWali = roles.some(r => [
+        'SISWA', 'PENGURUS_KELAS', 'PENGURUS KELAS',
+        'ORANG_TUA', 'ORANGTUA', 'WALI', 'TAMU'
+    ].includes(r));
+    if (isSiswaOrWali) return false;
+
+    // Periksa peran pendidik/tenaga kependidikan atau administrator
+    const hasGuruOrStaffRole = roles.some(r => [
+        'GURU', 'STAF', 'TU', 'TATA_USAHA', 'BENDAHARA',
+        'KAMAD', 'KEPALA_SEKOLAH', 'WAKAMAD', 'WALI_KELAS',
+        'ADMIN', 'ADMINISTRATOR', 'SUPERADMIN',
+        'BK', 'PEMBINA_EKSKUL', 'PENGAWAS_MADRASAH',
+        'WKM_AKADEMIK', 'WKM_KESISWAAN', 'WKM_KEASRAMAAN', 'WKM_HUMAS',
+        'OP_IZIN', 'OP_ABSENSI', 'OP_UKS', 'OP_JURNAL', 'OP_AGENDA',
+        'OP_LAYANAN', 'OP_PENGUMUMAN', 'OP_FORM', 'OP_LOMBA', 'OP_KELAS',
+        'PTSP', 'BANKDATA'
+    ].includes(r));
+
+    if (hasGuruOrStaffRole) return true;
+
+    // Fallback NIP: hanya berlaku jika NIP panjang (> 10 digit, bukan format NISN)
+    // dan user tidak memiliki role siswa
+    const nip = String(user.nip || '').trim();
+    if (nip && !user.nisn && nip.length > 10) {
+        return true;
+    }
+
+    return false;
+}

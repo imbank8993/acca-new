@@ -68,7 +68,7 @@ export const MENU_GROUPS: MenuGroupDef[] = [
     key: 'portal-siswa',
     label: 'Portal Siswa',
     icon: 'fa-id-card',
-    pages: ['nilai-siswa', 'ketidakhadiran', 'tugas-siswa', 'kokurikuler'],
+    pages: ['nilai-siswa', 'ketidakhadiran', 'tugas-siswa', 'kokurikuler', 'ekstrakurikuler'],
   },
   {
     key: 'laporan',

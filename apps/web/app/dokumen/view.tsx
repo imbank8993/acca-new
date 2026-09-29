@@ -8,7 +8,7 @@ import PersonalDocumentsPage from './tabs/PersonalDocumentsTab';
 import UnggahDokumenTab from './tabs/UnggahDokumenTab';
 import ManageDokumenTab from './tabs/ManageDokumenTab';
 import type { User } from '@/lib/types';
-import { isUserAdmin, getUserRoles } from '@/lib/auth-client';
+import { isUserAdmin, getUserRoles, isMasterGuruUser } from '@/lib/auth-client';
 import { useOptionalDashboardUser } from '@/components/UserContext';
 
 type DokumenTabKey = 'pribadi' | 'sekolah' | 'kelola';
@@ -86,16 +86,8 @@ function PusatDokumenContent({ user: propUser }: { user?: User }) {
         return userAllowed;
     }, [isAdmin, user, accessConfig]);
 
-    const isMasterGuruUser = useMemo(() => {
-        if (!user) return false;
-        const userRoles = getUserRoles(user);
-        const hasGuruOrStaffRole = userRoles.some(r => [
-            'GURU', 'STAF', 'TU', 'TATA_USAHA', 'BENDAHARA',
-            'KAMAD', 'KEPALA_SEKOLAH', 'WAKAMAD', 'WALI_KELAS',
-            'ADMIN', 'ADMINISTRATOR', 'SUPERADMIN'
-        ].includes(r));
-        const hasNip = Boolean(user.nip && String(user.nip).trim() !== '' && !user.nisn);
-        return hasNip || hasGuruOrStaffRole;
+    const isMasterGuru = useMemo(() => {
+        return isMasterGuruUser(user);
     }, [user]);
 
     // Initial tab based on URL query param
@@ -103,18 +95,18 @@ function PusatDokumenContent({ user: propUser }: { user?: User }) {
         const paramTab = searchParams.get('tab')?.toLowerCase();
         if (paramTab === 'sekolah' || paramTab === 'upload') return 'sekolah';
         if (paramTab === 'kelola' && hasFullAccess) return 'kelola';
-        if (paramTab === 'pribadi' || paramTab === 'personal') return isMasterGuruUser ? 'pribadi' : 'sekolah';
-        return isMasterGuruUser ? 'pribadi' : 'sekolah';
-    }, [searchParams, hasFullAccess, isMasterGuruUser]);
+        if (paramTab === 'pribadi' || paramTab === 'personal') return isMasterGuru ? 'pribadi' : 'sekolah';
+        return isMasterGuru ? 'pribadi' : 'sekolah';
+    }, [searchParams, hasFullAccess, isMasterGuru]);
 
     const activeTab = initialTabFromUrl;
 
     // Guard: jika kelola/pribadi dipilih tapi tidak punya izin, kembalikan ke sekolah
     const resolvedTab = useMemo(() => {
-        if (activeTab === 'pribadi' && !isMasterGuruUser) return 'sekolah';
-        if (activeTab === 'kelola' && !hasFullAccess) return isMasterGuruUser ? 'pribadi' : 'sekolah';
+        if (activeTab === 'pribadi' && !isMasterGuru) return 'sekolah';
+        if (activeTab === 'kelola' && !hasFullAccess) return isMasterGuru ? 'pribadi' : 'sekolah';
         return activeTab;
-    }, [activeTab, hasFullAccess, isMasterGuruUser]);
+    }, [activeTab, hasFullAccess, isMasterGuru]);
 
     const handleTabChange = (key: DokumenTabKey) => {
         const newParams = new URLSearchParams(searchParams.toString());
@@ -124,7 +116,7 @@ function PusatDokumenContent({ user: propUser }: { user?: User }) {
 
     const tabsConfig = useMemo<TabItem<DokumenTabKey>[]>(() => {
         const items: TabItem<DokumenTabKey>[] = [];
-        if (isMasterGuruUser) {
+        if (isMasterGuru) {
             items.push({
                 key: 'pribadi',
                 label: 'Dokumen Pribadi',
@@ -147,7 +139,7 @@ function PusatDokumenContent({ user: propUser }: { user?: User }) {
             });
         }
         return items;
-    }, [hasFullAccess, isMasterGuruUser]);
+    }, [hasFullAccess, isMasterGuru]);
 
     return (
         <div className="pd-center-page">

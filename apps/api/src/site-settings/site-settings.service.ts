@@ -18,7 +18,7 @@ export class SiteSettingsService {
     });
 
     if (!data) {
-      throw new NotFoundException('Setting not found');
+      return null;
     }
 
     return data;

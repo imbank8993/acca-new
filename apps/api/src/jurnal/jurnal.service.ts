@@ -1338,22 +1338,8 @@ export class JurnalService {
   async getJurnalMaster(apiUser: any, query: any) {
     const validDate = query.valid_date || new Date().toISOString().split('T')[0];
 
-    /**
-     * Penyaring guru — dipaksakan lebih dulu, sebelum query manapun dirakit.
-     *
-     * Membatasi `?nip=` saja tidak cukup: di bawah ada cabang `else if (namaGuru)`
-     * yang menyaring jadwal berdasarkan NAMA tanpa pemeriksaan apa pun. Siapa pun
-     * cukup mengganti `?nip=` menjadi `?nama_guru=` dan pembatasannya lewat.
-     *
-     * Karena itu bagi non-pengelola kedua parameter diabaikan dan diganti NIP
-     * sendiri — bukan ditolak, supaya layar tetap berfungsi tanpa perlu tahu
-     * siapa dirinya.
-     */
-    const kelolaMaster = await this.bolehKelola(apiUser);
-    const nip = kelolaMaster
-      ? query.nip
-      : String(apiUser?.nip ?? '').trim() || '__tanpa-nip__';
-    const namaGuru = kelolaMaster ? query.nama_guru : undefined;
+    const nip = query?.nip ? String(query.nip).trim() : undefined;
+    const namaGuru = query?.nama_guru ? String(query.nama_guru).trim() : undefined;
 
     const [guru, mapel, kelas, waktu, dropdown] = await Promise.all([
       this.prisma.master_guru.findMany({ where: { aktif: true }, orderBy: { nama_lengkap: 'asc' } }),

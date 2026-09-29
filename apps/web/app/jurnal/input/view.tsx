@@ -197,11 +197,7 @@ export default function JurnalInputPage() {
         const fetchMaster = async () => {
             setLoadingMaster(true);
             try {
-                let url = `/api/laporan/jurnal-master?valid_date=${formData.tanggal}`;
-                if (formData.nip) url += `&nip=${encodeURIComponent(formData.nip)}`;
-                if (formData.nama_guru) url += `&nama_guru=${encodeURIComponent(formData.nama_guru)}`;
-                
-                const res = await fetch(url);
+                const res = await fetch(`/api/laporan/jurnal-master?valid_date=${formData.tanggal}`);
                 const result = await res.json();
                 if (result.ok) {
                     setMasterData(result.data);
@@ -213,7 +209,7 @@ export default function JurnalInputPage() {
             }
         };
         fetchMaster();
-    }, [formData.tanggal, formData.nip, formData.nama_guru]);
+    }, [formData.tanggal]);
 
     useEffect(() => {
         if (!masterData || loadingMaster) return;
@@ -222,6 +218,8 @@ export default function JurnalInputPage() {
         const dateObj = new Date(year, month - 1, day);
         const days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
         const dayName = days[dateObj.getDay()];
+
+        const getDateOnly = (d: any) => d ? String(d).slice(0, 10) : '';
 
         // 1. Ambil semua jadwal yang COCOK dengan guru & aktif & belum kadaluarsa
         const allMatchingSchedules = (masterData.jadwal || []).filter((j: any) => {
@@ -232,22 +230,25 @@ export default function JurnalInputPage() {
             const matchName = (j.nama_guru && formData.nama_guru && cleanName(j.nama_guru) === cleanName(formData.nama_guru));
             const matchGuru = matchNip || matchName;
 
+            const jMulai = getDateOnly(j.berlaku_mulai);
+            const jSelesai = getDateOnly(j.berlaku_selesai);
+
             return matchGuru &&
                 j.hari?.trim().toLowerCase() === dayName.toLowerCase() &&
                 (j.aktif === true || j.aktif === 'true' || j.aktif === 'ya') &&
-                (!j.berlaku_mulai || j.berlaku_mulai <= formData.tanggal) &&
-                (!j.berlaku_selesai || j.berlaku_selesai >= formData.tanggal);
+                (!jMulai || jMulai <= formData.tanggal) &&
+                (!jSelesai || jSelesai >= formData.tanggal);
         });
 
         // 2. Cari tanggal 'berlaku_mulai' TERBARU dari kumpulan jadwal tersebut
         let latestBerlakuMulai = '1970-01-01';
         allMatchingSchedules.forEach((j: any) => {
-            const tgl = j.berlaku_mulai || '1970-01-01';
+            const tgl = getDateOnly(j.berlaku_mulai) || '1970-01-01';
             if (tgl > latestBerlakuMulai) latestBerlakuMulai = tgl;
         });
 
         // 3. Hanya gunakan jadwal yang berasal dari tanggal terbaru tersebut
-        const activeSchedules = allMatchingSchedules.filter((j: any) => (j.berlaku_mulai || '1970-01-01') === latestBerlakuMulai);
+        const activeSchedules = allMatchingSchedules.filter((j: any) => (getDateOnly(j.berlaku_mulai) || '1970-01-01') === latestBerlakuMulai);
 
         const scheduleMap = new Map<string, any>();
         activeSchedules.forEach((j: any) => {
@@ -296,20 +297,22 @@ export default function JurnalInputPage() {
                 const matchGuru = (j.nip && formData.nip && String(j.nip) === String(formData.nip)) ||
                     (j.nama_guru?.trim().toLowerCase() === formData.nama_guru?.trim().toLowerCase());
                 
+                const jMulai = getDateOnly(j.berlaku_mulai);
+                const jSelesai = getDateOnly(j.berlaku_selesai);
                 return matchGuru &&
                     j.kelas?.trim().toLowerCase() === formData.kelas?.trim().toLowerCase() &&
                     j.hari?.trim().toLowerCase() === dayName.toLowerCase() &&
                     (j.aktif === true || j.aktif === 'true' || j.aktif === 'ya') &&
-                    (!j.berlaku_mulai || j.berlaku_mulai <= formData.tanggal) &&
-                    (!j.berlaku_selesai || j.berlaku_selesai >= formData.tanggal);
+                    (!jMulai || jMulai <= formData.tanggal) &&
+                    (!jSelesai || jSelesai >= formData.tanggal);
             });
 
             let maxOrigMulai = '1970-01-01';
             rawOriginalSchedules.forEach((j: any) => {
-                const tgl = j.berlaku_mulai || '1970-01-01';
+                const tgl = getDateOnly(j.berlaku_mulai) || '1970-01-01';
                 if (tgl > maxOrigMulai) maxOrigMulai = tgl;
             });
-            const originalSchedules = rawOriginalSchedules.filter((j: any) => (j.berlaku_mulai || '1970-01-01') === maxOrigMulai);
+            const originalSchedules = rawOriginalSchedules.filter((j: any) => (getDateOnly(j.berlaku_mulai) || '1970-01-01') === maxOrigMulai);
 
             let combinedMapels = originalSchedules.map((s: any) => s.mata_pelajaran || s.mapel);
 
@@ -354,21 +357,23 @@ export default function JurnalInputPage() {
 
         let availableJams: any[] = [];
         if (formData.kelas && formData.mata_pelajaran) {
-            const allValidClassSchedules = (masterData.jadwal || []).filter((j: any) =>
-                j.kelas === formData.kelas &&
-                j.hari === dayName &&
-                (j.aktif === true || j.aktif === 'true' || j.aktif === 'ya') &&
-                (!j.berlaku_mulai || j.berlaku_mulai <= formData.tanggal) &&
-                (!j.berlaku_selesai || j.berlaku_selesai >= formData.tanggal)
-            );
+            const allValidClassSchedules = (masterData.jadwal || []).filter((j: any) => {
+                const jMulai = getDateOnly(j.berlaku_mulai);
+                const jSelesai = getDateOnly(j.berlaku_selesai);
+                return j.kelas === formData.kelas &&
+                    j.hari === dayName &&
+                    (j.aktif === true || j.aktif === 'true' || j.aktif === 'ya') &&
+                    (!jMulai || jMulai <= formData.tanggal) &&
+                    (!jSelesai || jSelesai >= formData.tanggal);
+            });
 
             // Filter to only the latest berlaku_mulai schedule version for this class & day
             let maxClassMulai = '1970-01-01';
             allValidClassSchedules.forEach((j: any) => {
-                const tgl = j.berlaku_mulai || '1970-01-01';
+                const tgl = getDateOnly(j.berlaku_mulai) || '1970-01-01';
                 if (tgl > maxClassMulai) maxClassMulai = tgl;
             });
-            const activeClassSchedules = allValidClassSchedules.filter((j: any) => (j.berlaku_mulai || '1970-01-01') === maxClassMulai);
+            const activeClassSchedules = allValidClassSchedules.filter((j: any) => (getDateOnly(j.berlaku_mulai) || '1970-01-01') === maxClassMulai);
 
             const classMap = new Map<number, any>();
             activeClassSchedules.forEach((j: any) => {

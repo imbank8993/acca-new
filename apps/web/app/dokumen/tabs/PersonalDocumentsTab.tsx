@@ -15,6 +15,7 @@ import FilterToolbar, { FilterSearch, FilterActions } from '@/components/ui/Filt
 import { DesktopFab } from '@/components/ui/DesktopFab';
 import Button from '@/components/ui/Button';
 import { FolderPen } from 'lucide-react';
+import { isMasterGuruUser as isMasterGuruUserUtil } from '@/lib/auth-client';
 // --- Types ---
 interface Folder {
     id: string;
@@ -135,6 +136,8 @@ export default function PersonalDocumentsPage({ user }: { user: any }) {
     const [manageShareData, setManageShareData] = useState<{ id: string, type: 'doc' | 'folder', title: string, shares: any[] } | null>(null);
     const [isRevoking, setIsRevoking] = useState<string | null>(null);
     const [selectedDoc, setSelectedDoc] = useState<{ url: string; title: string } | null>(null);
+    const [isRestricted, setIsRestricted] = useState(false);
+    const [restrictedMessage, setRestrictedMessage] = useState('');
 
     // Menu aksi kartu mobile ("...") — cuma satu yang boleh terbuka sekaligus,
     // jadi cukup simpan id dokumennya, bukan per-kartu.
@@ -158,15 +161,7 @@ export default function PersonalDocumentsPage({ user }: { user: any }) {
     }, [openCardMenu]);
 
     const isMasterGuruUser = useMemo(() => {
-        if (!user) return false;
-        const userRoles = (user.roles || [user.role]).filter(Boolean).map((r: any) => String(r).toUpperCase());
-        const hasGuruOrStaffRole = userRoles.some((r: string) => [
-            'GURU', 'STAF', 'TU', 'TATA_USAHA', 'BENDAHARA',
-            'KAMAD', 'KEPALA_SEKOLAH', 'WAKAMAD', 'WALI_KELAS',
-            'ADMIN', 'ADMINISTRATOR'
-        ].includes(r));
-        const hasNip = Boolean(user.nip && String(user.nip).trim() !== '' && !user.nisn);
-        return hasNip || hasGuruOrStaffRole;
+        return isMasterGuruUserUtil(user);
     }, [user]);
 
     const canManage = true; // All users can manage their own documents
@@ -269,6 +264,12 @@ export default function PersonalDocumentsPage({ user }: { user: any }) {
                 fRes.json(),
                 dRes.json()
             ]);
+
+            if (fRes.status === 403 || dRes.status === 403 || dJson?.error?.includes('Master Guru') || fJson?.error?.includes('Master Guru')) {
+                setIsRestricted(true);
+                setRestrictedMessage(dJson?.error || fJson?.error || 'Akses Dokumen Pribadi hanya diperbolehkan untuk Guru & Tendik terdaftar di Master Guru');
+                return;
+            }
 
             if (fJson.ok) setFolders(fJson.data);
             else console.error("Folder fetch error:", fJson.error);
@@ -458,10 +459,12 @@ export default function PersonalDocumentsPage({ user }: { user: any }) {
 
 
     useEffect(() => {
-
+        if (!isMasterGuruUser) {
+            setLoading(false);
+            return;
+        }
         fetchData();
-
-    }, [fetchData]);
+    }, [fetchData, isMasterGuruUser]);
 
 
 
@@ -797,7 +800,7 @@ export default function PersonalDocumentsPage({ user }: { user: any }) {
         return Math.min(100, Math.round((totalStorageBytes / MAX_STORAGE_BYTES) * 100));
     }, [totalStorageBytes]);
 
-    if (!isMasterGuruUser) {
+    if (!isMasterGuruUser || isRestricted) {
         return (
             <div style={{
                 padding: '32px 24px',
@@ -810,7 +813,7 @@ export default function PersonalDocumentsPage({ user }: { user: any }) {
                 <i className="bi bi-shield-lock-fill" style={{ fontSize: '2.5rem', color: '#f59e0b', display: 'block', marginBottom: '12px' }}></i>
                 <h3 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '6px' }}>Akses Dokumen Pribadi Dibatasi</h3>
                 <p style={{ fontSize: '0.86rem', color: 'var(--n-muted, #64748b)', margin: 0 }}>
-                    Fitur Dokumen Pribadi hanya dapat diakses oleh Guru & Tenaga Kependidikan yang terdaftar pada Master Guru.
+                    {restrictedMessage || 'Fitur Dokumen Pribadi hanya dapat diakses oleh Guru & Tenaga Kependidikan yang terdaftar pada Master Guru.'}
                 </p>
             </div>
         );

@@ -26,9 +26,16 @@ export async function isPembinaOfEkskul(nip: string, ekskul_id: string): Promise
  */
 export async function resolveOwnSiswaId(nisn: string): Promise<string | null> {
     if (!nisn) return null;
+    const cleanNisn = String(nisn).trim();
+    const unpadded = cleanNisn.replace(/^0+/, '');
+    const padded = unpadded ? unpadded.padStart(10, '0') : cleanNisn;
     const data = await prisma.master_siswa.findFirst({
         where: {
-            nisn,
+            OR: [
+                { nisn: cleanNisn },
+                { nisn: padded },
+                { nisn: unpadded },
+            ],
             aktif: true
         },
         select: { id: true }

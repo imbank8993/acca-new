@@ -17,6 +17,7 @@ import { Modal, ModalHeader, ModalBody, ModalFooter } from '@/components/ui/Moda
 import Tab, { TabItem } from '@/components/ui/Tab'
 import { MobileFab } from '@/components/mobile'
 import { DesktopFab } from '@/components/ui/DesktopFab'
+import SiswaEkskulView from './components/SiswaEkskulView'
 import './ekstrakurikuler.css'
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -510,14 +511,8 @@ function EkskulPembinaViewContent({ user }: { user: any }) {
         return peserta.filter(p => p.nama_siswa.toLowerCase().includes(q))
     }, [peserta, pesertaSearch])
 
-    if (isSiswa && !roles.includes('GURU')) {
-        return (
-            <div className="ps-card" style={{ maxWidth: 600, margin: '0 auto', background: 'var(--n-card)', padding: '32px', borderRadius: '16px', textAlign: 'center', marginTop: '24px' }}>
-                <div style={{ fontSize: '48px', color: '#f59e0b', marginBottom: '16px' }}><i className="bi bi-shield-lock" /></div>
-                <h3 style={{ color: 'var(--n-text)', marginBottom: '8px' }}>Akses Dibatasi</h3>
-                <p style={{ color: 'var(--n-muted)' }}>Halaman ini hanya untuk Guru Pembina Ekstrakurikuler.</p>
-            </div>
-        )
+    if (isSiswa && !canManageAll && !roles.includes('PEMBINA_EKSKUL')) {
+        return <SiswaEkskulView user={user} />
     }
 
     return (

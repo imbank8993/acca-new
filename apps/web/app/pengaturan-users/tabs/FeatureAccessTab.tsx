@@ -496,36 +496,37 @@ export default function FeatureAccessTab() {
     const muatSemua = useCallback(async () => {
         try {
             setLoading(true);
-            const usersRes = await fetch('/api/admin/users');
-            const rolesRes = await fetch('/api/admin/roles');
-            const usersJson = await usersRes.json().catch(() => ({}));
-            const rolesJson = await rolesRes.json().catch(() => ({}));
+            const [usersRes, rolesRes, ssAllRes] = await Promise.all([
+                fetch('/api/admin/users').then(r => r.json()).catch(() => ({})),
+                fetch('/api/admin/roles').then(r => r.json()).catch(() => ({})),
+                fetch('/api/site-settings').then(r => r.json()).catch(() => ({})),
+            ]);
 
-            const usersList: UserApiItem[] = usersJson.ok && Array.isArray(usersJson.data) ? usersJson.data : [];
-            if (usersJson.ok && Array.isArray(usersJson.data)) setRawUserList(usersJson.data);
-            if (rolesJson.ok && Array.isArray(rolesJson.data)) setDbRoles(rolesJson.data);
+            const usersList: UserApiItem[] = usersRes.ok && Array.isArray(usersRes.data) ? usersRes.data : [];
+            if (usersRes.ok && Array.isArray(usersRes.data)) setRawUserList(usersRes.data);
+            if (rolesRes.ok && Array.isArray(rolesRes.data)) setDbRoles(rolesRes.data);
 
-            const configRes = await Promise.all(
-                MODUL.map(async (m) => {
-                    const ssRes = await fetch(`/api/site-settings?key=${encodeURIComponent(m.settingKey)}`).then(r => r.json()).catch(() => ({}));
-                    if (m.isCapability) {
-                        const capRes = await fetch(`/api/admin/capabilities?capability=${encodeURIComponent(m.settingKey)}`).then(r => r.json()).catch(() => ({}));
-                        return { siteSetting: ssRes, cap: capRes };
-                    }
-                    return { siteSetting: ssRes };
+            const allSettings: any[] = ssAllRes.ok && Array.isArray(ssAllRes.data) ? ssAllRes.data : [];
+            const settingsMap = new Map<string, any>(allSettings.map((s: any) => [s.key, s]));
+
+            // Muat grants kapabilitas khusus untuk modul bertanda isCapability
+            const capResList = await Promise.all(
+                MODUL.filter(m => m.isCapability).map(async (m) => {
+                    const res = await fetch(`/api/admin/capabilities?capability=${encodeURIComponent(m.settingKey)}`).then(r => r.json()).catch(() => ({}));
+                    return { key: m.settingKey, res };
                 })
             );
+            const capMap = new Map(capResList.map(c => [c.key, c.res]));
 
             const hasil: Record<string, AccessConfig> = {};
             const gagal = new Set<string>();
-            for (let i = 0; i < MODUL.length; i++) {
-                const m = MODUL[i];
-                const itemRes = configRes[i];
-                const json = itemRes.siteSetting;
+
+            for (const m of MODUL) {
                 const kunci = m.settingKey;
+                const settingRow = settingsMap.get(kunci);
 
                 if (m.isCapability) {
-                    const capJson = itemRes.cap;
+                    const capJson = capMap.get(kunci);
                     let capUsers: UserAccessItem[] = [];
                     if (capJson?.ok && Array.isArray(capJson.grants)) {
                         const grantedIds = capJson.grants.map((g: { user_id: string | number }) => String(g.user_id));
@@ -541,8 +542,8 @@ export default function FeatureAccessTab() {
                         });
                     }
 
-                    const ssCfg = json?.ok && json.data ? parseKonfig(json.data.value) : { ...KONFIG_AWAL };
-                    if (capJson && !capJson.ok && (!json || !json.ok)) {
+                    const ssCfg = settingRow ? parseKonfig(settingRow.value) : { ...KONFIG_AWAL };
+                    if (!ssAllRes.ok && capJson && !capJson.ok) {
                         gagal.add(kunci);
                     }
                     hasil[kunci] = {
@@ -550,9 +551,9 @@ export default function FeatureAccessTab() {
                         allowedUsers: capUsers.length > 0 ? capUsers : ssCfg.allowedUsers || [],
                     };
                 } else {
-                    if (json?.ok && json.data) {
-                        hasil[kunci] = parseKonfig(json.data.value);
-                    } else if (json?.ok) {
+                    if (settingRow) {
+                        hasil[kunci] = parseKonfig(settingRow.value);
+                    } else if (ssAllRes.ok) {
                         hasil[kunci] = { ...KONFIG_AWAL };
                     } else {
                         hasil[kunci] = { ...KONFIG_AWAL };
