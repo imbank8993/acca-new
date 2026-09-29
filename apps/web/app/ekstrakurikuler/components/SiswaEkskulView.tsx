@@ -5,10 +5,10 @@ import { getActiveSettings } from '@/lib/settings-client'
 import { useTahunAjaranFilter } from '@/hooks/use-tahun-ajaran-filter'
 import Swal from 'sweetalert2'
 import { swalError, swalWarning } from '@/lib/swal-premium'
-import Select from 'react-select'
 import { Spinner } from '@/components/ui/Spinner'
 import { Button } from '@/components/ui/Button'
-import { Modal, ModalHeader, ModalBody, ModalFooter } from '@/components/ui/Modal'
+import { Modal, ModalHeader, ModalBody, ModalFooter, ModalField } from '@/components/ui/Modal'
+import { InlineSelect } from '@/components/ui/InlineSelect'
 import { FilterToolbar, FilterSelect } from '@/components/ui/FilterToolbar'
 
 interface SiswaEkskul {
@@ -46,68 +46,6 @@ function formatWaktu(waktu?: string | null) {
     }
 }
 
-const getCustomSelectStyles = (isDark: boolean) => ({
-    control: (base: any, state: any) => ({
-        ...base,
-        backgroundColor: isDark ? '#1e293b' : '#ffffff',
-        borderColor: state.isFocused 
-            ? 'var(--n-primary, #3b82f6)' 
-            : isDark ? 'rgba(255, 255, 255, 0.18)' : '#cbd5e1',
-        boxShadow: state.isFocused ? '0 0 0 3px rgba(59, 130, 246, 0.2)' : 'none',
-        borderRadius: '10px',
-        padding: '3px 6px',
-        color: isDark ? '#ffffff' : '#0f172a',
-        cursor: 'pointer',
-        '&:hover': {
-            borderColor: 'var(--n-primary, #3b82f6)',
-        }
-    }),
-    menu: (base: any) => ({
-        ...base,
-        borderRadius: '12px',
-        backgroundColor: isDark ? '#1e293b' : '#ffffff',
-        border: isDark ? '1px solid rgba(255, 255, 255, 0.15)' : '1px solid #e2e8f0',
-        boxShadow: isDark ? '0 10px 30px rgba(0,0,0,0.7)' : '0 10px 25px rgba(0,0,0,0.1)',
-        zIndex: 99999,
-        overflow: 'hidden'
-    }),
-    menuList: (base: any) => ({
-        ...base,
-        padding: '6px',
-        backgroundColor: isDark ? '#1e293b' : '#ffffff',
-    }),
-    option: (base: any, state: any) => ({
-        ...base,
-        fontSize: '0.9rem',
-        fontWeight: 500,
-        padding: '10px 14px',
-        borderRadius: '8px',
-        backgroundColor: state.isSelected
-            ? '#3b82f6'
-            : state.isFocused
-                ? (isDark ? 'rgba(59, 130, 246, 0.25)' : 'rgba(59, 130, 246, 0.08)')
-                : 'transparent',
-        color: state.isSelected
-            ? '#ffffff'
-            : isDark ? '#f1f5f9' : '#0f172a',
-        cursor: 'pointer',
-    }),
-    singleValue: (base: any) => ({
-        ...base,
-        fontWeight: 600,
-        color: isDark ? '#ffffff' : '#0f172a',
-    }),
-    input: (base: any) => ({
-        ...base,
-        color: isDark ? '#ffffff' : '#0f172a',
-    }),
-    placeholder: (base: any) => ({
-        ...base,
-        color: isDark ? '#94a3b8' : '#94a3b8',
-    }),
-    indicatorSeparator: () => ({ display: 'none' }),
-})
-
 export default function SiswaEkskulView({ user }: { user?: any }) {
     const taFilter = useTahunAjaranFilter()
     const selectedTA = taFilter.selected
@@ -119,7 +57,7 @@ export default function SiswaEkskulView({ user }: { user?: any }) {
     
     // Form Modal States
     const [showEkskulForm, setShowEkskulForm] = useState(false)
-    const [selectedEkskulOption, setSelectedEkskulOption] = useState<{ value: string; label: string; meta?: MasterEkskul } | null>(null)
+    const [selectedEkskulId, setSelectedEkskulId] = useState<string>('')
     const [savingEkskul, setSavingEkskul] = useState(false)
     const [deleteEkskulId, setDeleteEkskulId] = useState<string | null>(null)
     const [activeTA, setActiveTA] = useState('')
@@ -135,8 +73,6 @@ export default function SiswaEkskulView({ user }: { user?: any }) {
         obs.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] })
         return () => obs.disconnect()
     }, [])
-
-    const selectStyles = useMemo(() => getCustomSelectStyles(isDark), [isDark])
 
     // Load active settings
     useEffect(() => {
@@ -220,16 +156,36 @@ export default function SiswaEkskulView({ user }: { user?: any }) {
         return masterEkskulList.filter(m => m.aktif !== false && !joinedIds.has(m.id))
     }, [masterEkskulList, siswaEkskulList])
 
+    // Selected ekskul metadata for modal preview
+    const selectedEkskulMeta = useMemo(() => {
+        if (!selectedEkskulId) return null
+        return masterMap.get(selectedEkskulId) || availableEkskulList.find(e => e.id === selectedEkskulId) || null
+    }, [selectedEkskulId, masterMap, availableEkskulList])
+
+    // Options for InlineSelect
+    const ekskulSelectOptions = useMemo(() => {
+        if (availableEkskulList.length === 0) {
+            return [{ value: '', label: '-- Tidak ada ekskul yang tersedia --', disabled: true }]
+        }
+        return [
+            { value: '', label: '-- Pilih Ekstrakurikuler --' },
+            ...availableEkskulList.map(e => ({
+                value: e.id,
+                label: e.nama_ekskul,
+            }))
+        ]
+    }, [availableEkskulList])
+
     // Open enrollment modal
     const openEkskulForm = () => {
-        setSelectedEkskulOption(null)
+        setSelectedEkskulId('')
         setShowEkskulForm(true)
     }
 
     // Save enrollment
     const handleSaveSiswaEkskul = async (e: React.FormEvent) => {
         e.preventDefault()
-        if (!selectedEkskulOption) {
+        if (!selectedEkskulId || !selectedEkskulMeta) {
             swalWarning('Peringatan', 'Pilih ekstrakurikuler terlebih dahulu!')
             return
         }
@@ -243,7 +199,7 @@ export default function SiswaEkskulView({ user }: { user?: any }) {
         setSavingEkskul(true)
         try {
             const payloadBase = {
-                ekskul_id: selectedEkskulOption.value,
+                ekskul_id: selectedEkskulId,
                 tahun_ajaran: taToUse,
                 aktif: true,
             }
@@ -272,7 +228,7 @@ export default function SiswaEkskulView({ user }: { user?: any }) {
                 Swal.fire({
                     icon: 'success',
                     title: 'Berhasil Mendaftar',
-                    text: `Anda berhasil terdaftar di ekstrakurikuler ${selectedEkskulOption.label}.`,
+                    text: `Anda berhasil terdaftar di ekstrakurikuler ${selectedEkskulMeta.nama_ekskul}.`,
                     timer: 2000,
                     showConfirmButton: false,
                     confirmButtonColor: '#10b981',
@@ -401,11 +357,36 @@ export default function SiswaEkskulView({ user }: { user?: any }) {
                     </p>
                 </div>
             ) : uniqueEnrolledEkskuls.length > 0 ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 4px' }}>
-                        <span style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--n-text)' }}>
-                            Ekskul yang Diikuti ({uniqueEnrolledEkskuls.length})
-                        </span>
+                <div className="ps-card" style={{ padding: '24px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px', flexWrap: 'wrap', gap: '10px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <div style={{
+                                width: '32px',
+                                height: '32px',
+                                borderRadius: '8px',
+                                background: 'rgba(59, 130, 246, 0.1)',
+                                color: 'var(--n-primary, #3b82f6)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontSize: '1rem'
+                            }}>
+                                <i className="bi bi-award" />
+                            </div>
+                            <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700, color: 'var(--n-text)' }}>
+                                Ekstrakurikuler yang Diikuti
+                            </h3>
+                            <span style={{
+                                padding: '2px 8px',
+                                borderRadius: '12px',
+                                fontSize: '0.78rem',
+                                fontWeight: 600,
+                                background: 'rgba(59, 130, 246, 0.1)',
+                                color: 'var(--n-primary, #3b82f6)'
+                            }}>
+                                {uniqueEnrolledEkskuls.length} Kegiatan
+                            </span>
+                        </div>
                         {currentYear && (
                             <span style={{ fontSize: '0.85rem', color: 'var(--n-muted, #64748b)' }}>
                                 Periode TA {currentYear}
@@ -413,135 +394,123 @@ export default function SiswaEkskulView({ user }: { user?: any }) {
                         )}
                     </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))', gap: '16px' }}>
-                        {uniqueEnrolledEkskuls.map((item) => {
-                            const master = masterMap.get(item.ekskul_id)
-                            const nama = item.nama_ekskul || master?.nama_ekskul || 'Ekstrakurikuler'
-                            const hari = master?.hari || null
-                            const waktuMulai = formatWaktu(master?.waktu_mulai)
-                            const waktuSelesai = formatWaktu(master?.waktu_selesai)
-                            const tempat = master?.tempat || null
-                            const keterangan = master?.keterangan || null
-                            const isDeleting = deleteEkskulId === item.ekskul_id
+                    <div className="ps-table-container">
+                        <table className="ps-table">
+                            <thead>
+                                <tr>
+                                    <th style={{ width: '60px', textAlign: 'center' }}>No</th>
+                                    <th>Ekstrakurikuler</th>
+                                    <th style={{ minWidth: '180px' }}>Jadwal & Waktu</th>
+                                    <th style={{ minWidth: '160px' }}>Tempat</th>
+                                    <th style={{ width: '130px', textAlign: 'center' }}>Status</th>
+                                    <th style={{ width: '150px', textAlign: 'center' }}>Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {uniqueEnrolledEkskuls.map((item, idx) => {
+                                    const master = masterMap.get(item.ekskul_id)
+                                    const nama = item.nama_ekskul || master?.nama_ekskul || 'Ekstrakurikuler'
+                                    const hari = master?.hari || null
+                                    const waktuMulai = formatWaktu(master?.waktu_mulai)
+                                    const waktuSelesai = formatWaktu(master?.waktu_selesai)
+                                    const tempat = master?.tempat || null
+                                    const keterangan = master?.keterangan || null
+                                    const isDeleting = deleteEkskulId === item.ekskul_id
 
-                            return (
-                                <div
-                                    key={item.ekskul_id}
-                                    className="ps-card"
-                                    style={{
-                                        position: 'relative',
-                                        display: 'flex',
-                                        flexDirection: 'column',
-                                        justifyContent: 'space-between',
-                                        padding: '20px',
-                                        borderRadius: '16px',
-                                        border: '1px solid var(--n-border)',
-                                        background: 'var(--n-card)',
-                                        boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
-                                        transition: 'all 0.2s',
-                                    }}
-                                >
-                                    <div>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px', marginBottom: '14px' }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                                <div style={{
-                                                    width: '40px',
-                                                    height: '40px',
-                                                    borderRadius: '10px',
-                                                    background: 'rgba(59, 130, 246, 0.12)',
-                                                    color: 'var(--n-primary, #3b82f6)',
-                                                    display: 'flex',
+                                    return (
+                                        <tr key={item.ekskul_id}>
+                                            <td data-label="No" style={{ textAlign: 'center', fontWeight: 600, color: 'var(--n-muted)' }}>
+                                                {idx + 1}
+                                            </td>
+                                            <td data-label="Ekstrakurikuler">
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                                    <div style={{
+                                                        width: '38px',
+                                                        height: '38px',
+                                                        borderRadius: '10px',
+                                                        background: 'rgba(59, 130, 246, 0.12)',
+                                                        color: 'var(--n-primary, #3b82f6)',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        fontSize: '1.2rem',
+                                                        flexShrink: 0
+                                                    }}>
+                                                        <i className="bi bi-award-fill" />
+                                                    </div>
+                                                    <div>
+                                                        <div style={{ fontWeight: 700, color: 'var(--n-text)', fontSize: '0.95rem' }}>
+                                                            {nama}
+                                                        </div>
+                                                        <div style={{ fontSize: '0.8rem', color: 'var(--n-muted, #64748b)' }}>
+                                                            Tahun Ajaran {item.tahun_ajaran}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td data-label="Jadwal & Waktu">
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 600, color: 'var(--n-text)', fontSize: '0.88rem' }}>
+                                                        <i className="bi bi-calendar3" style={{ color: '#3b82f6', fontSize: '0.85rem' }} />
+                                                        <span>{hari || 'Sesuai jadwal pembina'}</span>
+                                                    </div>
+                                                    {waktuMulai ? (
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', color: 'var(--n-muted, #64748b)' }}>
+                                                            <i className="bi bi-clock" style={{ fontSize: '0.8rem' }} />
+                                                            <span>{waktuMulai}{waktuSelesai ? ` - ${waktuSelesai}` : ''}</span>
+                                                        </div>
+                                                    ) : null}
+                                                </div>
+                                            </td>
+                                            <td data-label="Tempat">
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--n-text)', fontWeight: 500, fontSize: '0.88rem' }}>
+                                                        <i className="bi bi-geo-alt" style={{ color: '#10b981', fontSize: '0.85rem' }} />
+                                                        <span>{tempat || 'Madrasah'}</span>
+                                                    </div>
+                                                    {keterangan && (
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.8rem', color: 'var(--n-muted, #64748b)' }}>
+                                                            <i className="bi bi-info-circle" style={{ color: '#f59e0b', fontSize: '0.75rem' }} />
+                                                            <span>{keterangan}</span>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </td>
+                                            <td data-label="Status" style={{ textAlign: 'center' }}>
+                                                <span style={{
+                                                    display: 'inline-flex',
                                                     alignItems: 'center',
-                                                    justifyContent: 'center',
-                                                    fontSize: '1.2rem',
-                                                    flexShrink: 0
+                                                    gap: '6px',
+                                                    padding: '4px 10px',
+                                                    borderRadius: '20px',
+                                                    fontSize: '0.78rem',
+                                                    fontWeight: 600,
+                                                    background: item.aktif !== false ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+                                                    color: item.aktif !== false ? '#10b981' : '#ef4444',
+                                                    border: `1px solid ${item.aktif !== false ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`,
                                                 }}>
-                                                    <i className="bi bi-award-fill" />
-                                                </div>
-                                                <div>
-                                                    <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, color: 'var(--n-text)' }}>
-                                                        {nama}
-                                                    </h3>
-                                                    <span style={{ fontSize: '0.8rem', color: 'var(--n-muted, #64748b)' }}>
-                                                        Tahun Ajaran {item.tahun_ajaran}
-                                                    </span>
-                                                </div>
-                                            </div>
-
-                                            <span style={{
-                                                display: 'inline-flex',
-                                                alignItems: 'center',
-                                                gap: '5px',
-                                                padding: '4px 10px',
-                                                borderRadius: '20px',
-                                                fontSize: '0.78rem',
-                                                fontWeight: 600,
-                                                background: item.aktif !== false ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)',
-                                                color: item.aktif !== false ? '#10b981' : '#ef4444',
-                                                border: `1px solid ${item.aktif !== false ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`,
-                                                flexShrink: 0
-                                            }}>
-                                                <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'currentColor' }} />
-                                                {item.aktif !== false ? 'Terdaftar' : 'Nonaktif'}
-                                            </span>
-                                        </div>
-
-                                        {/* Detail info */}
-                                        <div style={{
-                                            display: 'flex',
-                                            flexDirection: 'column',
-                                            gap: '8px',
-                                            padding: '12px 14px',
-                                            background: 'var(--n-surface)',
-                                            borderRadius: '10px',
-                                            fontSize: '0.86rem',
-                                            color: 'var(--n-text)',
-                                            marginBottom: '16px'
-                                        }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                <i className="bi bi-calendar3" style={{ color: '#3b82f6', width: '16px' }} />
-                                                <span style={{ color: 'var(--n-muted, #64748b)', minWidth: '55px' }}>Jadwal:</span>
-                                                <span style={{ fontWeight: 600 }}>
-                                                    {hari ? hari : 'Sesuai jadwal pembina'}
-                                                    {waktuMulai ? `, ${waktuMulai}${waktuSelesai ? ' - ' + waktuSelesai : ''}` : ''}
+                                                    <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'currentColor' }} />
+                                                    {item.aktif !== false ? 'Terdaftar' : 'Nonaktif'}
                                                 </span>
-                                            </div>
-
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                <i className="bi bi-geo-alt" style={{ color: '#10b981', width: '16px' }} />
-                                                <span style={{ color: 'var(--n-muted, #64748b)', minWidth: '55px' }}>Tempat:</span>
-                                                <span style={{ fontWeight: 500 }}>
-                                                    {tempat || 'Madrasah'}
-                                                </span>
-                                            </div>
-
-                                            {keterangan && (
-                                                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', marginTop: '2px' }}>
-                                                    <i className="bi bi-info-circle" style={{ color: '#f59e0b', width: '16px', marginTop: '2px' }} />
-                                                    <span style={{ color: 'var(--n-muted, #64748b)', fontSize: '0.82rem' }}>
-                                                        {keterangan}
-                                                    </span>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-
-                                    {/* Action footer */}
-                                    <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: '10px', borderTop: '1px solid var(--n-border)' }}>
-                                        <Button
-                                            type="button"
-                                            variant="danger"
-                                            onClick={() => handleDeleteSiswaEkskul(item)}
-                                            disabled={isDeleting}
-                                            icon="delete"
-                                            style={{ fontSize: '0.85rem', padding: '6px 14px' }}
-                                        >
-                                            {isDeleting ? 'Membatalkan...' : 'Batalkan Pilihan'}
-                                        </Button>
-                                    </div>
-                                </div>
-                            )
-                        })}
+                                            </td>
+                                            <td data-label="Aksi" style={{ textAlign: 'center' }}>
+                                                <Button
+                                                    type="button"
+                                                    variant="danger"
+                                                    size="sm"
+                                                    onClick={() => handleDeleteSiswaEkskul(item)}
+                                                    disabled={isDeleting}
+                                                    icon="delete"
+                                                    style={{ fontSize: '0.82rem', padding: '5px 12px' }}
+                                                >
+                                                    {isDeleting ? 'Membatalkan...' : 'Batalkan'}
+                                                </Button>
+                                            </td>
+                                        </tr>
+                                    )
+                                })}
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             ) : (
@@ -593,44 +562,39 @@ export default function SiswaEkskulView({ user }: { user?: any }) {
                 <form onSubmit={handleSaveSiswaEkskul}>
                     <ModalBody>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                            <div>
-                                <label style={{ display: 'block', fontWeight: 600, fontSize: '0.9rem', marginBottom: '8px', color: 'var(--n-text)' }}>
-                                    Nama Ekstrakurikuler <span style={{ color: '#ef4444' }}>*</span>
-                                </label>
-                                <Select
-                                    styles={selectStyles}
-                                    options={availableEkskulList.map(e => ({
-                                        value: e.id,
-                                        label: e.nama_ekskul,
-                                        meta: e
-                                    }))}
-                                    value={selectedEkskulOption}
-                                    onChange={(val) => setSelectedEkskulOption(val as any)}
-                                    placeholder="Cari atau pilih ekstrakurikuler..."
-                                    noOptionsMessage={() => "Tidak ada ekskul yang tersedia"}
-                                    isClearable
+                            <ModalField label="Nama Ekstrakurikuler" required>
+                                <InlineSelect
+                                    value={selectedEkskulId}
+                                    onChange={setSelectedEkskulId}
+                                    minWidth="100%"
+                                    height="40px"
+                                    options={ekskulSelectOptions}
+                                    disabled={availableEkskulList.length === 0}
+                                    title="Pilih Ekstrakurikuler"
+                                    style={{ width: '100%' }}
                                 />
-                                {availableEkskulList.length === 0 && (
-                                    <div style={{
-                                        marginTop: '12px',
-                                        padding: '10px 14px',
-                                        background: 'rgba(245, 158, 11, 0.12)',
-                                        border: '1px solid rgba(245, 158, 11, 0.3)',
-                                        borderRadius: '8px',
-                                        color: isDark ? '#fbbf24' : '#b45309',
-                                        fontSize: '0.85rem',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: '8px'
-                                    }}>
-                                        <i className="bi bi-info-circle-fill" />
-                                        <span>Semua ekstrakurikuler yang tersedia pada periode ini sudah Anda ikuti.</span>
-                                    </div>
-                                )}
-                            </div>
+                            </ModalField>
+
+                            {availableEkskulList.length === 0 && (
+                                <div style={{
+                                    marginTop: '-4px',
+                                    padding: '10px 14px',
+                                    background: 'rgba(245, 158, 11, 0.12)',
+                                    border: '1px solid rgba(245, 158, 11, 0.3)',
+                                    borderRadius: '8px',
+                                    color: isDark ? '#fbbf24' : '#b45309',
+                                    fontSize: '0.85rem',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '8px'
+                                }}>
+                                    <i className="bi bi-info-circle-fill" />
+                                    <span>Semua ekstrakurikuler yang tersedia pada periode ini sudah Anda ikuti.</span>
+                                </div>
+                            )}
 
                             {/* Preview detail of selected ekskul */}
-                            {selectedEkskulOption?.meta && (
+                            {selectedEkskulMeta && (
                                 <div style={{
                                     padding: '14px 16px',
                                     borderRadius: '12px',
@@ -642,25 +606,25 @@ export default function SiswaEkskulView({ user }: { user?: any }) {
                                     fontSize: '0.88rem',
                                 }}>
                                     <div style={{ fontWeight: 700, color: 'var(--n-primary, #3b82f6)', fontSize: '0.95rem', marginBottom: '2px' }}>
-                                        {selectedEkskulOption.meta.nama_ekskul}
+                                        {selectedEkskulMeta.nama_ekskul}
                                     </div>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--n-text)' }}>
                                         <i className="bi bi-calendar3" style={{ color: '#3b82f6', width: '16px' }} />
                                         <span style={{ color: 'var(--n-muted, #64748b)' }}>Jadwal:</span>
                                         <span>
-                                            {selectedEkskulOption.meta.hari || 'Sesuai jadwal pembina'}
-                                            {selectedEkskulOption.meta.waktu_mulai ? `, ${formatWaktu(selectedEkskulOption.meta.waktu_mulai)} - ${formatWaktu(selectedEkskulOption.meta.waktu_selesai)}` : ''}
+                                            {selectedEkskulMeta.hari || 'Sesuai jadwal pembina'}
+                                            {selectedEkskulMeta.waktu_mulai ? `, ${formatWaktu(selectedEkskulMeta.waktu_mulai)} - ${formatWaktu(selectedEkskulMeta.waktu_selesai)}` : ''}
                                         </span>
                                     </div>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--n-text)' }}>
                                         <i className="bi bi-geo-alt" style={{ color: '#10b981', width: '16px' }} />
                                         <span style={{ color: 'var(--n-muted, #64748b)' }}>Tempat:</span>
-                                        <span>{selectedEkskulOption.meta.tempat || 'Madrasah'}</span>
+                                        <span>{selectedEkskulMeta.tempat || 'Madrasah'}</span>
                                     </div>
-                                    {selectedEkskulOption.meta.keterangan && (
+                                    {selectedEkskulMeta.keterangan && (
                                         <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', color: 'var(--n-muted, #64748b)', fontSize: '0.82rem', marginTop: '2px' }}>
                                             <i className="bi bi-info-circle" style={{ color: '#f59e0b', width: '16px', marginTop: '2px' }} />
-                                            <span>{selectedEkskulOption.meta.keterangan}</span>
+                                            <span>{selectedEkskulMeta.keterangan}</span>
                                         </div>
                                     )}
                                 </div>
@@ -695,7 +659,7 @@ export default function SiswaEkskulView({ user }: { user?: any }) {
                             type="submit"
                             variant="primary"
                             isLoading={savingEkskul}
-                            disabled={savingEkskul || !selectedEkskulOption || availableEkskulList.length === 0}
+                            disabled={savingEkskul || !selectedEkskulId || availableEkskulList.length === 0}
                             icon="save"
                         >
                             Daftar Ekstrakurikuler
