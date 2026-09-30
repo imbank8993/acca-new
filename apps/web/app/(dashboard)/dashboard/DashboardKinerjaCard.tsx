@@ -48,7 +48,7 @@ export default function DashboardKinerjaCard() {
             color: '#ef4444',
             bgBadge: 'rgba(239, 68, 68, 0.1)',
             sarcasticAlias: 'Grand Master Ghosting',
-            emptyText: 'Nihil! Semua kelas terisi.'
+            emptyText: 'Belum ada data'
         },
         {
             key: 'penugasanTanpa',
@@ -57,7 +57,7 @@ export default function DashboardKinerjaCard() {
             color: '#f59e0b',
             bgBadge: 'rgba(245, 158, 11, 0.1)',
             sarcasticAlias: 'Duta Lempar Tugas',
-            emptyText: 'Semua tugas didampingi.'
+            emptyText: 'Belum ada data'
         },
         {
             key: 'terlambat',
@@ -66,7 +66,7 @@ export default function DashboardKinerjaCard() {
             color: '#06b6d4',
             bgBadge: 'rgba(6, 182, 212, 0.1)',
             sarcasticAlias: 'Juara OTW Abadi',
-            emptyText: 'Tepat waktu semua.'
+            emptyText: 'Belum ada data'
         }
     ], []);
 
