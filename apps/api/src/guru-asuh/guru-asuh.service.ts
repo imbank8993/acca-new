@@ -1087,10 +1087,14 @@ export class GuruAsuhService {
       submission?.approved_by
         ? this.prisma.public_users.findFirst({
             where: { auth_id: submission.approved_by },
-            select: { nip: true, nama: true },
+            select: { nip: true, nama: true, nama_lengkap: true },
           })
         : null,
     ]);
+
+    if (submission && !submission.approved_by_name && approverUser) {
+      submission.approved_by_name = approverUser.nama_lengkap || approverUser.nama || '-';
+    }
 
     return {
       ok: true,

@@ -122,10 +122,11 @@ export default function GuruAsuhTabApproval({ user }: { user?: any }) {
             return;
         }
         const isRevokingApproval = action === 'revisi' && selected.status === 'Approved';
+        const approverName = user?.nama_lengkap || user?.nama || 'Anda';
         const confirm = await swalConfirm({
             title: action === 'approve' ? 'Setujui Laporan?' : isRevokingApproval ? 'Batalkan Persetujuan?' : 'Kembalikan Laporan?',
             text: action === 'approve'
-                ? `Laporan ${selected.nama_guru_snap} akan disahkan dan Anda tercatat sebagai penanda tangan.`
+                ? `Laporan ${selected.nama_guru_snap} akan disahkan dan ${approverName} akan tercatat sebagai penanda tangan dokumen.`
                 : isRevokingApproval
                     ? 'Persetujuan yang sudah diberikan akan dibatalkan (PDF resmi sebelumnya jadi tidak berlaku) dan laporan dikembalikan ke guru untuk diperbaiki.'
                     : 'Laporan akan dikembalikan ke guru untuk diperbaiki.',
