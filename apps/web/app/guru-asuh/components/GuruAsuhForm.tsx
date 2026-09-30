@@ -90,7 +90,7 @@ export default function GuruAsuhForm({ user, editData, onClose, onSuccess, onErr
         if (modalAaTahun) {
             const loadKelasList = async () => {
                 try {
-                    const res = await fetch(`/api/settings/siswa-kelas?tahun_ajaran=${modalAaTahun}&limit=10000`);
+                    const res = await fetch(`/api/settings/siswa-kelas?tahun_ajaran=${modalAaTahun}&program=Reguler&limit=10000`);
                     const data = await res.json();
                     if (data.ok && data.data) {
                         const kelasSet = new Set<string>();
@@ -110,8 +110,8 @@ export default function GuruAsuhForm({ user, editData, onClose, onSuccess, onErr
         if (!ta) return;
         setLoadingStudents(true);
         try {
-            // Build URL with class filter if selected
-            let url = `/api/settings/siswa-kelas?tahun_ajaran=${ta}&limit=5000`;
+            // Build URL with class filter if selected, strictly regular classes
+            let url = `/api/settings/siswa-kelas?tahun_ajaran=${ta}&program=Reguler&limit=5000`;
             if (kf) {
                 url += `&kelas=${encodeURIComponent(kf)}`;
             }
@@ -171,7 +171,7 @@ export default function GuruAsuhForm({ user, editData, onClose, onSuccess, onErr
         if (val) {
             loadStudentOptions('', val, '');
             // Update kelas list
-            fetch(`/api/settings/siswa-kelas?tahun_ajaran=${val}&limit=10000`)
+            fetch(`/api/settings/siswa-kelas?tahun_ajaran=${val}&program=Reguler&limit=10000`)
                 .then(r => r.json())
                 .then(d => {
                     if (d.ok && d.data) {

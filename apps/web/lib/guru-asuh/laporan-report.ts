@@ -6,6 +6,7 @@
 import QRCode from 'qrcode';
 import { nestFetchAsUser } from '@/lib/nest-api';
 import { renderKopHTML, KOP_CSS } from '@/lib/lckh/print-shared';
+import { getPublicOrigin } from '@/lib/public-url';
 
 export const BULAN = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
 
@@ -174,7 +175,8 @@ export async function buildLaporanReport(input: LaporanReportInput): Promise<Lap
     </div>`;
 
     const isApproved = submission.status === 'Approved';
-    const scanUrl = submission.id ? `${origin}/guru-asuh/verify/${submission.id}` : '';
+    const baseOrigin = getPublicOrigin(origin);
+    const scanUrl = submission.id ? `${baseOrigin}/guru-asuh/verify/${submission.id}` : '';
     const qrDataUrl = scanUrl ? await generateQrDataUrl(scanUrl) : '';
 
     const statusInfo = isApproved

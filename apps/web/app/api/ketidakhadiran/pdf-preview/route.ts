@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import QRCode from 'qrcode';
+import { getPublicOrigin } from '@/lib/public-url';
 import {
   buildSingleHtml,
   buildCollectiveHtml,
@@ -53,8 +54,8 @@ export async function GET(request: NextRequest) {
     }
 
     // 2. Render dokumen HTML on-the-fly secara dinamis
-    const origin = request.nextUrl.origin || 'https://acca.icgowa.sch.id';
-    const scanUrl = `${origin}/ketidakhadiran/verify/${letter.barcode}`;
+    const scanBase = getPublicOrigin(request.headers.get('x-forwarded-host') || request.headers.get('host'));
+    const scanUrl = `${scanBase}/ketidakhadiran/verify/${letter.barcode}`;
     const backgroundUrl = await getTemplateBackgroundUrl(letter.jenis_izin);
 
     let qrCodeUrl: string | undefined;

@@ -1,6 +1,7 @@
 import QRCode from 'qrcode';
 import { nestFetchAsUser } from '@/lib/nest-api';
 import { renderKopHTML, KOP_CSS } from '@/lib/lckh/print-shared';
+import { getPublicOrigin } from '@/lib/public-url';
 
 export const BULAN = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
 
@@ -101,7 +102,8 @@ export async function buildEkskulReport(input: EkskulReportInput, token: string 
     </div>`;
 
     const isApproved = submission.status === 'Disahkan';
-    const scanUrl = submission.id ? `${origin}/ekstrakurikuler?tab=approval&id=${submission.id}` : '';
+    const baseOrigin = getPublicOrigin(origin);
+    const scanUrl = submission.id ? `${baseOrigin}/ekstrakurikuler?tab=approval&id=${submission.id}` : '';
     const qrDataUrl = scanUrl ? await generateQrDataUrl(scanUrl) : '';
 
     const statusInfo = isApproved

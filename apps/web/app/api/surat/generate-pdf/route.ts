@@ -12,6 +12,7 @@ import React from 'react';
 import fs from 'fs/promises';
 import path from 'path';
 import { fetchSafeFile } from '@/lib/proxy-guard';
+import { getPublicOrigin } from '@/lib/public-url';
 
 // A4 dimensions in points (72 dpi)
 const A4_WIDTH = 595.28;
@@ -940,7 +941,8 @@ export async function POST(request: NextRequest) {
         const letterId = tempResult.letterId;
 
         // URL verifikasi resmi menggunakan domain terverifikasi (anti spoofing/phishing)
-        const verificationUrl = `${serverOrigin.replace(/\/$/, '')}/surat/scan/${letterId}`;
+        const publicBase = getPublicOrigin(serverOrigin);
+        const verificationUrl = `${publicBase}/surat/scan/${letterId}`;
 
         console.log('[PDF] Generating PDF...');
         console.log('[PDF] Scan URL:', verificationUrl);

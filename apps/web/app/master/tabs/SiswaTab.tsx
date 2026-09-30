@@ -18,6 +18,7 @@ import { useModalBlur } from '@/components/ModalBlurProvider'
 import { MobileFab } from '@/components/mobile'
 import { DesktopFab } from '@/components/ui/DesktopFab'
 import { useMasterAccess } from '@/lib/use-master-access'
+import { getPublicOrigin } from '@/lib/public-url'
 
 
 interface RawSiswa {
@@ -1547,7 +1548,7 @@ export default function SiswaTab({ user }: { user?: any }) {
                   });
 
                   const zip = new JSZip();
-                  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || (typeof window !== 'undefined' ? window.location.origin : '');
+                  const baseUrl = getPublicOrigin();
                   let count = 0;
 
                   for (const siswa of allData) {
@@ -1671,7 +1672,7 @@ export default function SiswaTab({ user }: { user?: any }) {
               <>
                 <div className="qrm-codeWrap">
                   <img
-                    src={`/api/qrcode?data=${encodeURIComponent(`${(process.env.NEXT_PUBLIC_BASE_URL || (typeof window !== 'undefined' ? window.location.origin : ''))}/verify/siswa/${qrCardId}`)}`}
+                    src={`/api/qrcode?data=${encodeURIComponent(`${getPublicOrigin()}/verify/siswa/${qrCardId}`)}`}
                     alt={`QR Code untuk ${qrStudent.nama_lengkap}`}
                     width={180}
                     height={180}
@@ -1684,7 +1685,7 @@ export default function SiswaTab({ user }: { user?: any }) {
                   <button
                     className="qrm-btnDownload"
                     onClick={async () => {
-                      const baseUrl = (process.env.NEXT_PUBLIC_BASE_URL || (typeof window !== 'undefined' ? window.location.origin : ''));
+                      const baseUrl = getPublicOrigin();
                       const url = `${baseUrl}/api/qrcode?data=${encodeURIComponent(`${baseUrl}/verify/siswa/${qrCardId}`)}`;
                       try {
                         const res = await fetch(url);
@@ -1710,7 +1711,8 @@ export default function SiswaTab({ user }: { user?: any }) {
                     id="copyLinkBtn"
                     className="qrm-btnCopy"
                     onClick={() => {
-                      const url = `${(process.env.NEXT_PUBLIC_BASE_URL || (typeof window !== 'undefined' ? window.location.origin : ''))}/verify/siswa/${qrCardId}`;
+                      const baseUrl = getPublicOrigin();
+                      const url = `${baseUrl}/verify/siswa/${qrCardId}`;
                       navigator.clipboard.writeText(url);
                       const btn = document.getElementById('copyLinkBtn');
                       if (btn) {

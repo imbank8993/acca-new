@@ -1,22 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { extractRequestToken } from '@/lib/app-jwt';
-import { nestFetchAsUser } from '@/lib/nest-api';
+import { nestFetch } from '@/lib/nest-api';
 
 export const dynamic = 'force-dynamic';
 
 /**
  * GET /api/master/students/verify
- * Proxy ke NestJS GET /students/verify
+ * Proxy publik ke NestJS GET /students/verify
  * ?nisn=... atau ?card_id=...
  */
 export async function GET(request: NextRequest) {
-  const token = extractRequestToken(request);
-  if (!token) {
-    return NextResponse.json({ ok: false, error: 'Unauthorized' }, { status: 401 });
+  try {
+    const { status, body } = await nestFetch(
+      `/students/verify${request.nextUrl.search}`,
+    );
+    return NextResponse.json(body, { status });
+  } catch (error: any) {
+    return NextResponse.json(
+      { ok: false, error: error?.message || 'Gagal memverifikasi identitas siswa' },
+      { status: 500 },
+    );
   }
-  const { status, body } = await nestFetchAsUser(
-    `/students/verify${request.nextUrl.search}`,
-    token,
-  );
-  return NextResponse.json(body, { status });
 }
+

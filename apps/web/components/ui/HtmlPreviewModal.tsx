@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Modal, ModalBody, ModalFooter, ModalHeader } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 
@@ -17,6 +17,14 @@ interface HtmlPreviewModalProps {
 export default function HtmlPreviewModal({ html, title, onClose }: HtmlPreviewModalProps) {
     const [blobUrl, setBlobUrl] = useState<string | null>(null);
     const [loaded, setLoaded] = useState(false);
+    const iframeRef = useRef<HTMLIFrameElement>(null);
+
+    const handlePrint = () => {
+        if (iframeRef.current?.contentWindow) {
+            iframeRef.current.contentWindow.focus();
+            iframeRef.current.contentWindow.print();
+        }
+    };
 
     useEffect(() => {
         if (!html) { setBlobUrl(null); return; }
@@ -46,6 +54,7 @@ export default function HtmlPreviewModal({ html, title, onClose }: HtmlPreviewMo
                             )}
                             {blobUrl && (
                                 <iframe
+                                    ref={iframeRef}
                                     src={blobUrl}
                                     className="hpm-iframe"
                                     style={{ opacity: loaded ? 1 : 0 }}
@@ -57,6 +66,9 @@ export default function HtmlPreviewModal({ html, title, onClose }: HtmlPreviewMo
                     )}
             </ModalBody>
             <ModalFooter>
+                {html && (
+                    <Button type="button" variant="primary" onClick={handlePrint} leftIcon={<i className="bi bi-printer" />}>Cetak / Simpan PDF</Button>
+                )}
                 <Button type="button" variant="cancel" onClick={onClose} leftIcon={<i className="bi bi-x-lg" />}>Tutup</Button>
             </ModalFooter>
 

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { extractRequestToken } from '@/lib/app-jwt';
 import { buildLaporanReport } from '@/lib/guru-asuh/laporan-report';
+import { getPublicOrigin } from '@/lib/public-url';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,7 +17,7 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ ok: false, error: 'Unauthorized' }, { status: 401 });
         }
         const body = await request.json();
-        const origin = new URL(request.url).origin;
+        const origin = getPublicOrigin(request.headers.get('x-forwarded-host') || request.headers.get('host'));
         const result = await buildLaporanReport({ ...body, origin, token });
         if (!result.ok) {
             return NextResponse.json({ ok: false, error: result.error }, { status: result.status });

@@ -260,11 +260,14 @@ export class GuruAsuhService {
       );
     }
 
-    const reviewer = await this.prisma.public_users.findFirst({
-      where: { auth_id: user.authId },
-      select: { nama: true },
-    });
-    const reviewerName = reviewer?.nama || 'Bendahara Komite';
+    const authId = user.auth_id || user.authId || null;
+    const reviewer = authId
+      ? await this.prisma.public_users.findFirst({
+          where: { auth_id: authId },
+          select: { nip: true, nama: true, nama_lengkap: true },
+        })
+      : null;
+    const reviewerName = reviewer?.nama_lengkap || reviewer?.nama || user.nama_lengkap || user.nama || 'Bendahara Komite';
 
     const updatePayload: any = {
       dibayarkan,
@@ -273,7 +276,7 @@ export class GuruAsuhService {
     };
     if (dibayarkan) {
       updatePayload.dibayarkan_at = new Date();
-      updatePayload.dibayarkan_by = user.authId;
+      updatePayload.dibayarkan_by = authId;
       updatePayload.dibayarkan_by_name = reviewerName;
     } else {
       updatePayload.dibayarkan_at = null;
@@ -323,11 +326,14 @@ export class GuruAsuhService {
       );
     }
 
-    const reviewer = await this.prisma.public_users.findFirst({
-      where: { auth_id: user.authId },
-      select: { nama: true },
-    });
-    const reviewerName = reviewer?.nama || user.nama || 'Approver';
+    const authId = user.auth_id || user.authId || null;
+    const reviewer = authId
+      ? await this.prisma.public_users.findFirst({
+          where: { auth_id: authId },
+          select: { nip: true, nama: true, nama_lengkap: true },
+        })
+      : null;
+    const reviewerName = reviewer?.nama_lengkap || reviewer?.nama || user.nama_lengkap || user.nama || 'WKM Keasramaan';
 
     const updatePayload: any = {
       catatan_reviewer: catatan || null,
@@ -336,7 +342,7 @@ export class GuruAsuhService {
 
     if (action === 'approve') {
       updatePayload.status = 'Approved';
-      updatePayload.approved_by = user.authId;
+      updatePayload.approved_by = authId;
       updatePayload.approved_by_name = reviewerName;
       updatePayload.approved_at = new Date();
     } else {
@@ -859,7 +865,10 @@ export class GuruAsuhService {
 
     const data = await this.prisma.laporan_guru_asuh.findMany({
       where,
-      include: { guru_asuh: true },
+      include: {
+        guru_asuh: true,
+        laporan_guru_asuh_submissions: true,
+      },
       orderBy: { tanggal: 'desc' },
     });
 

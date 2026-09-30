@@ -8,6 +8,8 @@ import MaintenanceBanner from '@/components/MaintenanceBanner';
 import FilterToolbar, { FilterSearch, FilterSelect } from '@/components/ui/FilterToolbar';
 import { Spinner } from '@/components/ui/Spinner';
 import { Tab } from '@/components/ui/Tab';
+import HtmlPreviewModal from '@/components/ui/HtmlPreviewModal';
+import DocViewerModal from '@/components/ui/DocViewerModal';
 import './pembayaran.css';
 
 const BULAN = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
@@ -151,6 +153,47 @@ export default function PembayaranPage({ user: propUser }: PembayaranPageProps =
 
     const [rekapanBulan, setRekapanBulan] = useState(new Date().getMonth() + 1);
     const [rekapanTahun, setRekapanTahun] = useState(new Date().getFullYear());
+
+    const [docPreview, setDocPreview] = useState<{
+        open: boolean;
+        title: string;
+        html?: string;
+        fileUrl?: string;
+    } | null>(null);
+
+    const handleViewGuruAsuhDoc = async (sub: Submission) => {
+        try {
+            Swal.fire({
+                title: 'Memuat Laporan...',
+                allowOutsideClick: false,
+                didOpen: () => Swal.showLoading(),
+            });
+            const res = await fetch('/api/guru-asuh/laporan-submission/preview', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ submissionId: sub.id }),
+            });
+            const json = await res.json();
+            Swal.close();
+            if (!res.ok || !json.ok) throw new Error(json.error || 'Gagal memuat pratinjau dokumen');
+            setDocPreview({
+                open: true,
+                title: `Laporan Guru Asuh - ${sub.nama_guru_snap || 'Guru'} (${BULAN[sub.bulan - 1] || sub.bulan} ${sub.tahun})`,
+                html: json.html,
+            });
+        } catch (e: any) {
+            Swal.close();
+            swalError('Gagal Membuka Dokumen', e.message);
+        }
+    };
+
+    const handleViewFile = (url: string, title: string = 'Bukti Pembayaran') => {
+        setDocPreview({
+            open: true,
+            title,
+            fileUrl: url,
+        });
+    };
 
     const TABS = [
         { id: 'KLINIK', label: 'Klinik Pembelajaran', icon: 'bi-heart-pulse' },
@@ -739,9 +782,15 @@ export default function PembayaranPage({ user: propUser }: PembayaranPageProps =
                                                             </div>
                                                         )}
                                                         {isSafeHttpUrl(cData.url) && (
-                                                            <a href={cData.url} target="_blank" rel="noreferrer noopener" className="gap-td-note" style={{ color: '#0ea5e9', textDecoration: 'none' }} title="Lihat Bukti Transfer">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handleViewFile(cData.url, `Bukti Pembayaran - ${sub.nama_guru_snap || 'Guru'}`)}
+                                                                className="gap-td-note"
+                                                                style={{ color: '#0ea5e9', background: 'none', border: 'none', padding: 0, cursor: 'pointer', textAlign: 'left', font: 'inherit' }}
+                                                                title="Lihat Bukti Pembayaran"
+                                                            >
                                                                 <i className="bi bi-receipt" /> Bukti Pembayaran
-                                                            </a>
+                                                            </button>
                                                         )}
                                                     </div>
                                                 )}
@@ -749,15 +798,14 @@ export default function PembayaranPage({ user: propUser }: PembayaranPageProps =
                                             <td>
                                         <div className="gap-actions-cell">
                                             {(sub.pdf_url || sub.id) && (
-                                                <a
-                                                    href={sub.pdf_url && isSafeHttpUrl(sub.pdf_url) ? sub.pdf_url : `/api/guru-asuh/laporan-submission/pdf?submissionId=${sub.id}`}
-                                                    target="_blank"
-                                                    rel="noreferrer noopener"
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleViewGuruAsuhDoc(sub)}
                                                     className="gap-btn-icon gap-btn-icon--info"
-                                                    title="Lihat PDF"
+                                                    title="Lihat Laporan Dokumen"
                                                 >
-                                                    <i className="bi bi-file-earmark-pdf" />
-                                                </a>
+                                                    <i className="bi bi-file-earmark-text" />
+                                                </button>
                                             )}
                                             {sub.dibayarkan ? (
                                                 <button onClick={() => handleTandai(sub, false)} className="gap-btn-icon gap-btn-icon--danger" title="Batal Dibayar" disabled={saving}>
@@ -963,9 +1011,15 @@ export default function PembayaranPage({ user: propUser }: PembayaranPageProps =
                                                                 </div>
                                                             )}
                                                             {isSafeHttpUrl(cData.url) && (
-                                                                <a href={cData.url} target="_blank" rel="noreferrer noopener" className="gap-td-note" style={{ color: '#0ea5e9', textDecoration: 'none' }} title="Lihat Bukti Transfer">
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => handleViewFile(cData.url, `Bukti Pembayaran - ${sub.pembina_nama || 'Pembina'}`)}
+                                                                    className="gap-td-note"
+                                                                    style={{ color: '#0ea5e9', background: 'none', border: 'none', padding: 0, cursor: 'pointer', textAlign: 'left', font: 'inherit' }}
+                                                                    title="Lihat Bukti Pembayaran"
+                                                                >
                                                                     <i className="bi bi-receipt" /> Bukti Pembayaran
-                                                                </a>
+                                                                </button>
                                                             )}
                                                         </div>
                                                     )}
@@ -973,9 +1027,14 @@ export default function PembayaranPage({ user: propUser }: PembayaranPageProps =
                                                 <td>
                                                     <div className="gap-actions-cell">
                                                         {sub.pdf_url && isSafeHttpUrl(sub.pdf_url) && (
-                                                            <a href={sub.pdf_url} target="_blank" rel="noreferrer noopener" className="gap-btn-icon gap-btn-icon--info" title="Lihat PDF Laporan">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handleViewFile(sub.pdf_url!, `Laporan Ekskul - ${sub.ekskul?.nama_ekskul || 'Ekskul'}`)}
+                                                                className="gap-btn-icon gap-btn-icon--info"
+                                                                title="Lihat PDF Laporan"
+                                                            >
                                                                 <i className="bi bi-file-earmark-pdf" />
-                                                            </a>
+                                                            </button>
                                                         )}
                                                         {sub.dibayarkan ? (
                                                             <button onClick={() => handleTandaiEkskul(sub, false)} className="gap-btn-icon gap-btn-icon--danger" title="Batal Dibayar" disabled={savingEkskul}>
@@ -1128,6 +1187,22 @@ export default function PembayaranPage({ user: propUser }: PembayaranPageProps =
                         </table>
                     </div>
                 </div>
+            )}
+
+            {docPreview?.open && docPreview.html && (
+                <HtmlPreviewModal
+                    html={docPreview.html}
+                    title={docPreview.title}
+                    onClose={() => setDocPreview(null)}
+                />
+            )}
+
+            {docPreview?.open && docPreview.fileUrl && (
+                <DocViewerModal
+                    fileUrl={docPreview.fileUrl}
+                    title={docPreview.title}
+                    onClose={() => setDocPreview(null)}
+                />
             )}
 
             <MaintenanceBanner pageKey="pembayaran" />

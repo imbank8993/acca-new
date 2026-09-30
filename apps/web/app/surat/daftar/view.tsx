@@ -10,6 +10,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { createPortal } from 'react-dom';
 import Swal from 'sweetalert2';
 import '../../surat/surat.css';
+import { getPublicOrigin } from '@/lib/public-url';
 
 interface SuratItem {
     id: string;
@@ -467,7 +468,7 @@ function DaftarSuratContent({ hideHeader = false }: { hideHeader?: boolean }) {
                                 {/* Left: QR Code */}
                                 <div style={{ position: 'relative', display: 'flex', flexShrink: 0, boxShadow: '0 4px 12px rgba(0,0,0,0.06)', borderRadius: '8px', overflow: 'hidden' }}>
                                     <img
-                                        src={`/api/qrcode?data=${encodeURIComponent(`${typeof window !== 'undefined' ? window.location.origin : ''}/surat/scan/${selectedSurat.id}`)}`}
+                                        src={`/api/qrcode?data=${encodeURIComponent(`${getPublicOrigin()}/surat/scan/${selectedSurat.id}`)}`}
                                         alt="QR Verifikasi"
                                         style={{ width: '84px', height: '84px', border: '1px solid #e2e8f0', background: 'white', display: 'block' }}
                                     />

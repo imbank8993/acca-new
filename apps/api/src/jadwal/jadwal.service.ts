@@ -155,11 +155,13 @@ export class JadwalService {
     const nisnSet = new Set<string>();
 
     if (roles.includes('SISWA')) {
-      const nisn = String(user?.nisn || user?.username || '').trim();
-      if (nisn) {
-        nisnSet.add(nisn);
-        nisnSet.add(nisn.padStart(10, '0'));
-        nisnSet.add(nisn.replace(/^0+/, ''));
+      for (const kandidat of [user?.nisn, user?.nip, user?.username]) {
+        const nisn = String(kandidat || '').trim();
+        if (nisn) {
+          nisnSet.add(nisn);
+          nisnSet.add(nisn.padStart(10, '0'));
+          nisnSet.add(nisn.replace(/^0+/, ''));
+        }
       }
     }
 
@@ -228,9 +230,11 @@ export class JadwalService {
       if (!diminta) {
         throw new BadRequestException('Kelas wajib diisi');
       }
-      if (!bolehKelas.includes(diminta)) {
+      const dimintaList = diminta.split(',').map((k) => k.trim()).filter(Boolean);
+      const tidakDiizinkan = dimintaList.filter((k) => !bolehKelas.includes(k));
+      if (tidakDiizinkan.length > 0) {
         throw new ForbiddenException(
-          `Anda tidak terdaftar di kelas ${diminta}. Jadwal kelas lain bisa dilihat lewat `
+          `Anda tidak terdaftar di kelas ${tidakDiizinkan.join(', ')}. Jadwal kelas lain bisa dilihat lewat `
           + `"Jadwal Lengkap".`,
         );
       }

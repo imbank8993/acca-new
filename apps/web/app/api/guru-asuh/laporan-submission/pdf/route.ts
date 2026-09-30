@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { extractRequestToken } from '@/lib/app-jwt';
 import { buildLaporanReport } from '@/lib/guru-asuh/laporan-report';
 import { launchPuppeteerBrowser } from '@/lib/puppeteer-launcher';
+import { getPublicOrigin } from '@/lib/public-url';
 
 export const dynamic = 'force-dynamic';
 
@@ -60,7 +61,7 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ ok: false, error: 'Unauthorized' }, { status: 401 });
         }
         const body = await request.json().catch(() => ({}));
-        const origin = new URL(request.url).origin;
+        const origin = getPublicOrigin(request.headers.get('x-forwarded-host') || request.headers.get('host'));
         return await handleGeneratePdf(body, token, origin);
     } catch (error: any) {
         console.error('[guru-asuh laporan-submission pdf POST] error:', error);
@@ -81,7 +82,7 @@ export async function GET(request: NextRequest) {
         const tahun = searchParams.get('tahun');
         const nama_guru = searchParams.get('nama_guru');
 
-        const origin = new URL(request.url).origin;
+        const origin = getPublicOrigin(request.headers.get('x-forwarded-host') || request.headers.get('host'));
         return await handleGeneratePdf({ submissionId, nip, bulan, tahun, nama_guru }, token, origin);
     } catch (error: any) {
         console.error('[guru-asuh laporan-submission pdf GET] error:', error);

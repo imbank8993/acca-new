@@ -13,6 +13,7 @@
 
 import { getUploadUrl } from '@/lib/file-storage';
 import { prisma } from '@/lib/prisma';
+import { getPublicOrigin } from '@/lib/public-url';
 import https from 'https';
 
 /** Result of opening a PDF-ready letter in a new window */
@@ -344,13 +345,7 @@ export async function openPdfLetter(
     }
 
     // Scan URL
-    const origin = typeof window !== 'undefined' ? window.location.origin : '';
-    let scanBase = origin;
-    if (scanBase.includes('localhost')) {
-        const envUrl = process.env.NEXT_PUBLIC_APP_URL;
-        if (envUrl && !envUrl.includes('localhost')) scanBase = envUrl;
-        else scanBase = 'https://acca.icgowa.sch.id';
-    }
+    const scanBase = getPublicOrigin();
     const scanUrl = `${scanBase}/ketidakhadiran/verify/${barcode}`;
 
     // Generate letter number

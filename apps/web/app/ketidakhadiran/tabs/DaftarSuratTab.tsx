@@ -8,6 +8,7 @@ import { useFileViewer } from '@/components/useFileViewer';
 import '../../surat/surat.css';
 import '../ketidakhadiran.css';
 import { createPortal } from 'react-dom';
+import { getPublicOrigin } from '@/lib/public-url';
 
 interface AccaLetter {
     id: string;
@@ -617,7 +618,7 @@ function DaftarAccaContent() {
                                         <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
                                             <div className="detail-qr-wrapper" style={{ position: 'relative', display: 'inline-block', flexShrink: 0, marginBottom: 0 }}>
                                                 <img
-                                                    src={`/api/qrcode?data=${encodeURIComponent(`${typeof window !== 'undefined' ? window.location.origin : ''}/ketidakhadiran/verify/${selectedLetter.barcode}`)}`}
+                                                    src={`/api/qrcode?data=${encodeURIComponent(`${getPublicOrigin()}/ketidakhadiran/verify/${selectedLetter.barcode}`)}`}
                                                     alt="QR Verifikasi"
                                                     className="detail-qr-image"
                                                     style={{ width: '110px', height: '110px', padding: '0.25rem' }}

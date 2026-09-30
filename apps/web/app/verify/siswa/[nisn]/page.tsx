@@ -11,10 +11,15 @@ function VerifySiswaPage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    const identifier = params.nisn as string;
+    const identifier = params?.nisn ? String(params.nisn).trim() : '';
 
     useEffect(() => {
-        if (identifier) fetchData();
+        if (identifier) {
+            fetchData();
+        } else {
+            setLoading(false);
+            setError('ID Kartu atau NISN tidak ditemukan di URL.');
+        }
     }, [identifier]);
 
     const fetchData = async () => {
@@ -51,10 +56,10 @@ function VerifySiswaPage() {
 
     if (loading) {
         return (
-            <div className="scan-page-wrap">
-                <div className="scan-loading">
+            <div className="scan-page-wrap animate-srt-fade-in" style={{ padding: '16px', minHeight: '100vh', display: 'flex', flexDirection: 'column', background: '#f8fafc', color: 'var(--n-text)' }}>
+                <div className="scan-loading" style={{ minHeight: '60vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
                     <Spinner size={40} />
-                    <p>Memverifikasi identitas siswa...</p>
+                    <p style={{ marginTop: '16px', color: 'var(--n-muted)', fontWeight: 500 }}>Memverifikasi identitas siswa...</p>
                 </div>
             </div>
         );
@@ -62,7 +67,19 @@ function VerifySiswaPage() {
 
     if (error || !data) {
         return (
-            <div className="scan-page-wrap">
+            <div className="scan-page-wrap animate-srt-fade-in" style={{ padding: '16px', minHeight: '100vh', display: 'flex', flexDirection: 'column', background: '#f8fafc', color: 'var(--n-text)' }}>
+                {/* Header Bar */}
+                <header className="scan-header-bar" style={{ padding: '12px 16px', borderRadius: '12px', background: 'white', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <a href="/" className="scan-btn-back" style={{ color: 'var(--n-muted)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 600 }}>
+                        <i className="bi bi-arrow-left"></i>
+                        <span>Kembali</span>
+                    </a>
+                    <div className="scan-system-badge" style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#3b82f6', fontWeight: 600, fontSize: '0.85rem' }}>
+                        <i className="bi bi-shield-check"></i>
+                        <span className="hide-mobile">Sistem Verifikasi Siswa</span>
+                    </div>
+                </header>
+
                 <div className="scan-error">
                     <div className="scan-error-icon"><i className="bi bi-x-circle-fill"></i></div>
                     <h1>{data?.status === 'CARD_INACTIVE' ? 'Kartu Tidak Aktif' : 'Siswa Tidak Ditemukan'}</h1>

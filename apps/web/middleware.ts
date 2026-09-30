@@ -48,7 +48,6 @@ const ALWAYS_ALLOWED = new Set([
     // sehingga tidak bisa diatur admin. Keduanya dibuka lewat kode/QR, bukan lewat menu.
     'lckh-verification',
     'lckh/verification',
-    'redirect',
 ])
 
 /** Halaman yang hanya relevan untuk role tertentu tetapi belum diseed di role_pages. */
@@ -62,6 +61,7 @@ const ROLE_SCOPED_EXTRAS: Record<string, string[]> = {
     OP_PENGUMUMAN: ['audit-log'],
     ORANG_TUA: ['anak'],
     OP_AGENDA: ['agenda-madrasah'],
+    SISWA: ['ketidakhadiran'],
 }
 
 export async function middleware(request: NextRequest) {
@@ -189,6 +189,8 @@ export async function middleware(request: NextRequest) {
         // diambil dari dokumen yang tercakup token, bukan dari pemanggil.
         '/api/informasi-akademik/share/file',
         '/api/qrcode', // QR code generation for public access
+        '/redirect', // Public card reader redirect route
+        '/api/config', // Public system config read endpoint
         '/verify', // Public verification standalone page
         '/verifikasi', // Public verification standalone page
         '/api/master/students/verify', // Verify siswa API endpoint (public)

@@ -4,6 +4,7 @@ import { Spinner } from '@/components/ui/Spinner';
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import '../surat/surat.css';
+import { getPublicOrigin } from '@/lib/public-url';
 
 interface SuratVerified {
     found: boolean;
@@ -197,7 +198,7 @@ function VerifikasiContent() {
                                 <div className="verify-qr-section" style={{ marginTop: '1rem', padding: '0.75rem' }}>
                                     <p className="qr-label">Pindai QR Code di dokumen untuk verifikasi ulang</p>
                                     <img
-                                        src={`/api/qrcode?data=${encodeURIComponent(`${typeof window !== 'undefined' ? window.location.origin : ''}/verifikasi?id=SRT-${letter.id}`)}`}
+                                        src={`/api/qrcode?data=${encodeURIComponent(`${getPublicOrigin()}/verifikasi?id=SRT-${letter.id}`)}`}
                                         alt="QR Code Verifikasi"
                                         className="verify-qr-image"
                                         style={{ width: '80px', height: '80px' }}
@@ -299,11 +300,11 @@ function VerifikasiContent() {
                         <div className="verify-qr-section">
                             <p className="qr-label">Pindai QR Code di dokumen untuk verifikasi ulang</p>
                             <img
-                                src={`/api/qrcode?data=${encodeURIComponent(`${typeof window !== 'undefined' ? window.location.origin : ''}/verifikasi?id=SRT-${letter.id}`)}`}
+                                src={`/api/qrcode?data=${encodeURIComponent(`${getPublicOrigin()}/verifikasi?id=SRT-${letter.id}`)}`}
                                 alt="QR Code Verifikasi"
                                 className="verify-qr-image"
                             />
-                            <p className="qr-url">app.adacode.ai/surat/scan/{letter.id}</p>
+                            <p className="qr-url">{getPublicOrigin().replace(/^https?:\/\//, '')}/surat/scan/{letter.id}</p>
                         </div>
 
                         <div className="verify-id-display">

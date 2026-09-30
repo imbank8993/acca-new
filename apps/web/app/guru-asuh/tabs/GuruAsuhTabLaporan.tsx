@@ -16,9 +16,10 @@ import { ActionButton, ActionGroup } from '@/components/ui/ActionButtons';
 import { Spinner } from '@/components/ui/Spinner';
 import { DesktopFab } from '@/components/ui/DesktopFab';
 import { MobileFab } from '@/components/mobile';
+import { getProxiedImageUrl } from '@/lib/image-utils';
 
 interface GuruAsuh { id: number; nip: string; nama_guru: string; nisn_siswa: string; nama_siswa: string; kelas: string; tahun_ajaran: string; aktif: boolean; }
-interface LaporanGuruAsuh { id: string; guru_asuh_id: number; nip: string; tanggal: string; kegiatan: string; foto_url?: string; guru_asuh?: GuruAsuh; submission_id?: string | null; }
+interface LaporanGuruAsuh { id: string; guru_asuh_id: number; nip: string; tanggal: string; kegiatan: string; foto_url?: string; guru_asuh?: GuruAsuh; submission_id?: string | null; laporan_guru_asuh_submissions?: { id: string; status: 'Submitted' | 'Approved' | 'Revisi'; } | null; }
 interface LaporanSubmission { id: string; status: 'Submitted' | 'Approved' | 'Revisi'; catatan_reviewer?: string | null; approved_by_name?: string | null; approved_at?: string | null; pdf_url?: string | null; }
 
 const BULAN = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
@@ -484,7 +485,7 @@ export default function GuruAsuhTabLaporan({ user }: { user?: any }) {
                     {selectedYear === 'ALL' ? (
                         <span className="gal__statusBadge gal__statusBadge--pending desktop-only"><i className="bi bi-info-circle-fill" /> Pilih tahun spesifik</span>
                     ) : submission?.status === 'Approved' ? (
-                        <span className="gal__statusBadge gal__statusBadge--approved desktop-only"><i className="bi bi-patch-check-fill" /> Disahkan</span>
+                        null
                     ) : submission?.status === 'Submitted' ? (
                         <div className="desktop-only" style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                             <span className="gal__statusBadge gal__statusBadge--pending"><i className="bi bi-hourglass-split" /> Menunggu WKM</span>
@@ -601,75 +602,115 @@ export default function GuruAsuhTabLaporan({ user }: { user?: any }) {
                         <div className="gal__tableWrap">
                             <table className="gal__table">
                                 <thead>
-                                    <tr><th style={{ width: '12%' }}>Tanggal</th><th style={{ width: '25%' }}>Siswa / Kelas</th><th>Kegiatan</th><th className="gal__thRight" style={{ width: '10%' }}>Aksi</th></tr>
+                                    <tr><th style={{ width: '12%' }}>Tanggal</th><th style={{ width: '25%' }}>Siswa / Kelas</th><th>Kegiatan</th><th className="gal__thRight" style={{ width: '12%', minWidth: '120px' }}>Aksi</th></tr>
                                 </thead>
                                 <tbody>
-                                    {groupedList.map(g => g.items.map((l, idx) => (
-                                        <tr key={l.id}>
-                                            {idx === 0 && (
-                                                <td className="gal__tdDate" rowSpan={g.items.length}>{formatDate(g.tanggal)}</td>
-                                            )}
-                                            <td>
-                                                <div className="gal__stuWrap">
-                                                    <div>
-                                                        <div className="gal__stuName">{l.guru_asuh?.nama_siswa || '-'}</div>
-                                                        <div className="gal__stuClass">Kelas {l.guru_asuh?.kelas || '-'}</div>
+                                    {groupedList.map(g => {
+                                        const fotoUrl = g.items.find(i => Boolean(i.foto_url))?.foto_url;
+                                        const isLocked = Boolean(g.items[0]?.submission_id);
+                                        const isApproved = g.items.some(i => i.laporan_guru_asuh_submissions?.status === 'Approved') || (isLocked && submission?.status === 'Approved');
+
+                                        return g.items.map((l, idx) => (
+                                            <tr key={l.id}>
+                                                {idx === 0 && (
+                                                    <td className="gal__tdDate" rowSpan={g.items.length}>{formatDate(g.tanggal)}</td>
+                                                )}
+                                                <td>
+                                                    <div className="gal__stuWrap">
+                                                        <div>
+                                                            <div className="gal__stuName">{l.guru_asuh?.nama_siswa || '-'}</div>
+                                                            <div className="gal__stuClass">Kelas {l.guru_asuh?.kelas || '-'}</div>
+                                                        </div>
                                                     </div>
-                                                </div>
-                                            </td>
-                                            {idx === 0 && (
-                                                <td rowSpan={g.items.length}>
-                                                    <div className="gal__keg">{g.kegiatan}</div>
                                                 </td>
-                                            )}
-                                            {idx === 0 && (
-                                                <td className="gal__tdRight" rowSpan={g.items.length}>
-                                                    {l.submission_id ? (
-                                                        <span className="gal__lockBadge" title="Sudah diajukan, tidak bisa diubah"><i className="bi bi-lock-fill" /> Terkunci</span>
-                                                    ) : (
-                                                        <ActionGroup>
-                                                            <ActionButton action="edit" onClick={() => openEdit(g)} title="Edit" />
-                                                            <ActionButton action="delete" onClick={() => handleDelete(g)} title="Hapus" />
+                                                {idx === 0 && (
+                                                    <td rowSpan={g.items.length}>
+                                                        <div className="gal__keg">{g.kegiatan}</div>
+                                                    </td>
+                                                )}
+                                                {idx === 0 && (
+                                                    <td className="gal__tdRight" rowSpan={g.items.length}>
+                                                        <ActionGroup align="right">
+                                                            {fotoUrl && (
+                                                                <ActionButton
+                                                                    action="view"
+                                                                    icon={<i className="bi bi-eye-fill" />}
+                                                                    title="Lihat Foto Kegiatan"
+                                                                    onClick={() => setPreviewFileUrl(fotoUrl)}
+                                                                />
+                                                            )}
+                                                            {isLocked ? (
+                                                                isApproved ? (
+                                                                    <span className="gal__approvedBadge" title="Laporan telah disahkan oleh WKM Keasramaan"><i className="bi bi-patch-check-fill" /> Disahkan</span>
+                                                                ) : (
+                                                                    <span className="gal__lockBadge" title="Sudah diajukan, tidak bisa diubah"><i className="bi bi-lock-fill" /> Terkunci</span>
+                                                                )
+                                                            ) : (
+                                                                <>
+                                                                    <ActionButton action="edit" onClick={() => openEdit(g)} title="Edit" />
+                                                                    <ActionButton action="delete" onClick={() => handleDelete(g)} title="Hapus" />
+                                                                </>
+                                                            )}
                                                         </ActionGroup>
-                                                    )}
-                                                </td>
-                                            )}
-                                        </tr>
-                                    )))}
+                                                    </td>
+                                                )}
+                                            </tr>
+                                        ));
+                                    })}
                                 </tbody>
                             </table>
                         </div>
 
                         <div className="gal__cards">
-                            {groupedList.map(g => (
-                                <div key={`${g.tanggal}|${g.kegiatan}`} className="gal__card">
-                                    <div className="gal__cardTop">
-                                        <div className="gal__cardDate">{formatDate(g.tanggal)}</div>
-                                        {g.items[0]?.submission_id ? (
-                                            <span className="gal__lockBadge"><i className="bi bi-lock-fill" /></span>
-                                        ) : (
-                                            <ActionGroup>
-                                                <ActionButton action="edit" onClick={() => openEdit(g)} title="Edit" />
-                                                <ActionButton action="delete" onClick={() => handleDelete(g)} title="Hapus" />
+                            {groupedList.map(g => {
+                                const fotoUrl = g.items.find(i => Boolean(i.foto_url))?.foto_url;
+                                const isLocked = Boolean(g.items[0]?.submission_id);
+                                const isApproved = g.items.some(i => i.laporan_guru_asuh_submissions?.status === 'Approved') || (isLocked && submission?.status === 'Approved');
+
+                                return (
+                                    <div key={`${g.tanggal}|${g.kegiatan}`} className="gal__card">
+                                        <div className="gal__cardTop">
+                                            <div className="gal__cardDate">{formatDate(g.tanggal)}</div>
+                                            <ActionGroup align="right">
+                                                {fotoUrl && (
+                                                    <ActionButton
+                                                        action="view"
+                                                        icon={<i className="bi bi-eye-fill" />}
+                                                        title="Lihat Foto Kegiatan"
+                                                        onClick={() => setPreviewFileUrl(fotoUrl)}
+                                                    />
+                                                )}
+                                                {isLocked ? (
+                                                    isApproved ? (
+                                                        <span className="gal__approvedBadge" title="Laporan telah disahkan oleh WKM Keasramaan"><i className="bi bi-patch-check-fill" /> Disahkan</span>
+                                                    ) : (
+                                                        <span className="gal__lockBadge" title="Sudah diajukan, tidak bisa diubah"><i className="bi bi-lock-fill" /> Terkunci</span>
+                                                    )
+                                                ) : (
+                                                    <>
+                                                        <ActionButton action="edit" onClick={() => openEdit(g)} title="Edit" />
+                                                        <ActionButton action="delete" onClick={() => handleDelete(g)} title="Hapus" />
+                                                    </>
+                                                )}
                                             </ActionGroup>
-                                        )}
-                                    </div>
-                                    <div className="gal__cardKeg">
-                                        <div className="gal__cardLbl">Kegiatan</div>
-                                        <div className="gal__cardTxt">{g.kegiatan}</div>
-                                    </div>
-                                    <div className="gal__cardStudents">
-                                        {g.items.map(l => (
-                                            <div key={l.id} className="gal__cardStudentRow">
-                                                <div className="gal__cardBody">
-                                                    <div className="gal__cardName">{l.guru_asuh?.nama_siswa || '-'}</div>
-                                                    <div className="gal__cardClass">Kelas {l.guru_asuh?.kelas || '-'}</div>
+                                        </div>
+                                        <div className="gal__cardKeg">
+                                            <div className="gal__cardLbl">Kegiatan</div>
+                                            <div className="gal__cardTxt">{g.kegiatan}</div>
+                                        </div>
+                                        <div className="gal__cardStudents">
+                                            {g.items.map(l => (
+                                                <div key={l.id} className="gal__cardStudentRow">
+                                                    <div className="gal__cardBody">
+                                                        <div className="gal__cardName">{l.guru_asuh?.nama_siswa || '-'}</div>
+                                                        <div className="gal__cardClass">Kelas {l.guru_asuh?.kelas || '-'}</div>
+                                                    </div>
                                                 </div>
-                                            </div>
-                                        ))}
+                                            ))}
+                                        </div>
                                     </div>
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
                     </>
                 )}
@@ -766,10 +807,10 @@ export default function GuruAsuhTabLaporan({ user }: { user?: any }) {
 
             {previewFileUrl && (
                 <Modal size="xl" className="gal__filePreview" onClose={() => setPreviewFileUrl(null)} labelledBy="file-preview-title">
-                    <ModalHeader id="file-preview-title" icon="file-earmark-text" title="Pratinjau Dokumen" onClose={() => setPreviewFileUrl(null)} />
+                    <ModalHeader id="file-preview-title" icon="image" title="Foto Dokumentasi Kegiatan" onClose={() => setPreviewFileUrl(null)} />
                     <ModalBody className="gal__modalBd" >
-                            {previewFileUrl?.match(/\.(jpeg|jpg|gif|png|webp|bmp)$/i) ? (
-                                <img src={previewFileUrl} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} alt="Pratinjau Dokumen" />
+                            {previewFileUrl?.match(/\.(jpeg|jpg|gif|png|webp|bmp)($|\?)/i) || !previewFileUrl?.match(/\.pdf($|\?)/i) ? (
+                                <img src={getProxiedImageUrl(previewFileUrl)} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} alt="Foto Dokumentasi Kegiatan" />
                             ) : (
                                 <iframe src={previewFileUrl} style={{ width: '100%', height: '100%', border: 'none', position: 'absolute', top: 0, left: 0 }} title="Pratinjau Dokumen" />
                             )}
@@ -823,6 +864,7 @@ export default function GuruAsuhTabLaporan({ user }: { user?: any }) {
                 .gal__statusBadge--pending { background: #eff6ff; color: #1d4ed8; }
                 .gal__statusBadge--revisi { background: #fee2e2; color: #dc2626; }
                 .gal__lockBadge { display: inline-flex; align-items: center; gap: 5px; font-size: 0.72rem; font-weight: 700; color: var(--n-muted); white-space: nowrap; }
+                .gal__approvedBadge { display: inline-flex; align-items: center; gap: 5px; font-size: 0.72rem; font-weight: 700; color: #2563eb; white-space: nowrap; }
                 .gal__revisiBanner { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 14px 18px; border-radius: 14px; background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; }
                 .gal__revisiContent { display: flex; align-items: flex-start; gap: 10px; flex: 1; }
                 .gal__revisiContent > i { font-size: 1.3rem; flex-shrink: 0; margin-top: 2px; }
@@ -833,6 +875,7 @@ export default function GuruAsuhTabLaporan({ user }: { user?: any }) {
                 :global(.dark) .gal__btn--outline { background: #0b1329 !important; border: 1px solid rgba(26, 115, 232, 0.35) !important; color: #ffffff !important; border-radius: 12px !important; }
                 :global(.dark) .gal__btn--ghost:hover,
                 :global(.dark) .gal__btn--outline:hover { background: rgba(26, 115, 232, 0.12) !important; border-color: #60a5fa !important; color: #60a5fa !important; }
+                :global(.dark) .gal__approvedBadge { color: #60a5fa !important; }
                 :global(.dark) .gal__statusBadge--revisi { background: rgba(239, 68, 68, 0.14) !important; color: #f87171 !important; border: 1px solid rgba(239, 68, 68, 0.35) !important; border-radius: 12px !important; }
                 :global(.dark) .gal__statusBadge--approved { background: rgba(59, 130, 246, 0.14) !important; color: #60a5fa !important; border: 1px solid rgba(26, 115, 232, 0.35) !important; border-radius: 12px !important; }
                 :global(.dark) .gal__statusBadge--pending { background: rgba(245, 158, 11, 0.14) !important; color: #fbbf24 !important; border: 1px solid rgba(245, 158, 11, 0.35) !important; border-radius: 12px !important; }

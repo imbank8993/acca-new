@@ -252,11 +252,14 @@ export class EkskulSubmissionService {
       );
     }
 
-    const reviewer = await this.prisma.public_users.findFirst({
-      where: { auth_id: user.authId },
-      select: { nama: true },
-    });
-    const reviewerName = reviewer?.nama || 'Bendahara Komite';
+    const authId = user.auth_id || user.authId || null;
+    const reviewer = authId
+      ? await this.prisma.public_users.findFirst({
+          where: { auth_id: authId },
+          select: { nip: true, nama: true, nama_lengkap: true },
+        })
+      : null;
+    const reviewerName = reviewer?.nama_lengkap || reviewer?.nama || user.nama_lengkap || user.nama || 'Bendahara Komite';
 
     const updatePayload: any = {
       dibayarkan,
@@ -265,7 +268,7 @@ export class EkskulSubmissionService {
     };
     if (dibayarkan) {
       updatePayload.dibayarkan_at = new Date();
-      updatePayload.dibayarkan_by = user.authId;
+      updatePayload.dibayarkan_by = authId;
       updatePayload.dibayarkan_by_name = reviewerName;
     } else {
       updatePayload.dibayarkan_at = null;

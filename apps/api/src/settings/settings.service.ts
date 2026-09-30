@@ -809,6 +809,22 @@ export class SettingsService {
     if (kelas && !homeroom_kelas) {
       where.kelas = kelas;
     }
+    if (params.program) {
+      const masterKelasRows = await this.prisma.master_kelas.findMany({
+        where: params.program === 'Reguler'
+          ? { OR: [{ program: 'Reguler' }, { program: null }] }
+          : { program: params.program },
+        select: { nama: true },
+      });
+      const allowedNames = masterKelasRows.map((r) => r.nama);
+      if (where.kelas && typeof where.kelas === 'string') {
+        if (!allowedNames.includes(where.kelas)) {
+          return { ok: true, data: [] };
+        }
+      } else {
+        where.kelas = { in: allowedNames };
+      }
+    }
     if (q) {
       where.OR = [
         { nama_siswa: { contains: q, mode: 'insensitive' } },
@@ -1739,22 +1755,44 @@ export class SettingsService {
 
     const nisns = Array.from(new Set(data.map((d: any) => d.nisn_siswa).filter(Boolean))) as string[];
     const photoMap = new Map<string, string>();
+    const regularClassMap = new Map<string, string>();
+
     if (nisns.length > 0) {
-      const userProfiles = await this.prisma.public_users.findMany({
-        where: {
-          OR: [
-            { username: { in: nisns } },
-            { nip: { in: nisns } },
-          ],
-          foto_profil: { not: null },
-        },
-        select: { username: true, nip: true, foto_profil: true },
-      });
+      const [userProfiles, regMasterClasses] = await Promise.all([
+        this.prisma.public_users.findMany({
+          where: {
+            OR: [
+              { username: { in: nisns } },
+              { nip: { in: nisns } },
+            ],
+            foto_profil: { not: null },
+          },
+          select: { username: true, nip: true, foto_profil: true },
+        }),
+        this.prisma.master_kelas.findMany({
+          where: { OR: [{ program: 'Reguler' }, { program: null }] },
+          select: { nama: true },
+        }),
+      ]);
+
       for (const up of userProfiles) {
         if (up.foto_profil) {
           if (up.username) photoMap.set(up.username, up.foto_profil);
           if (up.nip) photoMap.set(up.nip, up.foto_profil);
         }
+      }
+
+      const regNames = regMasterClasses.map((r) => r.nama);
+      const skRows = await this.prisma.siswa_kelas.findMany({
+        where: {
+          nisn: { in: nisns },
+          aktif: true,
+          kelas: { in: regNames },
+        },
+        select: { nisn: true, kelas: true, tahun_ajaran: true },
+      });
+      for (const sk of skRows) {
+        regularClassMap.set(`${sk.nisn}|${sk.tahun_ajaran}`, sk.kelas);
       }
     }
 
@@ -1763,6 +1801,7 @@ export class SettingsService {
       data: data.map(d => ({ 
         ...d, 
         id: d.id.toString(),
+        kelas: regularClassMap.get(`${d.nisn_siswa}|${d.tahun_ajaran}`) || d.kelas,
         foto_profil: photoMap.get(d.nisn_siswa) || null,
       })), 
       total 
@@ -1805,16 +1844,40 @@ export class SettingsService {
     }
 
     const paddedNISN = String(body.nisn_siswa).trim();
-    const siswaQuery: any = { nisn: paddedNISN, tahun_ajaran: body.tahun_ajaran };
-    if (body.kelas) siswaQuery.kelas = body.kelas;
 
-    const siswaKelasData = await this.prisma.siswa_kelas.findFirst({
-      where: siswaQuery,
+    // Pastikan selalu memetakan ke kelas reguler siswa (bukan kelas peminatan/UTBK)
+    const masterReguler = await this.prisma.master_kelas.findMany({
+      where: { OR: [{ program: 'Reguler' }, { program: null }] },
+      select: { nama: true },
+    });
+    const regularClassNames = masterReguler.map((r) => r.nama);
+
+    let siswaKelasData = await this.prisma.siswa_kelas.findFirst({
+      where: {
+        nisn: paddedNISN,
+        tahun_ajaran: body.tahun_ajaran,
+        aktif: true,
+        kelas: { in: regularClassNames },
+      },
       select: { nisn: true, nama_siswa: true, kelas: true, tahun_ajaran: true },
     });
 
     if (!siswaKelasData) {
+      const siswaQuery: any = { nisn: paddedNISN, tahun_ajaran: body.tahun_ajaran };
+      if (body.kelas) siswaQuery.kelas = body.kelas;
+      siswaKelasData = await this.prisma.siswa_kelas.findFirst({
+        where: siswaQuery,
+        select: { nisn: true, nama_siswa: true, kelas: true, tahun_ajaran: true },
+      });
+    }
+
+    if (!siswaKelasData) {
       throw new BadRequestException(`Siswa dengan NISN ${paddedNISN} tidak ditemukan pada Tahun ${body.tahun_ajaran}.`);
+    }
+
+    let finalKelas = siswaKelasData.kelas;
+    if (body.kelas && regularClassNames.includes(body.kelas)) {
+      finalKelas = body.kelas;
     }
 
     const existingClaim = await this.prisma.guru_asuh.findFirst({
@@ -1842,7 +1905,7 @@ export class SettingsService {
       nama_guru: guru.nama_lengkap,
       nisn_siswa: siswaKelasData.nisn,
       nama_siswa: siswaKelasData.nama_siswa,
-      kelas: body.kelas || siswaKelasData.kelas,
+      kelas: finalKelas,
       tahun_ajaran: body.tahun_ajaran,
       aktif: aktif,
     };

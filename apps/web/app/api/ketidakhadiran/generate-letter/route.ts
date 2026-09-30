@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/prisma';
 import { NextRequest, NextResponse } from 'next/server';
 import QRCode from 'qrcode';
+import { getPublicOrigin } from '@/lib/public-url';
 
 export const dynamic = 'force-dynamic';
 
@@ -178,9 +179,8 @@ export async function POST(request: NextRequest) {
       : `${String(nextNumber).padStart(3, '0')}/IZIN/${jenisSub}/${monthRoman}/${currentYear}`;
 
     const barcode = 'ACCA-' + Date.now().toString(36).toUpperCase() + '-' + Math.random().toString(36).slice(2, 8).toUpperCase();
-
-    const origin = request.nextUrl.origin || 'https://acca.icgowa.sch.id';
-    const scanUrl = `${origin}/ketidakhadiran/verify/${barcode}`;
+    const scanBase = getPublicOrigin(request.headers.get('x-forwarded-host') || request.headers.get('host'));
+    const scanUrl = `${scanBase}/ketidakhadiran/verify/${barcode}`;
 
     let qrCodeUrl: string | undefined;
     try {

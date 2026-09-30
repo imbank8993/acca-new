@@ -2,6 +2,7 @@ import QRCode from 'qrcode';
 import { prisma } from '@/lib/prisma';
 import { renderKopHTML, KOP_CSS } from '@/lib/lckh/print-shared';
 import { can, type CapabilityHolder } from '@/lib/capabilities';
+import { getPublicOrigin } from '@/lib/public-url';
 
 export function esc(v: unknown): string {
     if (v === null || v === undefined) return '';
@@ -165,7 +166,8 @@ export async function buildKlinikReport(input: KlinikReportInput): Promise<Klini
 
     const isApproved = laporan.status === 'Approved';
     const isSubmitted = laporan.status === 'Submitted' || laporan.status === 'Approved';
-    const scanUrl = (isApproved && laporan.id) ? `${origin}/klinik-approval/verify/${laporan.id}` : '';
+    const baseOrigin = getPublicOrigin(origin);
+    const scanUrl = (isApproved && laporan.id) ? `${baseOrigin}/klinik-approval/verify/${laporan.id}` : '';
     const qrDataUrl = scanUrl ? await generateQrDataUrl(scanUrl) : '';
 
     const statusInfo = isApproved
