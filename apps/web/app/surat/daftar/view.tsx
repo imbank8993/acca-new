@@ -473,8 +473,8 @@ function DaftarSuratContent({ hideHeader = false }: { hideHeader?: boolean }) {
                                         style={{ width: '84px', height: '84px', border: '1px solid #e2e8f0', background: 'white', display: 'block' }}
                                     />
                                     <img
-                                        src="/logo-icon.png" alt="Logo"
-                                        style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '20px', height: '20px', borderRadius: '50%', background: 'white', padding: '2px', boxShadow: '0 2px 6px rgba(0,0,0,0.1)' }}
+                                        src="/logo-sidebar-kecil.webp" alt="Logo"
+                                        style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '20px', height: '20px', borderRadius: '4px', background: 'white', padding: '1.5px', boxShadow: '0 2px 6px rgba(0,0,0,0.1)', objectFit: 'contain' }}
                                     />
                                 </div>
 

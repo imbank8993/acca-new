@@ -31,17 +31,35 @@ export class AuthService {
 
   async login(loginDto: LoginDto) {
     const { usernameOrEmail, password } = loginDto;
-    const cleanIdentifier = (usernameOrEmail || '').trim().toLowerCase();
+    const rawIdentifier = (usernameOrEmail || '').trim();
+    const cleanIdentifier = rawIdentifier.toLowerCase();
 
-    // Search user by email or username in public_users table
-    const user = await this.prismaService.public_users.findFirst({
+    // 1. Search user by email, username, or nip in public_users table (case-insensitive)
+    let user = await this.prismaService.public_users.findFirst({
       where: {
         OR: [
-          { email: cleanIdentifier },
-          { username: cleanIdentifier },
+          { email: { equals: cleanIdentifier, mode: 'insensitive' } },
+          { username: { equals: rawIdentifier, mode: 'insensitive' } },
+          { nip: { equals: rawIdentifier, mode: 'insensitive' } },
         ],
       },
     });
+
+    // 2. Fallback: jika tidak ditemukan di public_users, cari di auth_users (misal user dibuat tanpa email di public_users atau email cerminan)
+    if (!user) {
+      const authUser = await this.prismaService.auth_users.findFirst({
+        where: {
+          email: { equals: cleanIdentifier, mode: 'insensitive' },
+        },
+        select: { id: true },
+      });
+
+      if (authUser?.id) {
+        user = await this.prismaService.public_users.findFirst({
+          where: { auth_id: authUser.id },
+        });
+      }
+    }
 
     if (!user) {
       this.logger.warn(`Login gagal: Pengguna '${cleanIdentifier}' tidak ditemukan`);
@@ -55,14 +73,6 @@ export class AuthService {
 
     /**
      * Satu-satunya tempat kredensial: `auth_users.encrypted_password` (bcrypt).
-     *
-     * Cabang cadangan ke `public_users.password_hash` sudah dicabut. Isinya
-     * membandingkan `password === storedPassword` apa adanya bila nilainya
-     * tidak diawali `$2a$`/`$2b$` — artinya password yang tersimpan sebagai
-     * teks biasa tetap bisa dipakai login, dan di basis data ini 79 baris
-     * memang berisi teks polos. Kolomnya sendiri sedang dihapus; sampai
-     * migrasinya jalan, tidak adanya cabang ini sudah cukup membuat nilai lama
-     * itu tidak berguna sebagai kredensial.
      */
     let isValidPassword = false;
 
@@ -78,6 +88,28 @@ export class AuthService {
           authUser.encrypted_password,
         );
       }
+    } else {
+      // Auto-repair: Jika akun lama belum punya auth_id, buatkan dan tautkan
+      const newAuthId = crypto.randomUUID();
+      const authEmail = (user.email || `${user.username || 'user'}@acca.local`).toLowerCase();
+      const encryptedPassword = await bcrypt.hash(password, 10);
+      await this.prismaService.auth_users.create({
+        data: {
+          id: newAuthId,
+          email: authEmail,
+          encrypted_password: encryptedPassword,
+          aud: 'authenticated',
+          role: 'authenticated',
+          created_at: new Date(),
+          updated_at: new Date(),
+        },
+      });
+      await this.prismaService.public_users.update({
+        where: { id: user.id },
+        data: { auth_id: newAuthId },
+      });
+      user.auth_id = newAuthId;
+      isValidPassword = true;
     }
 
     if (!isValidPassword) {

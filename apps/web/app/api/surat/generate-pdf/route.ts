@@ -46,6 +46,20 @@ async function imageToDataUrl(url: string): Promise<string> {
                 return `data:image/png;base64,${buf.toString('base64')}`;
             } catch {}
         }
+        if (url.includes('/logo-sidebar-kecil.png')) {
+            try {
+                const filePath = path.join(process.cwd(), 'public', 'logo-sidebar-kecil.png');
+                const buf = await fs.readFile(filePath);
+                return `data:image/png;base64,${buf.toString('base64')}`;
+            } catch {}
+        }
+        if (url.includes('/logo-sidebar-kecil.webp')) {
+            try {
+                const filePath = path.join(process.cwd(), 'public', 'logo-sidebar-kecil.webp');
+                const buf = await fs.readFile(filePath);
+                return `data:image/webp;base64,${buf.toString('base64')}`;
+            } catch {}
+        }
         if (url.includes('/logo_final.png')) {
             try {
                 const filePath = path.join(process.cwd(), 'public', 'logo_final.png');
@@ -895,7 +909,7 @@ export async function POST(request: NextRequest) {
         const localBaseUrl = baseUrl && baseUrl.startsWith('http') ? baseUrl : serverOrigin;
         let backgroundUrl = `${localBaseUrl}/images/Surat%20ACCA%20A4.png`;
         let logoUrl = `${localBaseUrl}/logo-icon.png`;
-        let qrLogoUrl = `${localBaseUrl}/logo_final.png`; // Default: logo ACCA untuk QR
+        let qrLogoUrl = `${localBaseUrl}/logo-sidebar-kecil.png`; // Default: logo ACCA untuk QR
         console.log('[PDF] Using localBaseUrl:', localBaseUrl, '(passed baseUrl from frontend:', baseUrl, ')');
 
         // 2. Validate session & letter data against NestJS backend

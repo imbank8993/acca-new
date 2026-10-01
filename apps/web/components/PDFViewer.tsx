@@ -127,6 +127,7 @@ export default function PDFViewer({ url, title, onClose, inline = false }: PDFVi
     const [activeSheetIndex, setActiveSheetIndex] = useState(0);
     const [blobUrl, setBlobUrl] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
+    const [downloading, setDownloading] = useState(false);
     const [error, setError] = useState('');
     const [progress, setProgress] = useState('Memuat dokumen...');
     /**
@@ -801,7 +802,7 @@ export default function PDFViewer({ url, title, onClose, inline = false }: PDFVi
             'image/heif': 'heif',
             'image/avif': 'avif',
         };
-        const targetExt = ext || (detectedMime ? mimeToExt[detectedMime] || '' : '');
+        const targetExt = isPdfPreview ? 'pdf' : (ext || (detectedMime ? mimeToExt[detectedMime] || '' : ''));
         const base = (title || 'dokumen')
             .replace(/[\\/:*?"<>|]+/g, '-')  // karakter yang dilarang di nama file
             .replace(/\s+/g, ' ')
@@ -810,18 +811,46 @@ export default function PDFViewer({ url, title, onClose, inline = false }: PDFVi
             || 'dokumen';
         if (!targetExt) return base;
         return base.toLowerCase().endsWith(`.${targetExt.toLowerCase()}`) ? base : `${base}.${targetExt}`;
-    }, [title, ext, detectedMime]);
+    }, [title, ext, detectedMime, isPdfPreview]);
 
-    const handleDownload = useCallback(() => {
+    const handleDownload = useCallback(async () => {
+        if (isPdfPreview) {
+            try {
+                setDownloading(true);
+                const pdfDownloadUrl = fileUrl.includes('?')
+                    ? `${fileUrl}&format=pdf`
+                    : `${fileUrl}?format=pdf`;
+                const res = await fetch(pdfDownloadUrl);
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const blob = await res.blob();
+                const dlUrl = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = dlUrl;
+                const safeName = downloadName.toLowerCase().endsWith('.pdf') ? downloadName : `${downloadName}.pdf`;
+                a.download = safeName;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(dlUrl);
+            } catch (err: any) {
+                console.error('[PDFViewer] Download error:', err);
+                alert('Gagal mengunduh dokumen sebagai PDF: ' + (err?.message || 'Terjadi kesalahan'));
+            } finally {
+                setDownloading(false);
+            }
+            return;
+        }
+
         const a = document.createElement('a');
         a.href = blobUrl || fileUrl;
         a.download = downloadName;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
-    }, [blobUrl, fileUrl, downloadName]);
+    }, [isPdfPreview, fileUrl, downloadName, blobUrl]);
 
     const getFileIcon = () => {
+        if (isPdfPreview) return 'bi bi-file-earmark-pdf-fill';
         if (isExcel) return 'bi bi-file-earmark-excel-fill';
         if (isWord) return 'bi bi-file-earmark-word-fill';
         if (isPpt) return 'bi bi-file-earmark-ppt-fill';
@@ -900,17 +929,31 @@ export default function PDFViewer({ url, title, onClose, inline = false }: PDFVi
                             >
                                 <i className="bi bi-printer"></i>
                             </button>
-                            <button onClick={handleDownload} title="Download" style={{
-                                background: 'rgba(255,255,255,0.08)', border: 'none',
-                                borderRadius: '6px', color: 'rgba(255,255,255,0.7)',
-                                cursor: 'pointer', width: '30px', height: '30px',
-                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                fontSize: '0.85rem', transition: 'all 0.2s ease'
-                            }}
-                                onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.15)'; }}
-                                onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; }}
+                            <button
+                                onClick={handleDownload}
+                                disabled={downloading}
+                                title={downloading ? "Mengunduh PDF..." : (isPdfPreview ? "Download PDF" : "Download")}
+                                style={{
+                                    background: 'rgba(255,255,255,0.08)', border: 'none',
+                                    borderRadius: '6px', color: 'rgba(255,255,255,0.7)',
+                                    cursor: downloading ? 'not-allowed' : 'pointer', width: '30px', height: '30px',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    fontSize: '0.85rem', transition: 'all 0.2s ease',
+                                    opacity: downloading ? 0.6 : 1,
+                                }}
+                                onMouseEnter={(e) => { if (!downloading) e.currentTarget.style.background = 'rgba(255,255,255,0.15)'; }}
+                                onMouseLeave={(e) => { if (!downloading) e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; }}
                             >
-                                <i className="bi bi-download"></i>
+                                {downloading ? (
+                                    <div style={{
+                                        width: '13px', height: '13px',
+                                        border: '2px solid rgba(255,255,255,0.3)',
+                                        borderTopColor: '#fff', borderRadius: '50%',
+                                        animation: 'pdfSpin 0.8s linear infinite'
+                                    }} />
+                                ) : (
+                                    <i className="bi bi-download"></i>
+                                )}
                             </button>
                             <button onClick={onClose} title="Tutup" style={{
                                 background: 'rgba(255,255,255,0.05)', border: 'none',

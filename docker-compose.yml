@@ -29,6 +29,9 @@ services:
       - PORT=3006
       - NODE_ENV=production
       - NEXT_PUBLIC_NEST_API_URL=http://acca-api:3007/api
+      - BAILEYS_AUTH_DIR=/app/apps/web/.baileys_auth
+    volumes:
+      - baileys_auth_data:/app/apps/web/.baileys_auth
     ports:
       - "3006:3006"
     depends_on:
@@ -60,3 +63,4 @@ networks:
 
 volumes:
   postgres_data:
+  baileys_auth_data:

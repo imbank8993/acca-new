@@ -125,9 +125,15 @@ export class UsersService {
     }
 
     const role = await this.normalkanRole(input.role || 'GURU');
-    const email = this.loginEmail(username, input.email);
+    const normalizedEmail = emailInput ? emailInput.toLowerCase() : null;
+    const email = this.loginEmail(username, normalizedEmail).toLowerCase();
     const authId = randomUUID();
     const now = new Date();
+
+    // Pastikan akun selalu memiliki kredensial terenkripsi (jika kosong saat impor, gunakan NIP/username/acca123 sebagai sandi awal)
+    const rawPassword = input.password?.trim() || nip || username || 'acca123';
+    const isDefaultPassword = !input.password?.trim();
+    const encryptedPassword = await bcrypt.hash(rawPassword, BCRYPT_ROUNDS);
 
     // auth_users dibuat lebih dulu supaya public_users.auth_id selalu menunjuk
     // ke baris kredensial yang valid — login bergantung pada pasangan ini.
@@ -137,9 +143,7 @@ export class UsersService {
         aud: 'authenticated',
         role: 'authenticated',
         email,
-        encrypted_password: input.password
-          ? await bcrypt.hash(input.password, BCRYPT_ROUNDS)
-          : null,
+        encrypted_password: encryptedPassword,
         email_confirmed_at: now,
         created_at: now,
         updated_at: now,
@@ -150,6 +154,7 @@ export class UsersService {
           nama_lengkap: input.nama_lengkap || input.nama,
           role,
           roles: role.split(','),
+          ...(isDefaultPassword ? { must_change_password: true } : {}),
         },
       },
     });
@@ -162,7 +167,7 @@ export class UsersService {
           nama: input.nama,
           nama_lengkap: input.nama_lengkap || input.nama,
           divisi: input.divisi || '',
-          email: input.email?.trim() || null,
+          email: normalizedEmail,
           role,
           auth_id: authId,
           aktif: input.aktif !== undefined ? Boolean(input.aktif) : true,
@@ -339,7 +344,8 @@ export class UsersService {
     if (usernameInput !== undefined) data.username = usernameInput;
     if (nipInput !== undefined) data.nip = nipInput;
     if (roleTernormal !== undefined) data.role = roleTernormal;
-    if (emailInput !== undefined) data.email = emailInput;
+    const normalizedEmailInput = emailInput !== undefined ? (emailInput ? emailInput.toLowerCase() : null) : undefined;
+    if (normalizedEmailInput !== undefined) data.email = normalizedEmailInput;
 
     let updated = user;
     if (Object.keys(data).length > 0) {
@@ -358,11 +364,11 @@ export class UsersService {
     if (user.auth_id) {
       const authData: Record<string, any> = { updated_at: new Date() };
 
-      if (input.email !== undefined || input.username !== undefined) {
+      if (normalizedEmailInput !== undefined || input.username !== undefined) {
         authData.email = this.loginEmail(
           input.username || updated.username || '',
-          input.email,
-        );
+          normalizedEmailInput !== undefined ? normalizedEmailInput : updated.email,
+        ).toLowerCase();
       }
 
       // raw_user_meta_data dijaga tetap selaras supaya tabel cerminan ini tidak
@@ -399,6 +405,36 @@ export class UsersService {
       if (input.password) {
         await this.writeCredential(user.auth_id, input.password);
       }
+    } else {
+      // Jika user belum punya auth_id, buatkan dan tautkan
+      const authId = randomUUID();
+      const authEmail = this.loginEmail(updated.username || '', updated.email).toLowerCase();
+      const rawPassword = input.password?.trim() || updated.nip || updated.username || 'acca123';
+      await this.prisma.auth_users.create({
+        data: {
+          id: authId,
+          aud: 'authenticated',
+          role: 'authenticated',
+          email: authEmail,
+          encrypted_password: await bcrypt.hash(rawPassword, BCRYPT_ROUNDS),
+          email_confirmed_at: new Date(),
+          created_at: new Date(),
+          updated_at: new Date(),
+          raw_app_meta_data: { provider: 'email', providers: ['email'] },
+          raw_user_meta_data: {
+            username: updated.username,
+            nama: updated.nama,
+            nama_lengkap: updated.nama_lengkap,
+            role: updated.role,
+            roles: (updated.role || '').split(','),
+          },
+        },
+      });
+      await this.prisma.public_users.update({
+        where: { id: user.id },
+        data: { auth_id: authId },
+      });
+      updated = { ...updated, auth_id: authId };
     }
 
     return this.serialize(updated);
@@ -1070,8 +1106,12 @@ export class UsersService {
       const rowTernormal = { ...row, role: [...new Set(diminta)].join(',') };
 
       try {
+        const orConditions: any[] = [{ username: { equals: username, mode: 'insensitive' } }];
+        if (row.nip?.trim()) orConditions.push({ nip: row.nip.trim() });
+        if (row.email?.trim()) orConditions.push({ email: { equals: row.email.trim(), mode: 'insensitive' } });
+
         const existing = await this.prisma.public_users.findFirst({
-          where: { username },
+          where: { OR: orConditions },
           select: { id: true },
         });
 

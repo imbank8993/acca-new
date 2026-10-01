@@ -529,8 +529,7 @@ export default function SuratPengaturanCard({ initialConfig, onSaveSuccess, comp
                             <i className="bi bi-qr-code" style={{ color: '#10b981', fontSize: '1.1rem' }}></i>
                             Logo QR — TTD Digital
                         </div>
-                        <p style={{ fontSize: '0.8rem', color: 'var(--n-muted)', marginBottom: '20px' }}>Logo ACCA di tengah barcode verifikasi. Default: <code>logo_final.png</code></p>
-
+                        <p style={{ fontSize: '0.8rem', color: 'var(--n-muted)', marginBottom: '20px' }}>Logo ACCA di tengah barcode verifikasi. Default: <code>logo-sidebar-kecil.png</code></p>
                         <div style={{ position: 'relative', width: '110px', height: '110px', margin: '0 auto 16px', background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', boxShadow: '0 8px 20px rgba(0,0,0,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '8px', cursor: 'pointer' }}
                             onClick={() => document.getElementById('qr-logo-upload')?.click()}>
                             <div style={{ position: 'absolute', inset: '12px', opacity: 0.12, backgroundImage: 'radial-gradient(#0f172a 2px, transparent 2px)', backgroundSize: '6px 6px' }}></div>
@@ -575,7 +574,7 @@ export default function SuratPengaturanCard({ initialConfig, onSaveSuccess, comp
                                 </button>
                             ) : (
                                 <p style={{ fontSize: '0.75rem', color: '#10b981', margin: '0 0 8px', fontWeight: 600 }}>
-                                    <i className="bi bi-check-circle"></i> Default: logo ACCA (logo_final.png)
+                                    <i className="bi bi-check-circle"></i> Default: logo ACCA (logo-sidebar-kecil.png)
                                 </p>
                             )}
                             <p style={{ fontSize: '0.75rem', color: 'var(--n-muted)', margin: 0, lineHeight: 1.4 }}>Format PNG/JPG transparan sangat disarankan. Maksimum file 500KB.</p>

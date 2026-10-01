@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import QRCode from 'qrcode';
 import { getPublicOrigin } from '@/lib/public-url';
+import { launchPuppeteerBrowser } from '@/lib/puppeteer-launcher';
 import {
   buildSingleHtml,
   buildCollectiveHtml,
@@ -17,6 +18,9 @@ export async function GET(request: NextRequest) {
   try {
     const barcode = request.nextUrl.searchParams.get('barcode');
     const autoPrint = request.nextUrl.searchParams.get('print') === '1' || request.nextUrl.searchParams.get('print') === 'true';
+    const isPdfRequested = request.nextUrl.searchParams.get('format') === 'pdf' ||
+      request.nextUrl.searchParams.get('download') === 'pdf' ||
+      request.nextUrl.searchParams.get('download') === '1';
 
     if (!barcode) {
       return new NextResponse('Barcode is required', { status: 400 });
@@ -30,6 +34,11 @@ export async function GET(request: NextRequest) {
       return new NextResponse('Dokumen tidak ditemukan', { status: 404 });
     }
 
+    const safeNomor = (letter.nomor_surat || 'surat-izin')
+      .replace(/[\\/:*?"<>|]+/g, '-')
+      .replace(/\s+/g, ' ')
+      .trim() || 'surat-izin';
+
     // 1. Jika ada file fisik (arsip lawas / storage eksternal), proxy file tersebut
     if (letter.file_url) {
       try {
@@ -40,6 +49,15 @@ export async function GET(request: NextRequest) {
           const lower = letter.file_url.toLowerCase();
           if (lower.endsWith('.html') || lower.endsWith('.htm')) {
             contentType = 'text/html';
+          }
+          if (contentType === 'application/pdf' && isPdfRequested) {
+            return new NextResponse(buffer, {
+              headers: {
+                'Content-Type': 'application/pdf',
+                'Content-Disposition': `attachment; filename="${safeNomor}.pdf"`,
+                'Cache-Control': 'no-cache, no-store, must-revalidate',
+              },
+            });
           }
           return new NextResponse(buffer, {
             headers: {
@@ -67,7 +85,7 @@ export async function GET(request: NextRequest) {
           dark: '#000000',
           light: '#ffffff',
         },
-        errorCorrectionLevel: 'M',
+        errorCorrectionLevel: 'H',
       });
     } catch (qrErr) {
       console.error('[pdf-preview] QR Code generation error:', qrErr);
@@ -102,7 +120,7 @@ export async function GET(request: NextRequest) {
         rekamRows,
         qrCodeUrl,
         backgroundUrl,
-        appBase: origin,
+        appBase: scanBase,
       });
     } else if (isCollective) {
       // Ambil data siswa kolektif dari ketidakhadiran / siswa_kelas jika memungkinkan
@@ -110,12 +128,16 @@ export async function GET(request: NextRequest) {
       if (letter.siswa_nisn && letter.siswa_nisn.includes(',')) {
         const nisns = letter.siswa_nisn.split(',').map((s: string) => s.trim()).filter(Boolean);
         try {
+          const dateStr = letter.tgl_mulai ? String(letter.tgl_mulai).split('T')[0] : null;
           const [relatedK, relatedS] = await Promise.all([
-            letter.tgl_mulai
+            dateStr
               ? prisma.ketidakhadiran.findMany({
                   where: {
                     nisn: { in: nisns },
-                    tgl_mulai: new Date(letter.tgl_mulai),
+                    tgl_mulai: {
+                      gte: new Date(`${dateStr}T00:00:00.000Z`),
+                      lte: new Date(`${dateStr}T23:59:59.999Z`),
+                    },
                     aktif: true,
                   },
                   select: { nama: true, nisn: true, kelas: true, keterangan: true },
@@ -131,17 +153,20 @@ export async function GET(request: NextRequest) {
             const fromK = relatedK.find((r) => r.nisn === n);
             if (fromK) return fromK;
             const fromS = relatedS.find((r) => r.nisn === n);
-            if (fromS) return { nama: fromS.nama_siswa, nisn: fromS.nisn, kelas: fromS.kelas };
-            return { nama: '-', nisn: n, kelas: '-' };
+            if (fromS) return { nama: fromS.nama_siswa, nisn: fromS.nisn, kelas: fromS.kelas, keterangan: '-' };
+            return { nama: '-', nisn: n, kelas: '-', keterangan: '-' };
           });
         } catch {}
       }
 
-      if (rows.length === 0 && letter.tgl_mulai && letter.keterangan) {
+      if (rows.length === 0 && letter.tgl_mulai) {
+        const dateStr = String(letter.tgl_mulai).split('T')[0];
         const related = await prisma.ketidakhadiran.findMany({
           where: {
-            tgl_mulai: new Date(letter.tgl_mulai),
-            keterangan: letter.keterangan,
+            tgl_mulai: {
+              gte: new Date(`${dateStr}T00:00:00.000Z`),
+              lte: new Date(`${dateStr}T23:59:59.999Z`),
+            },
             aktif: true,
           },
           select: { nama: true, nisn: true, kelas: true, keterangan: true },
@@ -154,6 +179,7 @@ export async function GET(request: NextRequest) {
           nama: letter.siswa_nama,
           nisn: letter.siswa_nisn,
           kelas: letter.siswa_kelas,
+          keterangan: letter.keterangan || '-',
         }];
       }
 
@@ -170,7 +196,7 @@ export async function GET(request: NextRequest) {
         scanUrl,
         qrCodeUrl,
         backgroundUrl,
-        autoPrint,
+        autoPrint: !isPdfRequested && autoPrint,
       });
     } else {
       const linkedAbsence = letter.ketidakhadiran_id
@@ -196,8 +222,46 @@ export async function GET(request: NextRequest) {
         letterType: letter.jenis_izin,
         status: linkedAbsence?.status || undefined,
         backgroundUrl,
-        autoPrint,
+        autoPrint: !isPdfRequested && autoPrint,
       });
+    }
+
+    if (isPdfRequested) {
+      try {
+        const browser = await launchPuppeteerBrowser();
+        try {
+          const page = await browser.newPage();
+          await page.setContent(html, {
+            waitUntil: 'load',
+            timeout: 20000,
+          });
+          const pdfBuffer = await page.pdf({
+            format: 'A4',
+            printBackground: true,
+            preferCSSPageSize: true,
+            margin: { top: 0, right: 0, bottom: 0, left: 0 },
+          });
+
+          return new NextResponse(Buffer.from(pdfBuffer), {
+            headers: {
+              'Content-Type': 'application/pdf',
+              'Content-Disposition': `attachment; filename="${safeNomor}.pdf"`,
+              'Cache-Control': 'no-cache, no-store, must-revalidate',
+            },
+          });
+        } finally {
+          await browser.close().catch(() => {});
+        }
+      } catch (pdfErr: any) {
+        console.error('[pdf-preview] Puppeteer PDF generation error:', pdfErr);
+        // Fallback to HTML if Puppeteer fails
+        return new NextResponse(html, {
+          headers: {
+            'Content-Type': 'text/html; charset=utf-8',
+            'Content-Disposition': 'inline',
+          },
+        });
+      }
     }
 
     return new NextResponse(html, {

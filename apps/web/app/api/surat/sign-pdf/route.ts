@@ -181,11 +181,11 @@ export async function POST(req: NextRequest) {
         console.log(`[Sign-PDF] Verification URL: ${verificationUrl}`);
 
         // ─── LOGO QR CODE ───
-        // HANYA logo-icon.png yang digunakan untuk QR code
-        // File sudah tersedia di public/logo-icon.png
-        const logoPath = process.cwd() + '/public/logo-icon.png';
+        // Menggunakan logo-sidebar-kecil.png yang selaras dengan logo sidebar
+        // File tersedia di public/logo-sidebar-kecil.png
+        const logoPath = process.cwd() + '/public/logo-sidebar-kecil.png';
 
-        // Hasilkan visual QR Code + logo-icon.png di tengah
+        // Hasilkan visual QR Code + logo-sidebar-kecil di tengah
         const qrDataUrl = await generateQRWithLogo(verificationUrl, logoPath);
         const qrBytes = Buffer.from(qrDataUrl.split(',')[1], 'base64');
 

@@ -979,22 +979,26 @@ export function InputDataTab() {
             return;
         }
 
-        await Swal.fire({
+        const res = await Swal.fire({
             icon: 'success',
             title,
             html: 'Dokumen berhasil dibuat dan diarsipkan di <b>Daftar Surat ACCA</b>.',
+            showCancelButton: true,
             confirmButtonText: 'Lihat Berkas',
+            cancelButtonText: 'Tutup',
             confirmButtonColor: '#3083FF',
             background: 'var(--n-card, #fff)',
             color: 'var(--n-ink, #0f172a)',
         });
 
         // Dibuka setelah dialog ditutup supaya modal viewer tidak tertimpa overlay SweetAlert
-        if (pdfUrl) {
-            openLetterFile(pdfUrl, title);
-        } else if (htmlContent) {
-            const blobUrl = URL.createObjectURL(new Blob([htmlContent], { type: 'text/html' }));
-            window.open(blobUrl, '_blank');
+        if (res.isConfirmed) {
+            if (pdfUrl) {
+                openLetterFile(pdfUrl, title);
+            } else if (htmlContent) {
+                const blobUrl = URL.createObjectURL(new Blob([htmlContent], { type: 'text/html' }));
+                openFile(blobUrl, title);
+            }
         }
     };
 
@@ -1071,13 +1075,21 @@ export function InputDataTab() {
                         }
                     }
 
-                    await Swal.fire({
+                    const userResult = await Swal.fire({
                         icon: 'info',
                         title: 'Sudah Dicetak',
                         html: `Surat rekam medis ini sudah pernah dicetak.<br/><b>Nomor: ${existing?.nomor_surat || 'tidak diketahui'}</b>`,
-                        confirmButtonText: 'OK',
+                        showCancelButton: true,
+                        confirmButtonText: 'Buka Dokumen',
+                        cancelButtonText: 'Tutup',
                         confirmButtonColor: '#3083FF',
                     });
+                    if (userResult.isConfirmed) {
+                        const targetUrl = existing?.file_url || (existing?.barcode ? `/api/ketidakhadiran/pdf-preview?barcode=${encodeURIComponent(existing.barcode)}` : null);
+                        if (targetUrl) {
+                            openLetterFile(targetUrl, existing?.nomor_surat || 'Surat');
+                        }
+                    }
                     return;
                 }
 
@@ -1086,7 +1098,8 @@ export function InputDataTab() {
                     return;
                 }
 
-                await showPrintSuccess('Surat Rekam Medis Berhasil Dicetak', genJson.data.file_url, genJson.data.html);
+                const previewUrl = genJson.data.file_url || (genJson.data.barcode ? `/api/ketidakhadiran/pdf-preview?barcode=${encodeURIComponent(genJson.data.barcode)}` : null);
+                await showPrintSuccess('Surat Rekam Medis Berhasil Dicetak', previewUrl, genJson.data.html);
             } catch (err: any) {
                 Swal.close();
                 await Swal.fire({ icon: 'error', title: 'Error', text: err.message });
@@ -1113,7 +1126,7 @@ export function InputDataTab() {
                 Swal.close();
 
                 if (genJson.alreadyPrinted) {
-                    // Already printed ΓÇö offer to view existing document or delete to reprint
+                    // Already printed — offer to view existing document or delete to reprint
                     const existing = genJson.data;
 
                     if (isAdmin) {
@@ -1154,14 +1167,22 @@ export function InputDataTab() {
                         }
                     }
 
-                    // Non-admin: just show info
-                    await Swal.fire({
+                    // Non-admin: allow opening existing document
+                    const userResult = await Swal.fire({
                         icon: 'info',
                         title: 'Sudah Dicetak',
                         html: `Surat ini sudah pernah dicetak.<br/><b>Nomor: ${existing?.nomor_surat || 'tidak diketahui'}</b>`,
-                        confirmButtonText: 'OK',
+                        showCancelButton: true,
+                        confirmButtonText: 'Buka Dokumen',
+                        cancelButtonText: 'Tutup',
                         confirmButtonColor: '#3083FF',
                     });
+                    if (userResult.isConfirmed) {
+                        const targetUrl = existing?.file_url || (existing?.barcode ? `/api/ketidakhadiran/pdf-preview?barcode=${encodeURIComponent(existing.barcode)}` : null);
+                        if (targetUrl) {
+                            openLetterFile(targetUrl, existing?.nomor_surat || 'Surat');
+                        }
+                    }
                     return;
                 }
 
@@ -1170,7 +1191,8 @@ export function InputDataTab() {
                     return;
                 }
 
-                await showPrintSuccess('Surat Berhasil Dicetak', genJson.data.file_url, genJson.data.html);
+                const previewUrl = genJson.data.file_url || (genJson.data.barcode ? `/api/ketidakhadiran/pdf-preview?barcode=${encodeURIComponent(genJson.data.barcode)}` : null);
+                await showPrintSuccess('Surat Berhasil Dicetak', previewUrl, genJson.data.html);
             } catch (err: any) {
                 Swal.close();
                 await Swal.fire({ icon: 'error', title: 'Error', text: err.message });
@@ -1229,7 +1251,21 @@ export function InputDataTab() {
                             return;
                         }
                     } else {
-                        await Swal.fire({ icon: 'info', title: 'Sudah Dicetak', html: `Surat ini sudah pernah dicetak.<br/><b>Nomor: ${existing?.nomor_surat || 'tidak diketahui'}</b>`, confirmButtonColor: '#3083FF' });
+                        const userResult = await Swal.fire({
+                            icon: 'info',
+                            title: 'Surat Sudah Dicetak',
+                            html: `Surat ini sudah pernah dicetak.<br/><b>Nomor: ${existing?.nomor_surat || 'tidak diketahui'}</b>`,
+                            showCancelButton: true,
+                            confirmButtonText: 'Buka Dokumen',
+                            cancelButtonText: 'Tutup',
+                            confirmButtonColor: '#3083FF',
+                        });
+                        if (userResult.isConfirmed) {
+                            const targetUrl = existing?.file_url || (existing?.barcode ? `/api/ketidakhadiran/pdf-preview?barcode=${encodeURIComponent(existing.barcode)}` : null);
+                            if (targetUrl) {
+                                openLetterFile(targetUrl, existing?.nomor_surat || 'Surat');
+                            }
+                        }
                     }
                     return;
                 }
@@ -1239,7 +1275,8 @@ export function InputDataTab() {
                     return;
                 }
 
-                await showPrintSuccess('Surat Berhasil Dicetak', genJson.data.file_url, genJson.data.html);
+                const previewUrl = genJson.data.file_url || (genJson.data.barcode ? `/api/ketidakhadiran/pdf-preview?barcode=${encodeURIComponent(genJson.data.barcode)}` : null);
+                await showPrintSuccess('Surat Berhasil Dicetak', previewUrl, genJson.data.html);
                 if (row._fromAsramaQueue) loadAsramaQueue();
             } catch (err: any) {
                 Swal.close();
@@ -1551,7 +1588,21 @@ export function InputDataTab() {
                         return;
                     }
                 } else {
-                    await Swal.fire({ icon: 'info', title: 'Sudah Dicetak', html: `Surat ini sudah pernah dicetak.<br/><b>Nomor: ${existing?.nomor_surat || 'tidak diketahui'}</b>`, confirmButtonColor: '#3083FF' });
+                    const userResult = await Swal.fire({
+                        icon: 'info',
+                        title: 'Surat Sudah Dicetak',
+                        html: `Surat ini sudah pernah dicetak.<br/><b>Nomor: ${existing?.nomor_surat || 'tidak diketahui'}</b>`,
+                        showCancelButton: true,
+                        confirmButtonText: 'Buka Dokumen',
+                        cancelButtonText: 'Tutup',
+                        confirmButtonColor: '#3083FF',
+                    });
+                    if (userResult.isConfirmed) {
+                        const targetUrl = existing?.file_url || (existing?.barcode ? `/api/ketidakhadiran/pdf-preview?barcode=${encodeURIComponent(existing.barcode)}` : null);
+                        if (targetUrl) {
+                            openLetterFile(targetUrl, existing?.nomor_surat || 'Surat');
+                        }
+                    }
                 }
                 return;
             }
@@ -1561,7 +1612,8 @@ export function InputDataTab() {
                 return;
             }
 
-            await showPrintSuccess('Surat Kolektif Berhasil Dicetak', genJson.data.file_url, genJson.data.html);
+            const previewUrl = genJson.data.file_url || (genJson.data.barcode ? `/api/ketidakhadiran/pdf-preview?barcode=${encodeURIComponent(genJson.data.barcode)}` : null);
+            await showPrintSuccess('Surat Kolektif Berhasil Dicetak', previewUrl, genJson.data.html);
             if (representative._fromAsramaQueue) loadAsramaQueue();
         } catch (err: any) {
             Swal.close();

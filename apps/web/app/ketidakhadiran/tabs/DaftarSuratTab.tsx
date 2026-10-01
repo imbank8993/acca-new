@@ -624,9 +624,9 @@ function DaftarAccaContent() {
                                                     style={{ width: '110px', height: '110px', padding: '0.25rem' }}
                                                 />
                                                 <img
-                                                    src="/logo-icon.png"
+                                                    src="/logo-sidebar-kecil.webp"
                                                     alt="Logo"
-                                                    style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '22px', height: '22px', borderRadius: '50%', background: 'white', padding: '2px' }}
+                                                    style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '22px', height: '22px', borderRadius: '4px', background: 'white', padding: '2px', objectFit: 'contain' }}
                                                 />
                                             </div>
                                             <div style={{ flex: '1 1 200px', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>

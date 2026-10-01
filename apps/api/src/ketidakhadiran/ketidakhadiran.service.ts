@@ -129,8 +129,8 @@ export class KetidakhadiranService {
     }
 
     if (from || to) {
-      const fromStr = from || to;
-      const toStr = to || from;
+      const fromStr = String(from || to).split('T')[0];
+      const toStr = String(to || from).split('T')[0];
       const fromDate = new Date(`${fromStr}T00:00:00.000Z`);
       const toDate = new Date(`${toStr}T23:59:59.999Z`);
 
@@ -197,6 +197,8 @@ export class KetidakhadiranService {
           select: {
             id: true,
             nomor_surat: true,
+            barcode: true,
+            file_url: true,
             jenis_izin: true,
             siswa_nisn: true,
             tgl_mulai: true,
@@ -254,13 +256,13 @@ export class KetidakhadiranService {
 
       const asramaLetter =
         linkedLetters.find((l: any) =>
-          ['MENINGGALKAN_ASRAMA', 'P', 'M'].includes(l.jenis_izin),
+          ['MENINGGALKAN_ASRAMA', 'AKHIR_PEKAN'].includes(l.jenis_izin),
         ) ||
         nisnLetters.find(
           (l: any) =>
             (l.ketidakhadiran_id === r.id ||
               (l.tgl_mulai === tglMulaiStr && l.tgl_selesai === tglSelesaiStr)) &&
-            ['MENINGGALKAN_ASRAMA', 'P', 'M'].includes(l.jenis_izin),
+            ['MENINGGALKAN_ASRAMA', 'AKHIR_PEKAN'].includes(l.jenis_izin),
         );
 
       const rekomLetter =
@@ -287,8 +289,11 @@ export class KetidakhadiranService {
         has_overlap: hasOverlap,
         letter_issued: !!asramaLetter,
         letter_nomor: asramaLetter?.nomor_surat || null,
+        letter_barcode: asramaLetter?.barcode || null,
+        letter_file_url: asramaLetter?.file_url || null,
         rekom_kontrol_issued: !!rekomLetter,
         rekom_kontrol_nomor: rekomLetter?.nomor_surat || null,
+        rekom_kontrol_barcode: rekomLetter?.barcode || null,
         foto_profil: photoMap.get(r.nisn) || null,
       };
     });

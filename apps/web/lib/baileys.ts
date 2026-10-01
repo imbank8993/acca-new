@@ -58,6 +58,23 @@ function authDir(): string {
     return process.env.BAILEYS_AUTH_DIR || path.join(process.cwd(), '.baileys_auth')
 }
 
+/** Hapus semua isi folder sesi tanpa menghapus mount point volume Docker itu sendiri */
+async function clearAuthDir(): Promise<void> {
+    try {
+        const fs = await import('fs')
+        const dir = authDir()
+        if (fs.existsSync(dir)) {
+            const entries = fs.readdirSync(dir)
+            for (const entry of entries) {
+                fs.rmSync(path.join(dir, entry), { recursive: true, force: true })
+            }
+            console.log('[Baileys] Folder sesi dibersihkan.')
+        }
+    } catch (e) {
+        console.error('[Baileys] Gagal membersihkan isi folder auth:', e)
+    }
+}
+
 /** Ubah target (nomor / JID) menjadi JID WhatsApp yang valid. */
 export function toJid(target: string): string {
     const t = String(target).trim()
@@ -131,13 +148,8 @@ export async function startBaileys(): Promise<void> {
                     // Sesi dicabut (401): kredensial di disk sudah mati. Bila dibiarkan,
                     // start berikutnya akan terus login→401 tanpa pernah memunculkan QR.
                     // Hapus agar start berikutnya (lazy-start dari polling status) masuk mode pairing QR.
-                    try {
-                        const fs = await import('fs')
-                        fs.rmSync(authDir(), { recursive: true, force: true })
-                        console.warn('[Baileys] Sesi dicabut — folder auth dihapus, silakan scan QR ulang di pengaturan.')
-                    } catch (e) {
-                        console.error('[Baileys] Gagal menghapus folder auth:', e)
-                    }
+                    await clearAuthDir()
+                    console.warn('[Baileys] Sesi dicabut — isi folder auth dibersihkan, silakan scan QR ulang di pengaturan.')
                     s.lastError = 'Sesi WhatsApp dicabut. Silakan scan QR ulang di pengaturan.'
                 }
             }
@@ -186,11 +198,8 @@ export async function logoutBaileys(): Promise<void> {
         s.user = null
         s.qr = null
         s.qrDataUrl = null
-        // Hapus folder sesi agar benar-benar bersih.
-        try {
-            const fs = await import('fs')
-            fs.rmSync(authDir(), { recursive: true, force: true })
-        } catch { /* ignore */ }
+        // Hapus isi folder sesi agar benar-benar bersih.
+        await clearAuthDir()
     }
 }
 
@@ -232,3 +241,19 @@ export async function baileysSendImage(target: string, imageUrl: string, caption
         return { ok: false, error: err?.message || String(err) }
     }
 }
+
+// Graceful shutdown: tutup koneksi socket secara rapi saat container dihentikan
+if (typeof process !== 'undefined' && typeof process.once === 'function') {
+    const handleShutdown = () => {
+        const s = store()
+        if (s.sock) {
+            try {
+                console.log('[Baileys] Menutup koneksi socket secara rapi (shutdown)...')
+                s.sock.end(undefined)
+            } catch { /* ignore */ }
+        }
+    }
+    process.once('SIGTERM', handleShutdown)
+    process.once('SIGINT', handleShutdown)
+}
+

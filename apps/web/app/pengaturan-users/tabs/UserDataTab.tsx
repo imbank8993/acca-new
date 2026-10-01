@@ -383,33 +383,60 @@ export default function UserDataTab({ user }: { user?: User }) {
       try {
         const wb = XLSX.read(evt.target?.result, { type: 'binary' })
         const data = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]) as any[]
+        const getRowVal = (row: any, ...keys: string[]): string => {
+          for (const key of keys) {
+            if (row[key] !== undefined && row[key] !== null) {
+              const val = String(row[key]).trim();
+              if (val) return val;
+            }
+          }
+          const normalizedTargetKeys = keys.map(k => k.toLowerCase().replace(/[\s_-]+/g, ''));
+          for (const rowKey of Object.keys(row)) {
+            const normalizedRowKey = rowKey.toLowerCase().replace(/[\s_-]+/g, '');
+            if (normalizedTargetKeys.includes(normalizedRowKey)) {
+              const val = row[rowKey];
+              if (val !== undefined && val !== null) {
+                const s = String(val).trim();
+                if (s) return s;
+              }
+            }
+          }
+          return '';
+        };
+
         const usersToImport = data.map(row => {
-          const rawAktif = row['aktif'] ?? row['Aktif'] ?? row['status'] ?? row['Status'];
+          const rawAktif = getRowVal(row, 'aktif', 'status');
           let isAktif = true;
-          if (rawAktif !== undefined && rawAktif !== null && String(rawAktif).trim() !== '') {
-            const strAktif = String(rawAktif).trim().toUpperCase();
+          if (rawAktif) {
+            const strAktif = rawAktif.toUpperCase();
             if (['N', 'FALSE', 'TIDAK', '0', 'INACTIVE', 'NONAKTIF', 'NON AKTIF'].includes(strAktif)) {
               isAktif = false;
             } else {
               isAktif = ['Y', 'TRUE', 'YA', '1', 'ACTIVE', 'AKTIF'].includes(strAktif);
             }
           }
-          const rawNip = String(row['nip'] || row['NIP'] || '').trim();
+          const rawNip = getRowVal(row, 'nip', 'nisn');
           const cleanNip = rawNip === '-' ? '' : rawNip;
-          const rawDivisi = String(row['divisi'] || row['Divisi'] || '').trim();
+          const rawDivisi = getRowVal(row, 'divisi', 'unit', 'unitkerja');
           const cleanDivisi = rawDivisi === '-' ? '' : rawDivisi;
-          const rawEmail = String(row['email'] || row['Email'] || '').trim();
+          const rawEmail = getRowVal(row, 'email', 'surel');
           const cleanEmail = rawEmail === '-' ? '' : rawEmail;
+          let username = getRowVal(row, 'username', 'user', 'nama pengguna');
+          if (!username && cleanNip) username = cleanNip;
+
+          const nama = getRowVal(row, 'nama', 'namalengkap', 'nama_lengkap', 'nama lengkap');
+          const password = getRowVal(row, 'password', 'sandi', 'katasandi', 'kata sandi');
+          const role = getRowVal(row, 'role', 'peran') || 'GURU';
 
           return {
-            username: String(row['username'] || row['Username'] || '').trim(),
+            username,
             nip: cleanNip,
-            nama: String(row['nama'] || row['Nama'] || row['Nama Lengkap'] || '').trim(),
+            nama,
             divisi: cleanDivisi,
             email: cleanEmail,
-            role: String(row['role'] || row['Role'] || 'GURU').trim(),
+            role,
             aktif: isAktif,
-            password: String(row['password'] || row['Password'] || '').trim(),
+            password,
           }
         }).filter(u => u.username && u.nama)
 

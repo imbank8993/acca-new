@@ -96,7 +96,7 @@ export async function POST(request: NextRequest) {
       } else {
         const targetJenisList =
           (letterType === 'MENINGGALKAN_ASRAMA' || letterType === 'AKHIR_PEKAN')
-            ? ['MENINGGALKAN_ASRAMA', 'P', 'M']
+            ? ['MENINGGALKAN_ASRAMA', 'AKHIR_PEKAN']
             : (letterType === 'REKOMENDASI_KONTROL' || letterType === 'SAKIT')
               ? ['REKOMENDASI_KONTROL']
               : (letterType === 'REKAM_MEDIK')
@@ -104,16 +104,17 @@ export async function POST(request: NextRequest) {
                 : [letterType];
 
         if (isCollective) {
-          const nisns = rows.map((r: any) => r.nisn).filter(Boolean);
+          const nisns = rows.map((r: any) => String(r.nisn || '').trim()).filter(Boolean);
           const firstRow = rows[0];
+          const startStr = String(firstRow?.tgl_mulai || '').split('T')[0];
+          const endStr = String(firstRow?.tgl_selesai || startStr).split('T')[0];
+          const allNisnsJoined = nisns.join(',');
+
           const existing = await prisma.acca_letters.findFirst({
             where: {
-              OR: [
-                { siswa_nisn: { in: nisns } },
-                ...nisns.map((n: string) => ({ siswa_nisn: { contains: n } })),
-              ],
-              tgl_mulai: firstRow?.tgl_mulai,
-              tgl_selesai: firstRow?.tgl_selesai,
+              siswa_nisn: allNisnsJoined,
+              tgl_mulai: { startsWith: startStr },
+              tgl_selesai: { startsWith: endStr },
               jenis_izin: { in: targetJenisList },
             },
             orderBy: { generated_at: 'desc' },
@@ -122,11 +123,13 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ ok: false, alreadyPrinted: true, data: existing });
           }
         } else if (row) {
+          const startStr = String(row.tgl_mulai || '').split('T')[0];
+          const endStr = String(row.tgl_selesai || startStr).split('T')[0];
           const existing = await prisma.acca_letters.findFirst({
             where: {
-              siswa_nisn: row.nisn,
-              tgl_mulai: row.tgl_mulai,
-              tgl_selesai: row.tgl_selesai,
+              siswa_nisn: String(row.nisn || '').trim(),
+              tgl_mulai: { startsWith: startStr },
+              tgl_selesai: { startsWith: endStr },
               jenis_izin: { in: targetJenisList },
             },
             orderBy: { generated_at: 'desc' },
@@ -243,12 +246,18 @@ export async function POST(request: NextRequest) {
       });
     } else if (isCollective) {
       const firstRow = rows[0] || {};
-      tglMulai = firstRow.tgl_mulai || '';
-      tglSelesai = firstRow.tgl_selesai || tglMulai;
+      tglMulai = String(firstRow.tgl_mulai || '').split('T')[0];
+      tglSelesai = String(firstRow.tgl_selesai || tglMulai).split('T')[0];
       studentNama = `${rows.length} Siswa (Kolektif)`;
       studentNisn = rows.map((r: any) => r.nisn).filter(Boolean).join(',');
       studentKelas = Array.from(new Set(rows.map((r: any) => r.kelas).filter(Boolean))).join(', ');
-      keterangan = firstRow.keterangan || 'Izin meninggalkan asrama kolektif';
+      
+      const ketList = rows.map((r: any) => String(r.keterangan || '').trim());
+      const sharedKet = ketList.length > 0 && ketList.every((item: string) => item === ketList[0]) &&
+        ketList[0] !== '' && ketList[0] !== '-'
+        ? ketList[0]
+        : '';
+      keterangan = sharedKet || 'Izin meninggalkan asrama (kolektif)';
 
       letterHtml = buildCollectiveHtml({
         nomorSurat,
@@ -266,8 +275,8 @@ export async function POST(request: NextRequest) {
         autoPrint: true,
       });
     } else {
-      tglMulai = row?.tgl_mulai || '';
-      tglSelesai = row?.tgl_selesai || tglMulai;
+      tglMulai = String(row?.tgl_mulai || '').split('T')[0];
+      tglSelesai = String(row?.tgl_selesai || tglMulai).split('T')[0];
       studentNama = row?.nama || '-';
       studentNisn = row?.nisn || '-';
       studentKelas = row?.kelas || '-';

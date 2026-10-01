@@ -23,6 +23,7 @@ apps/web/.next/
 apps/web/out/
 apps/web/.open-next/
 apps/web/.wrangler/
+**/.baileys_auth/
 
 # NestJS Build Outputs
 apps/api/dist/

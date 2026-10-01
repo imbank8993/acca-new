@@ -82,6 +82,9 @@ COPY --from=builder --chown=nextjs:nodejs /app/apps/web/next.config.ts ./apps/we
 COPY --from=builder --chown=nextjs:nodejs /app/apps/web/package.json ./apps/web/package.json
 COPY --from=builder --chown=nextjs:nodejs /app/package.json ./package.json
 
+# Ensure Baileys persistent session directory exists with correct permissions
+RUN mkdir -p /app/apps/web/.baileys_auth && chown -R nextjs:nodejs /app/apps/web/.baileys_auth
+
 USER nextjs
 
 EXPOSE 3006

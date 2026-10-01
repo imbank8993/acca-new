@@ -149,6 +149,7 @@ export default function UserModal({
             Swal.fire({ icon: 'warning', title: 'Validasi', text: 'Pilih minimal satu role!' })
             return
         }
+        const password = formData.password ? formData.password.trim() : ''
         const dataToSave = {
             ...formData,
             username,
@@ -157,6 +158,7 @@ export default function UserModal({
             nip,
             divisi,
             email,
+            password,
             role: selectedRoles.join(',')
         }
         onSave(dataToSave);

@@ -169,7 +169,7 @@ function buildLetterHtml(params: {
 
     const isRekom = letterType === 'REKOMENDASI_KONTROL';
     const bgUrl = suratUmumConfig?.backgroundUrl || '/images/Surat ACCA.png';
-    const qrLogoUrl = '/logo-icon.png';
+    const qrLogoUrl = '/logo-sidebar-kecil.webp';
     const titleText = isRekom ? 'SURAT REKOMENDASI KONTROL' : 'SURAT IZIN MENINGGALKAN ASRAMA';
     const openingText = 'Yang bertanda tangan di bawah ini adalah petugas pemberi izin MAN Insan Cendekia Gowa, menyatakan bahwa siswa berikut:';
     const stateText = 'diberikan izin dengan keterangan dan keperluan sebagai berikut:';
@@ -234,8 +234,8 @@ function buildLetterHtml(params: {
   .qr-img { width: 75px; height: 75px; display: block; }
   .qr-logo {
     position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-    width: 24px; height: 24px; border-radius: 50%;
-    background: #fff; padding: 1px; box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+    width: 20px; height: 20px; border-radius: 4px; object-fit: contain;
+    background: #fff; padding: 1.5px; box-shadow: 0 1px 4px rgba(0,0,0,0.2);
   }
   .barcode-id { font-family: 'Courier New', monospace; font-size: 7pt; color: #666; letter-spacing: 1px; margin-top: 4px; }
   @media print {

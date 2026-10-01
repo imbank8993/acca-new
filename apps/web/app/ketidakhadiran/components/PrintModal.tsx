@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { Modal, ModalHeader, ModalBody, ModalFooter } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { ASRAMA_STATUS } from "@/lib/antrean-asrama-status";
@@ -37,6 +37,22 @@ const PALETTE = {
 const MONTHS = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
 const YEARS  = [2024, 2025, 2026, 2027];
 
+const toDateStr = (d: any): string => {
+  if (!d) return '';
+  if (typeof d === 'string') return d.split('T')[0];
+  if (d instanceof Date) return d.toISOString().split('T')[0];
+  return String(d).split('T')[0];
+};
+
+const isSameDateRange = (r: any, d: any): boolean => {
+  if (!r || !d) return false;
+  const dStart = toDateStr(d.tgl_mulai);
+  const dEnd = toDateStr(d.tgl_selesai) || dStart;
+  const rStart = toDateStr(r.tgl_mulai);
+  const rEnd = toDateStr(r.tgl_selesai) || rStart;
+  return rStart === dStart && rEnd === dEnd;
+};
+
 export default function PrintModal({
   isOpen, onClose, data, allRows,
   onPrintSingle, onPrintGroup,
@@ -45,6 +61,8 @@ export default function PrintModal({
   const [docType, setDocType] = useState<"SAKIT"|"TUGAS"|"IZIN"|"MENINGGALKAN_ASRAMA"|"REKAM_MEDIK">("IZIN");
   const [printMode, setPrintMode] = useState<"SINGLE"|"GROUP">("SINGLE");
   const [siblings, setSiblings] = useState<any[]>([]);
+  const [selectedSiblingIds, setSelectedSiblingIds] = useState<Set<string>>(new Set());
+  const [candidateRows, setCandidateRows] = useState<any[]>([]);
   // Guru list from master_guru
   const [guruList, setGuruList] = useState<GuruItem[]>([]);
   // Penandatangan — selected from guru list for MENINGGALKAN_ASRAMA
@@ -73,11 +91,42 @@ export default function PrintModal({
     };
   }, [isOpen, onClose]);
 
-  // ── Reset state when modal opens ──────────────────────────────
+  // ── Fetch candidate rows with matching date range when modal opens ──
   useEffect(() => {
-    if (!isOpen || !data) {
+    if (!isOpen || !data?.tgl_mulai) {
+      setCandidateRows([]);
       return;
     }
+    let cancel = false;
+    (async () => {
+      try {
+        const from = toDateStr(data.tgl_mulai);
+        const to = toDateStr(data.tgl_selesai) || from;
+        const res = await fetch(`/api/ketidakhadiran?from=${from}&to=${to}&limit=100`);
+        const json = await res.json();
+        if (cancel) return;
+        if (json.ok && Array.isArray(json.data)) {
+          setCandidateRows(json.data);
+        }
+      } catch (e) {
+        // Fallback to allRows on error
+      }
+    })();
+    return () => { cancel = true; };
+  }, [isOpen, data?.tgl_mulai, data?.tgl_selesai]);
+
+  // ── Combine allRows and candidateRows deduplicated by ID ──────
+  const combinedRows = useMemo(() => {
+    const map = new Map<string, any>();
+    (allRows || []).forEach(r => { if (r?.id) map.set(String(r.id), r); });
+    (candidateRows || []).forEach(r => { if (r?.id) map.set(String(r.id), r); });
+    if (data?.id) map.set(String(data.id), data);
+    return Array.from(map.values());
+  }, [allRows, candidateRows, data]);
+
+  // ── Reset docType & mode when modal opens ────────────────────
+  useEffect(() => {
+    if (!isOpen || !data) return;
     if (asramaOnly) {
       setDocType("MENINGGALKAN_ASRAMA");
     } else if (data.jenis === "SAKIT") {
@@ -85,21 +134,40 @@ export default function PrintModal({
     } else {
       setDocType("IZIN");
     }
-    // Antrean asrama: kelompokkan cukup berdasarkan rentang tanggal — keterangan
-    // (diagnosis) boleh berbeda per siswa, beda dengan grup IZIN yang keterangannya
-    // memang sama untuk semua anggota. Baris yang suratnya sudah terbit, atau yang
-    // Rekomendasi dari UKS-nya belum ada, dikeluarkan dari kandidat grup.
-    const related = allRows.filter((r) => {
-      if (r.jenis !== data.jenis || r.tgl_mulai !== data.tgl_mulai || r.tgl_selesai !== data.tgl_selesai) return false;
-      if (asramaOnly) return !r.letter_issued && !!r.rekom_kontrol_issued;
-      return r.keterangan === data.keterangan;
-    });
-    setSiblings(related);
     setPrintMode("SINGLE");
-    setPenandatanganNama("");
-    setPenandatanganJabatan("");
     setPenandatanganError(false);
-  }, [isOpen, data, allRows, asramaOnly]);
+  }, [isOpen, data?.id, asramaOnly, bolehRekomendasi]);
+
+  // ── Recalculate siblings when docType, combinedRows, or data changes ──
+  useEffect(() => {
+    if (!isOpen || !data) return;
+
+    if (docType === "MENINGGALKAN_ASRAMA") {
+      const related = combinedRows.filter((r) => {
+        if (!isSameDateRange(r, data)) return false;
+        if (asramaOnly) {
+          return r.rekom_kontrol_issued || ASRAMA_STATUS.includes(r.status);
+        }
+        // General MENINGGALKAN_ASRAMA:
+        // Include any student on the same date range regardless of keterangan differences!
+        return true;
+      });
+      setSiblings(related);
+      setSelectedSiblingIds(new Set(related.map(r => String(r.id))));
+    } else if (docType === "IZIN" || docType === "TUGAS") {
+      const related = combinedRows.filter((r) => {
+        if (r.jenis !== data.jenis || !isSameDateRange(r, data)) return false;
+        if (docType === "TUGAS" && r.status !== 'MADRASAH') return false;
+        return r.keterangan === data.keterangan;
+      });
+      setSiblings(related);
+      setSelectedSiblingIds(new Set(related.map(r => String(r.id))));
+    } else {
+      // REKAM_MEDIK or SAKIT
+      setSiblings([data]);
+      setSelectedSiblingIds(new Set([String(data.id)]));
+    }
+  }, [isOpen, data, docType, combinedRows, asramaOnly]);
 
   // ── Load guru list from master_guru + default penandatangan Keasramaan ──
   useEffect(() => {
@@ -117,7 +185,7 @@ export default function PrintModal({
         const tugasJson = await tugasRes.json();
         const wkmKeasramaan = (tugasJson.data || []).find((t: any) => /keasramaan/i.test(t.jabatan || ''));
         if (wkmKeasramaan) {
-          const guru = guruData.find((g) => g.nip === wkmKeasramaan.nip);
+          const guru = guruData.find((g) => g.nip === wkmKeasramaan.nip || (wkmKeasramaan.nama && g.nama_lengkap?.toLowerCase().includes(wkmKeasramaan.nama.toLowerCase())));
           setDefaultAsramaSigner(guru ? { id: String(guru.id), nama: guru.nama_lengkap } : null);
         } else {
           setDefaultAsramaSigner(null);
@@ -144,13 +212,39 @@ export default function PrintModal({
   }, [selectedGuruId, guruList]);
 
   // ── Pre-fill penandatangan Izin Keasramaan dengan WKM Keasramaan ────────
-  // Cuma dipakai kalau belum ada pilihan (manual maupun default sebelumnya),
-  // supaya pengguna tetap bebas mengganti penandatangan secara manual.
   useEffect(() => {
     if (docType !== "MENINGGALKAN_ASRAMA" || selectedGuruId || !defaultAsramaSigner) return;
     setSelectedGuruId(defaultAsramaSigner.id);
+    setPenandatanganNama(defaultAsramaSigner.nama);
     setPenandatanganJabatan('WKM Keasramaan');
+    setPenandatanganError(false);
   }, [docType, defaultAsramaSigner, selectedGuruId]);
+
+  const selectedSiblings = useMemo(() => {
+    return siblings.filter(s => selectedSiblingIds.has(String(s.id)));
+  }, [siblings, selectedSiblingIds]);
+
+  const toggleSibling = (id: string) => {
+    setSelectedSiblingIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        if (next.size > 1) {
+          next.delete(id);
+        }
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const toggleAllSiblings = () => {
+    if (selectedSiblingIds.size === siblings.length) {
+      setSelectedSiblingIds(new Set([String(data.id)]));
+    } else {
+      setSelectedSiblingIds(new Set(siblings.map(s => String(s.id))));
+    }
+  };
 
   if (!isOpen || !data) return null;
 
@@ -162,7 +256,7 @@ export default function PrintModal({
     if (docType === "MENINGGALKAN_ASRAMA") return {
       icon: "bi-calendar-weekend-fill",
       label: "Izin Keasramaan",
-      sub: printMode === "GROUP" && isGroup ? `Kolektif · ${siblings.length} siswa` : "Perorangan",
+      sub: printMode === "GROUP" && isGroup ? `Kolektif · ${selectedSiblings.length} siswa` : "Perorangan",
       color: PALETTE.MENINGGALKAN_ASRAMA.primary,
       bg: PALETTE.MENINGGALKAN_ASRAMA.bg,
       border: PALETTE.MENINGGALKAN_ASRAMA.border,
@@ -178,7 +272,7 @@ export default function PrintModal({
     if (docType === "TUGAS") return {
       icon: "bi-briefcase-fill",
       label: "Surat Tugas",
-      sub: printMode === "GROUP" && isGroup ? `Kolektif · ${siblings.length} siswa` : "Perorangan",
+      sub: printMode === "GROUP" && isGroup ? `Kolektif · ${selectedSiblings.length} siswa` : "Perorangan",
       color: PALETTE.TUGAS.primary,
       bg: PALETTE.TUGAS.bg,
       border: PALETTE.TUGAS.border,
@@ -186,7 +280,7 @@ export default function PrintModal({
     return {
       icon: isSakit ? "bi-heart-pulse-fill" : "bi-envelope-paper-fill",
       label: isSakit ? "Surat Rekomendasi" : "Surat ACCA",
-      sub: printMode === "GROUP" && isGroup ? `Kolektif · ${siblings.length} siswa` : "Perorangan",
+      sub: printMode === "GROUP" && isGroup ? `Kolektif · ${selectedSiblings.length} siswa` : "Perorangan",
       color: palette.primary,
       bg: palette.bg,
       border: palette.border,
@@ -203,14 +297,18 @@ export default function PrintModal({
         setPenandatanganError(true);
         return;
       }
-      const penandatangan = { nama: penandatanganNama, jabatan: penandatanganJabatan };
-      if (printMode === "GROUP" && isGroup) {
-        onPrintGroup(siblings, data, "MENINGGALKAN_ASRAMA", penandatangan);
+      const penandatangan = {
+        nama: penandatanganNama || (guruList.find(g => String(g.id) === selectedGuruId)?.nama_lengkap || ''),
+        jabatan: penandatanganJabatan || 'WKM Keasramaan'
+      };
+      if (printMode === "GROUP" && isGroup && selectedSiblings.length > 1) {
+        onPrintGroup(selectedSiblings, data, "MENINGGALKAN_ASRAMA", penandatangan);
       } else {
-        onPrintSingle(data, "MENINGGALKAN_ASRAMA", penandatangan);
+        const targetStudent = selectedSiblings.length === 1 ? selectedSiblings[0] : data;
+        onPrintSingle(targetStudent, "MENINGGALKAN_ASRAMA", penandatangan);
       }
     } else if (printMode === "GROUP" && isGroup && !isSakit && (docType === "IZIN" || docType === "TUGAS")) {
-      onPrintGroup(siblings, data, docType as "IZIN" | "TUGAS");
+      onPrintGroup(selectedSiblings, data, docType as "IZIN" | "TUGAS");
     } else if (docType === "TUGAS") {
       onPrintSingle(data, "TUGAS");
     } else {
@@ -355,7 +453,7 @@ export default function PrintModal({
           )}
 
           {/* ── Group selector for IZIN/TUGAS/MENINGGALKAN_ASRAMA (termasuk dari antrean SAKIT) ── */}
-          {(!isSakit || asramaOnly) && isGroup && (docType === "IZIN" || docType === "TUGAS" || docType === "MENINGGALKAN_ASRAMA") && (
+          {isGroup && (docType === "MENINGGALKAN_ASRAMA" || (!isSakit && (docType === "IZIN" || docType === "TUGAS"))) && (
             <div className="pm-section">
               <div className="pm-section-row">
                 <span className="pm-section-label">Format Cetak</span>
@@ -380,14 +478,85 @@ export default function PrintModal({
                 </button>
               </div>
               {printMode === "GROUP" && (
-                <p className="pm-hint">
-                  <i className="bi bi-info-circle" />
-                  {docType === "MENINGGALKAN_ASRAMA"
-                    ? asramaOnly
-                      ? `1 surat untuk ${siblings.length} siswa dengan rentang tanggal yang sama (keterangan tetap dicatat per siswa)`
-                      : `1 surat untuk ${siblings.length} siswa dengan rentang tanggal & keperluan yang sama`
-                    : `1 surat + lampiran daftar ${siblings.length} siswa`}
-                </p>
+                <>
+                  <p className="pm-hint" style={{ marginBottom: '10px' }}>
+                    <i className="bi bi-info-circle" />
+                    {docType === "MENINGGALKAN_ASRAMA"
+                      ? asramaOnly
+                        ? `1 surat untuk ${selectedSiblings.length} siswa dengan rentang tanggal yang sama (keterangan tetap dicatat per siswa)`
+                        : `1 surat untuk ${selectedSiblings.length} siswa dengan rentang tanggal yang sama`
+                      : `1 surat + lampiran daftar ${selectedSiblings.length} siswa`}
+                  </p>
+                  <div style={{ marginTop: '8px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                      <span style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--n-ink, #0f172a)' }}>
+                        Pilih Siswa ({selectedSiblings.length} dari {siblings.length})
+                      </span>
+                      <button
+                        type="button"
+                        onClick={toggleAllSiblings}
+                        style={{ fontSize: '0.72rem', color: '#3083FF', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px', fontWeight: 500 }}
+                      >
+                        {selectedSiblingIds.size === siblings.length ? 'Hanya Siswa Ini' : 'Pilih Semua'}
+                      </button>
+                    </div>
+                    <div style={{
+                      maxHeight: '170px',
+                      overflowY: 'auto',
+                      border: '1px solid var(--n-border, #e2e8f0)',
+                      borderRadius: '8px',
+                      padding: '6px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '4px',
+                      background: 'var(--n-surface, #f8fafc)'
+                    }}>
+                      {siblings.map((s) => {
+                        const isChecked = selectedSiblingIds.has(String(s.id));
+                        const isCurrent = String(s.id) === String(data.id);
+                        return (
+                          <label
+                            key={s.id}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '8px',
+                              padding: '6px 8px',
+                              borderRadius: '6px',
+                              background: isChecked ? 'var(--n-card, #ffffff)' : 'transparent',
+                              border: isChecked ? '1px solid var(--n-border, #cbd5e1)' : '1px solid transparent',
+                              cursor: 'pointer',
+                              fontSize: '0.78rem',
+                              transition: 'all 0.15s ease',
+                            }}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={() => toggleSibling(String(s.id))}
+                              style={{ width: '15px', height: '15px', accentColor: '#3083FF', cursor: 'pointer' }}
+                            />
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <span style={{ fontWeight: 600, color: 'var(--n-ink, #0f172a)' }}>{s.nama}</span>
+                                <span style={{ fontSize: '0.68rem', padding: '1px 6px', borderRadius: '4px', background: 'rgba(48,131,255,0.1)', color: '#3083FF', fontWeight: 600 }}>{s.kelas}</span>
+                                {isCurrent && (
+                                  <span style={{ fontSize: '0.65rem', padding: '1px 5px', borderRadius: '4px', background: '#fef3c7', color: '#b45309', fontWeight: 600 }}>Pemohon</span>
+                                )}
+                                {s.letter_issued && (
+                                  <span style={{ fontSize: '0.65rem', padding: '1px 5px', borderRadius: '4px', background: '#f1f5f9', color: '#64748b', fontWeight: 600 }}>Sudah terbit</span>
+                                )}
+                              </div>
+                              <div style={{ fontSize: '0.7rem', color: 'var(--n-muted, #64748b)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                {s.keterangan || 'Tanpa keterangan tambahan'}
+                              </div>
+                            </div>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </>
               )}
             </div>
           )}
@@ -447,7 +616,7 @@ export default function PrintModal({
           type="button"
           variant="primary"
           onClick={handlePrint}
-          disabled={docType === "SAKIT" && !bolehRekomendasi}
+          disabled={(docType === "SAKIT" && !bolehRekomendasi) || (printMode === "GROUP" && selectedSiblings.length === 0)}
           leftIcon={<i className="bi bi-download" />}
         >
           Cetak Sekarang

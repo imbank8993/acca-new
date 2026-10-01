@@ -1,4 +1,29 @@
+import fs from 'fs';
+import path from 'path';
 import { escapeHtml } from '@/lib/print/print-utils';
+
+export function resolveAssetDataUri(url: string): string {
+  if (!url) return url;
+  if (url.startsWith('data:')) return url;
+  try {
+    const cleanUrl = url.replace(/^[/\\]+/, '');
+    const candidates = [
+      path.join(process.cwd(), 'apps/web/public', cleanUrl),
+      path.join(process.cwd(), 'public', cleanUrl),
+      path.resolve(__dirname, '../../../public', cleanUrl),
+      path.resolve(__dirname, '../../../../public', cleanUrl),
+    ];
+    for (const localPath of candidates) {
+      if (fs.existsSync(localPath)) {
+        const ext = path.extname(localPath).toLowerCase().replace('.', '');
+        const mime = ext === 'png' ? 'image/png' : ext === 'webp' ? 'image/webp' : ext === 'jpg' || ext === 'jpeg' ? 'image/jpeg' : ext === 'svg' ? 'image/svg+xml' : 'application/octet-stream';
+        const b64 = fs.readFileSync(localPath).toString('base64');
+        return `data:${mime};base64,${b64}`;
+      }
+    }
+  } catch {}
+  return url;
+}
 
 export function getMonthRoman(month: number): string {
   const romans = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII'];
@@ -47,7 +72,8 @@ export function buildSingleHtml(params: SingleHtmlParams): string {
 
   const qrSrc = qrCodeUrl || `/api/qrcode?data=${encodeURIComponent(scanUrl)}`;
   const safe = (value: string) => escapeHtml(value || '-');
-  const logoSrc = new URL('/logo-icon.png', scanUrl).toString();
+  const logoSrc = resolveAssetDataUri('/logo-sidebar-kecil.webp');
+  const resolvedBg = resolveAssetDataUri(backgroundUrl);
   const isRekomendasi = letterType === 'REKOMENDASI_KONTROL' || letterType === 'SAKIT' ||
     (Boolean(nomorSurat) && nomorSurat.includes('/UKS/'));
   const isKontrol = (status || '').toLowerCase() === 'kontrol';
@@ -91,56 +117,166 @@ export function buildSingleHtml(params: SingleHtmlParams): string {
     : '';
 
   return `<!DOCTYPE html>
-<html>
+<html lang="id">
 <head>
 <meta charset="utf-8"/>
 <title>${safe(titleText)} - ${safe(nomorSurat)}</title>
 <style>
-  @page { size: A4; margin: 0; }
+  @page { size: A4 portrait; margin: 0; }
   * { margin: 0; padding: 0; box-sizing: border-box; }
   html, body {
-    width: 210mm; height: 297mm; margin: 0;
-    font-family: 'Times New Roman', serif;
+    width: 210mm;
+    height: 297mm;
+    margin: 0;
+    padding: 0;
+    font-family: 'Times New Roman', Times, serif;
     font-size: 11pt;
-    color: #000; background: #fff;
+    color: #000;
+    background: #fff;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
-  .a4-page { position: relative; width: 210mm; height: 297mm; overflow: hidden; }
-  .bg-img { position: absolute; inset: 0; width: 210mm; height: 297mm; z-index: 0; }
-  .bg-img img { display: block; width: 100%; height: 100%; object-fit: cover; }
+  .a4-page {
+    position: relative;
+    width: 210mm;
+    height: 297mm;
+    overflow: hidden;
+    page-break-after: avoid;
+    break-after: avoid;
+  }
+  .bg-img {
+    position: absolute;
+    inset: 0;
+    width: 210mm;
+    height: 297mm;
+    z-index: 0;
+  }
+  .bg-img img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
   .content {
-    position: absolute; top: 35mm; left: 30mm; right: 20mm; bottom: 20mm; z-index: 1;
+    position: absolute;
+    top: 36mm;
+    left: 28mm;
+    right: 20mm;
+    bottom: 20mm;
+    z-index: 1;
     display: flex;
     flex-direction: column;
     overflow: hidden;
   }
-  .nomor-surat-wrapper { text-align: center; margin-bottom: 10px; padding-bottom: 8px; }
+  .nomor-surat-wrapper {
+    text-align: center;
+    margin-bottom: 12px;
+    padding-bottom: 4px;
+  }
   .surat-title {
     font-size: 13pt;
     font-weight: bold;
     text-decoration: underline;
-    text-underline-offset: 5px;
+    text-underline-offset: 4px;
     text-transform: uppercase;
     margin-bottom: 4px;
-    letter-spacing: 2px;
+    letter-spacing: 1.5px;
   }
-  .surat-nomor { font-size: 10pt; margin-bottom: 14pt; }
-  .body-text { font-size: 10.5pt; text-align: justify; line-height: 1.55; margin-bottom: 10px; }
-  .data-table { width: 100%; border-collapse: collapse; margin: 6px 0 10px; font-size: 10.5pt; }
-  .data-table td { padding: 3px 0; vertical-align: top; }
-  .data-table td:first-child { width: 110px; }
-  .data-table td:nth-child(2) { width: 20px; }
-  .data-table td:last-child { padding-left: 6px; }
-  .footer-statement { font-size: 10.5pt; text-align: justify; margin: 0 0 10px; line-height: 1.55; }
-  .sign-area { padding: 16pt 0 0; flex-shrink: 0; display: flex; justify-content: flex-end; }
-  .sign-box { display: flex; flex-direction: column; align-items: flex-start; font-size: 9pt; line-height: 1.4; gap: 1px; }
-  .sign-place { font-size: 9pt; margin-bottom: 2px; }
-  .qr-section-inline { margin: 4px 0; }
-  .qr-wrap { position: relative; display: inline-block; }
-  .qr-img { display: block; width: 60px; height: 60px; }
-  .qr-logo { position: absolute; top: 50%; left: 50%; width: 18px; height: 18px; transform: translate(-50%, -50%); border-radius: 50%; background: #fff; padding: 1px; }
-  .sign-name { font-weight: bold; }
-  .barcode-id { font-family: 'Courier New', monospace; font-size: 7pt; color: #555; letter-spacing: 1px; margin-top: 3px; }
-  .recommendation-sign-gap { height: 45pt; flex-shrink: 0; }
+  .surat-nomor {
+    font-size: 10.5pt;
+  }
+  .body-text {
+    font-size: 10.5pt;
+    text-align: justify;
+    line-height: 1.6;
+    margin-bottom: 8px;
+  }
+  .data-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 4px 0 8px;
+    font-size: 10.5pt;
+  }
+  .data-table td {
+    padding: 2.5px 0;
+    vertical-align: top;
+  }
+  .data-table td:first-child {
+    width: 32mm;
+  }
+  .data-table td:nth-child(2) {
+    width: 4mm;
+  }
+  .data-table td:last-child {
+    padding-left: 4px;
+  }
+  .footer-statement {
+    font-size: 10.5pt;
+    text-align: justify;
+    margin: 0 0 8px;
+    line-height: 1.6;
+  }
+  .sign-area {
+    margin-top: auto;
+    padding-top: 8px;
+    flex-shrink: 0;
+    display: flex;
+    justify-content: flex-end;
+  }
+  .sign-box {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    font-size: 9.5pt;
+    line-height: 1.35;
+    min-width: 58mm;
+  }
+  .sign-place {
+    font-size: 9.5pt;
+    margin-bottom: 2px;
+  }
+  .qr-section-inline {
+    margin: 4px 0;
+  }
+  .qr-wrap {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 60px;
+  }
+  .qr-img {
+    display: block;
+    width: 60px;
+    height: 60px;
+  }
+  .qr-logo {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 18px;
+    height: 18px;
+    transform: translate(-50%, -50%);
+    border-radius: 4px;
+    background: #fff;
+    padding: 1.5px;
+    object-fit: contain;
+    box-shadow: 0 0 1px rgba(0,0,0,0.5);
+  }
+  .sign-name {
+    font-weight: bold;
+    margin-top: 2px;
+  }
+  .barcode-id {
+    font-family: 'Courier New', monospace;
+    font-size: 7.5pt;
+    color: #444;
+    letter-spacing: 1px;
+    margin-top: 2px;
+  }
+  .recommendation-sign-gap {
+    height: 30pt;
+    flex-shrink: 0;
+  }
   @media print {
     html, body { margin: 0 !important; padding: 0 !important; }
     .bg-img img { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
@@ -149,7 +285,7 @@ export function buildSingleHtml(params: SingleHtmlParams): string {
 </head>
 <body>
 <div class="a4-page">
-  <div class="bg-img"><img src="${safe(backgroundUrl)}" alt="Background"/></div>
+  <div class="bg-img"><img src="${safe(resolvedBg)}" alt="Background"/></div>
   <div class="content">
     <div class="nomor-surat-wrapper">
       <div class="surat-title">${safe(titleText)}</div>
@@ -222,7 +358,8 @@ export function buildCollectiveHtml(params: CollectiveHtmlParams): string {
 
   const qrSrc = qrCodeUrl || `/api/qrcode?data=${encodeURIComponent(scanUrl)}`;
   const safe = (value: unknown) => escapeHtml(String(value || '-'));
-  const logoSrc = new URL('/logo-icon.png', scanUrl).toString();
+  const logoSrc = resolveAssetDataUri('/logo-sidebar-kecil.webp');
+  const resolvedBg = resolveAssetDataUri(backgroundUrl);
   const ketList = rows.map((r) => String(r.keterangan || '').trim());
   const sharedKet = ketList.length > 0 && ketList.every((item) => item === ketList[0]) &&
     ketList[0] !== '' && ketList[0] !== '-'
@@ -239,14 +376,14 @@ export function buildCollectiveHtml(params: CollectiveHtmlParams): string {
     </tr>`).join('');
   const colWidthCss = showKetColumn
     ? `.grp-table th:nth-child(1), .grp-table td:nth-child(1) { width: 6%; }
-  .grp-table th:nth-child(2), .grp-table td:nth-child(2) { width: 20%; }
-  .grp-table th:nth-child(3), .grp-table td:nth-child(3) { width: 16%; }
-  .grp-table th:nth-child(4), .grp-table td:nth-child(4) { width: 12%; }
-  .grp-table th:nth-child(5), .grp-table td:nth-child(5) { width: 46%; }`
-    : `.grp-table th:nth-child(1), .grp-table td:nth-child(1) { width: 7%; }
-  .grp-table th:nth-child(2), .grp-table td:nth-child(2) { width: 47%; }
-  .grp-table th:nth-child(3), .grp-table td:nth-child(3) { width: 26%; }
-  .grp-table th:nth-child(4), .grp-table td:nth-child(4) { width: 20%; }`;
+  .grp-table th:nth-child(2), .grp-table td:nth-child(2) { width: 27%; }
+  .grp-table th:nth-child(3), .grp-table td:nth-child(3) { width: 17%; }
+  .grp-table th:nth-child(4), .grp-table td:nth-child(4) { width: 13%; }
+  .grp-table th:nth-child(5), .grp-table td:nth-child(5) { width: 37%; }`
+    : `.grp-table th:nth-child(1), .grp-table td:nth-child(1) { width: 6%; }
+  .grp-table th:nth-child(2), .grp-table td:nth-child(2) { width: 42%; }
+  .grp-table th:nth-child(3), .grp-table td:nth-child(3) { width: 28%; }
+  .grp-table th:nth-child(4), .grp-table td:nth-child(4) { width: 24%; }`;
 
   const scriptTag = autoPrint
     ? `<script>
@@ -266,47 +403,201 @@ export function buildCollectiveHtml(params: CollectiveHtmlParams): string {
     : '';
 
   return `<!DOCTYPE html>
-<html>
+<html lang="id">
 <head>
 <meta charset="utf-8"/>
 <title>SURAT IZIN MENINGGALKAN ASRAMA - ${safe(nomorSurat)}</title>
 <style>
-  @page { size: 210mm 297mm portrait; margin: 0; }
+  @page { size: A4 portrait; margin: 0; }
   *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
-  html, body { width: 210mm; max-width: 210mm; font-family: 'Times New Roman', serif; font-size: 11pt; color: #000; background: #fff; }
-  .page-bg { position: fixed; top: 0; left: 0; width: 210mm; height: 297mm; z-index: 0; pointer-events: none; background-image: url('${safe(backgroundUrl)}'); background-repeat: no-repeat; background-position: top left; background-size: 210mm 297mm; }
-  .page-frame { width: 210mm; border-collapse: collapse; position: relative; z-index: 1; }
-  .frame-top { height: 35mm; }
+  html {
+    background: #fff;
+  }
+  body {
+    position: relative;
+    width: 210mm;
+    max-width: 210mm;
+    min-height: 297mm;
+    margin: 0 auto;
+    font-family: 'Times New Roman', Times, serif;
+    font-size: 11pt;
+    color: #000;
+    background: #fff;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .page-bg {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 210mm;
+    height: 297mm;
+    z-index: 0;
+    pointer-events: none;
+    background-image: url('${safe(resolvedBg)}');
+    background-repeat: no-repeat;
+    background-position: top left;
+    background-size: 210mm 297mm;
+  }
+  .page-frame {
+    width: 210mm;
+    border-collapse: collapse;
+    position: relative;
+    z-index: 1;
+  }
+  .frame-top { height: 36mm; }
   .frame-bottom { height: 20mm; }
-  .frame-body > td { padding: 0 20mm 0 30mm; vertical-align: top; }
-  .nomor-surat-wrapper { text-align: center; margin-bottom: 10px; padding-bottom: 8px; }
-  .surat-title { font-size: 13pt; font-weight: bold; text-decoration: underline; text-underline-offset: 5px; letter-spacing: 2px; margin-bottom: 4px; }
-  .surat-nomor { font-size: 10pt; margin-bottom: 14pt; }
-  .body-text { font-size: 10.5pt; line-height: 1.55; margin-bottom: 10px; text-align: justify; }
-  .grp-table { width: 100%; border-collapse: collapse; font-size: 9.5pt; margin: 8px 0 12px; }
-  .grp-table th, .grp-table td { border: 1px solid #333; padding: 4px 6px; vertical-align: middle; word-break: break-word; }
-  .grp-table th { background: #3083FF; color: #fff; text-align: center; font-weight: bold; }
-  .grp-table thead { display: table-header-group; }
-  .grp-table tr { break-inside: avoid; page-break-inside: avoid; }
-  .cell-no { text-align: center; font-weight: bold; }
+  .frame-body > td {
+    padding: 0 20mm 0 28mm;
+    vertical-align: top;
+  }
+  .nomor-surat-wrapper {
+    text-align: center;
+    margin-bottom: 12px;
+    padding-bottom: 4px;
+  }
+  .surat-title {
+    font-size: 13pt;
+    font-weight: bold;
+    text-decoration: underline;
+    text-underline-offset: 4px;
+    letter-spacing: 1.5px;
+    margin-bottom: 4px;
+  }
+  .surat-nomor {
+    font-size: 10.5pt;
+  }
+  .body-text {
+    font-size: 10.5pt;
+    line-height: 1.6;
+    margin-bottom: 8px;
+    text-align: justify;
+  }
+  .grp-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 9pt;
+    margin: 8px 0 12px;
+  }
+  .grp-table th, .grp-table td {
+    border: 1px solid #111;
+    padding: 4px 6px;
+    vertical-align: middle;
+    word-break: break-word;
+  }
+  .grp-table th {
+    background: #f1f5f9;
+    color: #0f172a;
+    text-align: center;
+    font-weight: bold;
+    font-size: 9pt;
+  }
+  .grp-table thead {
+    display: table-header-group;
+  }
+  .grp-table tr {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  .cell-no {
+    text-align: center;
+    font-weight: bold;
+  }
 ${colWidthCss}
-  .data-table { width: 100%; border-collapse: collapse; font-size: 10.5pt; margin-bottom: 10px; }
-  .data-table td { padding: 3px 0; vertical-align: top; }
-  .data-table td:first-child { width: 110px; }
-  .data-table td:nth-child(2) { width: 20px; }
-  .data-table td:last-child { padding-left: 6px; }
-  .sign-area { padding: 16pt 0 0; display: flex; justify-content: flex-end; break-inside: avoid; page-break-inside: avoid; }
-  .sign-box { display: flex; flex-direction: column; align-items: flex-start; font-size: 9pt; line-height: 1.4; gap: 1px; }
-  .sign-place { font-size: 9pt; margin-bottom: 2px; }
-  .qr-section-inline { margin: 4px 0; }
-  .qr-wrap { position: relative; display: inline-block; }
-  .qr-img { display: block; width: 60px; height: 60px; }
-  .qr-logo { position: absolute; top: 50%; left: 50%; width: 18px; height: 18px; transform: translate(-50%, -50%); border-radius: 50%; background: #fff; padding: 1px; }
-  .sign-name { font-weight: bold; }
-  .barcode-id { font-family: 'Courier New', monospace; font-size: 7pt; color: #555; letter-spacing: 1px; margin-top: 3px; }
+  .data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 10.5pt;
+    margin: 4px 0 8px;
+  }
+  .data-table td {
+    padding: 2.5px 0;
+    vertical-align: top;
+  }
+  .data-table td:first-child {
+    width: 32mm;
+  }
+  .data-table td:nth-child(2) {
+    width: 4mm;
+  }
+  .data-table td:last-child {
+    padding-left: 4px;
+  }
+  .sign-area {
+    margin-top: 14px;
+    padding-top: 6px;
+    display: flex;
+    justify-content: flex-end;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  .sign-box {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    font-size: 9.5pt;
+    line-height: 1.35;
+    min-width: 58mm;
+  }
+  .sign-place {
+    font-size: 9.5pt;
+    margin-bottom: 2px;
+  }
+  .qr-section-inline {
+    margin: 4px 0;
+  }
+  .qr-wrap {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 60px;
+  }
+  .qr-img {
+    display: block;
+    width: 60px;
+    height: 60px;
+  }
+  .qr-logo {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 18px;
+    height: 18px;
+    transform: translate(-50%, -50%);
+    border-radius: 4px;
+    background: #fff;
+    padding: 1.5px;
+    object-fit: contain;
+    box-shadow: 0 0 1px rgba(0,0,0,0.5);
+  }
+  .sign-name {
+    font-weight: bold;
+    margin-top: 2px;
+  }
+  .barcode-id {
+    font-family: 'Courier New', monospace;
+    font-size: 7.5pt;
+    color: #444;
+    letter-spacing: 1px;
+    margin-top: 2px;
+  }
   @media print {
-    html, body { margin: 0 !important; padding: 0 !important; }
-    .page-bg, .grp-table th { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+    html, body {
+      margin: 0 !important;
+      padding: 0 !important;
+      width: 210mm !important;
+      max-width: 210mm !important;
+    }
+    .page-bg {
+      position: fixed !important;
+      top: 0 !important;
+      left: 0 !important;
+      width: 210mm !important;
+      height: 297mm !important;
+      print-color-adjust: exact;
+      -webkit-print-color-adjust: exact;
+    }
+    .grp-table th { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
   }
 </style>
 </head>
@@ -386,6 +677,9 @@ export function buildRekapanHtml(params: RekapanHtmlParams): string {
   } = params;
 
   const qrSrc = qrCodeUrl || `/api/qrcode?data=${encodeURIComponent(scanUrl)}`;
+  const logoSrc = resolveAssetDataUri('/logo-sidebar-kecil.webp');
+  const resolvedBg = resolveAssetDataUri(backgroundUrl);
+  const safe = (value: unknown) => escapeHtml(String(value || '-'));
 
   const isIzin = letterType === 'REKAPAN_IZIN';
   const titleText = isIzin ? 'REKAPITULASI IZIN SISWA' : 'REKAPITULASI PEMERIKSAAN KESEHATAN (SAKIT)';
@@ -408,67 +702,84 @@ export function buildRekapanHtml(params: RekapanHtmlParams): string {
     : '';
 
   return `<!DOCTYPE html>
-<html>
+<html lang="id">
 <head>
 <meta charset="utf-8"/>
 <title>${titleText} - ${monthName} ${year}</title>
 <style>
-  @page { size: A4; margin: 0; }
+  @page { size: A4 portrait; margin: 0; }
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body {
     width: 210mm;
-    height: 296.5mm;
-    font-family: 'Times New Roman', serif;
+    height: 297mm;
+    font-family: 'Times New Roman', Times, serif;
     font-size: 11pt;
     position: relative;
     overflow: hidden;
     background: #fff;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
-  .page-wrapper { position: relative; width: 210mm; height: 296.5mm; }
+  .page-wrapper { position: relative; width: 210mm; height: 297mm; }
   .bg-img { position: absolute; top: 0; left: 0; width: 210mm; height: 297mm; z-index: 0; }
   .bg-img img { width: 210mm; height: 100%; object-fit: cover; }
   .content {
     position: absolute;
-    top: 38mm;
-    left: 30mm;
-    right: 30mm;
-    bottom: 28mm;
+    top: 36mm;
+    left: 28mm;
+    right: 20mm;
+    bottom: 20mm;
     z-index: 1;
     display: flex;
     flex-direction: column;
   }
-  .nomor-surat-wrapper { text-align: center; margin-bottom: 18px; }
+  .nomor-surat-wrapper { text-align: center; margin-bottom: 14px; }
   .surat-title {
     font-size: 12pt;
     font-weight: bold;
     text-decoration: underline;
-    text-underline-offset: 5px;
+    text-underline-offset: 4px;
     text-transform: uppercase;
     margin-bottom: 2px;
     letter-spacing: 1.5px;
   }
   .surat-nomor { font-size: 11pt; }
   .body-text { font-size: 11pt; text-align: justify; line-height: 1.6; margin-bottom: 12px; }
-  .sign-area { margin-top: 30px; display: flex; justify-content: flex-end; padding-right: 5mm; }
+  .sign-area { margin-top: auto; display: flex; justify-content: flex-end; padding-top: 10px; }
   .sign-box { text-align: center; width: 260px; }
-  .sign-place { font-size: 11pt; margin-bottom: 4px; }
+  .sign-place { font-size: 10pt; margin-bottom: 4px; }
   .sign-jabatan { font-size: 10pt; margin-bottom: 2px; }
-  .sign-name { font-size: 11pt; font-weight: bold; margin-top: 4px; }
+  .sign-name { font-size: 10.5pt; font-weight: bold; margin-top: 4px; }
   .sign-nip { font-size: 9pt; margin-top: 2px; }
   .qr-section-inline { display: flex; flex-direction: column; align-items: center; margin: 8px 0; width: 100%; }
+  .qr-wrap {
+    position: relative;
+    display: inline-block;
+    width: 75px;
+    height: 75px;
+  }
   .qr-img {
     width: 75px;
     height: 75px;
     display: block;
     object-fit: contain;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
-    image-rendering: -webkit-optimize-contrast;
-    image-rendering: crisp-edges;
+  }
+  .qr-logo {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 22px;
+    height: 22px;
+    transform: translate(-50%, -50%);
+    border-radius: 4px;
+    background: #fff;
+    padding: 2px;
+    object-fit: contain;
+    box-shadow: 0 0 1px rgba(0,0,0,0.5);
   }
   .barcode-id { font-family: 'Courier New', monospace; font-size: 7pt; color: #666; letter-spacing: 1px; margin-top: 4px; }
   @media print {
-    html, body { height: 296.5mm; overflow: hidden; margin: 0 !important; padding: 0 !important; }
+    html, body { height: 297mm; overflow: hidden; margin: 0 !important; padding: 0 !important; }
     .page-wrapper { page-break-after: avoid; page-break-before: avoid; break-after: avoid; }
     .bg-img img { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
   }
@@ -476,7 +787,7 @@ export function buildRekapanHtml(params: RekapanHtmlParams): string {
 </head>
 <body>
 <div class="page-wrapper">
-  <div class="bg-img"><img src="${backgroundUrl}" alt="Background"/></div>
+  <div class="bg-img"><img src="${safe(resolvedBg)}" alt="Background"/></div>
   <div class="content">
     <div class="nomor-surat-wrapper">
       <div class="surat-title">${titleText}</div>
@@ -493,7 +804,10 @@ export function buildRekapanHtml(params: RekapanHtmlParams): string {
         <div class="sign-place">Gowa, ${formatDateId(new Date().toISOString().slice(0, 10))}</div>
         <div class="sign-jabatan">${pejabatJabatan}</div>
         <div class="qr-section-inline">
-          <img src="${qrSrc}" alt="QR Code" class="qr-img"/>
+          <div class="qr-wrap">
+            <img src="${safe(qrSrc)}" alt="QR Code" class="qr-img"/>
+            <img src="${safe(logoSrc)}" alt="Logo" class="qr-logo"/>
+          </div>
           <div class="barcode-id">${barcode}</div>
         </div>
         <div class="sign-name">${pejabatNama}</div>
@@ -506,3 +820,4 @@ ${scriptTag}
 </body>
 </html>`;
 }
+
