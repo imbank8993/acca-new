@@ -9,7 +9,7 @@ import Swal from 'sweetalert2'
 import { swalSuccess, swalError, swalWarning, swalConfirm } from '@/lib/swal-premium';
 import { getProxiedImageUrl } from '@/lib/image-utils'
 import Cropper from 'react-easy-crop'
-import getCroppedImg from '@/lib/cropImage'
+import getCroppedImg, { convertFileToWebp } from '@/lib/cropImage'
 import { useModalBlur } from '@/components/ModalBlurProvider'
 import Select from 'react-select'
 import { getActiveAcademicYear, getActiveSettings } from '@/lib/settings-client'
@@ -451,7 +451,16 @@ export default function ProfilePage({ user, onRefreshUser }: ProfilePageProps) {
     const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0]
         if (!file) return
-        if (file.size > 2 * 1024 * 1024) { swalError('Error', 'Ukuran foto maksimal adalah 2 MB.'); e.target.value = ''; return }
+        if (!file.type.startsWith('image/')) {
+            swalError('Error', 'File yang dipilih harus berupa gambar.');
+            e.target.value = '';
+            return;
+        }
+        if (file.size > 10 * 1024 * 1024) {
+            swalError('Error', 'Ukuran foto maksimal adalah 10 MB.');
+            e.target.value = '';
+            return;
+        }
         const reader = new FileReader()
         reader.addEventListener('load', () => setImageToCrop(reader.result as string))
         reader.readAsDataURL(file)
@@ -459,11 +468,19 @@ export default function ProfilePage({ user, onRefreshUser }: ProfilePageProps) {
     }
 
     const uploadFile = async (file: File) => {
-        if (file.size > 2 * 1024 * 1024) { swalError('Error', 'Ukuran foto maksimal adalah 2 MB.'); return }
+        if (file.size > 10 * 1024 * 1024) {
+            swalError('Error', 'Ukuran foto maksimal adalah 10 MB.');
+            return;
+        }
         setUploading(true)
         try {
+            // Konversi gambar ke WebP agar ukuran kecil & kualitas tetap bagus
+            let fileToUpload = file
+            if (file.type.startsWith('image/') && !file.type.includes('webp')) {
+                fileToUpload = await convertFileToWebp(file, 800, 0.85).catch(() => file)
+            }
             const fd = new FormData()
-            fd.append('file', file); fd.append('folder', 'profil_users')
+            fd.append('file', fileToUpload); fd.append('folder', 'profil_users')
             if (formData.photoUrl) fd.append('old_file', formData.photoUrl)
             const res = await fetch('/api/upload', { method: 'POST', body: fd })
             const data = await res.json()
@@ -498,7 +515,7 @@ export default function ProfilePage({ user, onRefreshUser }: ProfilePageProps) {
                     reader.addEventListener('load', () => { setImageToCrop(reader.result as string); stopCamera() })
                     reader.readAsDataURL(blob)
                 }
-            }, 'image/jpeg')
+            }, 'image/webp', 0.9)
         }
     }
 
@@ -508,9 +525,19 @@ export default function ProfilePage({ user, onRefreshUser }: ProfilePageProps) {
         if (!imageToCrop || !croppedAreaPixels) return
         setUploading(true)
         try {
-            const blob = await getCroppedImg(imageToCrop, croppedAreaPixels)
+            const blob = await getCroppedImg(
+                imageToCrop,
+                croppedAreaPixels,
+                0,
+                { horizontal: false, vertical: false },
+                'image/webp',
+                0.85,
+                800
+            )
             if (!blob) throw new Error('Gagal memproses gambar')
-            const file = new File([blob], `avatar_${Date.now()}.jpg`, { type: 'image/jpeg' })
+            const isWebp = blob.type === 'image/webp'
+            const ext = isWebp ? 'webp' : 'jpg'
+            const file = new File([blob], `avatar_${Date.now()}.${ext}`, { type: blob.type || 'image/webp' })
             await uploadFile(file)
             setImageToCrop(null)
         } catch (error: any) { swalError('Error', error.message) }
@@ -765,6 +792,7 @@ export default function ProfilePage({ user, onRefreshUser }: ProfilePageProps) {
                                                 )}
                                             </div>
                                         </div>
+                                        <p className="ps-field-helpText">Maksimal 10 MB. Foto otomatis dikonversi ke WebP untuk ukuran ringan dan kualitas tinggi.</p>
                                     </div>
                                 </div>
                             </div>
