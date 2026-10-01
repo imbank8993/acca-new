@@ -80,32 +80,87 @@ export default function BankDataView() {
         <RiwayatTab />
       ) : loading || !capsSiap ? (
         <div className="bd-loading">
-          <Spinner variant="buble" label="Memuat katalog..." />
+          <Spinner variant="buble" label="Memuat katalog data..." />
         </div>
       ) : ditolak ? (
-        <div className="bd-empty">
-          <i className="bi bi-shield-lock" />
-          <h3>Akses Terbatas</h3>
+        <div className="bd-empty bd-empty--denied">
+          <div className="bd-empty__icon">
+            <i className="bi bi-shield-lock-fill" />
+          </div>
+          <h3>Akses Bank Data Terbatas</h3>
+          <p>
+            Akun Anda belum memiliki izin untuk mengakses modul Bank Data. Hubungi Administrator untuk memberikan akses melalui menu <strong>Pengaturan Users &gt; Akses Halaman</strong>.
+          </p>
+          <button type="button" className="bd-btn-retry" onClick={muatKatalog}>
+            <i className="bi bi-arrow-clockwise" /> Coba Lagi
+          </button>
         </div>
       ) : katalog.length === 0 ? (
         <div className="bd-empty">
-          <i className="bi bi-inbox" />
-          <h3>Belum ada data tersedia</h3>
+          <div className="bd-empty__icon">
+            <i className="bi bi-inbox-fill" />
+          </div>
+          <h3>Belum ada dataset yang diaktifkan</h3>
+          <p>
+            {bolehKelola
+              ? 'Silakan aktifkan dataset dan pilih kolom yang diizinkan melalui tab Pengaturan.'
+              : 'Belum ada dataset yang dibuka oleh Administrator. Silakan hubungi pengelola.'}
+          </p>
+          {bolehKelola && (
+            <button
+              type="button"
+              className="bd-btn-primary-subtle"
+              onClick={() => setActiveTab('pengaturan')}
+            >
+              <i className="bi bi-gear-fill" /> Buka Pengaturan Dataset
+            </button>
+          )}
         </div>
       ) : (
         <div className="bd-grid">
           {katalog.map(d => (
-            <button
+            <div
               key={d.id}
-              type="button"
               className="bd-card"
               onClick={() => setDatasetAktif(d)}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setDatasetAktif(d); }}
             >
-              <div className="bd-card__icon">
-                <i className={`bi ${d.ikon}`} />
+              <div className="bd-card__top">
+                <div className="bd-card__icon">
+                  <i className={`bi ${d.ikon}`} />
+                </div>
+                <span className="bd-card__pill">
+                  <i className="bi bi-table" /> {d.kolom.length} Kolom
+                </span>
               </div>
-              <span className="bd-card__name">{d.label}</span>
-            </button>
+              <div className="bd-card__body">
+                <h3 className="bd-card__name">{d.label}</h3>
+                <p className="bd-card__desc">{d.deskripsi}</p>
+              </div>
+              <div className="bd-card__footer">
+                <div className="bd-card__filters">
+                  {d.filter.includes('tahun_ajaran') && (
+                    <span className="bd-filter-tag" title="Mendukung filter Tahun Ajaran">TA</span>
+                  )}
+                  {d.filter.includes('semester') && (
+                    <span className="bd-filter-tag" title="Mendukung filter Semester">Sem</span>
+                  )}
+                  {d.filter.includes('kelas') && (
+                    <span className="bd-filter-tag" title="Mendukung filter Kelas">Kelas</span>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  className="bd-card__btn"
+                  onClick={(e) => { e.stopPropagation(); setDatasetAktif(d); }}
+                >
+                  <span>Ekspor</span>
+                  <i className="bi bi-download" />
+                </button>
+              </div>
+            </div>
           ))}
         </div>
       )}

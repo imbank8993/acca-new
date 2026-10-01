@@ -12,8 +12,7 @@ export class BankDataService {
             throw new ForbiddenException('Sesi diperlukan');
         const a = await this.access.resolveUserAccess(user);
         const admin = a.roles.some(r => ['ADMIN', 'ADMINISTRATOR'].includes(r));
-        if (!admin && !a.pageIds.includes('bank-data'))
-            throw new ForbiddenException('Tidak memiliki akses Bank Data');
+        
         let bolehKelola = admin || !!a.caps?.includes('bank_data.kelola');
         if (!bolehKelola) {
             try {
@@ -33,14 +32,41 @@ export class BankDataService {
                 // Abaikan jika tidak ada
             }
         }
+
+        // Cek apakah user memiliki akses halaman Bank Data (via role_pages, page_overrides, atau hak kelola)
+        let hasAccess = admin || bolehKelola || a.pageIds.includes('bank-data');
+        if (!hasAccess) {
+            // Direct DB fallback untuk menghindari staleness cache in-memory 30s saat role baru saja diatur
+            const userRoles = a.roles.map(r => r.toUpperCase());
+            const directRolePage = await this.prisma.role_pages.findFirst({
+                where: {
+                    role: { in: userRoles },
+                    page_id: 'bank-data',
+                },
+            });
+            if (directRolePage) {
+                hasAccess = true;
+            }
+        }
+
+        if (!hasAccess) {
+            throw new ForbiddenException('Tidak memiliki akses Bank Data');
+        }
+
         return { bolehKelola, bolehSensitif: admin || !!a.caps?.includes('bank_data.export_sensitif') };
     }
     private async manager(user: any) { if (!(await this.permission(user)).bolehKelola)
         throw new ForbiddenException('Izin pengelola diperlukan'); }
     private config(def: DatasetDef, row: any) {
-        return { aktif: row ? row.aktif === true : true,
-            kolomDiizinkan: Array.isArray(row?.kolom_diizinkan) ? row.kolom_diizinkan : def.kolom.filter(k => !k.sensitif).map(k => k.key),
-            batasBaris: Math.max(1, Math.min(def.batasBaris, Number(row?.batas_baris) || def.batasBaris)), catatan: row?.catatan || '' };
+        const defaultCols = def.kolom.filter(k => !k.sensitif).map(k => k.key);
+        const validSet = new Set(def.kolom.map(c => c.key));
+        const savedCols = Array.isArray(row?.kolom_diizinkan) ? row.kolom_diizinkan.filter((k: string) => validSet.has(k)) : [];
+        return {
+            aktif: row ? row.aktif === true : true,
+            kolomDiizinkan: savedCols.length > 0 ? savedCols : defaultCols,
+            batasBaris: Math.max(1, Math.min(def.batasBaris, Number(row?.batas_baris) || def.batasBaris)),
+            catatan: row?.catatan || ''
+        };
     }
     async getCatalog(user: any) {
         const permission = await this.permission(user);
@@ -61,15 +87,17 @@ export class BankDataService {
         const def = getDataset(body?.dataset_id);
         if (!def)
             throw new BadRequestException('Dataset tidak dikenal');
-        if (!Array.isArray(body.kolomDiizinkan) || body.kolomDiizinkan.some((k: any) => !def.kolom.some(c => c.key === k)))
-            throw new BadRequestException('Kolom tidak dikenal');
-        const limit = Number(body.batasBaris || def.batasBaris);
-        if (!Number.isInteger(limit) || limit < 1 || limit > def.batasBaris)
+        if (!Array.isArray(body.kolomDiizinkan))
+            throw new BadRequestException('Kolom tidak valid');
+        const validSet = new Set(def.kolom.map(c => c.key));
+        const cleanKolom = body.kolomDiizinkan.filter((k: any) => typeof k === 'string' && validSet.has(k));
+        const limit = body.batasBaris ? Number(body.batasBaris) : null;
+        if (limit !== null && (!Number.isInteger(limit) || limit < 1))
             throw new BadRequestException('Batas baris tidak valid');
         const userId = user?.id ? BigInt(user.id) : null;
         const data = {
             aktif: body.aktif === true,
-            kolom_diizinkan: body.kolomDiizinkan,
+            kolom_diizinkan: cleanKolom,
             batas_baris: limit,
             catatan: body.catatan || null,
             updated_by: userId,
@@ -106,7 +134,7 @@ export class BankDataService {
         }
         return where;
     }
-    private async rows(def: DatasetDef, columns: KolomDef[], filter: any, take: number) {
+    private async rows(def: DatasetDef, columns: KolomDef[], filter: any, take?: number) {
         const where: any = {};
         for (const b of def.baseFilter || [])
             where[b.kolom] = b.op === 'eq' ? b.nilai : { equals: b.nilai, mode: 'insensitive' };
@@ -130,7 +158,15 @@ export class BankDataService {
             else if (c.pendukung.kunciInduk)
                 select[c.pendukung.kunciInduk] = true;
         }
-        const [total, rows] = await Promise.all([this.model(def.table).count({ where }), this.model(def.table).findMany({ where, select, take, orderBy: def.urut ? { [def.urut.kolom]: def.urut.naik === false ? 'desc' : 'asc' } : { id: 'asc' } })]);
+        const [total, rows] = await Promise.all([
+            this.model(def.table).count({ where }),
+            this.model(def.table).findMany({
+                where,
+                select,
+                ...(take ? { take } : {}),
+                orderBy: def.urut ? { [def.urut.kolom]: def.urut.naik === false ? 'desc' : 'asc' } : { id: 'asc' }
+            })
+        ]);
         const raw: Record<string, any[]>[] = rows.map(() => ({}));
         for (const col of working.filter(c => c.pendukung)) {
             const d = col.pendukung!;
@@ -174,7 +210,7 @@ export class BankDataService {
         if (filter.semester && typeof filter.semester !== 'string')
             throw new BadRequestException('Filter semester tidak valid');
 
-        const result = await this.rows(def, columns, filter, body.action === 'preview' ? Math.min(50, cfg.batasBaris) : cfg.batasBaris);
+        const result = await this.rows(def, columns, filter, body.action === 'preview' ? 50 : undefined);
         
         if (body.action === 'preview') {
             // Catat audit trail pratinjau jika terdapat kolom sensitif
@@ -195,36 +231,153 @@ export class BankDataService {
                 ok: true,
                 ...result,
                 kolom: columns.map(c => ({ key: c.key, label: c.label })),
-                batas: cfg.batasBaris,
-                terpotong: result.total > cfg.batasBaris,
             };
         }
 
-        const sanitizeCellValue = (val: any) => {
+        const sanitizeCellValue = (val: any, tipe: string, key: string) => {
             if (val === null || val === undefined) return '';
+            if (tipe === 'boolean') {
+                return val ? 'Ya' : 'Tidak';
+            }
+            if (val instanceof Date) {
+                return val.toISOString().slice(0, 10);
+            }
             if (typeof val === 'string') {
+                // Format ISO string date jika cocok YYYY-MM-DD
+                if (/^\d{4}-\d{2}-\d{2}(T|\b)/.test(val)) {
+                    const d = new Date(val);
+                    if (!isNaN(d.getTime())) {
+                        return val.slice(0, 10);
+                    }
+                }
                 // Prevent Formula / CSV Injection (CWE-1236)
                 if (/^[=+@-]/s.test(val)) {
                     return `'${val}`;
                 }
                 return val;
             }
-            if (val instanceof Date) {
-                return val.toISOString().slice(0, 10);
-            }
-            return val;
+            return String(val);
         };
 
         const book = new Workbook();
-        const sheet = book.addWorksheet('Data');
-        sheet.columns = columns.map(c => ({ header: c.label, key: c.key, width: 24 }));
-        result.data.forEach((r: any) => {
+        book.creator = 'ACCA Madrasah';
+        book.lastModifiedBy = user?.nama || user?.username || 'ACCA System';
+        book.created = new Date();
+        book.modified = new Date();
+
+        const sheetName = (def.label || 'Data').replace(/[:\\/?*[\]]/g, '-').slice(0, 31);
+        const sheet = book.addWorksheet(sheetName, {
+            views: [{ state: 'frozen', xSplit: 0, ySplit: 1 }],
+        });
+
+        // Set kolom dasar
+        sheet.columns = columns.map(c => ({
+            header: c.label,
+            key: c.key,
+            width: Math.max(c.label.length + 4, 14),
+        }));
+
+        // Styling Baris Header (Baris 1)
+        const headerRow = sheet.getRow(1);
+        headerRow.height = 28;
+        headerRow.eachCell((cell) => {
+            cell.font = {
+                name: 'Segoe UI',
+                size: 11,
+                bold: true,
+                color: { argb: 'FFFFFFFF' },
+            };
+            cell.fill = {
+                type: 'pattern',
+                pattern: 'solid',
+                fgColor: { argb: 'FF1E40AF' }, // Royal Blue
+            };
+            cell.alignment = {
+                vertical: 'middle',
+                horizontal: 'center',
+                wrapText: true,
+            };
+            cell.border = {
+                top: { style: 'thin', color: { argb: 'FFCBD5E1' } },
+                bottom: { style: 'medium', color: { argb: 'FF0F172A' } },
+                left: { style: 'thin', color: { argb: 'FFCBD5E1' } },
+                right: { style: 'thin', color: { argb: 'FFCBD5E1' } },
+            };
+        });
+
+        // Data Rows
+        const textKeyPatterns = ['nisn', 'nip', 'nik', 'no_hp', 'nomor', 'rekening'];
+        result.data.forEach((r: any, idx: number) => {
             const cleanRow: Record<string, any> = {};
             for (const c of columns) {
-                cleanRow[c.key] = sanitizeCellValue(r[c.key]);
+                cleanRow[c.key] = sanitizeCellValue(r[c.key], c.tipe, c.key);
             }
-            sheet.addRow(cleanRow);
+            const row = sheet.addRow(cleanRow);
+            row.height = 22;
+            const isEven = idx % 2 === 0;
+
+            row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+                const colDef = columns[colNumber - 1];
+                const key = colDef?.key || '';
+                const isNumericId = textKeyPatterns.some(p => key.includes(p));
+
+                if (isNumericId && cell.value) {
+                    cell.numFmt = '@';
+                }
+
+                cell.font = {
+                    name: 'Segoe UI',
+                    size: 10,
+                    color: { argb: 'FF0F172A' },
+                };
+
+                cell.fill = {
+                    type: 'pattern',
+                    pattern: 'solid',
+                    fgColor: { argb: isEven ? 'FFFFFFFF' : 'FFF8FAFC' },
+                };
+
+                let hAlign: 'left' | 'center' | 'right' = 'left';
+                if (colDef?.tipe === 'boolean' || colDef?.tipe === 'tanggal' || isNumericId || key === 'gender' || key === 'golongan') {
+                    hAlign = 'center';
+                } else if (colDef?.tipe === 'angka') {
+                    hAlign = 'right';
+                }
+
+                cell.alignment = {
+                    vertical: 'middle',
+                    horizontal: hAlign,
+                };
+
+                cell.border = {
+                    top: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+                    bottom: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+                    left: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+                    right: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+                };
+            });
         });
+
+        // AutoFilter
+        sheet.autoFilter = {
+            from: { row: 1, column: 1 },
+            to: { row: 1, column: columns.length },
+        };
+
+        // Hitung lebar kolom dinamis
+        sheet.columns.forEach((column: any) => {
+            let maxLen = column.header ? String(column.header).length : 10;
+            if (column.eachCell) {
+                column.eachCell({ includeEmpty: false }, (cell: any, rowNumber: number) => {
+                    if (rowNumber > 1) {
+                        const len = cell.value ? String(cell.value).length : 0;
+                        if (len > maxLen) maxLen = len;
+                    }
+                });
+            }
+            column.width = Math.min(Math.max(maxLen + 4, 12), 48);
+        });
+
         const buffer = await book.xlsx.writeBuffer();
         
         await this.prisma.bank_data_log.create({

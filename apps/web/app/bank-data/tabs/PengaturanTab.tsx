@@ -120,21 +120,26 @@ export default function PengaturanTab({ onTersimpan }: { onTersimpan?: () => voi
 
   const daftarKolom = (d: DatasetKonfig, list: DatasetKonfig['kolom']) => (
     <div className="bd-kolom">
-      {list.map(k => (
-        <label key={k.key} className="bd-kolom__item">
-          <input
-            type="checkbox"
-            className="ui-checkbox"
-            checked={d.kolomDiizinkan.includes(k.key)}
-            onChange={() => ubah(d.id, {
-              kolomDiizinkan: d.kolomDiizinkan.includes(k.key)
-                ? d.kolomDiizinkan.filter(x => x !== k.key)
-                : [...d.kolomDiizinkan, k.key],
-            })}
-          />
-          <span>{k.label}</span>
-        </label>
-      ))}
+      {list.map(k => {
+        const isAllowed = d.kolomDiizinkan.includes(k.key);
+        return (
+          <label key={k.key} className={`bd-kolom__card ${isAllowed ? 'bd-kolom__card--selected' : ''}`}>
+            <input
+              type="checkbox"
+              className="ui-checkbox"
+              checked={isAllowed}
+              onChange={() => ubah(d.id, {
+                kolomDiizinkan: isAllowed
+                  ? d.kolomDiizinkan.filter(x => x !== k.key)
+                  : [...d.kolomDiizinkan, k.key],
+              })}
+            />
+            <div className="bd-kolom__info">
+              <span className="bd-kolom__text">{k.label}</span>
+            </div>
+          </label>
+        );
+      })}
     </div>
   );
 
@@ -144,9 +149,6 @@ export default function PengaturanTab({ onTersimpan }: { onTersimpan?: () => voi
 
   return (
     <div className="bd-panel">
-      <div className="bd-panel__head">
-        <h3 className="bd-panel__title">Pengaturan Dataset</h3>
-      </div>
 
       <section className="bd-konfig-list">
         {datasets.map(d => {
@@ -154,7 +156,7 @@ export default function PengaturanTab({ onTersimpan }: { onTersimpan?: () => voi
           const kolomInduk = d.kolom.filter(k => !k.pendukung);
           const kolomPendukung = d.kolom.filter(k => k.pendukung);
           return (
-            <div key={d.id} className="bd-konfig">
+            <div key={d.id} className={`bd-konfig ${buka ? 'bd-konfig--open' : ''}`}>
               <div className="bd-konfig__bar">
                 <label className="bd-switch">
                   <input
@@ -163,12 +165,23 @@ export default function PengaturanTab({ onTersimpan }: { onTersimpan?: () => voi
                     checked={d.aktif}
                     onChange={e => ubah(d.id, { aktif: e.target.checked })}
                   />
-                  <span className="bd-konfig__label">{d.label}</span>
+                  <div className="bd-konfig__title-wrap">
+                    <span className="bd-konfig__label">{d.label}</span>
+                    <span className={`bd-status-pill ${d.aktif ? 'bd-status-pill--active' : 'bd-status-pill--inactive'}`}>
+                      {d.aktif ? 'Aktif' : 'Non-Aktif'}
+                    </span>
+                  </div>
                 </label>
                 <div className="bd-konfig__meta">
-                  <span className="bd-konfig__count">{d.kolomDiizinkan.length}/{d.kolom.length} Kolom</span>
-                  <button type="button" className="bd-btn-subtle" onClick={() => setTerbuka(buka ? null : d.id)}>
-                    {buka ? 'Tutup' : 'Ubah'}
+                  <span className="bd-konfig__count">
+                    <i className="bi bi-columns-gap" /> {d.kolomDiizinkan.length}/{d.kolom.length} Kolom
+                  </span>
+                  <button
+                    type="button"
+                    className="bd-btn-subtle"
+                    onClick={() => setTerbuka(buka ? null : d.id)}
+                  >
+                    {buka ? 'Tutup' : 'Ubah Pengaturan'}
                   </button>
                 </div>
               </div>
@@ -205,24 +218,13 @@ export default function PengaturanTab({ onTersimpan }: { onTersimpan?: () => voi
                   )}
 
                   <div className="bd-filters" style={{ marginTop: 8 }}>
-                    <label className="bd-field">
-                      <span>Batas Baris</span>
-                      <input
-                        type="number"
-                        min={1}
-                        max={d.batasBarisKatalog}
-                        placeholder={String(d.batasBarisKatalog)}
-                        value={d.batasBaris ?? ''}
-                        onChange={e => ubah(d.id, { batasBaris: e.target.value === '' ? null : Number(e.target.value) })}
-                      />
-                    </label>
                     <label className="bd-field bd-field--grow">
                       <span>Catatan Pengekspor</span>
                       <input
                         type="text"
                         value={d.catatan}
                         onChange={e => ubah(d.id, { catatan: e.target.value })}
-                        placeholder="Opsional"
+                        placeholder="Opsional (catatan untuk pengekspor data)"
                       />
                     </label>
                   </div>

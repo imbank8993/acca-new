@@ -16,8 +16,8 @@ interface Props {
 
 interface HasilPratinjau {
   total: number;
-  batas: number;
-  terpotong: boolean;
+  batas?: number;
+  terpotong?: boolean;
   kolom: { key: string; label: string }[];
   data: Record<string, any>[];
 }
@@ -140,19 +140,35 @@ export default function ExportModal({ dataset, onClose }: Props) {
 
   const daftarKolom = (list: typeof dataset.kolom) => (
     <div className="bd-kolom">
-      {list.map(k => (
-        <label key={k.key} className="bd-kolom__item">
-          <input
-            type="checkbox"
-            className="ui-checkbox"
-            checked={dipilih.includes(k.key)}
-            onChange={() => toggleKolom(k.key)}
-          />
-          <span>{k.label}</span>
-        </label>
-      ))}
+      {list.map(k => {
+        const isSelected = dipilih.includes(k.key);
+        return (
+          <label
+            key={k.key}
+            className={`bd-kolom__card ${isSelected ? 'bd-kolom__card--selected' : ''}`}
+          >
+            <input
+              type="checkbox"
+              className="ui-checkbox"
+              checked={isSelected}
+              onChange={() => toggleKolom(k.key)}
+            />
+            <div className="bd-kolom__info">
+              <span className="bd-kolom__text">{k.label}</span>
+            </div>
+          </label>
+        );
+      })}
     </div>
   );
+
+  const resetFilter = () => {
+    setTahunAjaran('');
+    setSemester('');
+    setKelas([]);
+  };
+
+  const adaFilterAktif = Boolean(tahunAjaran || semester || kelas.length > 0);
 
   return (
     <Modal
@@ -166,7 +182,16 @@ export default function ExportModal({ dataset, onClose }: Props) {
         {/* ── Filter ─────────────────────────────────────────────── */}
         {dataset.filter.length > 0 && (
           <section className="bd-sec">
-            <span className="bd-sec__title">Filter</span>
+            <div className="bd-sec__bar">
+              <span className="bd-sec__title">
+                <i className="bi bi-funnel-fill" /> Filter Data
+              </span>
+              {adaFilterAktif && (
+                <button type="button" className="bd-link bd-link--muted" onClick={resetFilter}>
+                  <i className="bi bi-x-circle" /> Reset Filter
+                </button>
+              )}
+            </div>
             <div className="bd-filters">
               {punya('tahun_ajaran') && (
                 <div className="bd-field">
@@ -180,7 +205,7 @@ export default function ExportModal({ dataset, onClose }: Props) {
                     ]}
                     style={{ width: '100%' }}
                     minWidth="100%"
-                    height="36px"
+                    height="38px"
                   />
                 </div>
               )}
@@ -192,12 +217,12 @@ export default function ExportModal({ dataset, onClose }: Props) {
                     onChange={setSemester}
                     options={[
                       { value: '', label: 'Semua Semester' },
-                      { value: 'Ganjil', label: 'Ganjil' },
-                      { value: 'Genap', label: 'Genap' },
+                      { value: 'Ganjil', label: 'Semester Ganjil' },
+                      { value: 'Genap', label: 'Semester Genap' },
                     ]}
                     style={{ width: '100%' }}
                     minWidth="100%"
-                    height="36px"
+                    height="38px"
                   />
                 </div>
               )}
@@ -213,7 +238,7 @@ export default function ExportModal({ dataset, onClose }: Props) {
                     ]}
                     style={{ width: '100%' }}
                     minWidth="100%"
-                    height="36px"
+                    height="38px"
                   />
                 </div>
               )}
@@ -224,44 +249,85 @@ export default function ExportModal({ dataset, onClose }: Props) {
         {/* ── Kolom ──────────────────────────────────────────────── */}
         <section className="bd-sec">
           <div className="bd-sec__bar">
-            <span className="bd-sec__title">Kolom</span>
+            <div className="bd-sec__title-group">
+              <span className="bd-sec__title">
+                <i className="bi bi-check2-square" /> Pilih Kolom
+              </span>
+              <span className="bd-counter-badge">
+                {dipilih.length} dari {dataset.kolom.length} dipilih
+              </span>
+            </div>
             <div className="bd-sec__act">
-              <button type="button" className="bd-link" onClick={() => setDipilih(dataset.kolom.map(k => k.key))}>Semua</button>
+              <button
+                type="button"
+                className="bd-link"
+                onClick={() => setDipilih(dataset.kolom.map(k => k.key))}
+              >
+                Pilih Semua
+              </button>
+              {dataset.kolom.some(k => k.sensitif) && (
+                <>
+                  <span className="bd-sep">·</span>
+                  <button
+                    type="button"
+                    className="bd-link"
+                    onClick={() => setDipilih(dataset.kolom.filter(k => !k.sensitif).map(k => k.key))}
+                  >
+                    Kecuali Sensitif
+                  </button>
+                </>
+              )}
               <span className="bd-sep">·</span>
-              <button type="button" className="bd-link" onClick={() => setDipilih([])}>Kosongkan</button>
+              <button
+                type="button"
+                className="bd-link"
+                onClick={() => setDipilih([])}
+              >
+                Kosongkan
+              </button>
             </div>
           </div>
-          {daftarKolom(kolomInduk)}
+
+          <div className="bd-kolom-group">
+            <span className="bd-sec__sub">Data Utama</span>
+            {daftarKolom(kolomInduk)}
+          </div>
 
           {kolomPendukung.length > 0 && (
-            <>
-              <span className="bd-sec__sub">Data Tambahan</span>
+            <div className="bd-kolom-group">
+              <span className="bd-sec__sub">Data Relasi / Pendukung</span>
               {daftarKolom(kolomPendukung)}
-            </>
+            </div>
           )}
         </section>
 
         {/* ── Pratinjau ──────────────────────────────────────────── */}
         {memuatPratinjau ? (
-          <div className="bd-loading"><Spinner variant="buble" label="Memuat pratinjau..." /></div>
+          <div className="bd-loading">
+            <Spinner variant="buble" label="Mengambil pratinjau data..." />
+          </div>
         ) : pratinjau && (
           <section className="bd-sec">
             <div className="bd-sec__bar">
-              <span className="bd-sec__title">Pratinjau ({pratinjau.total.toLocaleString('id-ID')} baris)</span>
+              <span className="bd-sec__title">
+                <i className="bi bi-table" /> Pratinjau Hasil ({pratinjau.total.toLocaleString('id-ID')} Total Baris)
+              </span>
+              <span className="bd-sec__sub-text">
+                Menampilkan {pratinjau.data.length} baris sampel
+              </span>
             </div>
-            {pratinjau.terpotong && (
-              <div className="bd-alert-notice">
-                Maksimal {pratinjau.batas.toLocaleString('id-ID')} baris pertama yang dapat diunduh.
-              </div>
-            )}
             <div className="bd-tablewrap">
               <table className="bd-table">
                 <thead>
-                  <tr>{pratinjau.kolom.map(k => <th key={k.key}>{k.label}</th>)}</tr>
+                  <tr>
+                    <th style={{ width: 48, textAlign: 'center' }}>No</th>
+                    {pratinjau.kolom.map(k => <th key={k.key}>{k.label}</th>)}
+                  </tr>
                 </thead>
                 <tbody>
                   {pratinjau.data.slice(0, 10).map((r, i) => (
                     <tr key={i}>
+                      <td style={{ textAlign: 'center', color: 'var(--n-muted)', fontWeight: 600 }}>{i + 1}</td>
                       {pratinjau.kolom.map(k => (
                         <td key={k.key}>
                           {formatTampilanNilai(r[k.key])}
@@ -270,7 +336,12 @@ export default function ExportModal({ dataset, onClose }: Props) {
                     </tr>
                   ))}
                   {pratinjau.data.length === 0 && (
-                    <tr><td colSpan={pratinjau.kolom.length} className="bd-table__kosong">Tidak ada data</td></tr>
+                    <tr>
+                      <td colSpan={pratinjau.kolom.length + 1} className="bd-table__kosong">
+                        <i className="bi bi-search" style={{ display: 'block', fontSize: '1.4rem', marginBottom: 4 }} />
+                        Tidak ada data yang cocok dengan kriteria filter
+                      </td>
+                    </tr>
                   )}
                 </tbody>
               </table>
@@ -284,8 +355,14 @@ export default function ExportModal({ dataset, onClose }: Props) {
         <Button variant="secondary" onClick={jalankanPratinjau} isLoading={memuatPratinjau} icon="preview">
           Pratinjau
         </Button>
-        <Button variant="primary" onClick={unduh} isLoading={mengunduh} icon="download">
-          Unduh Excel
+        <Button
+          variant="primary"
+          onClick={unduh}
+          isLoading={mengunduh}
+          icon="download"
+          disabled={dipilih.length === 0}
+        >
+          Unduh Excel (.xlsx)
         </Button>
       </ModalFooter>
     </Modal>

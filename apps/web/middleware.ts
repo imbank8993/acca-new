@@ -52,8 +52,8 @@ const ALWAYS_ALLOWED = new Set([
 
 /** Halaman yang hanya relevan untuk role tertentu tetapi belum diseed di role_pages. */
 const ROLE_SCOPED_EXTRAS: Record<string, string[]> = {
-    ADMIN: ['audit-log'],
-    ADMINISTRATOR: ['audit-log'],
+    ADMIN: ['audit-log', 'monitoring'],
+    ADMINISTRATOR: ['audit-log', 'monitoring'],
     WKM_AKADEMIK: ['audit-log'],
     WKM_KESISWAAN: ['audit-log'],
     WKM_KEASRAMAAN: ['audit-log'],
@@ -342,8 +342,10 @@ export async function middleware(request: NextRequest) {
                 const extras = userRoles.flatMap((r: string) => ROLE_SCOPED_EXTRAS[r] || [])
                 const isAdmin = userRoles.includes('ADMIN') || userRoles.includes('ADMINISTRATOR')
                 allowed = claims.pageIds.includes(pageId) || extras.includes(pageId) || (isAdmin && pageId === 'audit-log')
-            } else {
-                // FALLBACK: panggil getAccessForAuthId jika token lama / feature flag disabled
+            }
+
+            // FALLBACK: panggil getAccessForAuthId jika belum diizinkan oleh token (mis. akses baru saja diubah di admin)
+            if (!allowed && authId) {
                 const access = await getAccessForAuthId(authId)
                 const isAdmin = access ? access.roles.some(r => ['ADMIN', 'ADMINISTRATOR'].includes(r.toUpperCase())) : false
                 const extras = access

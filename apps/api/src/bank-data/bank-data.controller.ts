@@ -27,9 +27,11 @@ export class BankDataController {
     
     // Check if result is a buffer or stream (we'll just use StreamableFile)
     if (result && (result instanceof StreamableFile || result.constructor?.name === 'StreamableFile')) {
+      const tanggalStr = new Date().toISOString().slice(0, 10);
+      const safeLabel = String(body.dataset_id || 'export').replace(/[^a-zA-Z0-9_-]/g, '-');
       res.set({
         'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        'Content-Disposition': `attachment; filename="${body.dataset_id || 'export'}.xlsx"`,
+        'Content-Disposition': `attachment; filename="Bank-Data-${safeLabel}-${tanggalStr}.xlsx"`,
       });
     }
     return result;

@@ -29,7 +29,9 @@ export default function RiwayatTab() {
     }
   }, []);
 
-  useEffect(() => { muat(halaman); }, [muat, halaman]);
+  useEffect(() => {
+    muat(halaman);
+  }, [muat, halaman]);
 
   const maksHalaman = Math.max(1, Math.ceil(total / perHalaman));
 
@@ -47,16 +49,17 @@ export default function RiwayatTab() {
       .join(' · ');
   };
 
-  if (loading) {
-    return <div className="bd-loading"><Spinner variant="buble" label="Memuat riwayat..." /></div>;
-  }
-
   return (
     <div className="bd-panel" style={{ padding: 0, border: 'none', background: 'transparent' }}>
-      {rows.length === 0 ? (
+      {loading ? (
+        <div className="bd-loading"><Spinner variant="buble" label="Memuat riwayat..." /></div>
+      ) : rows.length === 0 ? (
         <div className="bd-empty">
-          <i className="bi bi-clock-history" />
-          <h3>Belum ada riwayat tercatat</h3>
+          <div className="bd-empty__icon">
+            <i className="bi bi-clock-history" />
+          </div>
+          <h3>Belum ada riwayat ekspor</h3>
+          <p>Aktivitas unduhan file Excel dan pratinjau data akan dicatat secara otomatis di sini.</p>
         </div>
       ) : (
         <>
@@ -67,40 +70,70 @@ export default function RiwayatTab() {
                   <th>Waktu</th>
                   <th>Pengguna</th>
                   <th>Dataset</th>
+                  <th>Tipe Aksi</th>
                   <th>Filter</th>
                   <th style={{ textAlign: 'right' }}>Jumlah Baris</th>
                   <th>Kolom</th>
-                  <th>IP</th>
+                  <th>Alamat IP</th>
                 </tr>
               </thead>
               <tbody>
-                {rows.map(r => (
-                  <tr key={r.id}>
-                    <td className="bd-table__time">{waktu(r.created_at)}</td>
-                    <td>{r.nama_user || `#${r.user_id ?? '?'}`}</td>
-                    <td>
-                      {r.dataset_label}
-                      {r.filter && r.filter._tipe === 'preview' && (
-                        <span style={{ marginLeft: 6, fontSize: '0.72rem', color: 'var(--n-muted)' }}>(Pratinjau)</span>
-                      )}
-                    </td>
-                    <td className="bd-table__muted">{ringkasFilter(r.filter)}</td>
-                    <td style={{ textAlign: 'right' }}>{(r.jumlah_baris ?? 0).toLocaleString('id-ID')}</td>
-                    <td className="bd-table__muted">{r.kolom?.length ?? 0} kolom</td>
-                    <td className="bd-table__muted">{r.ip || '—'}</td>
-                  </tr>
-                ))}
+                {rows.map(r => {
+                  const isPreview = r.filter && r.filter._tipe === 'preview';
+                  return (
+                    <tr key={r.id}>
+                      <td className="bd-table__time">{waktu(r.created_at)}</td>
+                      <td>
+                        <span className="bd-user-tag">
+                          <i className="bi bi-person-fill" /> {r.nama_user || `#${r.user_id ?? '?'}`}
+                        </span>
+                      </td>
+                      <td>
+                        <strong>{r.dataset_label}</strong>
+                      </td>
+                      <td>
+                        {isPreview ? (
+                          <span className="bd-action-badge bd-action-badge--preview">
+                            <i className="bi bi-eye" /> Pratinjau
+                          </span>
+                        ) : (
+                          <span className="bd-action-badge bd-action-badge--export">
+                            <i className="bi bi-download" /> Ekspor Excel
+                          </span>
+                        )}
+                      </td>
+                      <td className="bd-table__muted">{ringkasFilter(r.filter)}</td>
+                      <td style={{ textAlign: 'right', fontWeight: 600 }}>
+                        {(r.jumlah_baris ?? 0).toLocaleString('id-ID')}
+                      </td>
+                      <td className="bd-table__muted">{r.kolom?.length ?? 0} kolom</td>
+                      <td className="bd-table__muted">{r.ip || '—'}</td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
 
           {maksHalaman > 1 && (
-            <div className="bd-pager">
-              <Button variant="secondary" disabled={halaman <= 1} onClick={() => setHalaman(h => h - 1)}>
+            <div className="bd-pager" style={{ marginTop: 16 }}>
+              <Button
+                variant="secondary"
+                disabled={halaman <= 1}
+                onClick={() => setHalaman(h => h - 1)}
+                icon="arrow-left"
+              >
                 Sebelumnya
               </Button>
-              <span className="bd-pager__info">{halaman} / {maksHalaman}</span>
-              <Button variant="secondary" disabled={halaman >= maksHalaman} onClick={() => setHalaman(h => h + 1)}>
+              <span className="bd-pager__info">
+                Halaman {halaman} dari {maksHalaman} ({total.toLocaleString('id-ID')} Total)
+              </span>
+              <Button
+                variant="secondary"
+                disabled={halaman >= maksHalaman}
+                onClick={() => setHalaman(h => h + 1)}
+                icon="arrow-right"
+              >
                 Berikutnya
               </Button>
             </div>

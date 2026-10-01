@@ -357,6 +357,7 @@ export class AccessService {
     const upperRoles = roles.map((r) => r.toUpperCase());
     if (upperRoles.includes('ADMIN') || upperRoles.includes('ADMINISTRATOR')) {
       pages.add('audit-log');
+      pages.add('monitoring');
     }
 
     const flatGroupKeys = new Set<string>();
@@ -467,6 +468,7 @@ export class AccessService {
       const upperUserRoles = roles.map((r) => r.toUpperCase());
       if (upperUserRoles.includes('ADMIN') || upperUserRoles.includes('ADMINISTRATOR')) {
         pages.add('audit-log');
+        pages.add('monitoring');
       }
 
       const flatGroupKeys = new Set<string>();

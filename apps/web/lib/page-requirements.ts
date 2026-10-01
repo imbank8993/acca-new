@@ -69,6 +69,12 @@ export const PAGE_ROLE_REQUIREMENTS: Record<string, PageRequirement> = {
         roleActions: { 'ADMIN': 'manage' },
         description: 'Master Data'
     },
+    'bank-data': {
+        allowedRoles: ['ADMIN', 'KAMAD', 'KTU', 'GURU', 'WKM_AKADEMIK', 'WKM_KESISWAAN', 'WKM_HUMAS', 'WKM_SARPRAS', 'OP_MADRASAH', 'OP_KELAS', 'WALI_KELAS', 'BENDAHARA_KOMITE', 'BANKDATA'],
+        defaultAction: 'view',
+        roleActions: { 'ADMIN': 'manage', 'BANKDATA': 'manage' },
+        description: 'Bank Data'
+    },
     'master:tahun_ajaran': { allowedRoles: ['ADMIN', 'KAMAD', 'KTU', 'GURU'], defaultAction: 'view', roleActions: { 'ADMIN': 'manage' }, description: 'Tab Tahun Ajaran' },
     'master:siswa': { allowedRoles: ['ADMIN', 'KAMAD', 'KTU', 'GURU'], defaultAction: 'view', roleActions: { 'ADMIN': 'manage' }, description: 'Tab Siswa' },
     'master:guru': { allowedRoles: ['ADMIN', 'KAMAD', 'KTU', 'GURU'], defaultAction: 'view', roleActions: { 'ADMIN': 'manage' }, description: 'Tab Guru' },
