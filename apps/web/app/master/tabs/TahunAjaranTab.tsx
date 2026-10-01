@@ -118,8 +118,8 @@ export default function TahunAjaranTab({ user }: { user?: any }) {
     // `isAdmin` dipertahankan sebagai nama untuk JSX di bawah.
     // `canManage` = ADMIN atau yang ditunjuk di Hak Akses Fitur.
     // `isAdminRole` khusus aksi yang TIDAK pernah diberikan lewat layar itu.
-    const { boleh, isAdmin: isAdminRole } = useMasterAccess()
-    const isAdmin = boleh('tahun-ajaran')
+    const { boleh, dapatKelola, isAdmin: isAdminRole } = useMasterAccess()
+    const isAdmin = dapatKelola('tahun-ajaran')
     const canManage = isAdmin
 
     useEffect(() => {

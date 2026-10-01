@@ -180,30 +180,43 @@ export default function TugasTambahanPage() {
                 setUser(profile);
                 const adminStatus = profile.roles?.some((r: string) => ['ADMIN', 'ADMINISTRATOR'].includes(r.toUpperCase())) || !!(profile as any).isAdmin;
                 setIsAdmin(adminStatus);
-                loadInitialData(profile.nip, adminStatus);
+                loadInitialData(profile.nip || '', adminStatus, profile.pagesArray);
             }
         };
         loadUser();
     }, []);
 
-    const loadInitialData = async (nip: string, adminMode: boolean) => {
+    const loadInitialData = async (nip: string, adminMode: boolean, pagesArray?: string[]) => {
         setLoading(true);
         try {
-            const tugasRes = await fetch(`/api/tugas-tambahan?nip=${nip}`);
-            const tugasData = await tugasRes.json();
-            if (tugasData.ok) setMyTugas(tugasData.data);
+            const hasPageAccess = adminMode || pagesArray?.includes('tugas-tambahan');
+            const nipParam = nip ? `?nip=${encodeURIComponent(nip)}` : '';
 
-            const jurnalRes = await fetch(`/api/tugas-tambahan/jurnal?nip=${nip}`);
+            const tugasRes = await fetch(`/api/tugas-tambahan${nipParam}`);
+            const tugasData = await tugasRes.json();
+            if (tugasData.ok) setMyTugas(tugasData.data || []);
+
+            const jurnalRes = await fetch(`/api/tugas-tambahan/jurnal${nipParam}`);
             const jurnalData = await jurnalRes.json();
-            if (jurnalData.ok) setJurnalList(jurnalData.data);
+            if (jurnalData.ok) setJurnalList(jurnalData.data || []);
 
             const periode = await getPeriodeBerjalan();
             setActiveSemester(periode.semester);
 
-            if (adminMode) {
+            if (hasPageAccess) {
                 const allRes = await fetch('/api/tugas-tambahan');
                 const allData = await allRes.json();
-                if (allData.ok) setAllTugas(allData.data);
+                if (allData.ok) {
+                    setAllTugas(allData.data || []);
+                    if (!nip || (!tugasData.data || tugasData.data.length === 0)) {
+                        setMyTugas(allData.data || []);
+                    }
+                }
+                if (!nip) {
+                    const allJurnalRes = await fetch('/api/tugas-tambahan/jurnal');
+                    const allJurnalData = await allJurnalRes.json();
+                    if (allJurnalData.ok) setJurnalList(allJurnalData.data || []);
+                }
             }
         } catch (error) {
             console.error(error);

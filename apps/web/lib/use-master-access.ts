@@ -20,12 +20,16 @@ export interface MasterAccess {
     memuat: boolean
     /** Role ADMIN / ADMINISTRATOR. Aksi paling merusak hanya untuk ini. */
     isAdmin: boolean
-    /** Wewenang per tab. Tab yang tidak ada di peta dianggap tidak dipegang. */
+    /** Wewenang tampil/view per tab. Tab yang tidak ada di peta dianggap tidak dipegang. */
     tabs: Partial<Record<MasterTab, boolean>>
+    /** Wewenang kelola/tulis (tambah, edit, hapus, impor) per tab. */
+    canManage: Partial<Record<MasterTab, boolean>>
     /** Boleh membuka halaman Master Data: memegang minimal satu tab. */
     adaAkses: boolean
-    /** Pintasan: wewenang atas satu tab tertentu. */
+    /** Pintasan: wewenang membuka/melihat satu tab tertentu. */
     boleh: (tab: MasterTab) => boolean
+    /** Pintasan: wewenang mengelola (tulis) satu tab tertentu. */
+    dapatKelola: (tab: MasterTab) => boolean
 }
 
 /**
@@ -41,9 +45,14 @@ export interface MasterAccess {
  * menentukan, jadi salah-ketat hanya menyembunyikan tombol, bukan membuka data.
  */
 export function useMasterAccess(): MasterAccess {
-    const [state, setState] = useState<{ isAdmin: boolean; tabs: Partial<Record<MasterTab, boolean>> }>({
+    const [state, setState] = useState<{
+        isAdmin: boolean;
+        tabs: Partial<Record<MasterTab, boolean>>;
+        canManage: Partial<Record<MasterTab, boolean>>;
+    }>({
         isAdmin: false,
         tabs: {},
+        canManage: {},
     })
     const [memuat, setMemuat] = useState(true)
 
@@ -54,7 +63,11 @@ export function useMasterAccess(): MasterAccess {
             .then((json) => {
                 if (dibatalkan) return
                 if (json?.ok) {
-                    setState({ isAdmin: !!json.isAdmin, tabs: json.tabs || {} })
+                    setState({
+                        isAdmin: !!json.isAdmin,
+                        tabs: json.tabs || {},
+                        canManage: json.canManage || (json.isAdmin ? json.tabs || {} : {}),
+                    })
                 }
             })
             .catch(() => { /* biarkan kosong: tidak ada tab yang dipegang */ })
@@ -63,11 +76,15 @@ export function useMasterAccess(): MasterAccess {
     }, [])
 
     const boleh = (tab: MasterTab) => state.tabs[tab] === true
+    const dapatKelola = (tab: MasterTab) => state.isAdmin || state.canManage[tab] === true
+
     return {
         memuat,
         isAdmin: state.isAdmin,
         tabs: state.tabs,
+        canManage: state.canManage,
         adaAkses: Object.values(state.tabs).some(Boolean),
         boleh,
+        dapatKelola,
     }
 }

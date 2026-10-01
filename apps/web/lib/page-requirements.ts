@@ -37,8 +37,18 @@ export const PAGE_ROLE_REQUIREMENTS: Record<string, PageRequirement> = {
 
     // === LCKH ===
     'lckh': { allowedRoles: ['ADMIN', 'GURU'], defaultAction: 'edit', roleActions: { 'ADMIN': 'manage' }, description: 'LCKH Submission' },
-    'lckh-approval': { allowedRoles: ['ADMIN'], defaultAction: 'manage', description: 'LCKH Approval' },
-    'pembayaran': { allowedRoles: ['ADMIN', 'BENDAHARA_KOMITE'], defaultAction: 'manage', description: 'Pembayaran Honor Guru Asuh' },
+    'lckh-approval': {
+        allowedRoles: ['ADMIN', 'KAMAD', 'KTU', 'GURU', 'WKM_AKADEMIK', 'WKM_KESISWAAN', 'WKM_HUMAS', 'WKM_SARPRAS', 'SUPERVISOR', 'PENGAWAS_MADRASAH'],
+        defaultAction: 'view',
+        roleActions: { 'ADMIN': 'manage', 'KAMAD': 'manage', 'WKM_AKADEMIK': 'manage', 'WKM_KESISWAAN': 'manage' },
+        description: 'LCKH Approval'
+    },
+    'pembayaran': {
+        allowedRoles: ['ADMIN', 'BENDAHARA_KOMITE', 'KAMAD', 'KTU'],
+        defaultAction: 'view',
+        roleActions: { 'ADMIN': 'manage', 'BENDAHARA_KOMITE': 'manage' },
+        description: 'Pembayaran Honor Guru Asuh'
+    },
 
     // === E-SUPERVISI ===
     'e-supervisi': {
@@ -53,15 +63,20 @@ export const PAGE_ROLE_REQUIREMENTS: Record<string, PageRequirement> = {
     'e-supervisi:hasil': { allowedRoles: ['ADMIN', 'GURU', 'SUPERVISOR', 'KAMAD', 'PENGAWAS_MADRASAH'], defaultAction: 'view', description: 'Tab Hasil Supervisi' },
 
     // === ADMINISTRASI ===
-    'master': { allowedRoles: ['ADMIN'], defaultAction: 'manage', description: 'Master Data' },
-    'master:tahun_ajaran': { allowedRoles: ['ADMIN'], defaultAction: 'manage', description: 'Tab Tahun Ajaran' },
-    'master:siswa': { allowedRoles: ['ADMIN'], defaultAction: 'manage', description: 'Tab Siswa' },
-    'master:guru': { allowedRoles: ['ADMIN'], defaultAction: 'manage', description: 'Tab Guru' },
-    'master:mapel': { allowedRoles: ['ADMIN'], defaultAction: 'manage', description: 'Tab Mata Pelajaran' },
-    'master:kelas': { allowedRoles: ['ADMIN'], defaultAction: 'manage', description: 'Tab Kelas' },
-    'master:kode_guru': { allowedRoles: ['ADMIN'], defaultAction: 'manage', description: 'Tab Kode Guru' },
-    'master:waktu': { allowedRoles: ['ADMIN'], defaultAction: 'manage', description: 'Tab Waktu' },
-    'master:informasi': { allowedRoles: ['ADMIN', 'GURU', 'WALI_KELAS'], defaultAction: 'edit', roleActions: { 'ADMIN': 'manage' }, description: 'Tab Informasi' },
+    'master': {
+        allowedRoles: ['ADMIN', 'KAMAD', 'KTU', 'GURU', 'WKM_AKADEMIK', 'WKM_KESISWAAN', 'WKM_HUMAS', 'WKM_SARPRAS', 'OP_MADRASAH'],
+        defaultAction: 'view',
+        roleActions: { 'ADMIN': 'manage' },
+        description: 'Master Data'
+    },
+    'master:tahun_ajaran': { allowedRoles: ['ADMIN', 'KAMAD', 'KTU', 'GURU'], defaultAction: 'view', roleActions: { 'ADMIN': 'manage' }, description: 'Tab Tahun Ajaran' },
+    'master:siswa': { allowedRoles: ['ADMIN', 'KAMAD', 'KTU', 'GURU'], defaultAction: 'view', roleActions: { 'ADMIN': 'manage' }, description: 'Tab Siswa' },
+    'master:guru': { allowedRoles: ['ADMIN', 'KAMAD', 'KTU', 'GURU'], defaultAction: 'view', roleActions: { 'ADMIN': 'manage' }, description: 'Tab Guru' },
+    'master:mapel': { allowedRoles: ['ADMIN', 'KAMAD', 'KTU', 'GURU'], defaultAction: 'view', roleActions: { 'ADMIN': 'manage' }, description: 'Tab Mata Pelajaran' },
+    'master:kelas': { allowedRoles: ['ADMIN', 'KAMAD', 'KTU', 'GURU'], defaultAction: 'view', roleActions: { 'ADMIN': 'manage' }, description: 'Tab Kelas' },
+    'master:kode_guru': { allowedRoles: ['ADMIN', 'KAMAD', 'KTU', 'GURU'], defaultAction: 'view', roleActions: { 'ADMIN': 'manage' }, description: 'Tab Kode Guru' },
+    'master:waktu': { allowedRoles: ['ADMIN', 'KAMAD', 'KTU', 'GURU'], defaultAction: 'view', roleActions: { 'ADMIN': 'manage' }, description: 'Tab Waktu' },
+    'master:informasi': { allowedRoles: ['ADMIN', 'GURU', 'WALI_KELAS', 'KAMAD', 'KTU'], defaultAction: 'view', roleActions: { 'ADMIN': 'manage', 'GURU': 'edit' }, description: 'Tab Informasi' },
 
     // === PENGATURAN DATA ===
     'pengaturan-data': { allowedRoles: ['ADMIN', 'GURU', 'WALI_KELAS', 'OP_KELAS'], defaultAction: 'view', roleActions: { 'ADMIN': 'manage', 'OP_KELAS': 'view' }, description: 'Pengaturan Data' },
@@ -90,9 +105,27 @@ export const PAGE_ROLE_REQUIREMENTS: Record<string, PageRequirement> = {
     'pengaturan_tugas:jadwal_piket': { allowedRoles: ['ADMIN'], defaultAction: 'manage', description: 'Tab Jadwal Piket' },
     'pengaturan_tugas:tugas_tambahan': { allowedRoles: ['ADMIN'], defaultAction: 'manage', description: 'Tab Plotting Tugas Tambahan' },
 
+    // === AUDIT LOG ===
+    'audit-log': {
+        allowedRoles: ['ADMIN', 'KAMAD', 'KTU', 'OP_PENGUMUMAN', 'WKM_AKADEMIK', 'WKM_KESISWAAN', 'WKM_HUMAS', 'WKM_SARPRAS'],
+        defaultAction: 'view',
+        roleActions: { 'ADMIN': 'manage' },
+        description: 'Jejak Audit Sistem'
+    },
+
     // === LAIN-LAIN ===
-    'monitoring': { allowedRoles: ['ADMIN'], defaultAction: 'manage', description: 'Monitoring' },
-    'tugas-tambahan': { allowedRoles: ['ADMIN'], defaultAction: 'manage', description: 'Tugas Tambahan' },
+    'monitoring': {
+        allowedRoles: ['ADMIN', 'KAMAD', 'KTU', 'GURU', 'WKM_AKADEMIK', 'WKM_KESISWAAN', 'WKM_HUMAS', 'WKM_SARPRAS', 'SUPERVISOR', 'PENGAWAS_MADRASAH', 'OP_MADRASAH'],
+        defaultAction: 'view',
+        roleActions: { 'ADMIN': 'manage' },
+        description: 'Monitoring'
+    },
+    'tugas-tambahan': {
+        allowedRoles: ['ADMIN', 'GURU', 'KAMAD', 'KTU', 'WKM_AKADEMIK', 'WKM_KESISWAAN'],
+        defaultAction: 'view',
+        roleActions: { 'ADMIN': 'manage', 'GURU': 'edit' },
+        description: 'Tugas Tambahan'
+    },
 
     // === PELAJARAN & KELAS ===
     'ketidakhadiran': {
@@ -107,9 +140,24 @@ export const PAGE_ROLE_REQUIREMENTS: Record<string, PageRequirement> = {
         roleActions: { 'ADMIN': 'manage', 'OP_UKS': 'manage', 'GURU': 'view', 'WALI_KELAS': 'view' },
         description: 'Rekam Medis Siswa'
     },
-    'kinerja-guru': { allowedRoles: ['ADMIN'], defaultAction: 'view', description: 'Kinerja Guru' },
-    'laporan': { allowedRoles: ['ADMIN'], defaultAction: 'view', description: 'Laporan' },
-    'laporan:pengembangan_diri': { allowedRoles: ['ADMIN'], defaultAction: 'view', description: 'Laporan Pengembangan Diri' },
+    'kinerja-guru': {
+        allowedRoles: ['ADMIN', 'KAMAD', 'KTU', 'GURU', 'WKM_AKADEMIK', 'WKM_KESISWAAN', 'WKM_HUMAS', 'WKM_SARPRAS', 'SUPERVISOR', 'PENGAWAS_MADRASAH', 'OP_MADRASAH'],
+        defaultAction: 'view',
+        roleActions: { 'ADMIN': 'manage' },
+        description: 'Kinerja Guru'
+    },
+    'laporan': {
+        allowedRoles: ['ADMIN', 'KAMAD', 'KTU', 'GURU', 'WKM_AKADEMIK', 'WKM_KESISWAAN', 'WKM_HUMAS', 'WKM_SARPRAS', 'SUPERVISOR', 'PENGAWAS_MADRASAH'],
+        defaultAction: 'view',
+        roleActions: { 'ADMIN': 'manage' },
+        description: 'Laporan'
+    },
+    'laporan:pengembangan_diri': {
+        allowedRoles: ['ADMIN', 'KAMAD', 'KTU', 'GURU', 'WKM_AKADEMIK', 'WKM_KESISWAAN', 'WKM_HUMAS', 'WKM_SARPRAS', 'SUPERVISOR', 'PENGAWAS_MADRASAH'],
+        defaultAction: 'view',
+        roleActions: { 'ADMIN': 'manage' },
+        description: 'Laporan Pengembangan Diri'
+    },
 
     // === KHUSUS SISWA ===
     'nilai-siswa': { allowedRoles: ['SISWA'], defaultAction: 'view', description: 'Nilai Siswa (portal)' },
@@ -139,8 +187,18 @@ export const PAGE_ROLE_REQUIREMENTS: Record<string, PageRequirement> = {
         roleActions: { 'ADMIN': 'manage', 'GURU': 'edit' },
         description: 'Klinik'
     },
-    'layanan-ptsp': { allowedRoles: ['ADMIN'], defaultAction: 'manage', description: 'Layanan PTSP' },
-    'um-kelulusan': { allowedRoles: ['ADMIN'], defaultAction: 'manage', description: 'UM & Kelulusan' },
+    'layanan-ptsp': {
+        allowedRoles: ['ADMIN', 'KAMAD', 'KTU', 'GURU', 'OP_LAYANAN', 'OP_PTSP'],
+        defaultAction: 'view',
+        roleActions: { 'ADMIN': 'manage', 'OP_LAYANAN': 'manage', 'OP_PTSP': 'manage' },
+        description: 'Layanan PTSP'
+    },
+    'um-kelulusan': {
+        allowedRoles: ['ADMIN', 'KAMAD', 'KTU', 'GURU', 'WKM_AKADEMIK'],
+        defaultAction: 'view',
+        roleActions: { 'ADMIN': 'manage', 'WKM_AKADEMIK': 'manage' },
+        description: 'UM & Kelulusan'
+    },
     'ujian-madrasah': { allowedRoles: ['ADMIN', 'GURU'], defaultAction: 'view', roleActions: { 'ADMIN': 'manage' }, description: 'Ujian Madrasah' },
     'izin-guru': { allowedRoles: ['ADMIN', 'OP_IZINGURU', 'GURU'], defaultAction: 'edit', roleActions: { 'ADMIN': 'manage', 'OP_IZINGURU': 'manage' }, description: 'Izin Guru' },
     'surat': { allowedRoles: ['ADMIN', 'GURU'], defaultAction: 'edit', roleActions: { 'ADMIN': 'manage' }, description: 'Generate Surat' },
@@ -183,7 +241,9 @@ export function getRequirement(resource: string): PageRequirement | null {
 const ACTION_HIERARCHY: Record<string, number> = { 'view': 1, 'edit': 2, 'manage': 3 };
 
 /** Apakah salah satu role user boleh membuka halaman ini? */
-export function canAccessPage(userRoles: string[], pageId: string): boolean {
+export function canAccessPage(userRoles: string[], pageId: string, userPages?: string[]): boolean {
+    if (userPages && (userPages.includes(pageId) || userPages.includes('*'))) return true;
+
     const req = getRequirement(pageId);
     if (!req) return true; // Halaman tak terdaftar → izinkan (default lama)
 
@@ -198,17 +258,17 @@ export function getPageIdFromPath(path: string): string {
 }
 
 /** Cek akses berdasarkan path (dipakai middleware). */
-export function canAccessPath(userRoles: string[], path: string): boolean {
+export function canAccessPath(userRoles: string[], path: string, userPages?: string[]): boolean {
     const pageId = getPageIdFromPath(path);
     if (pageId === 'dashboard' || pageId === 'login' || pageId === '') return true;
-    return canAccessPage(userRoles, pageId);
+    return canAccessPage(userRoles, pageId, userPages);
 }
 
 /**
  * Level aksi tertinggi yang dimiliki user pada sebuah resource.
  * `null` = resource terdaftar tapi user tidak punya role yang diizinkan.
  */
-export function getActionLevel(userRoles: string[], resource: string): string | null {
+export function getActionLevel(userRoles: string[], resource: string, userPages?: string[]): string | null {
     const req = getRequirement(resource);
     if (!req) return null; // Resource tak terdaftar
 
@@ -229,6 +289,10 @@ export function getActionLevel(userRoles: string[], resource: string): string | 
         else if (allowed.includes(upper)) consider(req.defaultAction || 'view');
     }
 
+    if (!best && userPages && (userPages.includes(resource) || userPages.includes('*') || userPages.some(p => resource.startsWith(p + ':')))) {
+        best = req.defaultAction || 'view';
+    }
+
     return best;
 }
 
@@ -236,11 +300,12 @@ export function getActionLevel(userRoles: string[], resource: string): string | 
 export function hasActionPermission(
     userRoles: string[],
     resource: string,
-    requiredAction: string
+    requiredAction: string,
+    userPages?: string[]
 ): boolean {
     if (userRoles.includes('ADMIN') || userRoles.includes('ADMINISTRATOR')) return true;
 
-    const actionLevel = getActionLevel(userRoles, resource);
+    const actionLevel = getActionLevel(userRoles, resource, userPages);
     if (actionLevel === null) return !getRequirement(resource); // tak terdaftar → izinkan
 
     const requiredLevel = ACTION_HIERARCHY[requiredAction] || 0;

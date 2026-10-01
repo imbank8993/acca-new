@@ -132,7 +132,9 @@ export class MasterController {
       ? aksesDiizinkan({ ...req.user, roles: access.roles }, parseKonfigurasiAkses(konfigRow?.value))
       : isAdmin;
 
-    return { isAdmin, isPegawai, canManageMaster: isAdmin || ditunjuk };
+    const hasPageAccess = access.pageIds.includes('master') || (entity ? access.pageIds.includes(`master:${entity}`) || access.pageIds.includes(`master_${entity}`) : false);
+
+    return { isAdmin, isPegawai: isPegawai || hasPageAccess, canManageMaster: isAdmin || ditunjuk };
   }
 
   /** Wewenang tiap tab untuk pemanggil, dipakai UI menyusun tab yang tampil. */
@@ -152,13 +154,22 @@ export class MasterController {
     const boleh = (kunci: string) =>
       aksesDiizinkan(user, parseKonfigurasiAkses(perKunci.get(kunci)));
 
-    const tabs: Record<string, boolean> = {};
+    const canManage: Record<string, boolean> = {};
     for (const [entity, kunci] of Object.entries(MASTER_TAB_ACCESS)) {
-      tabs[entity] = boleh(kunci);
+      canManage[entity] = boleh(kunci);
     }
-    tabs.ekskul = boleh(MASTER_EKSKUL_ACCESS_KEY);
+    canManage.ekskul = boleh(MASTER_EKSKUL_ACCESS_KEY);
 
-    return { isAdmin, tabs };
+    // View access: user can view tabs if they have canManage[entity],
+    // OR if their role has access to page 'master' (or 'master:entity') in role_pages (access.pageIds)
+    const hasMasterPage = access.pageIds.includes('master');
+    const tabs: Record<string, boolean> = {};
+    for (const entity of Object.keys(MASTER_TAB_ACCESS)) {
+      tabs[entity] = canManage[entity] || hasMasterPage || access.pageIds.includes(`master:${entity}`) || access.pageIds.includes(`master_${entity}`);
+    }
+    tabs.ekskul = canManage.ekskul || hasMasterPage || access.pageIds.includes('master:ekskul');
+
+    return { isAdmin, tabs, canManage };
   }
 
   private async assertCanWrite(req: any, entity?: string) {

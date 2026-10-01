@@ -28,9 +28,14 @@ export class LckhService {
   private isAdmin(user: any) { return user?.roles?.some((r: string) => ['ADMIN','ADMINISTRATOR'].includes(r)); }
   private isHead(user: any) { return user?.roles?.some((r: string) => ['KAMAD','KEPALA','KEPALA_MADRASAH'].includes(r)); }
   private isReviewer(user: any) { return this.isAdmin(user) || this.isHead(user) || user?.roles?.some((r: string) => ['WKM_AKADEMIK','WKM_KESISWAAN','WAKA_AKADEMIK','WAKA_KESISWAAN','WAKAMAD_KURIKULUM'].includes(r)); }
+  private canViewAll(user: any) {
+    return this.isReviewer(user) ||
+      user?.pageIds?.includes('lckh-approval') ||
+      user?.roles?.some((r: string) => ['KTU','KEPEGAWAIAN','SUPERVISOR','PENGAWAS_MADRASAH'].includes(r));
+  }
   private scopeNip(user: any, nip?: string) {
     if (!user?.id) throw new ForbiddenException('Sesi tidak dikenali');
-    if (this.isReviewer(user)) return nip;
+    if (this.canViewAll(user)) return nip;
     if (!user.nip || (nip && nip !== user.nip)) throw new ForbiddenException('Laporan di luar kepemilikan Anda');
     return user.nip;
   }

@@ -92,9 +92,13 @@ export default function LckhApprovalPage() {
     }, [isRestrictedWkm, kamadDirect, assignmentRoles, isWkmAkademik, isWkmKesiswaan]);
 
     const canDo = useCallback((action: string) => {
+        if (action === 'view') {
+            if (isAdmin || isWaka || isKamad || user?.pagesArray?.includes('lckh-approval')) return true;
+            return hasPermission(user?.permissions || [], 'lckh-approval', action, isAdmin, userRoles, user?.pagesArray);
+        }
         if (isAdmin || isWaka || isKamad) return true;
-        return hasPermission(user?.permissions || [], 'lckh_approval', action, isAdmin);
-    }, [isAdmin, isWaka, isKamad, user?.permissions]);
+        return hasPermission(user?.permissions || [], 'lckh-approval', action, isAdmin, userRoles, user?.pagesArray);
+    }, [isAdmin, isWaka, isKamad, user?.permissions, userRoles, user?.pagesArray]);
 
     useEffect(() => {
         const init = async () => {

@@ -18,6 +18,7 @@ type MainTab = 'kelulusan' | 'nilai-um' | 'nilai-ijazah' | 'plotting-mapel';
 function UMKelulusanPage() {
   const [user, setUser] = useState<any>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [hasAccess, setHasAccess] = useState(false);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useTabParam<MainTab>('kelulusan', [
     'kelulusan',
@@ -59,10 +60,15 @@ function UMKelulusanPage() {
         const userData = meJson.user;
         if (!userData) return;
         setUser(userData);
-        setIsAdmin(
+        const adminStatus =
           userData?.roles?.some((r: string) => ['ADMIN', 'ADMINISTRATOR'].includes(r.toUpperCase())) || !!(userData as any).isAdmin ||
-            false
-        );
+            false;
+        setIsAdmin(adminStatus);
+        const pageAccess =
+          adminStatus ||
+          userData?.pagesArray?.includes('um-kelulusan') ||
+          (userData?.roles || []).some((r: string) => ['KAMAD', 'KTU', 'GURU', 'WKM_AKADEMIK'].includes(r.toUpperCase()));
+        setHasAccess(pageAccess);
       } finally {
         setLoading(false);
       }
@@ -74,14 +80,14 @@ function UMKelulusanPage() {
     return <PageLoader label="Memuat data UM & Kelulusan…" />;
   }
 
-  if (!isAdmin) {
+  if (!hasAccess) {
     return (
       <div className="uk-access-denied">
         <div className="uk-access-denied__icon">
           <i className="bi bi-shield-exclamation" />
         </div>
         <h2>Akses Ditolak</h2>
-        <p>Halaman ini hanya untuk Administrator.</p>
+        <p>Anda tidak memiliki akses ke halaman ini.</p>
       </div>
     );
   }

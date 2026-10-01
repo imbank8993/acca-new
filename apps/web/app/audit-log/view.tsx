@@ -56,8 +56,8 @@ export default function AuditLogView({ user }: { user?: User }) {
 
     const userRoles = (user?.roles || []).map(r => r.toUpperCase());
     const isAdminOrWkm = userRoles.some(r =>
-        r === 'ADMIN' || r === 'ADMINISTRATOR' || r === 'OP_PENGUMUMAN' || r.startsWith('WKM_')
-    );
+        r === 'ADMIN' || r === 'ADMINISTRATOR' || r === 'OP_PENGUMUMAN' || r.startsWith('WKM_') || r === 'KAMAD' || r === 'KTU' || r === 'PENGAWAS_MADRASAH' || r === 'SUPERVISOR'
+    ) || (user?.pagesArray || []).includes('audit-log');
 
     const fetchLogs = async () => {
         setLoading(true);

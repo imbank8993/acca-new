@@ -31,10 +31,9 @@ export class EkskulSubmissionService {
     const { nip, ekskul_id, status, bulan, tahun } = query;
     const where: any = {};
 
+    const roles: string[] = Array.isArray(user?.roles) ? user.roles : [user?.role].filter(Boolean);
     const canViewAll =
-      user?.roles?.includes('ADMIN') ||
-      user?.roles?.includes('WKM_KESISWAAN') ||
-      user?.roles?.includes('BENDAHARA_KOMITE') ||
+      roles.some((r: string) => ['ADMIN', 'KAMAD', 'KTU', 'SUPERVISOR', 'PENGAWAS_MADRASAH', 'BENDAHARA_KOMITE', 'WKM_KESISWAAN'].includes(r.toUpperCase())) ||
       user?.role === 'ADMIN';
 
     if (canViewAll) {

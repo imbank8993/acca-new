@@ -210,6 +210,11 @@ export default function PembayaranPage({ user: propUser }: PembayaranPageProps =
     }, [user]);
     const isAdmin = useMemo(() => userRoles.some((r: string) => r.includes('ADMIN')), [userRoles]);
     const isBendahara = useMemo(() => isAdmin || userRoles.includes('BENDAHARA_KOMITE'), [isAdmin, userRoles]);
+    const hasAccess = useMemo(() => {
+        if (isBendahara) return true;
+        if (user?.pagesArray?.includes('pembayaran')) return true;
+        return userRoles.some((r: string) => ['KAMAD', 'KTU', 'SUPERVISOR', 'PENGAWAS_MADRASAH'].includes(r));
+    }, [isBendahara, user, userRoles]);
 
     useEffect(() => {
         if (propUser) {
@@ -283,23 +288,23 @@ export default function PembayaranPage({ user: propUser }: PembayaranPageProps =
     }, []);
 
     useEffect(() => {
-        if (isBendahara) {
+        if (hasAccess) {
             fetchSubmissions();
             fetchTarif();
         }
-    }, [isBendahara, fetchSubmissions, fetchTarif]);
+    }, [hasAccess, fetchSubmissions, fetchTarif]);
 
     useEffect(() => {
-        if (isBendahara && (activeTab === 'KLINIK' || activeTab === 'REKAPAN')) {
+        if (hasAccess && (activeTab === 'KLINIK' || activeTab === 'REKAPAN')) {
             fetchKlinikSlots();
         }
-    }, [isBendahara, activeTab, fetchKlinikSlots]);
+    }, [hasAccess, activeTab, fetchKlinikSlots]);
 
     useEffect(() => {
-        if (isBendahara && (activeTab === 'EKSKUL' || activeTab === 'REKAPAN')) {
+        if (hasAccess && (activeTab === 'EKSKUL' || activeTab === 'REKAPAN')) {
             fetchEkskulSubmissions();
         }
-    }, [isBendahara, activeTab, fetchEkskulSubmissions]);
+    }, [hasAccess, activeTab, fetchEkskulSubmissions]);
 
     const getTarif = useCallback((modul: string) => {
         const found = tarifList.find(t => t.modul === modul);
@@ -685,12 +690,12 @@ export default function PembayaranPage({ user: propUser }: PembayaranPageProps =
         );
     }
 
-    if (!isBendahara) {
+    if (!hasAccess) {
         return (
             <div className="gap-denied">
                 <i className="bi bi-shield-lock" />
                 <h3>Akses Ditolak</h3>
-                <p>Halaman ini hanya untuk Bendahara Komite atau Admin.</p>
+                <p>Halaman ini hanya untuk Bendahara Komite, Pimpinan, atau Pengguna yang diberikan akses.</p>
             </div>
         );
     }
@@ -807,14 +812,16 @@ export default function PembayaranPage({ user: propUser }: PembayaranPageProps =
                                                     <i className="bi bi-file-earmark-text" />
                                                 </button>
                                             )}
-                                            {sub.dibayarkan ? (
-                                                <button onClick={() => handleTandai(sub, false)} className="gap-btn-icon gap-btn-icon--danger" title="Batal Dibayar" disabled={saving}>
-                                                    <i className="bi bi-x-circle" />
-                                                </button>
-                                            ) : (
-                                                <button onClick={() => handleTandai(sub, true)} className="gap-btn-icon gap-btn-icon--success" title="Tandai Dibayar" disabled={saving}>
-                                                    <i className="bi bi-check-circle" />
-                                                </button>
+                                            {isBendahara && (
+                                                sub.dibayarkan ? (
+                                                    <button onClick={() => handleTandai(sub, false)} className="gap-btn-icon gap-btn-icon--danger" title="Batal Dibayar" disabled={saving}>
+                                                        <i className="bi bi-x-circle" />
+                                                    </button>
+                                                ) : (
+                                                    <button onClick={() => handleTandai(sub, true)} className="gap-btn-icon gap-btn-icon--success" title="Tandai Dibayar" disabled={saving}>
+                                                        <i className="bi bi-check-circle" />
+                                                    </button>
+                                                )
                                             )}
                                         </div>
                                     </td>
@@ -897,14 +904,18 @@ export default function PembayaranPage({ user: propUser }: PembayaranPageProps =
                                             </td>
                                             <td>
                                                 <div className="gap-actions-cell">
-                                                    {slot.status === 'paid' ? (
-                                                        <button onClick={() => handleBatalKlinik(slot)} className="gap-btn-icon gap-btn-icon--danger" title="Batalkan Tanda Dibayar" disabled={savingKlinik}>
-                                                            <i className="bi bi-x-circle" />
-                                                        </button>
+                                                    {isBendahara ? (
+                                                        slot.status === 'paid' ? (
+                                                            <button onClick={() => handleBatalKlinik(slot)} className="gap-btn-icon gap-btn-icon--danger" title="Batalkan Tanda Dibayar" disabled={savingKlinik}>
+                                                                <i className="bi bi-x-circle" />
+                                                            </button>
+                                                        ) : (
+                                                            <button onClick={() => handleTandaiKlinik(slot)} className="gap-btn-icon gap-btn-icon--success" title="Tandai Dibayar" disabled={savingKlinik}>
+                                                                <i className="bi bi-check-circle" />
+                                                            </button>
+                                                        )
                                                     ) : (
-                                                        <button onClick={() => handleTandaiKlinik(slot)} className="gap-btn-icon gap-btn-icon--success" title="Tandai Dibayar" disabled={savingKlinik}>
-                                                            <i className="bi bi-check-circle" />
-                                                        </button>
+                                                        <span style={{ color: 'var(--n-muted)', fontSize: '0.8rem' }}>-</span>
                                                     )}
                                                 </div>
                                             </td>
@@ -1036,14 +1047,16 @@ export default function PembayaranPage({ user: propUser }: PembayaranPageProps =
                                                                 <i className="bi bi-file-earmark-pdf" />
                                                             </button>
                                                         )}
-                                                        {sub.dibayarkan ? (
-                                                            <button onClick={() => handleTandaiEkskul(sub, false)} className="gap-btn-icon gap-btn-icon--danger" title="Batal Dibayar" disabled={savingEkskul}>
-                                                                <i className="bi bi-x-circle" />
-                                                            </button>
-                                                        ) : (
-                                                            <button onClick={() => handleTandaiEkskul(sub, true)} className="gap-btn-icon gap-btn-icon--success" title="Tandai Dibayar" disabled={savingEkskul}>
-                                                                <i className="bi bi-check-circle" />
-                                                            </button>
+                                                        {isBendahara && (
+                                                            sub.dibayarkan ? (
+                                                                <button onClick={() => handleTandaiEkskul(sub, false)} className="gap-btn-icon gap-btn-icon--danger" title="Batal Dibayar" disabled={savingEkskul}>
+                                                                    <i className="bi bi-x-circle" />
+                                                                </button>
+                                                            ) : (
+                                                                <button onClick={() => handleTandaiEkskul(sub, true)} className="gap-btn-icon gap-btn-icon--success" title="Tandai Dibayar" disabled={savingEkskul}>
+                                                                    <i className="bi bi-check-circle" />
+                                                                </button>
+                                                            )
                                                         )}
                                                     </div>
                                                 </td>
@@ -1100,6 +1113,7 @@ export default function PembayaranPage({ user: propUser }: PembayaranPageProps =
                                                 <input
                                                     type="number"
                                                     min={0}
+                                                    disabled={!isBendahara}
                                                     className="gap-select"
                                                     style={{ minWidth: '140px', width: '160px', fontWeight: 700 }}
                                                     value={tarifDraft[t.modul] ?? String(parseNominal(t.nominal))}
@@ -1112,14 +1126,18 @@ export default function PembayaranPage({ user: propUser }: PembayaranPageProps =
                                             {t.updated_by_name && <div>oleh {t.updated_by_name}</div>}
                                         </td>
                                         <td>
-                                            <button
-                                                className="gap-btn-icon gap-btn-icon--success"
-                                                style={{ width: 'auto', padding: '0 14px', fontSize: '0.8rem', fontWeight: 700 }}
-                                                onClick={() => handleUpdateTarif(t.modul)}
-                                                disabled={savingTarifModul === t.modul || String(parseNominal(t.nominal)) === (tarifDraft[t.modul] ?? String(parseNominal(t.nominal)))}
-                                            >
-                                                {savingTarifModul === t.modul ? 'Menyimpan...' : 'Simpan'}
-                                            </button>
+                                            {isBendahara ? (
+                                                <button
+                                                    className="gap-btn-icon gap-btn-icon--success"
+                                                    style={{ width: 'auto', padding: '0 14px', fontSize: '0.8rem', fontWeight: 700 }}
+                                                    onClick={() => handleUpdateTarif(t.modul)}
+                                                    disabled={savingTarifModul === t.modul || String(parseNominal(t.nominal)) === (tarifDraft[t.modul] ?? String(parseNominal(t.nominal)))}
+                                                >
+                                                    {savingTarifModul === t.modul ? 'Menyimpan...' : 'Simpan'}
+                                                </button>
+                                            ) : (
+                                                <span style={{ color: 'var(--n-muted)', fontSize: '0.8rem' }}>-</span>
+                                            )}
                                         </td>
                                     </tr>
                                 ))}

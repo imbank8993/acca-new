@@ -102,8 +102,8 @@ export default function SiswaTab({ user }: { user?: any }) {
   // `isAdmin` dipertahankan sebagai nama untuk JSX di bawah.
   // `canManage` = ADMIN atau yang ditunjuk di Hak Akses Fitur.
   // `isAdminRole` khusus aksi yang TIDAK pernah diberikan lewat layar itu.
-  const { boleh, isAdmin: isAdminRole } = useMasterAccess()
-  const isAdmin = boleh('siswa')
+  const { boleh, dapatKelola, isAdmin: isAdminRole } = useMasterAccess()
+  const isAdmin = dapatKelola('siswa')
 
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1)

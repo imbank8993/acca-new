@@ -179,8 +179,8 @@ export default function PegawaiTab({ user, jenis }: { user?: any; jenis: JenisPe
   // `isAdmin` dipertahankan sebagai nama untuk JSX di bawah.
   // `canManage` = ADMIN atau yang ditunjuk di Hak Akses Fitur.
   // `isAdminRole` khusus aksi yang TIDAK pernah diberikan lewat layar itu.
-  const { boleh, isAdmin: isAdminRole } = useMasterAccess()
-  const isAdmin = boleh('guru')
+  const { boleh, dapatKelola, isAdmin: isAdminRole } = useMasterAccess()
+  const isAdmin = dapatKelola('guru')
 
   /* Satu efek untuk pergantian tab DAN pencarian. Sebelumnya keduanya efek
      terpisah yang sama-sama memanggil fetchGuru saat mount, jadi setiap kali

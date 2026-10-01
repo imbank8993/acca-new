@@ -50,9 +50,9 @@ export function matchAction(required: string, possessed: string): boolean {
  * `null` = halaman terdaftar tapi user tak punya role yang diizinkan.
  * `'edit'` = halaman tidak terdaftar (default permisif warisan lama).
  */
-export function getPageActionForRole(userRoles: string[], pageId: string): string | null {
+export function getPageActionForRole(userRoles: string[], pageId: string, userPages?: string[]): string | null {
     if (!getRequirement(pageId)) return 'edit';
-    return getActionLevel(userRoles, pageId);
+    return getActionLevel(userRoles, pageId, userPages);
 }
 
 const ACTION_HIERARCHY: Record<string, number> = { 'view': 1, 'edit': 2, 'manage': 3 };
@@ -65,13 +65,15 @@ const ACTION_HIERARCHY: Record<string, number> = { 'view': 1, 'edit': 2, 'manage
  * @param action - view, edit, create, update, delete, manage, atau `tab:<key>`
  * @param isAdmin - Admin melewati semua pemeriksaan
  * @param userRoles - Role user, dipakai untuk lookup PAGE_ROLE_REQUIREMENTS
+ * @param userPages - Daftar pageId yang dimiliki user dari role_pages
  */
 export function hasPermission(
     userPermissions: any[],
     resource: string,
     action: string,
     isAdmin: boolean = false,
-    userRoles: string[] = []
+    userRoles: string[] = [],
+    userPages?: string[]
 ): boolean {
     if (isAdmin) return true;
 
@@ -88,14 +90,14 @@ export function hasPermission(
             if (!req) return true; // Tak terdaftar → izinkan (kompatibilitas mundur)
 
             const allowed = req.allowedRoles.map(r => r.toUpperCase());
-            return userRoles.length === 0 || userRoles.some(r => allowed.includes(r.toUpperCase()));
+            return userRoles.length === 0 || userRoles.some(r => allowed.includes(r.toUpperCase())) || !!(userPages && (userPages.includes(resource) || userPages.includes(`${resource}:${tabKey}`)));
         }
 
         // Akses halaman dasar
-        if (!canAccessPage(userRoles, resource)) return false;
+        if (!canAccessPage(userRoles, resource, userPages)) return false;
 
         // Level aksi
-        const roleAction = getPageActionForRole(userRoles, resource);
+        const roleAction = getPageActionForRole(userRoles, resource, userPages);
         if (roleAction) {
             const allowedLevel = ACTION_HIERARCHY[roleAction] || 0;
             const requiredLevel = ACTION_HIERARCHY[normalizedAction] || 0;

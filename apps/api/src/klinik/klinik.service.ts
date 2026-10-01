@@ -775,8 +775,14 @@ export async function handleGet(req: any, action: string, searchParams: URLSearc
         // browser — artinya siapa pun bisa menambahkan `?role=ADMIN` di URL dan
         // memanen seluruh sesi madrasah. Sekarang diputuskan dari identitas yang
         // sudah terverifikasi di server; parameter dari klien tidak dipakai lagi.
-        const isBendaharaOrAdmin = user.roles?.includes('ADMIN') || user.roles?.includes('BENDAHARA_KOMITE') || user.role === 'ADMIN';
-        if (!can(user, 'klinik.kelola_sesi') && !isBendaharaOrAdmin && user.roles?.includes('GURU')) {
+        const roles: string[] = Array.isArray(user?.roles) ? user.roles : [user?.role].filter(Boolean);
+        const hasBroadAccess =
+            user.roles?.includes('ADMIN') ||
+            user.roles?.includes('BENDAHARA_KOMITE') ||
+            user.role === 'ADMIN' ||
+            roles.some((r: string) => ['KAMAD', 'KTU', 'SUPERVISOR', 'PENGAWAS_MADRASAH'].includes(r.toUpperCase())) ||
+            can(user, 'klinik.kelola_sesi');
+        if (!hasBroadAccess && user.roles?.includes('GURU')) {
             const guruRecord = await resolveUserRecord(db, user.auth_id || user.authId, user.nip);
             // Tanpa baris user yang cocok, jangan bocorkan apa pun.
             query = query.eq('guru_id', guruRecord?.id ?? -1);

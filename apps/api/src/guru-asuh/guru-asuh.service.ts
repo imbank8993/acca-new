@@ -50,10 +50,11 @@ export class GuruAsuhService {
     const where: any = {};
 
     const isApproverUser = await this.isApprover(user);
-    const canViewAll =
-      isApproverUser ||
-      user?.roles?.includes('BENDAHARA_KOMITE') ||
+    const roles: string[] = Array.isArray(user?.roles) ? user.roles : [user?.role].filter(Boolean);
+    const hasAdminOrSupervisory =
+      roles.some((r: string) => ['ADMIN', 'KAMAD', 'KTU', 'SUPERVISOR', 'PENGAWAS_MADRASAH', 'BENDAHARA_KOMITE'].includes(r.toUpperCase())) ||
       user?.role === 'ADMIN';
+    const canViewAll = isApproverUser || hasAdminOrSupervisory;
 
     if (canViewAll) {
       if (nip) where.nip = nip;
@@ -1036,10 +1037,11 @@ export class GuruAsuhService {
     const targetTahun = submission?.tahun || (tahun ? parseInt(tahun, 10) : undefined);
 
     const isApproverUser = await this.isApprover(user);
-    const canViewAll =
-      isApproverUser ||
-      user?.roles?.includes('BENDAHARA_KOMITE') ||
+    const roles: string[] = Array.isArray(user?.roles) ? user.roles : [user?.role].filter(Boolean);
+    const hasAdminOrSupervisory =
+      roles.some((r: string) => ['ADMIN', 'KAMAD', 'KTU', 'SUPERVISOR', 'PENGAWAS_MADRASAH', 'BENDAHARA_KOMITE'].includes(r.toUpperCase())) ||
       user?.role === 'ADMIN';
+    const canViewAll = isApproverUser || hasAdminOrSupervisory;
 
     if (!canViewAll && (!targetNip || user?.nip !== targetNip)) {
       throw new ForbiddenException('Anda hanya berhak melihat data laporan milik sendiri.');

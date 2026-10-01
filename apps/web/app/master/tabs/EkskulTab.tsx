@@ -239,8 +239,8 @@ export default function EkskulTab(_props: { user?: unknown }) {
    *
    * `isAdmin` dipertahankan sebagai nama untuk JSX di bawah.
    */
-  const { boleh } = useMasterAccess()
-  const isAdmin = boleh('ekskul')
+  const { boleh, dapatKelola } = useMasterAccess()
+  const isAdmin = dapatKelola('ekskul')
 
   const statsData = useMemo(() => ({
     total: filteredData.length,
