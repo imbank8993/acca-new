@@ -93,8 +93,11 @@ export default function ParentDashboard({ user }: { user: User }) {
             if (json.ok) {
                 setAddSuccess(json.message || 'Anak berhasil ditambahkan.');
                 const newNisn = addNisn.trim();
-                await fetchAnak(newNisn);
-                setTimeout(() => setShowAddModal(false), 1500);
+                setTimeout(async () => {
+                    setShowAddModal(false);
+                    setLoading(true);
+                    await fetchAnak(newNisn);
+                }, 1000);
             } else {
                 setAddError(json.error || 'Gagal menambahkan anak');
             }
@@ -281,7 +284,14 @@ export default function ParentDashboard({ user }: { user: User }) {
         <div>
             {/* Dashboard identik dengan dashboard siswa untuk anak terpilih.
                 key memaksa remount saat ganti anak agar semua data dimuat ulang. */}
-            {mockUser && <DashboardContent key={selectedNisn} user={mockUser} headerExtra={switcherRow} />}
+            {mockUser ? (
+                <DashboardContent key={selectedNisn} user={mockUser} headerExtra={switcherRow} />
+            ) : (
+                <div style={{ textAlign: 'center', padding: '60px 0', color: '#64748b' }}>
+                    <div className="spinner" style={{ margin: '0 auto 16px' }}></div>
+                    <p>Menyiapkan data siswa...</p>
+                </div>
+            )}
 
             {showAddModal && renderAddModal()}
         </div>

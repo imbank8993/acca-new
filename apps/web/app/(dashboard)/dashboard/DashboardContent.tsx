@@ -1085,12 +1085,12 @@ export default function DashboardContent({ user, headerExtra }: { user: User; he
                             <div className="db__row2-grid">
                                 {/* Saudara Asuh / Anak Asuh (Guru, Siswa, Orang Tua) */}
                                 {(isGuru || isSiswa || isOrangTua) && (() => {
-                                    const hadirCount = anakAsuh.filter(s => (anakAsuhKehadiran[s.nisn_siswa]?.kode || 'HADIR').toUpperCase() === 'HADIR').length;
-                                    const sakitCount = anakAsuh.filter(s => (anakAsuhKehadiran[s.nisn_siswa]?.kode || '').toUpperCase() === 'SAKIT').length;
-                                    const izinCount = anakAsuh.filter(s => (anakAsuhKehadiran[s.nisn_siswa]?.kode || '').toUpperCase() === 'IZIN').length;
+                                    const hadirCount = anakAsuh.filter(s => (anakAsuhKehadiran[s?.nisn_siswa]?.kode || 'HADIR').toUpperCase() === 'HADIR').length;
+                                    const sakitCount = anakAsuh.filter(s => (anakAsuhKehadiran[s?.nisn_siswa]?.kode || '').toUpperCase() === 'SAKIT').length;
+                                    const izinCount = anakAsuh.filter(s => (anakAsuhKehadiran[s?.nisn_siswa]?.kode || '').toUpperCase() === 'IZIN').length;
 
-                                    const hasIzin = anakAsuh.some(s => anakAsuhKehadiran[s.nisn_siswa]?.kode === 'IZIN');
-                                    const hasSakit = anakAsuh.some(s => anakAsuhKehadiran[s.nisn_siswa]?.kode === 'SAKIT');
+                                    const hasIzin = anakAsuh.some(s => anakAsuhKehadiran[s?.nisn_siswa]?.kode === 'IZIN');
+                                    const hasSakit = anakAsuh.some(s => anakAsuhKehadiran[s?.nisn_siswa]?.kode === 'SAKIT');
                                     const blinkType = hasIzin && hasSakit ? 'both' : hasSakit ? 'sakit' : hasIzin ? 'izin' : null;
                                     const titleWidget = isGuru ? 'Anak Asuh' : 'Saudara Asuh';
                                     const blinkTitle = hasIzin && hasSakit ? `Ada ${titleWidget.toLowerCase()} yang Sakit & Izin hari ini` : hasSakit ? `Ada ${titleWidget.toLowerCase()} yang Sakit hari ini` : hasIzin ? `Ada ${titleWidget.toLowerCase()} yang Izin hari ini` : '';
@@ -1148,14 +1148,14 @@ export default function DashboardContent({ user, headerExtra }: { user: User; he
                                                         )}
                                                         <div className="db__chip-grid">
                                                             {[...anakAsuh].sort((a, b) => {
-                                                                const khA = anakAsuhKehadiran[a.nisn_siswa]?.kode?.toUpperCase() || 'HADIR';
-                                                                const khB = anakAsuhKehadiran[b.nisn_siswa]?.kode?.toUpperCase() || 'HADIR';
+                                                                const khA = anakAsuhKehadiran[a?.nisn_siswa]?.kode?.toUpperCase() || 'HADIR';
+                                                                const khB = anakAsuhKehadiran[b?.nisn_siswa]?.kode?.toUpperCase() || 'HADIR';
                                                                 const weightA = khA === 'SAKIT' ? 1 : khA === 'IZIN' ? 2 : 3;
                                                                 const weightB = khB === 'SAKIT' ? 1 : khB === 'IZIN' ? 2 : 3;
                                                                 if (weightA !== weightB) return weightA - weightB;
-                                                                return a.nama_siswa.localeCompare(b.nama_siswa);
+                                                                return (a?.nama_siswa || '').localeCompare(b?.nama_siswa || '');
                                                             }).map((s, idx) => {
-                                                                const kh = anakAsuhKehadiran[s.nisn_siswa];
+                                                                const kh = s?.nisn_siswa ? anakAsuhKehadiran[s.nisn_siswa] : undefined;
                                                                 const kode = kh?.kode ? kh.kode.toUpperCase() : 'HADIR';
                                                                 const khLabel = kode === 'SAKIT' ? 'Sakit'
                                                                     : kode === 'IZIN' ? 'Izin'

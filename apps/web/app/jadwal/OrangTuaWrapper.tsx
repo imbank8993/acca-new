@@ -86,7 +86,7 @@ export default function OrangTuaWrapper({ user }: { user: User }) {
             if (filterTahunAjaran && s.tahun_ajaran !== filterTahunAjaran) return false;
             if (searchQuery) {
                 const q = searchQuery.toLowerCase();
-                if (!s.nisn.toLowerCase().includes(q) && !s.nama_lengkap.toLowerCase().includes(q)) return false;
+                if (!(s.nisn || '').toLowerCase().includes(q) && !(s.nama_lengkap || '').toLowerCase().includes(q)) return false;
             }
             return true;
         });

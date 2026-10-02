@@ -31,11 +31,11 @@ export default function DetailAnakClient({ siswa }: { siswa: any }) {
                         {siswa.foto ? (
                             <img src={siswa.foto} alt="Foto" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
                         ) : (
-                            siswa.nama_lengkap.charAt(0)
+                            (siswa.nama_lengkap || '?').charAt(0)
                         )}
                     </div>
                     <div>
-                        <h2 style={{ margin: '0 0 4px', fontSize: '1.5rem', fontWeight: 700 }}>{siswa.nama_lengkap}</h2>
+                        <h2 style={{ margin: '0 0 4px', fontSize: '1.5rem', fontWeight: 700 }}>{siswa.nama_lengkap || 'Data Siswa'}</h2>
                         <p style={{ margin: 0, opacity: 0.9 }}>NISN: {siswa.nisn} &bull; Kelas: {siswa.kelas || '-'}</p>
                     </div>
                 </div>

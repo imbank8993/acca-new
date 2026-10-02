@@ -45,7 +45,7 @@ export default function AnakSwitcher({
     const single = anakList.length === 1;
     if (single && !actions) return null;
 
-    const selected = anakList.find(a => a.nisn === selectedNisn) || anakList[0];
+    const selected = (selectedNisn ? anakList.find(a => a.nisn === selectedNisn) : null) || anakList[0];
     const initialOf = (nama: string) => (nama || '?').trim().charAt(0).toUpperCase();
 
     return (
@@ -71,13 +71,13 @@ export default function AnakSwitcher({
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
                             fontWeight: 700, fontSize: '0.9rem', background: '#4f46e5', color: '#fff'
                         }}>
-                            {initialOf(selected.nama_lengkap)}
+                            {selected ? initialOf(selected.nama_lengkap) : '?'}
                         </span>
                         <span style={{ textAlign: 'left', lineHeight: 1.2, minWidth: 0 }}>
                             <span style={{ display: 'block', fontWeight: 700, fontSize: '0.88rem', color: '#1e293b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                {selected.nama_lengkap}
+                                {selected?.nama_lengkap || selected?.nisn || '-'}
                             </span>
-                            {selected.kelas && (
+                            {selected?.kelas && (
                                 <span style={{ display: 'block', fontSize: '0.72rem', fontWeight: 500, color: '#64748b' }}>
                                     {selected.kelas}
                                 </span>

@@ -28,6 +28,12 @@ export default function GlobalError({
     }
   }, [error])
 
+  const isChunkError =
+    error?.name === 'ChunkLoadError' ||
+    error?.message?.includes('Loading chunk') ||
+    error?.message?.includes('Failed to fetch dynamically imported module') ||
+    error?.message?.includes('Load failed')
+
   return (
     <html lang="id">
       <body style={{
@@ -56,33 +62,62 @@ export default function GlobalError({
             height: '3.5rem',
             margin: '0 auto 1.25rem',
             borderRadius: '9999px',
-            backgroundColor: 'rgba(239, 68, 68, 0.15)',
+            backgroundColor: isChunkError ? 'rgba(59, 130, 246, 0.15)' : 'rgba(239, 68, 68, 0.15)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center'
           }}>
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" />
-              <line x1="12" y1="9" x2="12" y2="13" />
-              <line x1="12" y1="17" x2="12.01" y2="17" />
-            </svg>
+            {isChunkError ? (
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                <path d="M3 3v5h5" />
+                <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16" />
+                <path d="M16 16h5v5" />
+              </svg>
+            ) : (
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" />
+                <line x1="12" y1="9" x2="12" y2="13" />
+                <line x1="12" y1="17" x2="12.01" y2="17" />
+              </svg>
+            )}
           </div>
 
           <h2 style={{ fontSize: '1.25rem', fontWeight: 600, margin: '0 0 0.5rem', color: '#f8fafc' }}>
-            Halaman Perlu Dimuat Ulang
+            {isChunkError ? 'Pembaruan Halaman Diperlukan' : 'Terjadi Kesalahan pada Aplikasi'}
           </h2>
           <p style={{ fontSize: '0.875rem', color: '#94a3b8', margin: '0 0 1.5rem', lineHeight: '1.5' }}>
-            Aplikasi telah diperbarui dengan versi terbaru. Silakan muat ulang halaman untuk melanjutkan.
+            {isChunkError
+              ? 'Aplikasi telah diperbarui dengan versi terbaru. Silakan muat ulang halaman untuk melanjutkan.'
+              : 'Terjadi kendala yang tidak terduga saat memuat halaman ini. Silakan coba lagi atau muat ulang.'}
           </p>
 
           <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
+            {!isChunkError && (
+              <button
+                onClick={() => reset()}
+                style={{
+                  backgroundColor: '#2563eb',
+                  color: '#ffffff',
+                  border: 'none',
+                  padding: '0.625rem 1.25rem',
+                  borderRadius: '0.5rem',
+                  fontSize: '0.875rem',
+                  fontWeight: 500,
+                  cursor: 'pointer',
+                  transition: 'background-color 0.15s ease'
+                }}
+              >
+                Coba Lagi
+              </button>
+            )}
             <button
               onClick={() => {
                 sessionStorage.removeItem('chunk_reload_retry')
                 window.location.reload()
               }}
               style={{
-                backgroundColor: '#2563eb',
+                backgroundColor: isChunkError ? '#2563eb' : '#334155',
                 color: '#ffffff',
                 border: 'none',
                 padding: '0.625rem 1.25rem',
