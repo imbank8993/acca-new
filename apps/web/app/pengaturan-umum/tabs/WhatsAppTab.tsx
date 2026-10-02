@@ -75,6 +75,26 @@ const WA_CONFIGS: WASettingConfig[] = [
         color: '#00b4d8',
         hideTargets: true,
     },
+    {
+        key: 'guru_asuh',
+        tokenKey: 'wa_token_guru_asuh',
+        targetsKey: 'wa_targets_guru_asuh',
+        label: 'Guru Asuh',
+        description: 'Notifikasi pengajuan laporan guru asuh ke peninjau/approval',
+        icon: 'bi-people',
+        color: '#10b981',
+        hideTargets: true,
+    },
+    {
+        key: 'klinik',
+        tokenKey: 'wa_token_klinik',
+        targetsKey: 'wa_targets_klinik',
+        label: 'Klinik',
+        description: 'Notifikasi pengajuan laporan klinik ke peninjau/approval',
+        icon: 'bi-heart-pulse',
+        color: '#e11d48',
+        hideTargets: true,
+    },
 ]
 
 interface WAProvider {

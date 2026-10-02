@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { extractRequestToken } from '@/lib/app-jwt';
 import { nestFetchAsUser } from '@/lib/nest-api';
+import { notifGuruAsuhWa } from '@/lib/wa-guru-asuh';
 
 export const dynamic = 'force-dynamic';
 
@@ -22,7 +23,31 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
     const body = await request.json();
-    return proxy(request, '/guru-asuh/laporan-submission', { method: 'POST', body: JSON.stringify(body) });
+    const token = extractRequestToken(request);
+    if (!token) return NextResponse.json({ ok: false, error: 'Unauthorized' }, { status: 401 });
+
+    const { status, body: resBody } = await nestFetchAsUser('/guru-asuh/laporan-submission', token, {
+        method: 'POST',
+        body: JSON.stringify(body),
+    });
+
+    if (status !== 200 && status !== 201) {
+        return NextResponse.json(
+            { ok: false, error: resBody?.message || resBody?.error || 'Permintaan gagal' },
+            { status }
+        );
+    }
+
+    // Kirim notifikasi WhatsApp ke approver setelah pengajuan berhasil disimpan
+    if (resBody?.ok && resBody?.data) {
+        try {
+            await notifGuruAsuhWa('diajukan', resBody.data, body);
+        } catch (e: any) {
+            console.error('[WA guru-asuh] Gagal mengirim notifikasi:', e?.message || e);
+        }
+    }
+
+    return NextResponse.json(resBody);
 }
 
 export async function DELETE(request: NextRequest) {

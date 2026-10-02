@@ -1,10 +1,11 @@
 'use client';
 import Pagination from '@/components/ui/Pagination';
 import MaintenanceBanner from '@/components/MaintenanceBanner';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { getCurrentUser } from '@/lib/auth-client';
 import Swal from 'sweetalert2';
 import { useFileViewer } from '@/components/useFileViewer';
+import { FilterToolbar, FilterSearch, FilterSelect } from '@/components/ui/FilterToolbar';
 import '../../surat/surat.css';
 import '../ketidakhadiran.css';
 import { createPortal } from 'react-dom';
@@ -63,6 +64,21 @@ export function DaftarSuratTab(props: any) {
                         padding: 0 !important; 
                         background: transparent !important; 
                         box-shadow: none !important;
+                    }
+                    :global(.daftar-surat-desktop-tabs) {
+                        display: none !important;
+                    }
+                    :global(.daftar-surat-desktop-search) {
+                        display: none !important;
+                    }
+                    :global(.daftar-surat-mobile-toolbar) {
+                        display: block !important;
+                        margin-bottom: 12px !important;
+                    }
+                }
+                @media (min-width: 768px) {
+                    :global(.daftar-surat-mobile-toolbar) {
+                        display: none !important;
                     }
                 }
             `}</style>
@@ -136,6 +152,25 @@ function DaftarAccaContent() {
         if (soloSakit) return isSakitLetter(l.jenis_izin);
         return true;
     });
+
+    const filterOptions = useMemo(() => {
+        const opts: { value: string; label: string }[] = [
+            { value: 'ALL', label: `Semua (${visibleLetters.length})` }
+        ];
+        if (!soloSakit) {
+            const count = visibleLetters.filter(l => isIzinAsramaLetter(l.jenis_izin)).length;
+            opts.push({ value: 'MENINGGALKAN_ASRAMA', label: `Izin Asrama (${count})` });
+        }
+        if (!soloIzin) {
+            const rekomCount = visibleLetters.filter(l => l.jenis_izin === 'REKOMENDASI_KONTROL').length;
+            const medikCount = visibleLetters.filter(l => l.jenis_izin === 'REKAM_MEDIK').length;
+            opts.push({ value: 'REKOMENDASI_KONTROL', label: `Rekomendasi (${rekomCount})` });
+            opts.push({ value: 'REKAM_MEDIK', label: `Rekam Medik (${medikCount})` });
+        }
+        const rekapanCount = visibleLetters.filter(l => l.jenis_izin.startsWith('REKAPAN')).length;
+        opts.push({ value: 'REKAPAN', label: `Rekapan (${rekapanCount})` });
+        return opts;
+    }, [visibleLetters, soloSakit, soloIzin]);
 
     const filtered = visibleLetters.filter(l => {
         if (activeTab && activeTab !== 'ALL') {
@@ -287,8 +322,8 @@ function DaftarAccaContent() {
 
     return (
         <>
-            {/* Tab Filter */}
-            <div className="kh-tabs" style={{ margin: '0 0 1rem 0', padding: 0 }}>
+            {/* Tab Filter Desktop (Hanya Dekstop) */}
+            <div className="kh-tabs daftar-surat-desktop-tabs" style={{ margin: '0 0 1rem 0', padding: 0 }}>
                 <button className={`kh-tab ${activeTab === 'ALL' ? 'is-active' : ''}`} onClick={() => setActiveTab('ALL')}>
                     <div className="kh-tab-icon"><i className="bi bi-grid"></i></div>
                     <span className="kh-tab-text">Semua</span>
@@ -322,7 +357,8 @@ function DaftarAccaContent() {
                 </button>
             </div>
 
-            <div className="daftar-surat-search">
+            {/* Desktop Search (Hanya Dekstop) */}
+            <div className="daftar-surat-search daftar-surat-desktop-search">
                 <i className="bi bi-search"></i>
                 <input
                     type="text"
@@ -332,6 +368,24 @@ function DaftarAccaContent() {
                     className="srt-input"
                     suppressHydrationWarning
                 />
+            </div>
+
+            {/* FilterToolbar Khusus Mobile: Mengatur jenis daftar surat dan pencarian ke toolbar mobile */}
+            <div className="daftar-surat-mobile-toolbar">
+                <FilterToolbar className="daftar-surat-filter-toolbar">
+                    <FilterSearch
+                        value={searchQuery}
+                        onChange={setSearchQuery}
+                        placeholder="Cari surat (nomor, nama, NISN)..."
+                    />
+                    <FilterSelect
+                        label="Jenis Surat"
+                        icon="envelope-paper"
+                        value={activeTab || 'ALL'}
+                        onChange={(val) => setActiveTab((val || 'ALL') as any)}
+                        options={filterOptions}
+                    />
+                </FilterToolbar>
             </div>
 
             {/* ΓöÇΓöÇ Tabel Daftar Surat ΓöÇΓöÇ */}

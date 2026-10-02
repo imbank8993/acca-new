@@ -6495,3 +6495,23 @@ body.dark .kh-time-input {
 .dark .kh-time-sep {
   color: #64748b;
 }
+
+/* ─── Daftar Surat Responsive Filter & Tabs ─── */
+@media (max-width: 767px) {
+  .daftar-surat-desktop-tabs {
+    display: none !important;
+  }
+  .daftar-surat-desktop-search {
+    display: none !important;
+  }
+  .daftar-surat-mobile-toolbar {
+    display: block !important;
+    margin-bottom: 12px !important;
+  }
+}
+
+@media (min-width: 768px) {
+  .daftar-surat-mobile-toolbar {
+    display: none !important;
+  }
+}

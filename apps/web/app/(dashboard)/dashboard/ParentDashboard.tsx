@@ -232,6 +232,47 @@ export default function ParentDashboard({ user }: { user: User }) {
         };
     }, [user, selectedAnak]);
 
+    const activeNisn = selectedAnak?.nisn || selectedNisn;
+
+    // Switcher anak + aksi, dirender DI BAWAH banner hero lewat prop headerExtra
+    // (1 anak = tanpa chip, hanya tombol aksi rata kanan)
+    // Dideklarasikan di level atas sebelum early return agar konsisten dengan Rules of Hooks.
+    const switcherRow = useMemo(() => (
+        <AnakSwitcher
+            anakList={anakList}
+            selectedNisn={selectedNisn}
+            onSelect={setSelectedNisn}
+            actions={
+                <>
+                    {selectedAnak && (
+                        <Link
+                            href={`/anak/${selectedAnak.nisn}`}
+                            style={{
+                                display: 'inline-flex', alignItems: 'center', gap: '6px',
+                                padding: '6px 12px', borderRadius: '10px', background: 'transparent',
+                                border: '1px solid #cbd5e1', color: '#3083FF', fontWeight: 600,
+                                fontSize: '0.82rem', textDecoration: 'none', whiteSpace: 'nowrap'
+                            }}
+                        >
+                            <i className="bi bi-person-vcard"></i> Profil Anak
+                        </Link>
+                    )}
+                    <button
+                        onClick={openAddModal}
+                        style={{
+                            display: 'inline-flex', alignItems: 'center', gap: '6px',
+                            padding: '6px 12px', borderRadius: '10px', background: '#3083FF',
+                            border: '1px solid #3083FF', color: '#fff', fontWeight: 600,
+                            fontSize: '0.82rem', cursor: 'pointer', whiteSpace: 'nowrap'
+                        }}
+                    >
+                        <i className="bi bi-person-plus-fill"></i> Tambah Anak
+                    </button>
+                </>
+            }
+        />
+    ), [anakList, selectedNisn, selectedAnak]);
+
     const inputStyle: React.CSSProperties = {
         width: '100%', padding: '10px 14px', borderRadius: '10px',
         border: '1px solid #cbd5e1', fontSize: '0.9rem', outline: 'none', background: '#fff'
@@ -346,46 +387,6 @@ export default function ParentDashboard({ user }: { user: User }) {
             </div>
         );
     }
-
-    // Switcher anak + aksi, dirender DI BAWAH banner hero lewat prop headerExtra
-    // (1 anak = tanpa chip, hanya tombol aksi rata kanan)
-    const switcherRow = useMemo(() => (
-        <AnakSwitcher
-            anakList={anakList}
-            selectedNisn={selectedNisn}
-            onSelect={setSelectedNisn}
-            actions={
-                <>
-                    {selectedAnak && (
-                        <Link
-                            href={`/anak/${selectedAnak.nisn}`}
-                            style={{
-                                display: 'inline-flex', alignItems: 'center', gap: '6px',
-                                padding: '6px 12px', borderRadius: '10px', background: 'transparent',
-                                border: '1px solid #cbd5e1', color: '#3083FF', fontWeight: 600,
-                                fontSize: '0.82rem', textDecoration: 'none', whiteSpace: 'nowrap'
-                            }}
-                        >
-                            <i className="bi bi-person-vcard"></i> Profil Anak
-                        </Link>
-                    )}
-                    <button
-                        onClick={openAddModal}
-                        style={{
-                            display: 'inline-flex', alignItems: 'center', gap: '6px',
-                            padding: '6px 12px', borderRadius: '10px', background: '#3083FF',
-                            border: '1px solid #3083FF', color: '#fff', fontWeight: 600,
-                            fontSize: '0.82rem', cursor: 'pointer', whiteSpace: 'nowrap'
-                        }}
-                    >
-                        <i className="bi bi-person-plus-fill"></i> Tambah Anak
-                    </button>
-                </>
-            }
-        />
-    ), [anakList, selectedNisn, selectedAnak]);
-
-    const activeNisn = selectedAnak?.nisn || selectedNisn;
 
     return (
         <div>

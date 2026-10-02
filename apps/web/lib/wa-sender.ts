@@ -74,8 +74,11 @@ export function clearWAConfigCache() {
     CONFIG_CACHE.timestamp = 0
 }
 
-export async function isWAToggleEnabled(toggle: 'notif_wa_ptsp' | 'notif_wa_piket' | 'notif_wa_ketidakhadiran' | 'notif_wa_jadwal'): Promise<boolean> {
+export async function isWAToggleEnabled(toggle: 'notif_wa_ptsp' | 'notif_wa_piket' | 'notif_wa_ketidakhadiran' | 'notif_wa_jadwal' | 'notif_wa_guru_asuh' | 'notif_wa_klinik'): Promise<boolean> {
     const settings = await getWASettings()
+    if (toggle === 'notif_wa_guru_asuh' || toggle === 'notif_wa_klinik') {
+        return settings[toggle] !== 'false'
+    }
     return settings[toggle] === 'true'
 }
 
@@ -86,8 +89,8 @@ export async function isWAImageMode(feature: 'piket' | 'ketidakhadiran'): Promis
 }
 
 interface TargetConfig {
-    tokenKey: 'wa_token_piket' | 'wa_token_ketidakhadiran' | 'wa_token_ptsp' | 'wa_token_sanggar' | 'wa_token_jadwal'
-    targetsKey: 'wa_targets_piket' | 'wa_targets_ketidakhadiran' | 'wa_targets_ptsp' | 'wa_targets_sanggar' | 'wa_targets_jadwal'
+    tokenKey: 'wa_token_piket' | 'wa_token_ketidakhadiran' | 'wa_token_ptsp' | 'wa_token_sanggar' | 'wa_token_jadwal' | 'wa_token_guru_asuh' | 'wa_token_klinik'
+    targetsKey: 'wa_targets_piket' | 'wa_targets_ketidakhadiran' | 'wa_targets_ptsp' | 'wa_targets_sanggar' | 'wa_targets_jadwal' | 'wa_targets_guru_asuh' | 'wa_targets_klinik'
 }
 
 const TARGET_CONFIGS: Record<string, TargetConfig> = {
@@ -100,6 +103,10 @@ const TARGET_CONFIGS: Record<string, TargetConfig> = {
     // Jadwal: seperti sanggar, selalu per-orang (overrideTarget = no_hp guru),
     // bukan ke grup. Tukar jadwal hanya menyangkut pihak yang terlibat.
     jadwal: { tokenKey: 'wa_token_jadwal', targetsKey: 'wa_targets_jadwal' },
+    // Guru Asuh: dikirim ke user yang ditunjuk sebagai approver
+    guru_asuh: { tokenKey: 'wa_token_guru_asuh', targetsKey: 'wa_targets_guru_asuh' },
+    // Klinik: dikirim ke user yang ditunjuk sebagai approver laporan klinik
+    klinik: { tokenKey: 'wa_token_klinik', targetsKey: 'wa_targets_klinik' },
 }
 
 async function getWAConfig(feature: string): Promise<WAConfig | null> {
@@ -111,9 +118,9 @@ async function getWAConfig(feature: string): Promise<WAConfig | null> {
         return null
     }
 
-    // Provider per-fitur (wa_provider_<feature>), fallback ke global (wa_provider), lalu 'fonnte'.
-    const provider = settings[`wa_provider_${feature}`] || settings.wa_provider || 'fonnte'
-    const token = settings[config.tokenKey]
+    // Provider per-fitur (wa_provider_<feature>), fallback ke global (wa_provider), lalu provider piket/fonnte.
+    const provider = settings[`wa_provider_${feature}`] || settings.wa_provider || settings.wa_provider_piket || 'fonnte'
+    const token = settings[config.tokenKey] || settings.wa_token || settings.wa_token_piket || settings.wa_token_ptsp || ''
     const template = settings[`wa_template_${feature}`]
     const detailsRowTemplate = settings[`wa_details_row_template_${feature}`]
 
@@ -404,7 +411,7 @@ export async function sendWhatsAppImage(
 
 export async function sendWhatsApp(
     message: string,
-    feature: 'piket' | 'ketidakhadiran' | 'ptsp' | 'sanggar' | 'jadwal',
+    feature: 'piket' | 'ketidakhadiran' | 'ptsp' | 'sanggar' | 'jadwal' | 'guru_asuh' | 'klinik',
     data?: Record<string, string>,
     overrideTarget?: string,
     mentions?: string[]
