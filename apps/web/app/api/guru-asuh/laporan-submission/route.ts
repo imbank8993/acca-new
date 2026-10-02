@@ -41,7 +41,9 @@ export async function POST(request: NextRequest) {
     // Kirim notifikasi WhatsApp ke approver setelah pengajuan berhasil disimpan
     if (resBody?.ok && resBody?.data) {
         try {
-            await notifGuruAsuhWa('diajukan', resBody.data, body);
+            const { getApiUser } = await import('@/lib/api-auth');
+            const userCaller = await getApiUser(request).catch(() => null);
+            await notifGuruAsuhWa('diajukan', resBody.data, { ...body, userCaller });
         } catch (e: any) {
             console.error('[WA guru-asuh] Gagal mengirim notifikasi:', e?.message || e);
         }

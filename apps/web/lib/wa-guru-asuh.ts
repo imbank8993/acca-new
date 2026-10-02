@@ -67,23 +67,27 @@ export async function nomorHpGuru(nip: string | null | undefined): Promise<strin
 /**
  * Mengambil nama guru pengaju laporan.
  */
-export async function resolveNamaGuru(nip: string, fallback?: string): Promise<string> {
-    if (fallback && fallback.trim()) return fallback.trim();
-    if (!nip) return 'Guru Asuh';
+export async function resolveNamaGuru(nip?: string | null, fallback?: string): Promise<string> {
+    const bersihFallback = String(fallback ?? '').trim();
+    if (bersihFallback && bersihFallback !== 'Guru Asuh') return bersihFallback;
+    const asli = String(nip ?? '').trim();
+    if (!asli) return bersihFallback || 'Guru Asuh';
+
+    const kandidat = [...new Set([asli, asli.padStart(10, '0'), asli.replace(/^0+/, '')])].filter(Boolean);
     try {
         const guru = await prisma.master_guru.findFirst({
-            where: { nip },
+            where: { nip: { in: kandidat } },
             select: { nama_lengkap: true },
         });
         if (guru?.nama_lengkap) return guru.nama_lengkap;
 
         const user = await prisma.public_users.findFirst({
-            where: { nip },
+            where: { nip: { in: kandidat } },
             select: { nama_lengkap: true, nama: true },
         });
-        return user?.nama_lengkap || user?.nama || nip;
+        return user?.nama_lengkap || user?.nama || bersihFallback || asli || 'Guru Asuh';
     } catch {
-        return fallback || nip || 'Guru Asuh';
+        return bersihFallback || asli || 'Guru Asuh';
     }
 }
 
@@ -230,11 +234,26 @@ function formatTanggalIndo(dateInput?: string | Date | null): string {
 }
 
 /**
- * Susun pesan notifikasi pengajuan laporan guru asuh.
+ * Susun pesan notifikasi pengajuan laporan guru asuh secara mendetail beserta variabel penggantinya.
  */
-export async function susunPesanGuruAsuh(submission: any, bodyExtra?: any): Promise<string> {
-    const nip = submission?.nip || bodyExtra?.nip || '';
-    const namaGuru = await resolveNamaGuru(nip, submission?.nama_guru_snap || bodyExtra?.nama_guru);
+export async function susunPesanGuruAsuhDetail(submission: any, bodyExtra?: any) {
+    const userCaller = bodyExtra?.userCaller;
+    const nip = String(
+        submission?.nip ||
+        bodyExtra?.nip ||
+        userCaller?.nip ||
+        ''
+    ).trim();
+
+    const fallbackNama =
+        userCaller?.nama_lengkap ||
+        userCaller?.nama ||
+        submission?.nama_guru_snap ||
+        bodyExtra?.nama_guru ||
+        bodyExtra?.nama_pengaju ||
+        bodyExtra?.nama;
+
+    const namaGuru = await resolveNamaGuru(nip, fallbackNama);
 
     const bulanNum = Number(submission?.bulan || bodyExtra?.bulan || 0);
     const namaBulan = (bulanNum >= 1 && bulanNum <= 12) ? NAMA_BULAN[bulanNum - 1] : String(bulanNum);
@@ -244,6 +263,18 @@ export async function susunPesanGuruAsuh(submission: any, bodyExtra?: any): Prom
     const tanggalStr = formatTanggalIndo(submission?.submitted_at || new Date());
     const url = baseUrl();
     const lamanUrl = url ? `${url}${TAUTAN_APPROVAL}` : TAUTAN_APPROVAL;
+
+    const dataParams: Record<string, string> = {
+        nama: namaGuru,
+        nama_guru: namaGuru,
+        nama_pengaju: namaGuru,
+        bulan: periodeStr,
+        nama_bulan: namaBulan,
+        tahun: tahunStr,
+        tanggal: tanggalStr,
+        laman: lamanUrl,
+        url: lamanUrl,
+    };
 
     // Cek apakah ada custom template tersimpan di site_settings
     let template: string | null = null;
@@ -257,20 +288,33 @@ export async function susunPesanGuruAsuh(submission: any, bodyExtra?: any): Prom
         }
     } catch {}
 
+    let pesan: string;
     if (template) {
-        return template
-            .replace(/\{\{nama\}\}/g, namaGuru)
-            .replace(/\{\{bulan\}\}/g, periodeStr)
-            .replace(/\{\{nama_bulan\}\}/g, namaBulan)
-            .replace(/\{\{tahun\}\}/g, tahunStr)
-            .replace(/\{\{tanggal\}\}/g, tanggalStr)
-            .replace(/\{\{laman\}\}/g, lamanUrl)
-            .replace(/\{\{url\}\}/g, lamanUrl);
+        pesan = template
+            .replace(/\{\{nama\}\}/gi, namaGuru)
+            .replace(/\{\{nama_guru\}\}/gi, namaGuru)
+            .replace(/\{\{nama_pengaju\}\}/gi, namaGuru)
+            .replace(/\{\{bulan\}\}/gi, periodeStr)
+            .replace(/\{\{nama_bulan\}\}/gi, namaBulan)
+            .replace(/\{\{tahun\}\}/gi, tahunStr)
+            .replace(/\{\{tanggal\}\}/gi, tanggalStr)
+            .replace(/\{\{laman\}\}/gi, lamanUrl)
+            .replace(/\{\{url\}\}/gi, lamanUrl);
+    } else {
+        // Pesan baku sesuai instruksi:
+        // "{nama} telah mengajukan laporan guru asuh periode {bulan} pada tanggal ..... , silakan akses {laman} untuk meninjau ajuan."
+        pesan = `${namaGuru} telah mengajukan laporan guru asuh periode ${periodeStr} pada tanggal ${tanggalStr}, silakan akses ${lamanUrl} untuk meninjau ajuan.`;
     }
 
-    // Pesan baku sesuai instruksi:
-    // "nama' telah mengajukan laporan guru asuh periode 'bulan' pada tanggal ..... , silakan akses 'laman' untuk meninjau ajuan."
-    return `${namaGuru} telah mengajukan laporan guru asuh periode ${periodeStr} pada tanggal ${tanggalStr}, silakan akses ${lamanUrl} untuk meninjau ajuan.`;
+    return { pesan, dataParams, namaGuru };
+}
+
+/**
+ * Susun pesan notifikasi pengajuan laporan guru asuh.
+ */
+export async function susunPesanGuruAsuh(submission: any, bodyExtra?: any): Promise<string> {
+    const detail = await susunPesanGuruAsuhDetail(submission, bodyExtra);
+    return detail.pesan;
 }
 
 /**
@@ -292,7 +336,7 @@ export async function notifGuruAsuhWa(
         }
 
         const mode = await bacaModeUji();
-        const pesan = await susunPesanGuruAsuh(submission, bodyExtra);
+        const { pesan, dataParams } = await susunPesanGuruAsuhDetail(submission, bodyExtra);
         const approvers = await getApproversGuruAsuh();
 
         if (approvers.length === 0) {
@@ -322,7 +366,7 @@ export async function notifGuruAsuhWa(
             }
 
             try {
-                const hasil = await sendWhatsApp(teks, 'guru_asuh', {}, tujuan);
+                const hasil = await sendWhatsApp(teks, 'guru_asuh', dataParams, tujuan);
                 if (hasil.ok) {
                     console.info(`[WA guru-asuh] Notifikasi berhasil dikirim ke ${approver.nama} (${tujuan})`);
                 } else {

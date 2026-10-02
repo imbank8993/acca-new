@@ -79,23 +79,68 @@ export async function nomorHpGuru(nip: string | null | undefined): Promise<strin
  * Mengambil nama guru pengampu klinik.
  */
 export async function resolveNamaGuru(nipOrId?: string | bigint | null, fallback?: string): Promise<string> {
-    if (fallback && fallback.trim()) return fallback.trim();
-    if (!nipOrId) return 'Guru Pembimbing Klinik';
+    const bersihFallback = String(fallback ?? '').trim();
+    if (bersihFallback && !['Guru Pembimbing Klinik', 'Guru Pengampu', 'Guru'].includes(bersihFallback)) {
+        return bersihFallback;
+    }
+    if (!nipOrId) return bersihFallback || 'Guru Pembimbing Klinik';
 
     try {
-        const nipStr = String(nipOrId);
-        if (nipStr.length >= 8 && !isNaN(Number(nipStr))) {
-            const guru = await prisma.master_guru.findFirst({
-                where: { nip: nipStr },
-                select: { nama_lengkap: true },
-            });
-            if (guru?.nama_lengkap) return guru.nama_lengkap;
+        const nipStr = String(nipOrId).trim();
+        const kandidat = [...new Set([nipStr, nipStr.padStart(10, '0'), nipStr.replace(/^0+/, '')])].filter(Boolean);
+
+        const guru = await prisma.master_guru.findFirst({
+            where: { nip: { in: kandidat } },
+            select: { nama_lengkap: true },
+        });
+        if (guru?.nama_lengkap) return guru.nama_lengkap;
+
+        const userByNip = await prisma.public_users.findFirst({
+            where: { nip: { in: kandidat } },
+            select: { nama_lengkap: true, nama: true },
+        });
+        if (userByNip?.nama_lengkap || userByNip?.nama) {
+            return userByNip.nama_lengkap || userByNip.nama || nipStr;
         }
 
         let idBigInt: bigint | null = null;
-        try {
-            idBigInt = BigInt(nipStr);
-        } catch {}
+        try { idBigInt = BigInt(nipStr); } catch {}
+        if (idBigInt) {
+            const userById = await prisma.public_users.findFirst({
+                where: { id: idBigInt },
+                select: { nama_lengkap: true, nama: true, nip: true },
+            });
+            if (userById?.nama_lengkap || userById?.nama) {
+                return userById.nama_lengkap || userById.nama || nipStr;
+            }
+            if (userById?.nip) {
+                const kandidatUser = [...new Set([userById.nip, userById.nip.padStart(10, '0'), userById.nip.replace(/^0+/, '')])].filter(Boolean);
+                const guru2 = await prisma.master_guru.findFirst({
+                    where: { nip: { in: kandidatUser } },
+                    select: { nama_lengkap: true },
+                });
+                if (guru2?.nama_lengkap) return guru2.nama_lengkap;
+            }
+        }
+
+        return bersihFallback || nipStr || 'Guru Pembimbing Klinik';
+    } catch {
+        return bersihFallback || 'Guru Pembimbing Klinik';
+    }
+}
+
+/**
+ * Mengambil nama siswa pembuat pengajuan klinik.
+ */
+export async function resolveNamaSiswa(idOrNisn?: bigint | string | null, fallback?: string): Promise<string> {
+    const bersihFallback = String(fallback ?? '').trim();
+    if (bersihFallback && bersihFallback !== 'Siswa') return bersihFallback;
+    if (!idOrNisn) return bersihFallback || 'Siswa';
+
+    try {
+        const idStr = String(idOrNisn).trim();
+        let idBigInt: bigint | null = null;
+        try { idBigInt = BigInt(idStr); } catch {}
 
         if (idBigInt) {
             const user = await prisma.public_users.findFirst({
@@ -103,37 +148,26 @@ export async function resolveNamaGuru(nipOrId?: string | bigint | null, fallback
                 select: { nama_lengkap: true, nama: true, nip: true },
             });
             if (user?.nama_lengkap || user?.nama) {
-                return user.nama_lengkap || user.nama || 'Guru Pembimbing Klinik';
+                return user.nama_lengkap || user.nama || 'Siswa';
             }
             if (user?.nip) {
-                const guru = await prisma.master_guru.findFirst({
-                    where: { nip: user.nip },
+                const siswa = await prisma.master_siswa.findFirst({
+                    where: { nisn: user.nip },
                     select: { nama_lengkap: true },
                 });
-                if (guru?.nama_lengkap) return guru.nama_lengkap;
+                if (siswa?.nama_lengkap) return siswa.nama_lengkap;
             }
         }
 
-        return fallback || 'Guru Pembimbing Klinik';
-    } catch {
-        return fallback || 'Guru Pembimbing Klinik';
-    }
-}
-
-/**
- * Mengambil nama siswa pembuat pengajuan klinik.
- */
-export async function resolveNamaSiswa(id?: bigint | null, fallback?: string): Promise<string> {
-    if (fallback && fallback.trim()) return fallback.trim();
-    if (!id) return 'Siswa';
-    try {
-        const user = await prisma.public_users.findFirst({
-            where: { id },
-            select: { nama_lengkap: true, nama: true },
+        const siswa = await prisma.master_siswa.findFirst({
+            where: { nisn: idStr },
+            select: { nama_lengkap: true },
         });
-        return user?.nama_lengkap || user?.nama || 'Siswa';
+        if (siswa?.nama_lengkap) return siswa.nama_lengkap;
+
+        return bersihFallback || 'Siswa';
     } catch {
-        return fallback || 'Siswa';
+        return bersihFallback || 'Siswa';
     }
 }
 
@@ -359,15 +393,24 @@ function formatTanggalIndo(dateInput?: string | Date | null): string {
 }
 
 /**
- * Susun pesan notifikasi sesuai peristiwa persetujuan klinik.
+ * Susun pesan notifikasi sesuai peristiwa persetujuan klinik beserta variabel pengganti detail.
  */
-export async function susunPesanKlinik(
+export async function susunPesanKlinikDetail(
     peristiwa: PeristiwaKlinik,
     slot: any,
     extra?: any
-): Promise<string> {
-    const namaGuru = await resolveNamaGuru(slot?.guru_id, slot?.nama_guru);
-    const namaSiswa = await resolveNamaSiswa(slot?.initiator_siswa_id, extra?.nama_siswa);
+) {
+    const userCaller = extra?.userCaller;
+    const isGuruCaller = userCaller?.role?.includes('GURU') || userCaller?.nip;
+
+    const fallbackGuru = slot?.nama_guru || (isGuruCaller ? (userCaller?.nama_lengkap || userCaller?.nama) : undefined);
+    const namaGuru = await resolveNamaGuru(slot?.guru_id, fallbackGuru);
+
+    const fallbackSiswa = extra?.nama_siswa || (!isGuruCaller ? (userCaller?.nama_lengkap || userCaller?.nama) : undefined);
+    const namaSiswa = await resolveNamaSiswa(slot?.initiator_siswa_id, fallbackSiswa);
+
+    // Tentukan siapa yang bertindak sebagai "nama pengaju" untuk placeholder {{nama}}
+    const namaPengaju = (peristiwa === 'siswa_ajukan_sesi') ? namaSiswa : namaGuru;
 
     const tanggalRef = slot?.tanggal ? new Date(slot.tanggal) : new Date();
     const bulanIndex = tanggalRef.getMonth();
@@ -382,26 +425,44 @@ export async function susunPesanKlinik(
     const url = baseUrl();
     const lamanUrl = url ? `${url}${TAUTAN_APPROVAL}` : TAUTAN_APPROVAL;
 
+    const dataParams: Record<string, string> = {
+        nama: namaPengaju,
+        nama_pengaju: namaPengaju,
+        nama_guru: namaGuru,
+        nama_siswa: namaSiswa,
+        bulan: periodeStr,
+        nama_bulan: namaBulan,
+        tahun: tahunStr,
+        tanggal: tanggalStr,
+        mapel: slot?.mapel || '',
+        topik: slot?.topik || '',
+        laman: lamanUrl,
+        url: lamanUrl,
+    };
+
+    let pesan = '';
     switch (peristiwa) {
         case 'siswa_ajukan_sesi': {
             // Siswa mengajukan sesi kelompok, ditujukan ke guru pengampu
-            return `${namaSiswa} telah mengajukan sesi klinik${mapelStr}${topikStr} pada tanggal ${tanggalStr}, silakan akses ${lamanUrl} untuk meninjau ajuan.`;
+            pesan = `${namaSiswa} telah mengajukan sesi klinik${mapelStr}${topikStr} pada tanggal ${tanggalStr}, silakan akses ${lamanUrl} untuk meninjau ajuan.`;
+            break;
         }
 
         case 'guru_terima_sesi_siswa': {
             // Guru telah bersedia, diajukan ke reviewer sesi
-            return `Sesi klinik${mapelStr}${topikStr} dari ${namaSiswa} telah disetujui oleh ${namaGuru} pada tanggal ${tanggalStr}, silakan akses ${lamanUrl} untuk meninjau ajuan.`;
+            pesan = `Sesi klinik${mapelStr}${topikStr} dari ${namaSiswa} telah disetujui oleh ${namaGuru} pada tanggal ${tanggalStr}, silakan akses ${lamanUrl} untuk meninjau ajuan.`;
+            break;
         }
 
         case 'guru_ajukan_sesi': {
             // Guru membuat sesi baru, diajukan ke reviewer sesi
-            return `${namaGuru} telah mengajukan sesi klinik${mapelStr}${topikStr} periode ${periodeStr} pada tanggal ${tanggalStr}, silakan akses ${lamanUrl} untuk meninjau ajuan.`;
+            pesan = `${namaGuru} telah mengajukan sesi klinik${mapelStr}${topikStr} periode ${periodeStr} pada tanggal ${tanggalStr}, silakan akses ${lamanUrl} untuk meninjau ajuan.`;
+            break;
         }
 
         case 'guru_ajukan_laporan':
         default: {
             // Guru memfinalisasi laporan klinik, diajukan ke reviewer laporan
-            // Cek template custom jika ada
             let template: string | null = null;
             try {
                 const row = await prisma.site_settings.findUnique({
@@ -412,21 +473,39 @@ export async function susunPesanKlinik(
             } catch {}
 
             if (template) {
-                return template
-                    .replace(/\{\{nama\}\}/g, namaGuru)
-                    .replace(/\{\{bulan\}\}/g, periodeStr)
-                    .replace(/\{\{nama_bulan\}\}/g, namaBulan)
-                    .replace(/\{\{tahun\}\}/g, tahunStr)
-                    .replace(/\{\{tanggal\}\}/g, tanggalStr)
-                    .replace(/\{\{mapel\}\}/g, slot?.mapel || '')
-                    .replace(/\{\{topik\}\}/g, slot?.topik || '')
-                    .replace(/\{\{laman\}\}/g, lamanUrl)
-                    .replace(/\{\{url\}\}/g, lamanUrl);
+                pesan = template
+                    .replace(/\{\{nama\}\}/gi, namaGuru)
+                    .replace(/\{\{nama_pengaju\}\}/gi, namaGuru)
+                    .replace(/\{\{nama_guru\}\}/gi, namaGuru)
+                    .replace(/\{\{nama_siswa\}\}/gi, namaSiswa)
+                    .replace(/\{\{bulan\}\}/gi, periodeStr)
+                    .replace(/\{\{nama_bulan\}\}/gi, namaBulan)
+                    .replace(/\{\{tahun\}\}/gi, tahunStr)
+                    .replace(/\{\{tanggal\}\}/gi, tanggalStr)
+                    .replace(/\{\{mapel\}\}/gi, slot?.mapel || '')
+                    .replace(/\{\{topik\}\}/gi, slot?.topik || '')
+                    .replace(/\{\{laman\}\}/gi, lamanUrl)
+                    .replace(/\{\{url\}\}/gi, lamanUrl);
+            } else {
+                pesan = `${namaGuru} telah mengajukan laporan klinik periode ${periodeStr} pada tanggal ${tanggalStr}, silakan akses ${lamanUrl} untuk meninjau ajuan.`;
             }
-
-            return `${namaGuru} telah mengajukan laporan klinik periode ${periodeStr} pada tanggal ${tanggalStr}, silakan akses ${lamanUrl} untuk meninjau ajuan.`;
+            break;
         }
     }
+
+    return { pesan, dataParams, namaPengaju, namaGuru, namaSiswa };
+}
+
+/**
+ * Susun pesan notifikasi sesuai peristiwa persetujuan klinik.
+ */
+export async function susunPesanKlinik(
+    peristiwa: PeristiwaKlinik,
+    slot: any,
+    extra?: any
+): Promise<string> {
+    const detail = await susunPesanKlinikDetail(peristiwa, slot, extra);
+    return detail.pesan;
 }
 
 /**
@@ -449,11 +528,14 @@ export async function notifKlinikWa(
         }
 
         let slot: any = null;
-        if (typeof slotIdOrData === 'object' && slotIdOrData.id) {
+        if (typeof slotIdOrData === 'object' && slotIdOrData?.id) {
             slot = slotIdOrData;
-        } else if (typeof slotIdOrData === 'string') {
-            slot = await prisma.klinik_slots.findUnique({
-                where: { id: slotIdOrData },
+        }
+
+        const slotId = typeof slotIdOrData === 'string' ? slotIdOrData : slot?.id;
+        if (slotId && (!slot || !slot.nama_guru || !slot.mapel || !slot.tanggal)) {
+            const dbSlot = await prisma.klinik_slots.findUnique({
+                where: { id: slotId },
                 select: {
                     id: true,
                     guru_id: true,
@@ -466,6 +548,9 @@ export async function notifKlinikWa(
                     status: true,
                 },
             });
+            if (dbSlot) {
+                slot = { ...slot, ...dbSlot };
+            }
         }
 
         if (!slot) {
@@ -494,9 +579,9 @@ export async function notifKlinikWa(
         }
 
         const mode = await bacaModeUji();
-        const pesan = await susunPesanKlinik(peristiwa, slot, {
+        const { pesan, dataParams } = await susunPesanKlinikDetail(peristiwa, slot, {
             ...extraPayload,
-            nama_siswa: userCaller?.nama || extraPayload?.nama_siswa,
+            userCaller,
         });
 
         for (const approver of approvers) {
@@ -521,7 +606,7 @@ export async function notifKlinikWa(
             }
 
             try {
-                const hasil = await sendWhatsApp(teks, 'klinik', {}, tujuan);
+                const hasil = await sendWhatsApp(teks, 'klinik', dataParams, tujuan);
                 if (hasil.ok) {
                     console.info(`[WA klinik] Notifikasi (${peristiwa}) berhasil dikirim ke ${approver.nama} (${tujuan})`);
                 } else {

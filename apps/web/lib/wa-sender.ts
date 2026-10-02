@@ -176,7 +176,7 @@ function renderTemplate(template: string, data: Record<string, string>): string 
     )
 
     for (const [key, value] of Object.entries(data)) {
-        out = out.replace(new RegExp(`\\{\\{${key}\\}\\}`, 'g'), () => value ?? '')
+        out = out.replace(new RegExp(`\\{\\{${key}\\}\\}`, 'gi'), () => value ?? '')
     }
 
     return out
@@ -439,10 +439,16 @@ export async function sendWhatsApp(
     // Check for status-specific template (e.g., for PTSP accepted/rejected/completed)
     const status = data?.status
     let templateToUse = status ? await getWATemplate(feature, status) : null
-    templateToUse = templateToUse || config.template || null
 
-    if (templateToUse && templateToUse.trim()) {
+    // PENTING: Jangan timpa pesan yang sudah terformat rapi (nama pengaju, dll)
+    // jika template tidak memiliki data atau pesan sudah disediakan secara langsung.
+    if (status && templateToUse && templateToUse.trim()) {
         finalMessage = renderTemplate(templateToUse, data || {})
+    } else if (!message || !message.trim()) {
+        const fallbackTpl = templateToUse || config.template
+        if (fallbackTpl && fallbackTpl.trim()) {
+            finalMessage = renderTemplate(fallbackTpl, data || {})
+        }
     }
 
     if (mentions && mentions.length > 0) {
