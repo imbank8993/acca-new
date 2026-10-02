@@ -261,7 +261,7 @@ export default function Header({ user, onMenuToggle, onNavigate, isCollapsed, on
                             </div>
                             <div className="user-info-header">
                                 <span className="user-name-header">{user.nama}</span>
-                                <span className="user-role-header">{user.nip || 'N/A'} • {user.roles[0] || 'User'}</span>
+                                <span className="user-role-header">{user.nip || 'N/A'} • {user.roles?.[0] || user.role || 'User'}</span>
                             </div>
                         </button>
 

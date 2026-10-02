@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 export default function RootError({
     error,
@@ -9,6 +9,9 @@ export default function RootError({
     error: Error & { digest?: string };
     reset: () => void;
 }) {
+    const [showDetails, setShowDetails] = useState(false);
+    const [copied, setCopied] = useState(false);
+
     const isChunkError =
         error?.name === 'ChunkLoadError' ||
         error?.message?.includes('Loading chunk') ||
@@ -16,6 +19,7 @@ export default function RootError({
         error?.message?.includes('Load failed');
 
     useEffect(() => {
+        console.error('[RootError] Unhandled error caught by root boundary:', error);
         if (isChunkError) {
             const lastReload = sessionStorage.getItem('chunk_reload_retry');
             const now = Date.now();
@@ -25,6 +29,13 @@ export default function RootError({
             }
         }
     }, [error, isChunkError]);
+
+    const handleCopy = () => {
+        const text = `Error: ${error?.name || 'Error'}\nMessage: ${error?.message || 'Unknown'}\nDigest: ${error?.digest || 'N/A'}\nStack:\n${error?.stack || 'N/A'}`;
+        navigator.clipboard?.writeText(text);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+    };
 
     return (
         <div style={{
@@ -41,7 +52,7 @@ export default function RootError({
                 borderRadius: '16px',
                 border: '1px solid #e2e8f0',
                 padding: '36px 28px',
-                maxWidth: '440px',
+                maxWidth: '480px',
                 width: '100%',
                 textAlign: 'center',
                 boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.05)'
@@ -65,11 +76,74 @@ export default function RootError({
                     {isChunkError ? 'Pembaruan Halaman Diperlukan' : 'Terjadi Kendala pada Halaman'}
                 </h3>
 
-                <p style={{ margin: '0 0 24px', fontSize: '0.9rem', color: '#64748b', lineHeight: 1.5 }}>
+                <p style={{ margin: '0 0 20px', fontSize: '0.9rem', color: '#64748b', lineHeight: 1.5 }}>
                     {isChunkError
                         ? 'Aplikasi telah diperbarui dengan versi terbaru. Silakan muat ulang halaman untuk melanjutkan.'
                         : 'Terjadi kesalahan saat memproses halaman ini. Silakan coba lagi atau muat ulang halaman.'}
                 </p>
+
+                {error?.message && !isChunkError && (
+                    <div style={{ margin: '0 0 20px', textAlign: 'left' }}>
+                        <button
+                            type="button"
+                            onClick={() => setShowDetails(!showDetails)}
+                            style={{
+                                background: 'transparent',
+                                border: 'none',
+                                color: '#64748b',
+                                fontSize: '0.78rem',
+                                cursor: 'pointer',
+                                padding: 0,
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px'
+                            }}
+                        >
+                            <span>{showDetails ? 'Sembunyikan Detail Galat' : 'Lihat Detail Galat'}</span>
+                            <i className={`bi bi-chevron-${showDetails ? 'up' : 'down'}`} style={{ fontSize: '0.7rem' }}></i>
+                        </button>
+
+                        {showDetails && (
+                            <div style={{
+                                marginTop: '8px',
+                                padding: '12px',
+                                background: '#f8fafc',
+                                border: '1px solid #e2e8f0',
+                                borderRadius: '10px',
+                                fontSize: '0.75rem',
+                                color: '#334155',
+                                wordBreak: 'break-word',
+                                maxHeight: '180px',
+                                overflowY: 'auto'
+                            }}>
+                                <div style={{ fontWeight: 600, color: '#dc2626', marginBottom: '4px' }}>
+                                    {error.name || 'Error'}: {error.message}
+                                </div>
+                                {error.digest && (
+                                    <div style={{ color: '#64748b', marginBottom: '8px' }}>
+                                        Digest: {error.digest}
+                                    </div>
+                                )}
+                                <button
+                                    type="button"
+                                    onClick={handleCopy}
+                                    style={{
+                                        marginTop: '6px',
+                                        padding: '4px 8px',
+                                        background: '#e2e8f0',
+                                        border: 'none',
+                                        borderRadius: '6px',
+                                        fontSize: '0.72rem',
+                                        cursor: 'pointer',
+                                        color: '#334155'
+                                    }}
+                                >
+                                    {copied ? 'Tersalin!' : 'Salin Detail'}
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                )}
 
                 <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
                     {!isChunkError && (

@@ -130,10 +130,11 @@ export default function DashboardContent({ user, headerExtra }: { user: User; he
 
     // 5 Hari agenda di desktop, 4 di mobile (5th day hidden via CSS on mobile)
     const weekDays = useMemo(() => {
-        const base = new Date(`${todayISO}T00:00:00`);
+        const base = todayISO ? new Date(`${todayISO}T00:00:00`) : new Date();
+        const validBase = isNaN(base.getTime()) ? new Date() : base;
         return Array.from({ length: 5 }, (_, i) => {
-            const d = new Date(base);
-            d.setDate(base.getDate() + agendaOffset + i);
+            const d = new Date(validBase);
+            d.setDate(validBase.getDate() + agendaOffset + i);
             return d;
         });
     }, [todayISO, agendaOffset]);
@@ -859,7 +860,8 @@ export default function DashboardContent({ user, headerExtra }: { user: User; he
                                                 const isSelected = activeDate === iso;
                                                 const hasAgenda = agendaDates.has(iso);
                                                 const dayNames = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
-                                                const label = dayNames[d.getDay()];
+                                                const isValidDate = d && !isNaN(d.getTime());
+                                                const label = isValidDate ? dayNames[d.getDay()] : '-';
 
                                                 return (
                                                     <button
@@ -867,7 +869,7 @@ export default function DashboardContent({ user, headerExtra }: { user: User; he
                                                         type="button"
                                                         onClick={() => setSelectedAgendaDate(iso)}
                                                         className={`db__agenda-day-btn ${isSelected ? "is-selected" : ""} ${isToday ? "is-today" : ""} ${hasAgenda ? "has-agenda" : ""}`}
-                                                        title={`${d.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long' })}${hasAgenda ? ' • ada agenda' : ''}`}
+                                                        title={`${isValidDate ? d.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long' }) : ''}${hasAgenda ? ' • ada agenda' : ''}`}
                                                     >
                                                         <span className="db__agenda-day-name">
                                                             {isToday ? 'Hari Ini' : label}
@@ -875,7 +877,7 @@ export default function DashboardContent({ user, headerExtra }: { user: User; he
 
                                                         {/* Circle Node */}
                                                         <div className="db__agenda-circle">
-                                                            {d.getDate()}
+                                                            {isValidDate ? d.getDate() : '-'}
 
                                                             {/* Dot marker for agenda */}
                                                             {hasAgenda && !isToday && !isSelected && (
@@ -887,7 +889,7 @@ export default function DashboardContent({ user, headerExtra }: { user: User; he
                                                         </div>
 
                                                         <span className="db__agenda-month-name">
-                                                            {d.toLocaleDateString('id-ID', { month: 'short' })}
+                                                            {isValidDate ? d.toLocaleDateString('id-ID', { month: 'short' }) : ''}
                                                         </span>
                                                     </button>
                                                 );
@@ -899,8 +901,8 @@ export default function DashboardContent({ user, headerExtra }: { user: User; he
                                     {(() => {
                                         const activeDate = selectedAgendaDate || (weekDays[0] ? toSchoolISO(weekDays[0]) : '');
                                         const displayItems = agendaItemsList.filter((item) => {
-                                            const mulai = String(item.tanggal_mulai).slice(0, 10);
-                                            const selesai = String(item.tanggal_selesai || item.tanggal_mulai).slice(0, 10);
+                                            const mulai = item.tanggal_mulai ? String(item.tanggal_mulai).slice(0, 10) : '';
+                                            const selesai = String(item.tanggal_selesai || item.tanggal_mulai || '').slice(0, 10);
                                             return activeDate >= mulai && activeDate <= selesai;
                                         });
 
@@ -908,9 +910,11 @@ export default function DashboardContent({ user, headerExtra }: { user: User; he
                                             <div className="db__agenda-items-container">
                                                 {displayItems.length > 0 ? (
                                                     displayItems.slice(0, 4).map((item) => {
-                                                        const tglMulai = String(item.tanggal_mulai).slice(0, 10);
-                                                        const itemDate = new Date(`${tglMulai}T00:00:00`);
-                                                        const formattedDate = itemDate.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
+                                                        const tglMulai = item.tanggal_mulai ? String(item.tanggal_mulai).slice(0, 10) : '';
+                                                        const itemDate = tglMulai ? new Date(`${tglMulai}T00:00:00`) : null;
+                                                        const formattedDate = itemDate && !isNaN(itemDate.getTime())
+                                                            ? itemDate.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })
+                                                            : (tglMulai || '-');
                                                         return (
                                                             <div
                                                                 key={item.id}
@@ -1053,7 +1057,7 @@ export default function DashboardContent({ user, headerExtra }: { user: User; he
                                                         <div className="db__chip-grid">
                                                             {ekskuls.map((e, idx) => (
                                                                 <div key={idx} className={`db__chip ${!showAllTugasTambahan && idx >= 2 ? 'db__mobile-hide-tugas' : ''}`}>
-                                                                    <span className="db__chip-name">{e.nama_ekskul}</span>
+                                                                    <span className="db__chip-name">{e?.nama_ekskul || '-'}</span>
                                                                 </div>
                                                             ))}
                                                         </div>
@@ -1163,10 +1167,10 @@ export default function DashboardContent({ user, headerExtra }: { user: User; he
                                                                 return (
                                                                     <div key={idx} className={`db__chip ${kode === 'HADIR' && !showAllAnakAsuh ? 'db__chip-hadir' : ''}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
                                                                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, minWidth: 0 }}>
-                                                                            {s.foto_profil ? (
+                                                                            {s?.foto_profil ? (
                                                                                 <img
                                                                                     src={getProxiedImageUrl(s.foto_profil)}
-                                                                                    alt={s.nama_siswa}
+                                                                                    alt={s?.nama_siswa || ''}
                                                                                     style={{
                                                                                         width: '26px',
                                                                                         height: '26px',
@@ -1184,7 +1188,7 @@ export default function DashboardContent({ user, headerExtra }: { user: User; he
                                                                             ) : null}
                                                                             <span className="db__avatarFallback"
                                                                                 style={{
-                                                                                    display: s.foto_profil ? 'none' : 'inline-flex',
+                                                                                    display: s?.foto_profil ? 'none' : 'inline-flex',
                                                                                     alignItems: 'center',
                                                                                     justifyContent: 'center',
                                                                                     width: '26px',
@@ -1196,9 +1200,9 @@ export default function DashboardContent({ user, headerExtra }: { user: User; he
                                                                                     textTransform: 'uppercase'
                                                                                 }}
                                                                             >
-                                                                                {s.nama_siswa ? s.nama_siswa.trim().charAt(0).toUpperCase() : 'S'}
+                                                                                {s?.nama_siswa ? s.nama_siswa.trim().charAt(0).toUpperCase() : 'S'}
                                                                             </span>
-                                                                            <span className="db__chip-name" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.nama_siswa}</span>
+                                                                            <span className="db__chip-name" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s?.nama_siswa || '-'}</span>
                                                                         </div>
                                                                         <span className="db__chip-meta" style={{ flexShrink: 0 }}>
                                                                             <span

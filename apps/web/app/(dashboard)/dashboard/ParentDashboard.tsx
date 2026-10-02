@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import React, { Component, useEffect, useMemo, useState, type ErrorInfo } from 'react';
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import type { User } from '@/lib/types';
@@ -15,6 +15,107 @@ interface Anak {
     tahun_ajaran: string;
     foto: string | null;
     status_keluarga: string;
+}
+
+class DashboardContentErrorBoundary extends Component<
+    { children: React.ReactNode; resetKey?: string; actions?: React.ReactNode },
+    { hasError: boolean; error: Error | null }
+> {
+    constructor(props: any) {
+        super(props);
+        this.state = { hasError: false, error: null };
+    }
+
+    static getDerivedStateFromError(error: Error) {
+        return { hasError: true, error };
+    }
+
+    componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+        console.error('[ParentDashboard Content Error]', error, errorInfo);
+    }
+
+    componentDidUpdate(prevProps: any) {
+        if (prevProps.resetKey !== this.props.resetKey && this.state.hasError) {
+            this.setState({ hasError: false, error: null });
+        }
+    }
+
+    reset = () => {
+        this.setState({ hasError: false, error: null });
+    };
+
+    render() {
+        if (this.state.hasError && this.state.error) {
+            return (
+                <div>
+                    {this.props.actions}
+                    <div style={{
+                        background: '#fff',
+                        borderRadius: '16px',
+                        border: '1px solid #fee2e2',
+                        padding: '32px 24px',
+                        margin: '16px 0',
+                        textAlign: 'center',
+                        boxShadow: '0 4px 12px rgba(239, 68, 68, 0.05)'
+                    }}>
+                        <div style={{
+                            width: '48px', height: '48px', borderRadius: '50%',
+                            background: '#fef2f2', color: '#dc2626',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            margin: '0 auto 14px', fontSize: '1.4rem'
+                        }}>
+                            <i className="bi bi-exclamation-triangle"></i>
+                        </div>
+                        <h4 style={{ margin: '0 0 6px', fontSize: '1.05rem', fontWeight: 700, color: '#1e293b' }}>
+                            Kendala Memuat Dashboard Siswa
+                        </h4>
+                        <p style={{ margin: '0 0 16px', fontSize: '0.86rem', color: '#64748b', maxWidth: '420px', marginLeft: 'auto', marginRight: 'auto' }}>
+                            Terjadi kendala saat memproses data siswa terpilih. Anda dapat mencoba memuat ulang atau memilih anak lainnya.
+                        </p>
+                        <div style={{
+                            padding: '10px 14px',
+                            background: '#f8fafc',
+                            borderRadius: '8px',
+                            fontSize: '0.76rem',
+                            color: '#dc2626',
+                            fontFamily: 'monospace',
+                            maxWidth: '480px',
+                            margin: '0 auto 16px',
+                            textAlign: 'left',
+                            wordBreak: 'break-word',
+                            border: '1px solid #e2e8f0'
+                        }}>
+                            {this.state.error.message || 'Unknown error'}
+                        </div>
+                        <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
+                            <button
+                                type="button"
+                                onClick={this.reset}
+                                style={{
+                                    padding: '8px 18px', background: '#3083FF', color: '#fff',
+                                    border: 'none', borderRadius: '8px', fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer'
+                                }}
+                            >
+                                <i className="bi bi-arrow-clockwise" style={{ marginRight: '6px' }}></i>
+                                Coba Lagi
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => window.location.reload()}
+                                style={{
+                                    padding: '8px 18px', background: '#f1f5f9', color: '#334155',
+                                    border: 'none', borderRadius: '8px', fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer'
+                                }}
+                            >
+                                Muat Ulang Halaman
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+        return this.props.children;
+    }
 }
 
 /**
@@ -40,16 +141,18 @@ export default function ParentDashboard({ user }: { user: User }) {
     const fetchAnak = async (selectNisn?: string) => {
         try {
             const res = await fetch('/api/orangtua/anak');
-            const json = await res.json();
-            if (json.ok) {
-                const list: Anak[] = json.data || [];
+            const json = await res.json().catch(() => null);
+            if (json?.ok) {
+                const list: Anak[] = Array.isArray(json.data) ? json.data : [];
                 setAnakList(list);
                 if (selectNisn && list.some(a => a.nisn === selectNisn)) {
                     setSelectedNisn(selectNisn);
-                } else if (list.length > 0 && !list.some(a => a.nisn === selectedNisn)) {
-                    // Dashboard adalah halaman pendaratan: langsung tampilkan anak
-                    // pertama; berganti anak lewat chip (tanpa halaman pemilih).
-                    setSelectedNisn(list[0].nisn);
+                } else if (list.length > 0) {
+                    if (!selectedNisn || !list.some(a => a.nisn === selectedNisn)) {
+                        // Dashboard adalah halaman pendaratan: langsung tampilkan anak
+                        // pertama; berganti anak lewat chip (tanpa halaman pemilih).
+                        setSelectedNisn(list[0].nisn);
+                    }
                 }
             }
         } catch (err) {
@@ -109,7 +212,9 @@ export default function ParentDashboard({ user }: { user: User }) {
     };
 
     const selectedAnak = useMemo(
-        () => anakList.find(a => a.nisn === selectedNisn) || null,
+        () => (anakList && anakList.length > 0
+            ? (anakList.find(a => a.nisn === selectedNisn) || anakList[0])
+            : null),
         [anakList, selectedNisn]
     );
 
@@ -280,18 +385,24 @@ export default function ParentDashboard({ user }: { user: User }) {
         />
     ), [anakList, selectedNisn, selectedAnak]);
 
+    const activeNisn = selectedAnak?.nisn || selectedNisn;
+
     return (
         <div>
             {/* Dashboard identik dengan dashboard siswa untuk anak terpilih.
-                key memaksa remount saat ganti anak agar semua data dimuat ulang. */}
-            {mockUser ? (
-                <DashboardContent key={selectedNisn} user={mockUser} headerExtra={switcherRow} />
-            ) : (
-                <div style={{ textAlign: 'center', padding: '60px 0', color: '#64748b' }}>
-                    <div className="spinner" style={{ margin: '0 auto 16px' }}></div>
-                    <p>Menyiapkan data siswa...</p>
-                </div>
-            )}
+                key memaksa remount saat ganti anak agar semua data dimuat ulang.
+                DashboardContentErrorBoundary mengisolasi galat hanya pada area konten
+                sehingga switcher anak, profil anak, dan tombol tambah anak tetap aktif. */}
+            <DashboardContentErrorBoundary resetKey={activeNisn} actions={switcherRow}>
+                {mockUser ? (
+                    <DashboardContent key={activeNisn} user={mockUser} headerExtra={switcherRow} />
+                ) : (
+                    <div style={{ textAlign: 'center', padding: '60px 0', color: '#64748b' }}>
+                        <div className="spinner" style={{ margin: '0 auto 16px' }}></div>
+                        <p>Menyiapkan data siswa...</p>
+                    </div>
+                )}
+            </DashboardContentErrorBoundary>
 
             {showAddModal && renderAddModal()}
         </div>
