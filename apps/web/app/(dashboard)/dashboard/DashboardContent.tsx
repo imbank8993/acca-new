@@ -11,6 +11,7 @@ import { getProxiedImageUrl } from '@/lib/image-utils';
 import DOMPurify from 'isomorphic-dompurify';
 import DashboardCharts from './DashboardCharts';
 import DashboardKinerjaCard from './DashboardKinerjaCard';
+import DashboardExamCard from './DashboardExamCard';
 import Modal, { ModalBody, ModalFooter } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import {
@@ -782,6 +783,11 @@ export default function DashboardContent({ user, headerExtra }: { user: User; he
                         )}
                     </div>
                 </div>
+            )}
+
+            {/* 📝 UJIAN CBT — DAFTAR UJIAN AKTIF, AKAN DATANG, & SELESAI */}
+            {(isSiswa || isGuru || isAdmin) && (
+                <DashboardExamCard user={user} isSiswa={isSiswa} isGuru={isGuru} isAdmin={isAdmin} />
             )}
 
             {/* 🏆 KINERJA GURU — RADAR KEDISIPLINAN (JAM KOSONG, PENUGASAN TANPA PENDAMPINGAN, TERLAMBAT) */}
