@@ -80,14 +80,13 @@ export async function buildRekapKlinik(input: RekapKlinikInput): Promise<RekapKl
     }
 
     // Rentang tanggal bulan tsb (akhir bulan dihitung dari hari ke-0 bulan berikutnya).
-    const awal = `${tahun}-${String(bulan).padStart(2, '0')}-01`;
-    const akhirDate = new Date(tahun, bulan, 0);
-    const akhir = `${tahun}-${String(bulan).padStart(2, '0')}-${String(akhirDate.getDate()).padStart(2, '0')}`;
+    const awalDate = new Date(Date.UTC(tahun, bulan - 1, 1, 0, 0, 0));
+    const akhirDate = new Date(Date.UTC(tahun, bulan, 0, 23, 59, 59, 999));
 
     try {
         const slots = await prisma.klinik_slots.findMany({
             where: {
-                tanggal: { gte: awal, lte: akhir },
+                tanggal: { gte: awalDate, lte: akhirDate },
                 status: { in: ['finished', 'paid'] }
             },
             include: {
