@@ -153,7 +153,7 @@ function getColumnCast(table: string, column: string): string {
     c === 'size_bytes' ||
     c === 'file_size' ||
     (t === 'klinik_laporan' && c === 'approved_by') ||
-    (t === 'budget_mutations' && c === 'created_by') ||
+    ((t === 'budget_mutations' || t === 'receipt_submissions') && c === 'created_by') ||
     ((t === 'users' ||
       t === 'public_users' ||
       t === 'master_siswa' ||
@@ -188,9 +188,11 @@ function getColumnCast(table: string, column: string): string {
     c === 'pertemuan_id' ||
     c === 'division_id' ||
     c === 'counterpart_division_id' ||
+    c === 'transfer_group_id' ||
     c === 'budget_request_id' ||
     c === 'recipient_user_id' ||
     (t === 'laporan_ekskul_submissions' && c === 'approved_by') ||
+    (t === 'tarif_honor' && c === 'updated_by') ||
     ((t === 'klinik_slots' ||
       t === 'klinik_peserta' ||
       t === 'klinik_laporan' ||
@@ -204,12 +206,34 @@ function getColumnCast(table: string, column: string): string {
       t === 'budget_request_registers' ||
       t === 'disbursements' ||
       t === 'receipt_submissions' ||
+      t === 'catatan_keuangan' ||
+      t === 'financial_officers' ||
+      t === 'tarif_honor' ||
       t === 'ekskul' ||
       t === 'ekskul_pertemuan' ||
       t === 'laporan_ekskul_submissions') &&
       c === 'id')
   ) {
     return '::uuid';
+  }
+
+  // 5. Kolom TIMESTAMPTZ / TIMESTAMP
+  if (
+    c.endsWith('_at') ||
+    c === 'last_seen' ||
+    c === 'timestamp' ||
+    c === 'rencana_waktu' ||
+    c === 'status_terakhir_update' ||
+    c === 'dicadangkan_pada' ||
+    c === 'personal_end_time' ||
+    c === 'banned_until'
+  ) {
+    return '::timestamptz';
+  }
+
+  // 6. Kolom ENUM khusus
+  if ((t === 'budget_request_items' || t === 'division_budgets') && c === 'category') {
+    return '::budget_category';
   }
 
   return '';

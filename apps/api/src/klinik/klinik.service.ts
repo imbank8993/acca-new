@@ -12,17 +12,36 @@ import { createPrismaDbAdapter, type PrismaDbAdapter } from '../prisma/prisma-db
 import { can } from '../access/access.service';
 /**
  * Zona waktu madrasah. Seluruh jam pada klinik_slots disimpan sebagai waktu
- * DINDING setempat — `jam_mulai` "14:00" berarti pukul 14.00 WIB, bukan UTC.
- * Karena itu "sekarang" harus dihitung pada zona yang sama sebelum dibandingkan
- * dengan jendela absensi. Sebelumnya kedua helper di bawah mengembalikan UTC,
- * sehingga jendela absensi sesi siang baru terbuka pukul 21.00 WIB.
+ * DINDING setempat — `jam_mulai` "14:00" berarti pukul 14.00 waktu setempat
+ * madrasah (default WITA / Asia/Makassar), bukan UTC. Karena itu "sekarang"
+ * harus dihitung pada zona yang sama sebelum dibandingkan dengan jendela absensi.
  */
-const ZONA_MADRASAH = 'Asia/Jakarta';
+const ZONA_MADRASAH_DEFAULT = 'Asia/Makassar';
+const ZONA_VALID = new Set(['Asia/Jakarta', 'Asia/Makassar', 'Asia/Jayapura']);
+let cachedZonaMadrasah: { tz: string; expiresAt: number } | null = null;
+
+async function getZonaMadrasah(db?: PrismaDbAdapter): Promise<string> {
+    if (cachedZonaMadrasah && Date.now() < cachedZonaMadrasah.expiresAt) {
+        return cachedZonaMadrasah.tz;
+    }
+    if (db) {
+        try {
+            const { data } = await db.from('site_settings').select('value').eq('key', 'timezone').maybeSingle();
+            const val = String(data?.value || '').trim();
+            const tz = ZONA_VALID.has(val) ? val : ZONA_MADRASAH_DEFAULT;
+            cachedZonaMadrasah = { tz, expiresAt: Date.now() + 5 * 60_000 };
+            return tz;
+        } catch {
+            // Gunakan default bila gagal membaca site_settings
+        }
+    }
+    return cachedZonaMadrasah?.tz || ZONA_MADRASAH_DEFAULT;
+}
 
 /** "YYYY-MM-DDTHH:mm" pada waktu dinding madrasah. */
-function waktuDindingMadrasah(): string {
+function waktuDindingMadrasah(tz: string = ZONA_MADRASAH_DEFAULT): string {
     const bagian = new Intl.DateTimeFormat('en-CA', {
-        timeZone: ZONA_MADRASAH,
+        timeZone: tz,
         year: 'numeric', month: '2-digit', day: '2-digit',
         // hourCycle h23 supaya tengah malam jadi "00", bukan "24".
         hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
@@ -31,8 +50,8 @@ function waktuDindingMadrasah(): string {
     return `${ambil('year')}-${ambil('month')}-${ambil('day')}T${ambil('hour')}:${ambil('minute')}`;
 }
 
-const getCurrentDateInTz = async () => waktuDindingMadrasah().slice(0, 10);
-const getCurrentDateTimeInTz = async () => waktuDindingMadrasah();
+const getCurrentDateInTz = async (db?: PrismaDbAdapter) => waktuDindingMadrasah(await getZonaMadrasah(db)).slice(0, 10);
+const getCurrentDateTimeInTz = async (db?: PrismaDbAdapter) => waktuDindingMadrasah(await getZonaMadrasah(db));
 
 /**
  * Geser waktu dinding tanpa menyentuh zona: tanggal+jam diperlakukan sebagai
@@ -864,7 +883,7 @@ export async function handleGet(req: any, action: string, searchParams: URLSearc
         // apakah tombol absensi tampil, supaya jam perangkat siswa yang meleset
         // (atau sengaja digeser) tidak menghasilkan tampilan yang berbeda dari
         // keputusan server saat absennya dikirim.
-        return { ok: true, data, now: await getCurrentDateTimeInTz() };
+        return { ok: true, data, now: await getCurrentDateTimeInTz(db) };
     } catch (err: any) {
         // HttpException (termasuk Forbidden/Unauthorized) sudah membawa status
         // dan pesan yang memang ditulis untuk pengguna — diteruskan apa adanya.
@@ -1941,7 +1960,7 @@ export async function handlePatch(req: any, action: string, id: any, payload: an
             if (!mulai || !selesai) {
                 throw new HttpException({ ok: false, error: 'Jadwal sesi ini tidak lengkap' }, 409);
             }
-            const sekarang = await getCurrentDateTimeInTz();
+            const sekarang = await getCurrentDateTimeInTz(db);
             if (sekarang < mulai || sekarang > selesai) {
                 const tgl = new Date(`${mulai.slice(0, 10)}T12:00:00`)
                     .toLocaleDateString('id-ID', { day: 'numeric', month: 'long' });
