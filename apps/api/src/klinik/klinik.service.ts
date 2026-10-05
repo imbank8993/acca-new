@@ -1935,10 +1935,18 @@ export async function handlePatch(req: any, action: string, id: any, payload: an
             if (!slot) {
                 throw new HttpException({ ok: false, error: 'Sesi tidak ditemukan' }, 404);
             }
-            if (!STATUS_BERJALAN.includes(slot.status)) {
+            const { data: laporan } = await db.from('klinik_laporan')
+                .select('status').eq('slot_id', slotId).maybeSingle();
+            const laporanStatus = laporan?.status;
+            const bolehAbsen = STATUS_BERJALAN.includes(slot.status) ||
+                (slot.status === 'finished' && ['Submitted', 'Revisi'].includes(laporanStatus));
+
+            if (!bolehAbsen || slot.status === 'paid' || slot.status === 'cancelled' || laporanStatus === 'Approved') {
                 throw new HttpException({
                     ok: false,
-                    error: 'Absensi hanya dibuka untuk sesi yang sudah disetujui dan belum dilaporkan',
+                    error: laporanStatus === 'Approved'
+                        ? 'Laporan sesi ini sudah disetujui, absensi mandiri ditutup'
+                        : 'Absensi hanya dibuka untuk sesi yang aktif atau dalam antrean persetujuan',
                 }, 409);
             }
 

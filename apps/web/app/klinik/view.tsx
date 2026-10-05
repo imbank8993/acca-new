@@ -537,12 +537,19 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
     (STATUS_BERJALAN.includes(slot.status) ||
       (slot.status === 'finished' && getLaporan(slot)?.status !== 'Approved'));
 
+  /** Siswa boleh absen jika sesi open/full, ATAU sesi finished tapi laporannya masih antre (Submitted/Revisi) dan belum Approved */
+  const bolehAbsenSiswa = (slot: KlinikSlot) => {
+    if (STATUS_BERJALAN.includes(slot.status)) return true;
+    const lapStatus = getLaporan(slot)?.status;
+    return slot.status === 'finished' && ['Submitted', 'Revisi'].includes(lapStatus);
+  };
+
   /**
    * Jendela absensi sesi ini sedang terbuka? Keputusan finalnya tetap di server;
    * ini hanya menentukan apakah tombolnya pantas ditampilkan.
    */
   const absensiTerbuka = (slot: KlinikSlot) => {
-    if (!STATUS_BERJALAN.includes(slot.status)) return false;
+    if (!bolehAbsenSiswa(slot)) return false;
     const { mulai, selesai } = jendelaAbsensi(slot);
     return !!mulai && !!selesai && sekarang >= mulai && sekarang <= selesai;
   };
@@ -1365,7 +1372,9 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
   const displayedSlots = useMemo(() => {
     return slots.filter((s) => {
       if (tabAktif === 'available') {
-        if (s.status !== 'open' && s.status !== 'full') return false;
+        const lapStatus = getLaporan(s)?.status;
+        const antreLaporan = s.status === 'finished' && ['Submitted', 'Revisi'].includes(lapStatus);
+        if (s.status !== 'open' && s.status !== 'full' && !antreLaporan) return false;
       } else if (tabAktif === 'my_sessions') {
         if (!isSameId(s.guru_id, user?.id)) return false;
         if (s.status === 'cancelled') return false;
@@ -1393,26 +1402,25 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
   }, [slots, tabAktif, user?.id, filterMapel, search]);
 
   /**
-   * Aksi siswa pada sebuah sesi yang sedang berjalan: mendaftar bila belum
-   * terdaftar, atau menyatakan kehadiran bila jendela absensinya terbuka.
+   * Aksi siswa pada sebuah sesi yang sedang berjalan atau sedang antre laporan:
+   * mendaftar bila belum terdaftar, atau menyatakan kehadiran bila jendela absensinya terbuka.
    * Ditulis sebagai fungsi biasa (bukan komponen) supaya tidak di-remount tiap
    * render induknya — tombolnya menyimpan state isLoading.
    */
   const aksiSiswa = (slot: KlinikSlot) => {
-    if (!isSiswa || !STATUS_BERJALAN.includes(slot.status)) return null;
+    if (!isSiswa) return null;
 
     const saya = pesertaSaya(slot);
     if (!saya) {
-      // Sesi bentukan admin yang kuotanya pas hanya lahir 'full', jadi tombol
-      // Daftar tidak akan muncul di sana — memang tertutup untuk umum.
-      return slot.status === 'open' ? (
+      if (slot.status !== 'open') return null;
+      return (
         <Button size="sm" variant="primary" onClick={() => handleRegister(slot.id)}>
           Daftar
         </Button>
-      ) : (
-        <span className="act-note">Kuota Penuh</span>
       );
     }
+
+    if (!bolehAbsenSiswa(slot)) return null;
 
     if (saya.kehadiran) {
       return (
