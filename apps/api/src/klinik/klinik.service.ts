@@ -141,7 +141,7 @@ const BATAS_DAFTAR_TEMAN = 300;
  * bisa ditandai guru pengampu lewat `absen_guru`.
  */
 const ABSENSI_TOLERANSI_AWAL_MENIT = 15;
-const ABSENSI_TOLERANSI_AKHIR_MENIT = 60;
+const ABSENSI_TOLERANSI_AKHIR_MENIT = 24 * 60; // 24 jam (1.440 menit) setelah sesi berakhir
 
 /** Nilai kehadiran yang sah. NULL = belum diabsen (beda dari 'A'/alpa). */
 const KEHADIRAN_VALID = ['H', 'S', 'I', 'A'];
@@ -1899,6 +1899,9 @@ export async function handlePatch(req: any, action: string, id: any, payload: an
             } else {
                 updatePayload.status = 'Revisi';
                 updatePayload.is_finalized = false;
+                updatePayload.approved_by = null;
+                updatePayload.approved_by_name = null;
+                updatePayload.approved_at = null;
             }
 
             const { data, error } = await db.from('klinik_laporan')
@@ -1962,11 +1965,16 @@ export async function handlePatch(req: any, action: string, id: any, payload: an
             }
             const sekarang = await getCurrentDateTimeInTz(db);
             if (sekarang < mulai || sekarang > selesai) {
-                const tgl = new Date(`${mulai.slice(0, 10)}T12:00:00`)
+                const tglMulai = new Date(`${mulai.slice(0, 10)}T12:00:00`)
                     .toLocaleDateString('id-ID', { day: 'numeric', month: 'long' });
+                const tglSelesai = new Date(`${selesai.slice(0, 10)}T12:00:00`)
+                    .toLocaleDateString('id-ID', { day: 'numeric', month: 'long' });
+                const infoWaktu = mulai.slice(0, 10) === selesai.slice(0, 10)
+                    ? `${tglMulai} pukul ${mulai.slice(11)}–${selesai.slice(11)}`
+                    : `${tglMulai} pukul ${mulai.slice(11)} s.d. ${tglSelesai} pukul ${selesai.slice(11)}`;
                 throw new HttpException({
                     ok: false,
-                    error: `Absensi sesi ini hanya dibuka ${tgl} pukul ${mulai.slice(11)}–${selesai.slice(11)}.`,
+                    error: `Absensi sesi ini hanya dibuka ${infoWaktu}.`,
                 }, 409);
             }
 

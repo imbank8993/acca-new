@@ -20,6 +20,8 @@ interface ViewReportModalProps {
   onPrintPreview: (slotId: string) => void;
   loadingPreviewSlotId: string | null;
   onOpenAbsensi?: (slot: any) => void;
+  canRevisiApproved?: boolean;
+  onRevisiApproved?: (laporanId: string) => void;
 }
 
 export default function ViewReportModal({
@@ -30,6 +32,8 @@ export default function ViewReportModal({
   onPrintPreview,
   loadingPreviewSlotId,
   onOpenAbsensi,
+  canRevisiApproved,
+  onRevisiApproved,
 }: ViewReportModalProps) {
   const [showPeserta, setShowPeserta] = useState(false);
 
@@ -270,9 +274,20 @@ export default function ViewReportModal({
       </ModalBody>
 
       <ModalFooter align="between">
-        <Button variant="cancel" onClick={onClose}>
-          Tutup
-        </Button>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <Button variant="cancel" onClick={onClose}>
+            Tutup
+          </Button>
+          {canRevisiApproved && laporan?.status === 'Approved' && onRevisiApproved && (
+            <Button
+              variant="danger"
+              onClick={() => onRevisiApproved(laporan.id)}
+              leftIcon={<i className="bi bi-arrow-return-left" />}
+            >
+              Batalkan Persetujuan (Revisi)
+            </Button>
+          )}
+        </div>
         <Button
           variant="primary"
           onClick={() => onPrintPreview(slot.id)}

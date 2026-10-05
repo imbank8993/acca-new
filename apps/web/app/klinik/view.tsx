@@ -133,7 +133,7 @@ function tingkatKelas(kelas: string | null | undefined): string | null {
  * masih boleh).
  */
 const ABSENSI_TOLERANSI_AWAL_MENIT = 15;
-const ABSENSI_TOLERANSI_AKHIR_MENIT = 60;
+const ABSENSI_TOLERANSI_AKHIR_MENIT = 24 * 60; // 24 jam (1.440 menit) setelah sesi berakhir
 
 /**
  * Waktu dinding madrasah sebagai "YYYY-MM-DDTHH:mm".
@@ -996,6 +996,50 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
     }
   }
 
+  async function handleKembalikanApproved(laporanId: string) {
+    if (actionLoadingId) return;
+    const { value: catatan, isConfirmed } = await Swal.fire({
+      title: 'Batalkan Persetujuan Laporan?',
+      text: 'Laporan akan dikembalikan ke status Revisi dan sesi klinik dibuka kembali agar absensi siswa atau data laporan dapat diperbaiki.',
+      input: 'textarea',
+      inputLabel: 'Alasan pengembalian / revisi',
+      inputPlaceholder: 'Mis. Siswa belum melakukan absensi...',
+      inputValue: 'Siswa belum melakukan absensi, silakan lengkapi absensi terlebih dahulu.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Kembalikan ke Revisi',
+      cancelButtonText: 'Batal',
+      inputValidator: (v) => (!v?.trim() ? 'Alasan pengembalian wajib diisi' : undefined),
+    });
+    if (!isConfirmed || !catatan?.trim()) return;
+
+    setActionLoadingId(`laporan_${laporanId}`);
+    try {
+      const res = await fetch('/api/klinik', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'approve_laporan',
+          id: laporanId,
+          laporanAction: 'revisi',
+          catatan: catatan.trim(),
+        }),
+      });
+      const json = await safeJson(res);
+      if (json.ok) {
+        Swal.fire('Berhasil', 'Persetujuan laporan dibatalkan. Sesi klinik kini aktif kembali untuk pengisian absensi.', 'success');
+        setShowViewReportModal(null);
+        fetchUserAndSlots();
+      } else {
+        Swal.fire('Gagal', json.error || 'Gagal memproses pembatalan', 'error');
+      }
+    } catch (err: any) {
+      Swal.fire('Error', err.message || 'Terjadi kesalahan sistem', 'error');
+    } finally {
+      setActionLoadingId(null);
+    }
+  }
+
   async function handleRegister(slotId: string) {
     if (!user || actionLoadingId) return;
     const confirm = await Swal.fire({
@@ -1395,9 +1439,13 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
 
     const { mulai, selesai } = jendelaAbsensi(slot);
     if (!mulai || !selesai) return null;
+    const bedaHari = mulai.slice(0, 10) !== selesai.slice(0, 10);
+    const teksJam = bedaHari
+      ? `${mulai.slice(11)} s.d. besok ${selesai.slice(11)}`
+      : `${mulai.slice(11)}–${selesai.slice(11)}`;
     return (
-      <span className="act-note" title={`Absensi hanya dibuka pada rentang jam ini`}>
-        <i className="bi bi-clock" /> Absensi {mulai.slice(11)}–{selesai.slice(11)}
+      <span className="act-note" title={`Absensi dibuka dari ${mulai} sampai ${selesai}`}>
+        <i className="bi bi-clock" /> Absensi {teksJam}
       </span>
     );
   };
@@ -2190,6 +2238,20 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
                               </>
                             )}
 
+                            {laporan.status === 'Approved' && slot.status !== 'paid' && bisaApproveLaporan && (
+                              <div className="laporan-approval-actions" style={{ marginTop: 12 }}>
+                                <Button
+                                  size="sm"
+                                  variant="danger"
+                                  onClick={() => handleKembalikanApproved(laporan.id)}
+                                  isLoading={actionLoadingId === `laporan_${laporan.id}`}
+                                  leftIcon={<i className="bi bi-arrow-return-left" />}
+                                >
+                                  Batalkan Persetujuan (Kembalikan ke Revisi)
+                                </Button>
+                              </div>
+                            )}
+
                             {(laporan.status === 'Revisi' || laporan.status === 'Rejected') && laporan.catatan_reviewer && (
                               <div className="mt-2 p-3 bg-red-50 dark:bg-red-950/30 rounded-lg text-sm border border-red-100 dark:border-red-900/40">
                                 <strong className="text-red-700 dark:text-red-400 text-xs uppercase tracking-wider block mb-1">
@@ -2294,6 +2356,8 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
             ? (s) => setShowAbsensiModal(s)
             : undefined
         }
+        canRevisiApproved={bisaApproveLaporan && showViewReportModal?.status !== 'paid'}
+        onRevisiApproved={handleKembalikanApproved}
       />
 
       <ParticipantsModal
