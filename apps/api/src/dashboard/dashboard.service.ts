@@ -134,11 +134,9 @@ export class DashboardService {
 
       // 3. Current Class
       let currentKelas = null;
-      let dataKelas = allRows;
-      if (allRows.length > 0 && activeYears.length > 0) {
-        const activeRows = allRows.filter(r => activeYears.includes(r.tahun_ajaran));
-        if (activeRows.length > 0) dataKelas = activeRows;
-      }
+      const dataKelas = activeYear
+        ? allRows.filter(r => r.tahun_ajaran === activeYear)
+        : [];
       
       if (dataKelas.length > 0) {
         // Need to sort by reguler vs utbk etc.
@@ -186,6 +184,7 @@ export class DashboardService {
       let guruAsuhName = null;
       let guruAsuhNip = null;
       let saudaraAsuh: any[] = [];
+      const saudaraAsuhKehadiran: Record<string, { kode: string; keterangan: string }> = {};
       if (activeYear) {
         const ga = await this.prisma.guru_asuh.findFirst({
           where: { nisn_siswa: nisn, aktif: true, tahun_ajaran: activeYear },
@@ -209,6 +208,30 @@ export class DashboardService {
 
             if (saudaraList.length > 0) {
               const sNisnList = [...new Set(saudaraList.map(d => d.nisn_siswa).filter(Boolean))];
+              if (sNisnList.length > 0) {
+                const { startOfToday, endOfToday } = await this.getSchoolDateRange();
+                const ketidakhadiran = await this.prisma.ketidakhadiran.findMany({
+                  where: {
+                    nisn: { in: sNisnList },
+                    aktif: true,
+                    tgl_mulai: { lte: endOfToday },
+                    tgl_selesai: { gte: startOfToday },
+                    jenis: { in: ['SAKIT', 'IZIN'] },
+                  },
+                  select: { nisn: true, jenis: true },
+                });
+                for (const saudaraNisn of sNisnList) {
+                  saudaraAsuhKehadiran[saudaraNisn] = { kode: 'HADIR', keterangan: 'Hadir hari ini' };
+                }
+                for (const item of ketidakhadiran) {
+                  if (!item.nisn || saudaraAsuhKehadiran[item.nisn]?.kode === 'SAKIT') continue;
+                  const kode = item.jenis === 'SAKIT' ? 'SAKIT' : 'IZIN';
+                  saudaraAsuhKehadiran[item.nisn] = {
+                    kode,
+                    keterangan: kode === 'SAKIT' ? 'Sakit hari ini' : 'Izin hari ini',
+                  };
+                }
+              }
               const photoMap: Record<string, string | null> = {};
               if (sNisnList.length > 0) {
                 const userProfiles = await this.prisma.public_users.findMany({
@@ -250,7 +273,8 @@ export class DashboardService {
         kelasHistory: uniqueClasses,
         waliKelas: waliKelasName,
         guruAsuh: guruAsuhName ? { nama: guruAsuhName, nip: guruAsuhNip } : null,
-        saudaraAsuh
+        saudaraAsuh,
+        saudaraAsuhKehadiran,
       };
     }
 

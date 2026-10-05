@@ -134,6 +134,14 @@ export class MasterService {
         data.selesai = new Date(`1970-01-01T${t}Z`);
       }
     }
+    if (entity === 'ruangan' && 'kapasitas' in data) {
+      if (data.kapasitas === '' || data.kapasitas === null || data.kapasitas === undefined) {
+        data.kapasitas = null;
+      } else {
+        const parsed = parseInt(String(data.kapasitas), 10);
+        data.kapasitas = Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
+      }
+    }
 
     // DatePicker mengirim 'YYYY-MM-DD'; Prisma menolaknya untuk kolom DateTime
     // ("premature end of input. Expected ISO-8601 DateTime"). Terima juga ISO
@@ -790,6 +798,12 @@ export class MasterService {
       nameProp = 'nama_lengkap';
     } else if (type === 'mapel') {
       table = 'master_mapel';
+      keyField = 'kode';
+      keyProp = 'kode';
+      nameField = 'nama';
+      nameProp = 'nama';
+    } else if (type === 'ruangan') {
+      table = 'master_ruangan';
       keyField = 'kode';
       keyProp = 'kode';
       nameField = 'nama';

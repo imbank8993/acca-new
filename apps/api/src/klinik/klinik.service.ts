@@ -199,12 +199,14 @@ async function mapUsersByNisn(db: PrismaDbAdapter, nisnList: string[]) {
  */
 async function getOptions(db: PrismaDbAdapter) {
     // Catatan skema: guru_mapel TIDAK punya kolom guru_id — NIP guru ada di `nip`.
-    const [mapel, guruMapel] = await Promise.all([
+    const [mapel, guruMapel, ruangan] = await Promise.all([
         db.from('master_mapel').select('id, nama').eq('aktif', true).order('nama'),
         db.from('guru_mapel').select('nip, nama_guru, nama_mapel').eq('aktif', true).order('nama_guru'),
+        db.from('master_ruangan').select('id, kode, nama, lokasi, kapasitas').eq('aktif', true).order('nama'),
     ]);
     if (mapel.error) throw mapel.error;
     if (guruMapel.error) throw guruMapel.error;
+    if (ruangan.error) throw ruangan.error;
 
     // Hanya tawarkan guru yang punya akun `users`; create_slot memetakan
     // NIP -> users.id, jadi guru tanpa akun akan gagal saat pengajuan dikirim.
@@ -217,6 +219,7 @@ async function getOptions(db: PrismaDbAdapter) {
     return {
         mapel: mapel.data || [],
         guru_mapel: (guruMapel.data || []).filter(g => punyaAkun.has(g.nip)),
+        ruangan: ruangan.data || [],
     };
 }
 
@@ -663,6 +666,7 @@ async function kabariPesertaTunjukan(
         namaGuru: string;
         tanggal: string;
         jamMulai: string;
+        ruangan?: string | null;
     }
 ) {
     if (opsi.siswaIds.length === 0) return;
@@ -672,6 +676,7 @@ async function kabariPesertaTunjukan(
 
     const tanggalTampil = new Date(`${opsi.tanggal}T12:00:00`)
         .toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long' });
+    const lokasiTampil = opsi.ruangan ? ` di ${opsi.ruangan}` : '';
 
     await Promise.all((akunPeserta || [])
         .filter((u: any) => u.auth_id)
@@ -679,7 +684,7 @@ async function kabariPesertaTunjukan(
             type: 'klinik_request',
             title: 'Anda Dijadwalkan Ikut Klinik',
             message: `Klinik ${opsi.mapel} bersama ${opsi.namaGuru} pada ${tanggalTampil}, `
-                + `pukul ${String(opsi.jamMulai).slice(0, 5)}. Jangan lupa mengisi absensi saat sesi berlangsung.`,
+                + `pukul ${String(opsi.jamMulai).slice(0, 5)}${lokasiTampil}. Jangan lupa mengisi absensi saat sesi berlangsung.`,
             link: '/klinik?tab=available',
             source_table: 'klinik_slots',
             source_id: String(opsi.slotId),
@@ -951,6 +956,7 @@ export async function handlePost(req: any, action: string, payload: any, db: Pri
             let insertPayload: any = {
                 mapel: payload.mapel,
                 topik: payload.topik,
+                ruangan: payload.ruangan ? String(payload.ruangan).trim() : null,
                 tanggal: payload.tanggal,
                 jam_mulai: payload.jam_mulai,
                 jam_selesai: payload.jam_selesai,
@@ -1049,6 +1055,7 @@ export async function handlePost(req: any, action: string, payload: any, db: Pri
                         namaGuru: userRecord.nama,
                         tanggal: payload.tanggal,
                         jamMulai: payload.jam_mulai,
+                        ruangan: insertPayload.ruangan,
                     });
                 }
             }
@@ -1109,12 +1116,14 @@ export async function handlePost(req: any, action: string, payload: any, db: Pri
             // lahir 'full' dan tertutup dari pendaftaran umum; kuota lebih besar
             // ⇒ 'open', siswa lain masih boleh mendaftar lewat action 'register'.
             const maxSiswa = Math.max(Number(payload.max_siswa) || 0, pesertaIds.length, PESERTA_MINIMAL);
+            const ruanganVal = payload.ruangan ? String(payload.ruangan).trim() : null;
 
             const { data: slotBaru, error: slotErr } = await db.from('klinik_slots').insert([{
                 guru_id: guruRecord.id,
                 nama_guru: guruRecord.nama,
                 mapel: payload.mapel,
                 topik: payload.topik,
+                ruangan: ruanganVal,
                 tanggal: payload.tanggal,
                 jam_mulai: payload.jam_mulai,
                 jam_selesai: payload.jam_selesai,
@@ -1150,6 +1159,7 @@ export async function handlePost(req: any, action: string, payload: any, db: Pri
                 namaGuru: guruRecord.nama,
                 tanggal: payload.tanggal,
                 jamMulai: payload.jam_mulai,
+                ruangan: ruanganVal,
             });
 
             return { ok: true, data: slotBaru };
@@ -1524,6 +1534,7 @@ export async function handlePost(req: any, action: string, payload: any, db: Pri
             const slotPatch: any = {
                 mapel: updateData.mapel,
                 topik: updateData.topik,
+                ruangan: updateData.ruangan !== undefined ? (updateData.ruangan ? String(updateData.ruangan).trim() : null) : slot.ruangan,
                 tanggal: updateData.tanggal,
                 jam_mulai: updateData.jam_mulai,
                 jam_selesai: updateData.jam_selesai,

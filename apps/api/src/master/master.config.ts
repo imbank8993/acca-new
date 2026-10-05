@@ -77,6 +77,15 @@ export const MASTER_ENTITIES: Record<string, MasterEntityConfig> = {
     orderBy: { nama: 'asc' },
     idType: 'bigint',
   },
+  ruangan: {
+    model: 'master_ruangan',
+    uniqueField: 'nama',
+    searchFields: ['nama', 'kode', 'lokasi', 'keterangan'],
+    writable: ['kode', 'nama', 'lokasi', 'kapasitas', 'keterangan', 'aktif'],
+    hasAktif: true,
+    orderBy: { nama: 'asc' },
+    idType: 'bigint',
+  },
   mapel: {
     model: 'master_mapel',
     uniqueField: 'kode',

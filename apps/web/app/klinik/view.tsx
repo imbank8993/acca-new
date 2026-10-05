@@ -19,7 +19,7 @@ import Swal from 'sweetalert2';
 import { useModalBlur } from '@/components/ModalBlurProvider';
 import { useFileViewer } from '@/components/useFileViewer';
 
-import CreateSlotModal, { CalonAnggota } from './components/CreateSlotModal';
+import CreateSlotModal, { CalonAnggota, RuanganOpsi } from './components/CreateSlotModal';
 import AdminSesiModal, { AdminSesiForm, KelasOpsi } from './components/AdminSesiModal';
 import AbsensiModal from './components/AbsensiModal';
 import ReportModal from './components/ReportModal';
@@ -67,6 +67,7 @@ interface KlinikSlot {
   tanggal: string;
   jam_mulai: string;
   jam_selesai: string;
+  ruangan?: string | null;
   max_siswa: number;
   status: 'pending_guru' | 'pending' | 'open' | 'full' | 'finished' | 'paid' | 'cancelled';
   catatan_penolakan?: string | null;
@@ -255,6 +256,7 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
   const [slots, setSlots] = useState<KlinikSlot[]>([]);
   const [mapelList, setMapelList] = useState<{ id: string; nama: string }[]>([]);
   const [guruMapelList, setGuruMapelList] = useState<{ nip: string; nama_guru: string; nama_mapel: string }[]>([]);
+  const [ruanganList, setRuanganList] = useState<RuanganOpsi[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Guard untuk mencegah klik ganda / race condition pada aksi
@@ -302,7 +304,7 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
   const [adminEditSlotId, setAdminEditSlotId] = useState<string | null>(null);
   const [savingAdminSesi, setSavingAdminSesi] = useState(false);
   const [adminForm, setAdminForm] = useState<AdminSesiForm>({
-    mapel: '', guru_nip: '', topik: '', tanggal: '', jam_mulai: '', jam_selesai: '', max_siswa: 5,
+    mapel: '', guru_nip: '', topik: '', tanggal: '', jam_mulai: '', jam_selesai: '', max_siswa: 5, ruangan: '',
   });
   const [adminPeserta, setAdminPeserta] = useState<CalonAnggota[]>([]);
   const [kelasList, setKelasList] = useState<KelasOpsi[]>([]);
@@ -362,12 +364,13 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
     max_siswa: 5,
     guru_nip: '',
     target_kelas: [] as string[],
+    ruangan: '',
   });
 
   /** Buka modal slot baru dengan form kosong — dipakai FAB guru & tombol siswa. */
   const openCreateSlot = () => {
     setEditSlotId(null);
-    setForm({ mapel: '', topik: '', tanggal: '', jam_mulai: '', jam_selesai: '', max_siswa: 5, guru_nip: '', target_kelas: [] });
+    setForm({ mapel: '', topik: '', tanggal: '', jam_mulai: '', jam_selesai: '', max_siswa: 5, guru_nip: '', target_kelas: [], ruangan: '' });
     setShowCreateModal(true);
   };
 
@@ -392,6 +395,7 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
       if (json.ok) {
         setMapelList(json.data.mapel || []);
         setGuruMapelList(json.data.guru_mapel || []);
+        setRuanganList(json.data.ruangan || []);
       }
     } catch (err) {
       console.error('Gagal mengambil opsi klinik:', err);
@@ -447,6 +451,7 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
       max_siswa: slot.max_siswa,
       guru_nip: slot.guru?.nip || '',
       target_kelas: slot.target_kelas || [],
+      ruangan: slot.ruangan || '',
     });
     // Pengajuan kelompok: seluruh peserta adalah anggota yang ditunjuk pengaju
     // (pengaju sendiri tidak bisa dikeluarkan, jadi disaring).
@@ -466,7 +471,7 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
   const closeCreateModal = () => {
     setShowCreateModal(false);
     setEditSlotId(null);
-    setForm({ mapel: '', topik: '', tanggal: '', jam_mulai: '', jam_selesai: '', max_siswa: 5, guru_nip: '', target_kelas: [] });
+    setForm({ mapel: '', topik: '', tanggal: '', jam_mulai: '', jam_selesai: '', max_siswa: 5, guru_nip: '', target_kelas: [], ruangan: '' });
     setAnggota([]);
     setAnggotaExpanded(false);
     setTemanQuery('');
@@ -525,6 +530,12 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
   /** Guru pengampu sesi ini atau pengelola klinik — berhak mengisi absensi. */
   const bisaKelolaAbsensi = (slot: KlinikSlot) =>
     bisaKelolaSesi || (isGuru && isSameId(slot.guru_id, user?.id));
+
+  /** Boleh mengisi/mengubah absensi selama sesi berjalan atau selesai tapi laporan belum disahkan. */
+  const bolehIsiAbsensi = (slot: KlinikSlot) =>
+    bisaKelolaAbsensi(slot) &&
+    (STATUS_BERJALAN.includes(slot.status) ||
+      (slot.status === 'finished' && getLaporan(slot)?.status !== 'Approved'));
 
   /**
    * Jendela absensi sesi ini sedang terbuka? Keputusan finalnya tetap di server;
@@ -718,7 +729,7 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
   /** Buka modal pembentukan sesi oleh admin dengan form kosong. */
   const openAdminSesi = () => {
     setAdminEditSlotId(null);
-    setAdminForm({ mapel: '', guru_nip: '', topik: '', tanggal: '', jam_mulai: '', jam_selesai: '', max_siswa: 5 });
+    setAdminForm({ mapel: '', guru_nip: '', topik: '', tanggal: '', jam_mulai: '', jam_selesai: '', max_siswa: 5, ruangan: '' });
     setAdminPeserta([]);
     setKelasDipilih([]);
     setKandidatQuery('');
@@ -735,6 +746,7 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
       jam_mulai: formatJam(slot.jam_mulai),
       jam_selesai: formatJam(slot.jam_selesai),
       max_siswa: slot.max_siswa,
+      ruangan: slot.ruangan || '',
     });
     const pesertaAwal = (slot.klinik_peserta || []).map((p) => ({
       siswa_id: p.siswa_id, nisn: '', nama: p.nama_siswa, kelas: p.kelas || '',
@@ -1328,7 +1340,8 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
         const m = (s.mapel || '').toLowerCase();
         const t = (s.topik || '').toLowerCase();
         const g = (s.nama_guru || '').toLowerCase();
-        if (!m.includes(q) && !t.includes(q) && !g.includes(q)) return false;
+        const r = (s.ruangan || '').toLowerCase();
+        if (!m.includes(q) && !t.includes(q) && !g.includes(q) && !r.includes(q)) return false;
       }
 
       return true;
@@ -1626,10 +1639,12 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
                       const canEdit = !isRejected && ((STATUS_PENGAJUAN.includes(slot.status) && (bisaKelolaSesi || isCreator))
                         || (bisaKelolaSesi && STATUS_BERJALAN.includes(slot.status)));
                       const canDelete = !isRejected && (bisaKelolaSesi || (STATUS_PENGAJUAN.includes(slot.status) && isCreator));
-                      const canAbsensi = bisaKelolaAbsensi(slot) && STATUS_BERJALAN.includes(slot.status);
+                      const canAbsensi = bolehIsiAbsensi(slot);
                       const canViewLaporan = bisaLihatLaporan(slot);
                       const perluRevisi = getLaporan(slot)?.status === 'Revisi';
                       const { kurang, batal } = cekPeserta(slot);
+                      const adaAbsen = (slot.klinik_peserta || []).some((p) => p.kehadiran);
+                      const jmlHadir = (slot.klinik_peserta || []).filter((p) => p.kehadiran === 'H').length;
 
                       return (
                         <Fragment key={slot.id}>
@@ -1676,18 +1691,29 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
                                 <span className="time">
                                   {formatJam(slot.jam_mulai)} – {formatJam(slot.jam_selesai)}
                                 </span>
+                                {slot.ruangan && (
+                                  <span style={{ fontSize: '0.75rem', color: 'var(--n-primary)', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                                    <i className="bi bi-geo-alt-fill" /> {slot.ruangan}
+                                  </span>
+                                )}
                               </div>
                             </td>
                             <td>
                               <div
                                 className={`table-col-kuota cursor-pointer ${(slot.klinik_peserta?.length || 0) >= slot.max_siswa ? 'kuota-full' : ''}`}
                                 onClick={() => openParticipants(slot.id)}
-                                title="Lihat Daftar Peserta"
+                                title="Lihat Daftar Peserta & Absensi"
+                                style={{ flexDirection: 'column', alignItems: 'flex-start', gap: 2 }}
                               >
                                 <span className="kuota-text">
                                   <i className="bi bi-people-fill mr-1" />
                                   {slot.klinik_peserta?.length || 0}/{slot.max_siswa}
                                 </span>
+                                {adaAbsen && (
+                                  <span style={{ fontSize: '0.68rem', color: '#0284c7', fontWeight: 700, whiteSpace: 'nowrap' }}>
+                                    Hadir: {jmlHadir}
+                                  </span>
+                                )}
                               </div>
                             </td>
                             <td>
@@ -1873,10 +1899,12 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
                   const canEdit = !isRejected && ((STATUS_PENGAJUAN.includes(slot.status) && (bisaKelolaSesi || isCreator))
                     || (bisaKelolaSesi && STATUS_BERJALAN.includes(slot.status)));
                   const canDelete = !isRejected && (bisaKelolaSesi || (STATUS_PENGAJUAN.includes(slot.status) && isCreator));
-                  const canAbsensi = bisaKelolaAbsensi(slot) && STATUS_BERJALAN.includes(slot.status);
+                  const canAbsensi = bolehIsiAbsensi(slot);
                   const canViewLaporan = bisaLihatLaporan(slot);
                   const perluRevisi = getLaporan(slot)?.status === 'Revisi';
                   const { kurang, batal } = cekPeserta(slot);
+                  const adaAbsen = (slot.klinik_peserta || []).some((p) => p.kehadiran);
+                  const jmlHadir = (slot.klinik_peserta || []).filter((p) => p.kehadiran === 'H').length;
 
                   return (
                     <div key={slot.id} className="slot-card">
@@ -1938,6 +1966,12 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
                             <i className="bi bi-clock" />
                             {formatJam(slot.jam_mulai)} - {formatJam(slot.jam_selesai)}
                           </div>
+                          {slot.ruangan && (
+                            <div className="info-chip">
+                              <i className="bi bi-geo-alt" />
+                              {slot.ruangan}
+                            </div>
+                          )}
                         </div>
                       </div>
 
@@ -1947,10 +1981,15 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
                             slot.klinik_peserta && slot.klinik_peserta.length >= slot.max_siswa ? 'full' : ''
                           }`}
                           onClick={() => openParticipants(slot.id)}
-                          title="Lihat Peserta"
+                          title="Lihat Peserta & Absensi"
                         >
                           <i className="bi bi-people-fill" />
                           {slot.klinik_peserta?.length || 0} / {slot.max_siswa}
+                          {adaAbsen && (
+                            <span style={{ fontSize: '0.68rem', color: '#0284c7', fontWeight: 800 }}>
+                              · Hadir {jmlHadir}
+                            </span>
+                          )}
                         </div>
 
                         <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
@@ -2181,6 +2220,7 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
         setForm={setForm}
         mapelList={mapelList}
         guruOptions={guruOptions}
+        ruanganList={ruanganList}
         onSubmit={handleCreateSlot}
         submitting={savingSlot}
         anggota={anggota}
@@ -2204,6 +2244,7 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
         setForm={setAdminForm}
         mapelList={mapelList}
         guruOptions={guruOptionsAdmin}
+        ruanganList={ruanganList}
         kelasList={kelasList}
         kelasDipilih={kelasDipilih}
         setKelasDipilih={setKelasDipilih}
@@ -2248,6 +2289,11 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
         openFile={openFile}
         onPrintPreview={handlePreviewLaporan}
         loadingPreviewSlotId={loadingPreviewSlotId}
+        onOpenAbsensi={
+          showViewReportModal && bolehIsiAbsensi(showViewReportModal)
+            ? (s) => setShowAbsensiModal(s)
+            : undefined
+        }
       />
 
       <ParticipantsModal
@@ -2259,6 +2305,11 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
         isAdmin={bisaKelolaSesi}
         isSiswa={isSiswa}
         onCancelParticipant={handleCancel}
+        onOpenAbsensi={
+          showParticipantsModal && bolehIsiAbsensi(showParticipantsModal)
+            ? (s) => setShowAbsensiModal(s)
+            : undefined
+        }
       />
 
       {/* ── Delete Slot Confirmation Modal (Modal.tsx) ────────────────── */}

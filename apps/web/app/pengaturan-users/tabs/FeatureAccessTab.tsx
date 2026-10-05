@@ -248,6 +248,13 @@ const MODUL: ModulItem[] = [
         grup: 'Master Data',
     },
     {
+        settingKey: 'master_ruangan_access_config',
+        judul: 'Ruangan',
+        ikon: 'bi-door-open-fill',
+        keterangan: 'Daftar ruangan pelaksanaan kegiatan dan klinik: nama ruangan, kode, lokasi/gedung, kapasitas, dan keterangan.',
+        grup: 'Master Data',
+    },
+    {
         settingKey: 'master_waktu_access_config',
         judul: 'Waktu (Jam Pelajaran)',
         ikon: 'bi-clock-fill',

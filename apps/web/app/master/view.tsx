@@ -9,6 +9,7 @@ import SiswaTab from './tabs/SiswaTab'
 import GuruTab from './tabs/GuruTab'
 import TendikTab from './tabs/TendikTab'
 import KelasTab from './tabs/KelasTab'
+import RuanganTab from './tabs/RuanganTab'
 import MapelTab from './tabs/MapelTab'
 import WaktuTab from './tabs/WaktuTab'
 import KodeGuruTab from './tabs/KodeGuruTab'
@@ -17,7 +18,7 @@ import EkskulTab from './tabs/EkskulTab'
 import { useMasterAccess, type MasterAccess, type MasterTab } from '@/lib/use-master-access'
 import './master.css'
 
-type TabType = 'tahun_ajaran' | 'siswa' | 'guru' | 'tendik' | 'kode_guru' | 'mapel' | 'kelas' | 'waktu' | 'ekskul'
+type TabType = 'tahun_ajaran' | 'siswa' | 'guru' | 'tendik' | 'kode_guru' | 'mapel' | 'kelas' | 'ruangan' | 'waktu' | 'ekskul'
 
 // `hint` hanya tampil di sheet pemilih (mobile, >=4 tab). Isinya sengaja
 // deskripsi tetap, bukan hitungan: hitungan butuh query tambahan yang
@@ -37,6 +38,7 @@ const TAB_ENTITY: Record<TabType, MasterTab> = {
   kode_guru: 'kode-guru',
   mapel: 'mapel',
   kelas: 'kelas',
+  ruangan: 'ruangan',
   waktu: 'waktu',
   ekskul: 'ekskul',
 }
@@ -49,6 +51,7 @@ const tabs: TabItem<TabType>[] = [
   { key: 'kode_guru', label: 'Kode Guru', icon: 'user-cog', hint: 'Kode singkat untuk jadwal' },
   { key: 'mapel', label: 'Mapel', icon: 'book-open', hint: 'Mata pelajaran & kelompoknya' },
   { key: 'kelas', label: 'Kelas', icon: 'school', hint: 'Rombel, tingkat, dan ruang' },
+  { key: 'ruangan', label: 'Ruangan', icon: 'door-open', hint: 'Daftar ruangan & lokasi' },
   { key: 'waktu', label: 'Waktu', icon: 'clock', hint: 'Jam pelajaran & bel' },
   { key: 'ekskul', label: 'Ekstrakurikuler', shortLabel: 'Ekskul', icon: 'volleyball', hint: 'Daftar ekskul & pembina' },
 ]
@@ -98,6 +101,7 @@ function TabContent({ user, akses }: { user?: any; akses: MasterAccess }) {
           {activeTab === 'kode_guru' && <KodeGuruTab user={user} />}
           {activeTab === 'mapel' && <MapelTab user={user} />}
           {activeTab === 'kelas' && <KelasTab user={user} />}
+          {activeTab === 'ruangan' && <RuanganTab user={user} />}
           {activeTab === 'waktu' && <WaktuTab user={user} />}
           {activeTab === 'tahun_ajaran' && <TahunAjaranTab user={user} />}
           {activeTab === 'ekskul' && <EkskulTab user={user} />}

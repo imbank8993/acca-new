@@ -2492,6 +2492,7 @@ model klinik_slots {
   target_kelas                                 String[]
   catatan_penolakan                            String?
   dibuat_oleh                                  BigInt?
+  ruangan                                      String?          @db.VarChar(150)
   klinik_laporan                               klinik_laporan[]
   klinik_peserta                               klinik_peserta[]
   users_klinik_slots_dibuat_olehTousers        public_users?    @relation("klinik_slots_dibuat_olehTousers", fields: [dibuat_oleh], references: [id], onDelete: NoAction, onUpdate: NoAction)
@@ -2937,6 +2938,21 @@ model master_permissions_list {
   created_at  DateTime? @default(now()) @db.Timestamptz(6)
 
   @@unique([resource, action])
+  @@schema("public")
+}
+
+model master_ruangan {
+  id         BigInt    @id @default(autoincrement())
+  kode       String?   @db.VarChar(50)
+  nama       String    @unique @db.VarChar(150)
+  lokasi     String?   @db.VarChar(150)
+  kapasitas  Int?
+  keterangan String?
+  aktif      Boolean?  @default(true)
+  created_at DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at DateTime? @default(now()) @db.Timestamptz(6)
+
+  @@index([aktif], map: "idx_master_ruangan_aktif")
   @@schema("public")
 }
 

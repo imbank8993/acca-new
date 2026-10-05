@@ -1,8 +1,15 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Modal, ModalBody, ModalFooter } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
+
+const LABEL_KEHADIRAN: Record<string, string> = {
+  H: 'Hadir',
+  S: 'Sakit',
+  I: 'Izin',
+  A: 'Alpa',
+};
 
 interface ParticipantsModalProps {
   isOpen: boolean;
@@ -17,6 +24,7 @@ interface ParticipantsModalProps {
     siswaId: number,
     namaSiswa: string
   ) => Promise<void> | void;
+  onOpenAbsensi?: (slot: any) => void;
 }
 
 export default function ParticipantsModal({
@@ -28,6 +36,7 @@ export default function ParticipantsModal({
   isAdmin,
   isSiswa,
   onCancelParticipant,
+  onOpenAbsensi,
 }: ParticipantsModalProps) {
   const [pesertaToDelete, setPesertaToDelete] = useState<{
     slotId: string;
@@ -37,17 +46,28 @@ export default function ParticipantsModal({
   } | null>(null);
   const [cancelling, setCancelling] = useState(false);
 
+  const pesertaList = useMemo(() => slot?.klinik_peserta || [], [slot]);
+
+  const rekapAbsen = useMemo(() => {
+    const r = { H: 0, S: 0, I: 0, A: 0, belum: 0 };
+    for (const p of pesertaList) {
+      const k = p.kehadiran;
+      if (k === 'H' || k === 'S' || k === 'I' || k === 'A') r[k as 'H' | 'S' | 'I' | 'A'] += 1;
+      else r.belum += 1;
+    }
+    return r;
+  }, [pesertaList]);
+
   if (!slot) return null;
 
-  const pesertaList = slot.klinik_peserta || [];
   /** Peserta yang ditunjuk pembentuk sesi — sinkron dgn STATUS_DITUGASKAN di API. */
   const adaPenugasan = pesertaList.some((p: any) => p.status === 'ditugaskan');
-  const jumlahHadir = pesertaList.filter((p: any) => p.kehadiran === 'H').length;
   const maxSiswa = slot.max_siswa || 1;
   const occupancyPercent = Math.min(
     100,
     (pesertaList.length / maxSiswa) * 100
   );
+  const sesiAktifAtauSelesai = ['open', 'full', 'finished', 'paid'].includes(slot.status);
 
   return (
     <>
@@ -57,11 +77,11 @@ export default function ParticipantsModal({
         size="md"
         variant="default"
         icon="people"
-        title="Peserta Terdaftar"
+        title="Peserta & Absensi Klinik"
         subtitle={`${slot.mapel} • ${slot.nama_guru}`}
       >
         <ModalBody>
-          <div className="quota-tracker" style={{ padding: '0 0 16px 0' }}>
+          <div className="quota-tracker" style={{ padding: '0 0 14px 0' }}>
             <div className="quota-label">
               <span>Okupansi Kelas</span>
               <span>
@@ -75,10 +95,21 @@ export default function ParticipantsModal({
                 style={{ width: `${occupancyPercent}%` }}
               />
             </div>
-            {jumlahHadir > 0 && (
-              <div className="quota-label" style={{ marginTop: 8 }}>
-                <span>Tercatat hadir</span>
-                <span>{jumlahHadir} <small className="opacity-50 font-normal">/ {pesertaList.length}</small></span>
+            {sesiAktifAtauSelesai && pesertaList.length > 0 && (
+              <div className="abs-ringkas" style={{ paddingTop: 10, paddingBottom: 0 }}>
+                <span className="abs-ringkas__item abs-ringkas__item--h">
+                  Hadir {rekapAbsen.H}
+                </span>
+                <span className="abs-ringkas__item">Sakit {rekapAbsen.S}</span>
+                <span className="abs-ringkas__item">Izin {rekapAbsen.I}</span>
+                <span className="abs-ringkas__item abs-ringkas__item--a">
+                  Alpa {rekapAbsen.A}
+                </span>
+                {rekapAbsen.belum > 0 && (
+                  <span className="abs-ringkas__item abs-ringkas__item--kosong">
+                    Belum diabsen {rekapAbsen.belum}
+                  </span>
+                )}
               </div>
             )}
             {adaPenugasan && (
@@ -92,11 +123,12 @@ export default function ParticipantsModal({
             {pesertaList.length > 0 ? (
               pesertaList.map((p: any) => {
                 const isInitiator = slot.initiator_type === 'SISWA' && slot.initiator_siswa_id === p.siswa_id;
-                const pengelolaSesi = (isGuru && user?.id === slot.guru_id) || isAdmin;
+                const pengelolaSesi = (isGuru && String(user?.id) === String(slot.guru_id)) || isAdmin;
                 const canCancel =
-                  !isInitiator && (
+                  !isInitiator &&
+                  ['pending_guru', 'pending', 'open', 'full'].includes(slot.status) && (
                     pengelolaSesi ||
-                    (isSiswa && user?.id === p.siswa_id && p.status !== 'ditugaskan')
+                    (isSiswa && String(user?.id) === String(p.siswa_id) && p.status !== 'ditugaskan')
                   );
 
                 return (
@@ -123,7 +155,7 @@ export default function ParticipantsModal({
                       </p>
                       <span className="p-class">{p.kelas || 'SISWA'}</span>
                     </div>
-                    {p.kehadiran && (
+                    {p.kehadiran ? (
                       <span
                         className={`kehadiran-pill k-${p.kehadiran}`}
                         title={
@@ -132,9 +164,13 @@ export default function ParticipantsModal({
                             : 'Ditandai guru pengampu'
                         }
                       >
-                        {p.kehadiran}
+                        {p.kehadiran} · {LABEL_KEHADIRAN[p.kehadiran] || p.kehadiran}
                       </span>
-                    )}
+                    ) : sesiAktifAtauSelesai ? (
+                      <span className="kehadiran-pill k-belum" title="Belum ada catatan kehadiran">
+                        Belum diabsen
+                      </span>
+                    ) : null}
                     <div className="p-actions">
                       {canCancel && (
                         <button
@@ -144,7 +180,7 @@ export default function ParticipantsModal({
                               slotId: slot.id,
                               siswaId: p.siswa_id,
                               namaSiswa: p.nama_siswa,
-                              isSelf: user?.id === p.siswa_id,
+                              isSelf: String(user?.id) === String(p.siswa_id),
                             })
                           }
                           className="p-del-btn"
@@ -166,10 +202,22 @@ export default function ParticipantsModal({
           </div>
         </ModalBody>
 
-        <ModalFooter align="end">
+        <ModalFooter align={onOpenAbsensi ? 'between' : 'end'}>
           <Button variant="cancel" onClick={onClose}>
             Tutup
           </Button>
+          {onOpenAbsensi && (
+            <Button
+              variant="primary"
+              onClick={() => {
+                onClose();
+                onOpenAbsensi(slot);
+              }}
+              leftIcon={<i className="bi bi-clipboard-check" />}
+            >
+              Isi / Ubah Absensi
+            </Button>
+          )}
         </ModalFooter>
       </Modal>
 

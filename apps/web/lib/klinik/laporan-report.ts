@@ -239,6 +239,7 @@ export async function buildKlinikReport(input: KlinikReportInput): Promise<Klini
       <tr><td>Topik</td><td>:</td><td>${esc(slot.topik)}</td></tr>
       <tr><td>Tanggal Pelaksanaan</td><td>:</td><td>${fmtDate(slot.tanggal)}</td></tr>
       <tr><td>Waktu</td><td>:</td><td>${esc(fmtJam(slot.jam_mulai))} - ${esc(fmtJam(slot.jam_selesai))}</td></tr>
+      <tr><td>Ruangan</td><td>:</td><td>${esc(slot.ruangan || '-')}</td></tr>
       <tr><td>Kehadiran</td><td>:</td><td>${jumlahHadir} dari ${peserta.length} peserta terdaftar</td></tr>
       <tr><td>Status</td><td>:</td><td><span class="status-text">${statusInfo.iconHtml}${statusInfo.label}</span></td></tr>
     </table>

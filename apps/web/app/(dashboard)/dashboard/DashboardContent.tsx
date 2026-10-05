@@ -82,6 +82,7 @@ export default function DashboardContent({ user, headerExtra }: { user: User; he
                         }
                         if (Array.isArray(json.data.siswaData.saudaraAsuh)) {
                             setAnakAsuh(json.data.siswaData.saudaraAsuh);
+                            setAnakAsuhKehadiran(json.data.siswaData.saudaraAsuhKehadiran || {});
                         }
                     }
 
@@ -115,6 +116,11 @@ export default function DashboardContent({ user, headerExtra }: { user: User; he
 
     const [agendaOffset, setAgendaOffset] = useState(0);
 
+    const moveAgenda = (direction: number) => {
+        setAgendaOffset(prev => Math.max(0, prev + direction));
+        setSelectedAgendaDate(null);
+    };
+
     // Geser strip agenda dengan jari — jarak minimum 40px, sama seperti pola
     // di app/jadwal/components/JadwalLengkapModal.tsx, supaya scroll vertikal
     // biasa tidak salah terbaca sebagai geser hari.
@@ -125,8 +131,7 @@ export default function DashboardContent({ user, headerExtra }: { user: User; he
         const delta = e.changedTouches[0].clientX - agendaTouchStartX.current;
         agendaTouchStartX.current = null;
         if (Math.abs(delta) < 40) return;
-        if (delta < 0) setAgendaOffset(prev => prev + 1);
-        else setAgendaOffset(prev => Math.max(0, prev - 1));
+        moveAgenda(delta < 0 ? 1 : -1);
     };
 
     // 5 Hari agenda di desktop, 4 di mobile (5th day hidden via CSS on mobile)
@@ -826,7 +831,7 @@ export default function DashboardContent({ user, headerExtra }: { user: User; he
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
                                             <button
                                                 type="button"
-                                                onClick={() => setAgendaOffset(prev => Math.max(0, prev - 1))}
+                                                onClick={() => moveAgenda(-1)}
                                                 disabled={agendaOffset === 0}
                                                 title="Hari sebelumnya"
                                                 aria-label="Hari sebelumnya"
@@ -837,7 +842,7 @@ export default function DashboardContent({ user, headerExtra }: { user: User; he
                                             </button>
                                             <button
                                                 type="button"
-                                                onClick={() => setAgendaOffset(prev => prev + 1)}
+                                                onClick={() => moveAgenda(1)}
                                                 title="Hari berikutnya"
                                                 aria-label="Hari berikutnya"
                                                 className="db__announcement-scroll-btn"

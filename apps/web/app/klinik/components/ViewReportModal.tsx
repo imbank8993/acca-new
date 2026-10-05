@@ -1,8 +1,16 @@
 'use client';
 
+import { useState, useMemo, useEffect } from 'react';
 import { Modal, ModalBody, ModalFooter } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { formatJam } from '../view';
+
+const LABEL_KEHADIRAN: Record<string, string> = {
+  H: 'Hadir',
+  S: 'Sakit',
+  I: 'Izin',
+  A: 'Alpa',
+};
 
 interface ViewReportModalProps {
   isOpen: boolean;
@@ -11,6 +19,7 @@ interface ViewReportModalProps {
   openFile: (url: string, title: string) => void;
   onPrintPreview: (slotId: string) => void;
   loadingPreviewSlotId: string | null;
+  onOpenAbsensi?: (slot: any) => void;
 }
 
 export default function ViewReportModal({
@@ -20,7 +29,31 @@ export default function ViewReportModal({
   openFile,
   onPrintPreview,
   loadingPreviewSlotId,
+  onOpenAbsensi,
 }: ViewReportModalProps) {
+  const [showPeserta, setShowPeserta] = useState(false);
+
+  useEffect(() => {
+    setShowPeserta(false);
+  }, [isOpen, slot?.id]);
+
+  const pesertaList = useMemo(() => {
+    const raw = slot?.klinik_peserta || [];
+    return [...raw].sort((a: any, b: any) =>
+      (a.nama_siswa || '').localeCompare(b.nama_siswa || '', 'id-ID')
+    );
+  }, [slot]);
+
+  const rekapAbsen = useMemo(() => {
+    const r = { H: 0, S: 0, I: 0, A: 0, belum: 0 };
+    for (const p of pesertaList) {
+      const k = p.kehadiran;
+      if (k === 'H' || k === 'S' || k === 'I' || k === 'A') r[k as 'H' | 'S' | 'I' | 'A'] += 1;
+      else r.belum += 1;
+    }
+    return r;
+  }, [pesertaList]);
+
   if (!slot) return null;
 
   const laporan = Array.isArray(slot.klinik_laporan)
@@ -28,7 +61,6 @@ export default function ViewReportModal({
     : slot.klinik_laporan;
 
   const fotos: string[] = laporan?.foto_bukti || [];
-  const pesertaList = slot.klinik_peserta || [];
 
   return (
     <Modal
@@ -82,10 +114,36 @@ export default function ViewReportModal({
                 </td>
               </tr>
               <tr>
-                <td className="kdt-label">Peserta Terdaftar</td>
+                <td className="kdt-label">Ruangan</td>
+                <td className="kdt-colon">:</td>
+                <td className="kdt-value">{slot.ruangan || '-'}</td>
+              </tr>
+              <tr>
+                <td className="kdt-label">Peserta &amp; Absensi</td>
                 <td className="kdt-colon">:</td>
                 <td className="kdt-value">
-                  {pesertaList.length} siswa / kuota {slot.max_siswa}
+                  <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 6 }}>
+                    <span style={{ fontWeight: 600, marginRight: 4 }}>
+                      {pesertaList.length} siswa <span style={{ color: 'var(--n-muted)', fontWeight: 400 }}>(kuota {slot.max_siswa})</span>
+                    </span>
+                    <span className="abs-ringkas__item abs-ringkas__item--h">
+                      Hadir {rekapAbsen.H}
+                    </span>
+                    {rekapAbsen.S > 0 && (
+                      <span className="abs-ringkas__item">Sakit {rekapAbsen.S}</span>
+                    )}
+                    {rekapAbsen.I > 0 && (
+                      <span className="abs-ringkas__item">Izin {rekapAbsen.I}</span>
+                    )}
+                    {rekapAbsen.A > 0 && (
+                      <span className="abs-ringkas__item abs-ringkas__item--a">Alpa {rekapAbsen.A}</span>
+                    )}
+                    {rekapAbsen.belum > 0 && (
+                      <span className="abs-ringkas__item abs-ringkas__item--kosong">
+                        Belum diabsen {rekapAbsen.belum}
+                      </span>
+                    )}
+                  </div>
                 </td>
               </tr>
               {slot.initiator_type === 'SISWA' && (
@@ -102,13 +160,63 @@ export default function ViewReportModal({
           </table>
 
           {pesertaList.length > 0 && (
-            <div className="anggota-chips" style={{ marginTop: 12 }}>
-              {pesertaList.map((p: any) => (
-                <span key={p.id} className="anggota-chip anggota-chip--plain">
-                  {p.nama_siswa}
-                  {p.kelas ? ` · ${p.kelas}` : ''}
-                </span>
-              ))}
+            <div className="vrm-peserta-wrap">
+              <div className="vrm-peserta-bar">
+                <button
+                  type="button"
+                  className="vrm-peserta-toggle"
+                  onClick={() => setShowPeserta((v) => !v)}
+                >
+                  <i className={`bi ${showPeserta ? 'bi-chevron-up' : 'bi-people-fill'}`} />
+                  <span>
+                    {showPeserta
+                      ? 'Sembunyikan Daftar Peserta & Absensi'
+                      : `Lihat Daftar Peserta & Absensi (${pesertaList.length} siswa)`}
+                  </span>
+                  <i className={`bi ${showPeserta ? 'bi-chevron-up' : 'bi-chevron-down'}`} style={{ marginLeft: 'auto' }} />
+                </button>
+                {onOpenAbsensi && (
+                  <button
+                    type="button"
+                    className="vrm-absen-btn"
+                    onClick={() => {
+                      onClose();
+                      onOpenAbsensi(slot);
+                    }}
+                    title="Isi atau ubah absensi peserta"
+                  >
+                    <i className="bi bi-clipboard-check" /> Kelola Absensi
+                  </button>
+                )}
+              </div>
+
+              {showPeserta && (
+                <div className="vrm-peserta-list">
+                  {pesertaList.map((p: any, idx: number) => {
+                    const kode = p.kehadiran as string | null | undefined;
+                    return (
+                      <div key={p.id || idx} className="vrm-peserta-row">
+                        <span className="vrm-peserta-no">{idx + 1}.</span>
+                        <span className="vrm-peserta-nama">{p.nama_siswa}</span>
+                        {p.kelas && <span className="p-class" style={{ marginTop: 0 }}>{p.kelas}</span>}
+                        <span
+                          className={`kehadiran-pill ${kode ? `k-${kode}` : 'k-belum'}`}
+                          style={{ marginLeft: 'auto' }}
+                          title={
+                            kode
+                              ? p.kehadiran_sumber === 'MANDIRI'
+                                ? 'Absen mandiri oleh siswa'
+                                : 'Ditandai oleh guru pengampu'
+                              : 'Belum diabsen'
+                          }
+                        >
+                          {kode ? `${kode} · ${LABEL_KEHADIRAN[kode] || kode}` : 'Belum diabsen'}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           )}
         </section>

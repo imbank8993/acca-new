@@ -62,6 +62,7 @@ const MASTER_TAB_ACCESS: Record<string, string> = {
   siswa: 'master_siswa_access_config',
   guru: 'master_guru_access_config',
   kelas: 'master_kelas_access_config',
+  ruangan: 'master_ruangan_access_config',
   mapel: 'master_mapel_access_config',
   waktu: 'master_waktu_access_config',
   'kode-guru': 'master_kode_guru_access_config',

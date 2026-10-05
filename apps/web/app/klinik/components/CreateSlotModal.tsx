@@ -11,6 +11,22 @@ export interface CalonAnggota {
   kelas: string;
 }
 
+export interface RuanganOpsi {
+  id: string;
+  kode?: string | null;
+  nama: string;
+  lokasi?: string | null;
+  kapasitas?: number | null;
+}
+
+export function formatLabelRuangan(r: RuanganOpsi): string {
+  const base = r.kode ? `${r.kode} - ${r.nama}` : r.nama;
+  const meta: string[] = [];
+  if (r.lokasi) meta.push(r.lokasi);
+  if (r.kapasitas) meta.push(`Kap. ${r.kapasitas}`);
+  return meta.length > 0 ? `${base} (${meta.join(', ')})` : base;
+}
+
 const MAX_CHIP_TAMPIL = 2;
 
 interface CreateSlotModalProps {
@@ -27,10 +43,12 @@ interface CreateSlotModalProps {
     max_siswa: number;
     guru_nip: string;
     target_kelas: string[];
+    ruangan?: string;
   };
   setForm: React.Dispatch<React.SetStateAction<any>>;
   mapelList: { id: string; nama: string }[];
   guruOptions: { nip: string; nama_guru: string }[];
+  ruanganList?: RuanganOpsi[];
   onSubmit: () => void;
   submitting?: boolean;
   // Siswa props
@@ -57,6 +75,7 @@ export default function CreateSlotModal({
   setForm,
   mapelList,
   guruOptions,
+  ruanganList = [],
   onSubmit,
   submitting = false,
   anggota = [],
@@ -181,7 +200,7 @@ export default function CreateSlotModal({
 
             <section className="form-section">
               <h3 className="form-section__title">
-                <i className="bi bi-clock-fill" /> Waktu Pelaksanaan
+                <i className="bi bi-clock-fill" /> Waktu &amp; Tempat Pelaksanaan
               </h3>
               <div className="form-row">
                 <div className={`form-group ${isPengajuanSiswa ? 'span-2' : ''}`}>
@@ -313,6 +332,29 @@ export default function CreateSlotModal({
                   <p style={{ margin: 0, fontSize: '0.72rem', color: '#64748b' }}>
                     💡 Tips: Gunakan format 24 jam (misal <strong>20:00</strong> untuk jam 8 malam), atau pilih <strong>PM</strong> jika di HP Anda muncul opsi AM/PM.
                   </p>
+                </div>
+                <div className="form-group span-2">
+                  <label>Ruangan</label>
+                  <select
+                    className="jp__input w-full"
+                    value={form.ruangan || ''}
+                    onChange={(e) => setForm({ ...form, ruangan: e.target.value })}
+                  >
+                    <option value="">-- Pilih Ruangan --</option>
+                    {form.ruangan && !ruanganList.some((r) => r.nama === form.ruangan) && (
+                      <option value={form.ruangan}>{form.ruangan}</option>
+                    )}
+                    {ruanganList.map((r) => (
+                      <option key={r.id} value={r.nama}>
+                        {formatLabelRuangan(r)}
+                      </option>
+                    ))}
+                  </select>
+                  {ruanganList.length === 0 && (
+                    <p className="form-hint form-hint--warn">
+                      Belum ada daftar ruangan aktif di Master Data &rarr; Ruangan.
+                    </p>
+                  )}
                 </div>
               </div>
             </section>

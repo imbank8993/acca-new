@@ -11,6 +11,7 @@ export type MasterTab =
     | 'mapel'
     | 'mapel-kelas'
     | 'kelas'
+    | 'ruangan'
     | 'waktu'
     | 'jp-mapel'
     | 'ekskul'

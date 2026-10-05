@@ -138,11 +138,6 @@ export default function DashboardExamCard({ user, isSiswa, isGuru, isAdmin }: Da
         }
     };
 
-    // Jangan tampilkan jika sudah selesai dimuat dan sama sekali tidak ada ujian
-    if (!loading && (!data || data.counts.total === 0)) {
-        return null;
-    }
-
     const filterOptions: InlineSelectOption[] = useMemo(() => {
         if (!data) return [];
         return [
@@ -152,6 +147,11 @@ export default function DashboardExamCard({ user, isSiswa, isGuru, isAdmin }: Da
             { value: 'completed', label: `Selesai (${data.counts.completed})` },
         ];
     }, [data]);
+
+    // Semua Hook tetap dipanggil ketika loading selesai tanpa data ujian.
+    if (!loading && (!data || data.counts.total === 0)) {
+        return null;
+    }
 
     const displayedExams = data
         ? activeTab === 'all'

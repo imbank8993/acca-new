@@ -142,6 +142,7 @@ function getColumnCast(table: string, column: string): string {
       t === 'master_siswa' ||
       t === 'master_guru' ||
       t === 'master_kelas' ||
+      t === 'master_ruangan' ||
       t === 'master_mapel' ||
       t === 'master_tahun_ajaran' ||
       t === 'master_waktu' ||
