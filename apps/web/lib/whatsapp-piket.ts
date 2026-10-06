@@ -42,7 +42,15 @@ function normalizeTeacherName(name: string): string {
         .replace(/[^a-z0-9]/g, '');
 }
 
-function matchTeacher(nameA: string, nameB: string): boolean {
+function cleanTeacherBaseName(name: string): string {
+    return (name || '')
+        .replace(/\b(dr|prof|ir|drs|dra|h|hj)\b\.?/gi, '')
+        .replace(/,\s*([A-Za-z\.\s]+)$/g, '') // strip trailing gelar like ", S.Pd., M.Pd."
+        .replace(/[^a-z0-9]/gi, '')
+        .toLowerCase();
+}
+
+function matchTeacher(nameA?: string | null, nameB?: string | null): boolean {
     if (!nameA || !nameB) return false;
     const a = nameA.trim().toLowerCase();
     const b = nameB.trim().toLowerCase();
@@ -50,8 +58,13 @@ function matchTeacher(nameA: string, nameB: string): boolean {
     const normA = normalizeTeacherName(a);
     const normB = normalizeTeacherName(b);
     if (!normA || !normB) return false;
-    if (normA === normB) return true;
-    if (normA.includes(normB) || normB.includes(normA)) return true;
+    if (normA === normB || normA.includes(normB) || normB.includes(normA)) return true;
+
+    const baseA = cleanTeacherBaseName(a);
+    const baseB = cleanTeacherBaseName(b);
+    if (baseA && baseB && (baseA === baseB || (baseA.length >= 4 && (baseA.includes(baseB) || baseB.includes(baseA))))) {
+        return true;
+    }
     return false;
 }
 
@@ -60,6 +73,8 @@ function isEligibleForIzinCheck(status: string): boolean {
     if (s.includes('kosong')) return true;
     if (s.includes('daring')) return true;
     if (s.includes('tanpa pendampingan') || (s.includes('penugasan') && s.includes('tanpa'))) return true;
+    if (s.includes('tanpa keterangan') || s.includes('tidak hadir')) return true;
+    if (s === 'izin' || s === 'sakit') return true;
     return false;
 }
 
@@ -109,17 +124,22 @@ export async function sendWhatsAppPiket(data: any): Promise<WASendPiketResult> {
         let izinList: any[] = [];
         if (fileDate) {
             try {
+                const dateParts = String(fileDate).split('T')[0].split('-').map(Number);
+                const targetDate = (dateParts.length === 3 && !dateParts.some(isNaN))
+                    ? new Date(Date.UTC(dateParts[0], dateParts[1] - 1, dateParts[2], 0, 0, 0))
+                    : new Date(fileDate);
+
                 const izinData = await prisma.izin_guru.findMany({
                     where: {
-                        tanggal_mulai: { lte: fileDate },
-                        tanggal_selesai: { gte: fileDate },
-                        status: { in: ['disetujui', 'pending'] }
+                        tanggal_mulai: { lte: targetDate },
+                        tanggal_selesai: { gte: targetDate },
+                        status: { in: ['disetujui', 'pending', 'approved', 'Disetujui', 'Pending'] }
                     },
                     select: { nama_guru: true, nip: true, jenis: true, status: true, tanggal_mulai: true, tanggal_selesai: true }
                 });
                 if (izinData) {
                     izinList = izinData;
-                    console.log(`[WA Piket] Found ${izinList.length} izin_guru records for date ${fileDate}`);
+                    console.log(`[WA Piket] Found ${izinList.length} izin_guru records for date ${fileDate} (${targetDate.toISOString()})`);
                 }
             } catch (err) {
                 console.warn("[WA Piket] Error fetching izin_guru:", err);
@@ -152,13 +172,17 @@ export async function sendWhatsAppPiket(data: any): Promise<WASendPiketResult> {
                 }
 
                 let izinSakit = '-';
-                if (isEligibleForIzinCheck(fullStatus)) {
-                    const matchingIzin = izinList.find(iz => matchTeacher(iz.nama_guru, namaGuru));
-                    if (!matchingIzin) {
-                        izinSakit = 'Tidak Ada';
-                    } else if (matchingIzin.status === 'pending') {
+                const matchingIzin = izinList.find(iz =>
+                    matchTeacher(iz.nama_guru, d.guru_jadwal) ||
+                    matchTeacher(iz.nama_guru, d.nama_guru) ||
+                    matchTeacher(iz.nama_guru, d.guru) ||
+                    matchTeacher(iz.nama_guru, namaGuru)
+                );
+
+                if (matchingIzin) {
+                    if (matchingIzin.status === 'pending' || matchingIzin.status === 'Pending') {
                         izinSakit = 'Pending';
-                    } else if (matchingIzin.status === 'disetujui') {
+                    } else if (matchingIzin.status === 'disetujui' || matchingIzin.status === 'approved' || matchingIzin.status === 'Disetujui') {
                         const j = (matchingIzin.jenis || '').toLowerCase();
                         if (j === 'sakit') {
                             izinSakit = 'Sakit';
@@ -168,8 +192,10 @@ export async function sendWhatsAppPiket(data: any): Promise<WASendPiketResult> {
                             izinSakit = 'Izin';
                         }
                     } else {
-                        izinSakit = 'Tidak Ada';
+                        izinSakit = '-';
                     }
+                } else if (isEligibleForIzinCheck(fullStatus)) {
+                    izinSakit = 'Tidak Ada';
                 }
 
                 rows.push({
