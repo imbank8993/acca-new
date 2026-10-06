@@ -1584,7 +1584,7 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
               <div>
                 <h3>Rekap Bulanan Klinik Pembelajaran</h3>
                 <p>
-                  Dokumen kolektif seluruh guru yang melaksanakan sesi klinik pada bulan terpilih, lengkap dengan KOP madrasah dan kolom tanda tangan Kepala Madrasah.
+                  Dokumen kolektif seluruh guru yang melaksanakan sesi klinik pada bulan terpilih, dilengkapi lampiran absensi setiap sesi, foto dokumentasi, dan pengesahan digital WKM Akademik dengan QR Code verifikasi.
                 </p>
               </div>
             </div>

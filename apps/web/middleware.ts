@@ -172,6 +172,8 @@ export async function middleware(request: NextRequest) {
         '/api/ketidakhadiran/pdf-preview', // Proxy berkas surat untuk pratinjau
         '/guru-asuh/verify', // Verifikasi QR laporan guru asuh — dibuka lewat scan, bukan menu
         '/api/guru-asuh/laporan-submission/verify', // Lookup ajuan by id utk verifikasi (read-only)
+        '/klinik/verify', // Verifikasi QR rekap & laporan klinik — dibuka lewat scan, bukan menu
+        '/api/klinik/verify', // Lookup rekap & laporan klinik utk verifikasi (read-only)
         // Galeri foto dokumentasi piket — dibuka lewat link di pesan grup WA, bukan menu.
         // Browser in-app WhatsApp punya cookie jar sendiri, jadi sesi dari Chrome tidak
         // terbawa dan penerima selalu mendarat di /login. Halamannya read-only dan

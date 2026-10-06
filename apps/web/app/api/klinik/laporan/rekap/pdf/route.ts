@@ -28,7 +28,7 @@ async function convertHtmlToPdf(html: string): Promise<Buffer> {
         const pdfBuffer = await page.pdf({
             format: 'A4',
             printBackground: true,
-            margin: { top: '20mm', right: '15mm', bottom: '20mm', left: '20mm' },
+            margin: { top: '15mm', right: '15mm', bottom: '15mm', left: '20mm' },
         });
         return Buffer.from(pdfBuffer);
     } finally {
@@ -46,7 +46,8 @@ export async function POST(request: NextRequest) {
         }
 
         const body = await request.json();
-        const result = await buildRekapKlinik(body);
+        const origin = request.nextUrl.origin;
+        const result = await buildRekapKlinik({ ...body, origin });
         if (!result.ok) {
             return NextResponse.json({ ok: false, error: result.error }, { status: result.status });
         }

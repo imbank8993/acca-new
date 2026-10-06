@@ -13,7 +13,8 @@ export async function POST(request: NextRequest) {
         }
 
         const body = await request.json();
-        const result = await buildRekapKlinik(body);
+        const origin = request.nextUrl.origin;
+        const result = await buildRekapKlinik({ ...body, origin });
         if (!result.ok) {
             return NextResponse.json({ ok: false, error: result.error }, { status: result.status });
         }
