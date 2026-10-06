@@ -50,6 +50,12 @@ async function proxy(req: NextRequest) {
             else if (parsedBody.action === 'update_report' && parsedBody.finalized) {
                 await notifKlinikWa('guru_ajukan_laporan', parsedBody.slot_id, parsedBody, userCaller);
             }
+
+            // 4. Akademik / Admin menugaskan sesi klinik ke guru
+            else if (parsedBody.action === 'create_slot_admin') {
+                const slotData = body.data || {};
+                await notifKlinikWa('admin_tugaskan_sesi_guru', slotData.id || slotData, parsedBody, userCaller);
+            }
         } catch (e: any) {
             console.error('[WA klinik] Gagal memicu notifikasi:', e?.message || e);
         }

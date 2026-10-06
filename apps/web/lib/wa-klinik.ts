@@ -31,7 +31,8 @@ export type PeristiwaKlinik =
     | 'siswa_ajukan_sesi'
     | 'guru_terima_sesi_siswa'
     | 'guru_ajukan_sesi'
-    | 'guru_ajukan_laporan';
+    | 'guru_ajukan_laporan'
+    | 'admin_tugaskan_sesi_guru';
 
 /**
  * Alamat publik aplikasi untuk tautan yang diklik dari WhatsApp.
@@ -180,32 +181,58 @@ export interface ApproverInfo {
 /**
  * Ambil data guru yang ditunjuk sebagai approver sesi kelompok dari siswa.
  */
-export async function getApproverGuruSesi(guruNipOrId?: string | bigint | null): Promise<ApproverInfo[]> {
+export async function getApproverGuruSesi(guruNipOrId?: string | bigint | number | null): Promise<ApproverInfo[]> {
     if (!guruNipOrId) return [];
     try {
-        const nipStr = String(guruNipOrId);
+        const nipStr = String(guruNipOrId).trim();
         let userNip: string | null = null;
         let userName: string = 'Guru Pengampu';
 
-        if (nipStr.length >= 8 && !isNaN(Number(nipStr))) {
-            userNip = nipStr;
-        } else {
-            let idBigInt: bigint | null = null;
-            try { idBigInt = BigInt(nipStr); } catch {}
-            if (idBigInt) {
-                const u = await prisma.public_users.findFirst({
-                    where: { id: idBigInt },
-                    select: { nip: true, nama: true, nama_lengkap: true },
-                });
-                userNip = u?.nip || null;
-                userName = u?.nama_lengkap || u?.nama || userName;
+        const kandidat = [...new Set([nipStr, nipStr.padStart(10, '0'), nipStr.replace(/^0+/, '')])].filter(Boolean);
+
+        // 1. Cek di master_guru berdasarkan NIP
+        const mg = await prisma.master_guru.findFirst({
+            where: { nip: { in: kandidat } },
+            select: { nip: true, nama_lengkap: true, no_hp: true },
+        });
+        if (mg?.nip) {
+            userNip = mg.nip;
+            userName = mg.nama_lengkap || userName;
+            const hp = (mg.no_hp && mg.no_hp.replace(/\D/g, '').length >= 8) ? mg.no_hp : await nomorHpGuru(userNip);
+            return [{ nip: userNip, nama: userName, noHp: hp }];
+        }
+
+        // 2. Cek di public_users berdasarkan NIP
+        const uByNip = await prisma.public_users.findFirst({
+            where: { nip: { in: kandidat } },
+            select: { nip: true, nama: true, nama_lengkap: true },
+        });
+        if (uByNip?.nip) {
+            userNip = uByNip.nip;
+            userName = uByNip.nama_lengkap || uByNip.nama || userName;
+            const hp = await nomorHpGuru(userNip);
+            const nama = await resolveNamaGuru(userNip, userName);
+            return [{ nip: userNip, nama, noHp: hp }];
+        }
+
+        // 3. Cek di public_users berdasarkan id (users.id)
+        let idBigInt: bigint | null = null;
+        try { idBigInt = BigInt(nipStr); } catch {}
+        if (idBigInt) {
+            const u = await prisma.public_users.findFirst({
+                where: { id: idBigInt },
+                select: { nip: true, nama: true, nama_lengkap: true },
+            });
+            if (u?.nip) {
+                userNip = u.nip;
+                userName = u.nama_lengkap || u.nama || userName;
+                const hp = await nomorHpGuru(userNip);
+                const nama = await resolveNamaGuru(userNip, userName);
+                return [{ nip: userNip, nama, noHp: hp }];
             }
         }
 
-        if (!userNip) return [];
-        const hp = await nomorHpGuru(userNip);
-        const nama = await resolveNamaGuru(userNip, userName);
-        return [{ nip: userNip, nama, noHp: hp }];
+        return [];
     } catch (e: any) {
         console.error('[WA klinik] Gagal mengambil approver guru sesi:', e?.message);
         return [];
@@ -424,6 +451,8 @@ export async function susunPesanKlinikDetail(
 
     const url = baseUrl();
     const lamanUrl = url ? `${url}${TAUTAN_APPROVAL}` : TAUTAN_APPROVAL;
+    const tautanSesiSaya = url ? `${url}/klinik?tab=my_sessions` : '/klinik?tab=my_sessions';
+    const tautanUrl = (peristiwa === 'admin_tugaskan_sesi_guru') ? tautanSesiSaya : lamanUrl;
 
     const dataParams: Record<string, string> = {
         nama: namaPengaju,
@@ -436,12 +465,21 @@ export async function susunPesanKlinikDetail(
         tanggal: tanggalStr,
         mapel: slot?.mapel || '',
         topik: slot?.topik || '',
-        laman: lamanUrl,
-        url: lamanUrl,
+        laman: tautanUrl,
+        url: tautanUrl,
     };
 
     let pesan = '';
     switch (peristiwa) {
+        case 'admin_tugaskan_sesi_guru': {
+            const ruanganInfo = slot?.ruangan ? ` di ${slot.ruangan}` : '';
+            const jamMulaiStr = slot?.jam_mulai ? (typeof slot.jam_mulai === 'string' && slot.jam_mulai.includes('T') ? slot.jam_mulai.split('T')[1].slice(0, 5) : String(slot.jam_mulai).slice(0, 5)) : '';
+            const jamSelesaiStr = slot?.jam_selesai ? (typeof slot.jam_selesai === 'string' && slot.jam_selesai.includes('T') ? slot.jam_selesai.split('T')[1].slice(0, 5) : String(slot.jam_selesai).slice(0, 5)) : '';
+            const jamInfo = (jamMulaiStr && jamSelesaiStr) ? ` (${jamMulaiStr} - ${jamSelesaiStr} WITA)` : (jamMulaiStr ? ` (pukul ${jamMulaiStr} WITA)` : '');
+            pesan = `Halo Bapak/Ibu ${namaGuru}, Anda telah dijadwalkan oleh Akademik untuk mengampu sesi klinik pembelajaran${mapelStr}${topikStr} pada tanggal ${tanggalStr}${jamInfo}${ruanganInfo}. Silakan akses ${tautanUrl} untuk melihat detail sesi dan daftar peserta.`;
+            break;
+        }
+
         case 'siswa_ajukan_sesi': {
             // Siswa mengajukan sesi kelompok, ditujukan ke guru pengampu
             pesan = `${namaSiswa} telah mengajukan sesi klinik${mapelStr}${topikStr} pada tanggal ${tanggalStr}, silakan akses ${lamanUrl} untuk meninjau ajuan.`;
@@ -542,6 +580,9 @@ export async function notifKlinikWa(
                     nama_guru: true,
                     mapel: true,
                     topik: true,
+                    ruangan: true,
+                    jam_mulai: true,
+                    jam_selesai: true,
                     tanggal: true,
                     initiator_type: true,
                     initiator_siswa_id: true,
@@ -561,8 +602,8 @@ export async function notifKlinikWa(
         // Tentukan daftar penerima approval sesuai peristiwanya
         let approvers: ApproverInfo[] = [];
 
-        if (peristiwa === 'siswa_ajukan_sesi') {
-            // Ditujukan ke guru pengampu yang dipilih siswa
+        if (peristiwa === 'siswa_ajukan_sesi' || peristiwa === 'admin_tugaskan_sesi_guru') {
+            // Ditujukan ke guru pengampu yang dipilih siswa atau ditugaskan oleh admin
             const targetGuru = slot.guru_id || extraPayload?.guru_nip;
             approvers = await getApproverGuruSesi(targetGuru);
         } else if (peristiwa === 'guru_terima_sesi_siswa' || peristiwa === 'guru_ajukan_sesi') {
@@ -633,6 +674,9 @@ export async function pratinjauKlinikWa(peristiwa: PeristiwaKlinik, slotId: stri
             nama_guru: true,
             mapel: true,
             topik: true,
+            ruangan: true,
+            jam_mulai: true,
+            jam_selesai: true,
             tanggal: true,
             initiator_type: true,
             initiator_siswa_id: true,
@@ -641,7 +685,7 @@ export async function pratinjauKlinikWa(peristiwa: PeristiwaKlinik, slotId: stri
     });
 
     let approvers: ApproverInfo[] = [];
-    if (peristiwa === 'siswa_ajukan_sesi') {
+    if (peristiwa === 'siswa_ajukan_sesi' || peristiwa === 'admin_tugaskan_sesi_guru') {
         approvers = await getApproverGuruSesi(slot?.guru_id || extraPayload?.guru_nip);
     } else if (peristiwa === 'guru_terima_sesi_siswa' || peristiwa === 'guru_ajukan_sesi') {
         approvers = await getApproversSesiKlinik();

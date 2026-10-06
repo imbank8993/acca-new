@@ -227,6 +227,30 @@ const ANTREAN: QueueDef[] = [
         }),
     },
     {
+        key: 'klinik-sesi-aktif-guru',
+        menuId: 'klinik',
+        tables: ['klinik_slots'],
+        audience: u => !!u.userId,
+        count: u => prisma.klinik_slots.count({
+            where: {
+                guru_id: BigInt(u.userId!),
+                status: { in: ['open', 'full'] },
+            },
+        }),
+    },
+    {
+        key: 'klinik-laporan-revisi-guru',
+        menuId: 'klinik',
+        tables: ['klinik_laporan'],
+        audience: u => !!u.userId,
+        count: u => prisma.klinik_laporan.count({
+            where: {
+                guru_id: BigInt(u.userId!),
+                status: 'Revisi',
+            },
+        }),
+    },
+    {
         key: 'klinik-review-sesi',
         menuId: 'klinik',
         tables: ['klinik_slots'],

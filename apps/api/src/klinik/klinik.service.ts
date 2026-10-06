@@ -1104,7 +1104,7 @@ export async function handlePost(req: any, action: string, payload: any, db: Pri
                 throw new HttpException({ ok: false, error: 'Pilih guru pengampu terlebih dahulu' }, 400);
             }
             const { data: guruRecord } = await db.from('users')
-                .select('id, nama').eq('nip', payload.guru_nip).maybeSingle();
+                .select('id, nama, auth_id').eq('nip', payload.guru_nip).maybeSingle();
             if (!guruRecord) {
                 throw new HttpException({ ok: false, error: 'Guru pengampu tidak ditemukan' }, 400);
             }
@@ -1180,6 +1180,21 @@ export async function handlePost(req: any, action: string, payload: any, db: Pri
                 jamMulai: payload.jam_mulai,
                 ruangan: ruanganVal,
             });
+
+            if (guruRecord.auth_id) {
+                const tanggalTampil = new Date(`${payload.tanggal}T12:00:00`)
+                    .toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long' });
+                const lokasiTampil = ruanganVal ? ` di ${ruanganVal}` : '';
+                await notifyUser(db, guruRecord.auth_id, {
+                    type: 'klinik_assigned',
+                    title: 'Penugasan Sesi Klinik Pembelajaran',
+                    message: `Anda dijadwalkan oleh Akademik untuk mengampu klinik ${payload.mapel} (${payload.topik}) pada ${tanggalTampil}, `
+                        + `pukul ${String(payload.jam_mulai).slice(0, 5)}${lokasiTampil}.`,
+                    link: '/klinik?tab=my_sessions',
+                    source_table: 'klinik_slots',
+                    source_id: String(slotBaru.id),
+                });
+            }
 
             return { ok: true, data: slotBaru };
         }

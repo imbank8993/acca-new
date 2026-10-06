@@ -1465,12 +1465,26 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
    */
   const sesiKosongDiApproval = tabAktif === 'approval' && displayedSlots.length === 0;
   const jumlahMenungguSesiApproval = displayedSlots.filter((slot) => slot.status === 'pending').length;
+  const jumlahSesiAktifGuru = useMemo(() => {
+    if (!isGuru || !user?.id) return 0;
+    return slots.filter((s) => isSameId(s.guru_id, user.id) && (s.status === 'open' || s.status === 'full')).length;
+  }, [slots, isGuru, user?.id]);
 
   const tabs: TabItem<'available' | 'my_sessions' | 'kelompok' | 'approval' | 'kelola' | 'rekap'>[] = [
     { key: 'available', label: 'Klinik Tersedia', icon: 'bi-grid-fill' },
-    ...(isGuru ? [{ key: 'my_sessions' as const, label: 'Sesi Saya', icon: 'bi-person-video3' }] : []),
+    ...(isGuru ? [{
+      key: 'my_sessions' as const,
+      label: 'Sesi Saya',
+      icon: 'bi-person-video3',
+      badge: jumlahSesiAktifGuru > 0 ? jumlahSesiAktifGuru : undefined,
+    }] : []),
     ...(isSiswa && !isGuru ? [{ key: 'kelompok' as const, label: 'Ajukan Kelompok', icon: 'bi-people-fill' }] : []),
-    ...(bisaApproveSesi || bisaApproveLaporan ? [{ key: 'approval' as const, label: 'Approval', icon: 'bi-shield-check' }] : []),
+    ...(bisaApproveSesi || bisaApproveLaporan ? [{
+      key: 'approval' as const,
+      label: 'Approval',
+      icon: 'bi-shield-check',
+      badge: jumlahMenungguSesiApproval > 0 ? jumlahMenungguSesiApproval : undefined,
+    }] : []),
     ...(bisaKelolaSesi ? [{ key: 'kelola' as const, label: 'Kelola Sesi', icon: 'bi-calendar2-week' }] : []),
     ...(bisaRekap ? [{ key: 'rekap' as const, label: 'Laporan', icon: 'bi-file-earmark-arrow-down' }] : []),
   ];
