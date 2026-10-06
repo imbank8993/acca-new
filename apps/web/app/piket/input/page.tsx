@@ -35,6 +35,33 @@ interface ClassData {
     jams?: string[];
 }
 
+function createInitialClassData(schedule: JadwalItem[]): Record<string, ClassData> {
+    const group: Record<string, { guru?: string; kelas: string; jams: string[] }> = {};
+    schedule.forEach(item => {
+        const teacher = item.nama_guru || 'Tanpa Guru';
+        const displayName = (!item.ruang || item.kelas === item.ruang) ? item.kelas : `${item.kelas} (${item.ruang})`;
+        const fKey = `${teacher}-${displayName}`;
+        if (!group[fKey]) group[fKey] = { guru: item.nama_guru, kelas: displayName, jams: [] };
+        group[fKey].jams.push(item.jam_ke);
+    });
+
+    const res: Record<string, ClassData> = {};
+    Object.entries(group).forEach(([fKey, fg]) => {
+        res[fKey] = {
+            kelas: fg.kelas,
+            jams: fg.jams,
+            guru: fg.guru || '',
+            guru_override: '',
+            status: '',
+            status_tambahan_1: '',
+            status_tambahan_2: '',
+            status_tambahan_3: '',
+            dokumentasi_url: ''
+        };
+    });
+    return res;
+}
+
 /**
  * Kompres dan konversi gambar/foto (dari kamera atau galeri) ke format WebP.
  * Menghasilkan berkas WebP (~80 - 180 KB) dengan dimensi maksimal 1280px.
@@ -555,33 +582,25 @@ export default function PiketInputPage(props?: any) {
     // Auto-fill classData when schedule loads
     useEffect(() => {
         if (allClassesForDate.length > 0) {
-            const newClassData: Record<string, any> = {};
-
-            // Build the SAME grouping (guru, kelas/ruang) as useMemo
-            const finalGroup: Record<string, any> = {};
-            allClassesForDate.forEach(item => {
-                const teacher = item.nama_guru || 'Tanpa Guru';
-                const displayName = (!item.ruang || item.kelas === item.ruang) ? item.kelas : `${item.kelas} (${item.ruang})`;
-                const fKey = `${teacher}-${displayName}`;
-                if (!finalGroup[fKey]) finalGroup[fKey] = { guru: item.nama_guru, kelas: displayName, jams: [] };
-                finalGroup[fKey].jams.push(item.jam_ke);
+            const initial = createInitialClassData(allClassesForDate);
+            setClassData(prev => {
+                const next: Record<string, ClassData> = {};
+                Object.entries(initial).forEach(([fKey, base]) => {
+                    const existing = prev[fKey];
+                    next[fKey] = {
+                        ...base,
+                        guru_override: existing?.guru_override || '',
+                        status: existing?.status || '',
+                        status_tambahan_1: existing?.status_tambahan_1 || '',
+                        status_tambahan_2: existing?.status_tambahan_2 || '',
+                        status_tambahan_3: existing?.status_tambahan_3 || '',
+                        dokumentasi_url: existing?.dokumentasi_url || ''
+                    };
+                });
+                return next;
             });
-
-            Object.entries(finalGroup).forEach(([fKey, fg]) => {
-                const existing = (classData as any)[fKey];
-                newClassData[fKey] = {
-                    kelas: fg.kelas,
-                    jams: fg.jams,
-                    guru: fg.guru || '',
-                    guru_override: existing?.guru_override || '',
-                    status: existing?.status || '',
-                    status_tambahan_1: existing?.status_tambahan_1 || '',
-                    status_tambahan_2: existing?.status_tambahan_2 || '',
-                    status_tambahan_3: existing?.status_tambahan_3 || '',
-                    dokumentasi_url: existing?.dokumentasi_url || ''
-                };
-            });
-            setClassData(newClassData as any);
+        } else {
+            setClassData({});
         }
     }, [allClassesForDate]);
 
@@ -677,41 +696,43 @@ export default function PiketInputPage(props?: any) {
 
     const updateClassData = (fKey: string, field: keyof ClassData, value: string) => {
         setClassData(prev => {
-            // Jika data belum ada (misal setelah reset atau upload foto duluan), 
-            // cari data dasarnya dari allClassesForDate berdasarkan fKey
-            const existing = (prev as any)[fKey];
+            const existing = prev[fKey];
 
-            let baseData = existing || {
-                kelas: '',
-                jams: [],
-                guru: '',
-                guru_override: '',
-                status: '',
-                dokumentasi_url: ''
-            };
+            let baseData = existing;
+            if (!baseData || !baseData.kelas || !baseData.jams || baseData.jams.length === 0) {
+                // Cari data dasar dari allClassesForDate berdasarkan fKey yang persis sama
+                const matchingItems = allClassesForDate.filter(item => {
+                    const teacher = item.nama_guru || 'Tanpa Guru';
+                    const displayName = (!item.ruang || item.kelas === item.ruang) ? item.kelas : `${item.kelas} (${item.ruang})`;
+                    return `${teacher}-${displayName}` === fKey;
+                });
 
-            // Jika baseData belum punya info kelas/jams, cari di allClassesForDate
-            if (!baseData.kelas || baseData.jams.length === 0) {
-                const parts = fKey.split('-');
-                const teacherName = parts[0];
-                const className = parts.slice(1).join('-');
-
-                const match = allClassesForDate.find(item =>
-                    (item.nama_guru || 'Tanpa Guru') === teacherName &&
-                    item.kelas === className
-                );
-
-                if (match) {
-                    // Cari semua jam untuk guru & kelas ini
-                    const allJams = allClassesForDate
-                        .filter(item => (item.nama_guru || 'Tanpa Guru') === teacherName && item.kelas === className)
-                        .map(item => item.jam_ke);
-
+                if (matchingItems.length > 0) {
+                    const first = matchingItems[0];
+                    const displayName = (!first.ruang || first.kelas === first.ruang) ? first.kelas : `${first.kelas} (${first.ruang})`;
                     baseData = {
-                        ...baseData,
-                        kelas: match.kelas,
-                        jams: allJams,
-                        guru: match.nama_guru || ''
+                        ...(baseData || {}),
+                        kelas: displayName,
+                        jams: matchingItems.map(item => item.jam_ke),
+                        guru: first.nama_guru || '',
+                        guru_override: baseData?.guru_override || '',
+                        status: baseData?.status || '',
+                        status_tambahan_1: baseData?.status_tambahan_1 || '',
+                        status_tambahan_2: baseData?.status_tambahan_2 || '',
+                        status_tambahan_3: baseData?.status_tambahan_3 || '',
+                        dokumentasi_url: baseData?.dokumentasi_url || ''
+                    };
+                } else {
+                    baseData = baseData || {
+                        kelas: '',
+                        jams: [],
+                        guru: '',
+                        guru_override: '',
+                        status: '',
+                        status_tambahan_1: '',
+                        status_tambahan_2: '',
+                        status_tambahan_3: '',
+                        dokumentasi_url: ''
                     };
                 }
             }
@@ -897,7 +918,12 @@ export default function PiketInputPage(props?: any) {
                 }
                 setSelectedJam('');
                 setKeteranganTambahan('');
-                setClassData({});
+                setAdditionalStatusCount({});
+                if (allClassesForDate.length > 0) {
+                    setClassData(createInitialClassData(allClassesForDate));
+                } else {
+                    setClassData({});
+                }
             } else {
                 throw new Error(result.error || 'Gagal mengirim laporan');
             }
@@ -1045,7 +1071,7 @@ export default function PiketInputPage(props?: any) {
                                                 const key = group.key;
                                                 const scheduledGuru = group.guru || 'Tanpa Guru';
                                                 const data = (classData as any)[key] || {
-                                                    kelas: group.classes,
+                                                    kelas: group.kelas,
                                                     guru: scheduledGuru,
                                                     guru_override: '',
                                                     status: '',
@@ -1186,7 +1212,7 @@ export default function PiketInputPage(props?: any) {
                                         const key = group.key;
                                         const scheduledGuru = group.guru || 'Tanpa Guru';
                                         const data = (classData as any)[key] || {
-                                            kelas: group.classes,
+                                            kelas: group.kelas,
                                             guru: scheduledGuru,
                                             guru_override: '',
                                             status: '',
