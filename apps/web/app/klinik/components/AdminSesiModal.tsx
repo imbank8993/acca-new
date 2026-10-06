@@ -4,6 +4,7 @@ import { useMemo, useState, useEffect } from 'react';
 import { Modal, ModalBody, ModalFooter } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import DatePicker from '@/components/ui/DatePicker';
+import { InlineSelect } from '@/components/ui/InlineSelect';
 import type { CalonAnggota, RuanganOpsi } from './CreateSlotModal';
 import { formatLabelRuangan } from './CreateSlotModal';
 
@@ -113,6 +114,33 @@ export default function AdminSesiModal({
     return [...peta.entries()];
   }, [kandidatList]);
 
+  const mapelOptions = useMemo(
+    () => [
+      { value: '', label: '-- Pilih Mata Pelajaran --' },
+      ...mapelList.map((m) => ({ value: m.nama, label: m.nama })),
+    ],
+    [mapelList]
+  );
+
+  const guruSelectOptions = useMemo(
+    () => [
+      { value: '', label: form.mapel ? '-- Pilih Guru --' : 'Pilih mata pelajaran dulu' },
+      ...guruOptions.map((g) => ({ value: g.nip, label: g.nama_guru })),
+    ],
+    [form.mapel, guruOptions]
+  );
+
+  const ruanganOptions = useMemo(() => {
+    const list = [{ value: '', label: '-- Pilih Ruangan --' }];
+    if (form.ruangan && !ruanganList.some((r) => r.nama === form.ruangan)) {
+      list.push({ value: form.ruangan, label: form.ruangan });
+    }
+    for (const r of ruanganList) {
+      list.push({ value: r.nama, label: formatLabelRuangan(r) });
+    }
+    return list;
+  }, [form.ruangan, ruanganList]);
+
   const toggleKelas = (kelas: string) =>
     setKelasDipilih((prev) =>
       prev.includes(kelas) ? prev.filter((k) => k !== kelas) : [...prev, kelas]
@@ -177,33 +205,25 @@ export default function AdminSesiModal({
 
               <div className="form-group">
                 <label>Mata Pelajaran</label>
-                <select
-                  className="jp__input w-full"
+                <InlineSelect
+                  minWidth="100%"
+                  height="42px"
                   value={form.mapel}
-                  onChange={(e) => setForm({ ...form, mapel: e.target.value, guru_nip: '' })}
-                >
-                  <option value="">-- Pilih Mata Pelajaran --</option>
-                  {mapelList.map((m) => (
-                    <option key={m.id} value={m.nama}>{m.nama}</option>
-                  ))}
-                </select>
+                  onChange={(val) => setForm({ ...form, mapel: val, guru_nip: '' })}
+                  options={mapelOptions}
+                />
               </div>
 
               <div className="form-group">
                 <label>Guru Pengampu</label>
-                <select
-                  className="jp__input w-full"
+                <InlineSelect
+                  minWidth="100%"
+                  height="42px"
                   value={form.guru_nip}
-                  onChange={(e) => setForm({ ...form, guru_nip: e.target.value })}
+                  onChange={(val) => setForm({ ...form, guru_nip: val })}
                   disabled={!form.mapel}
-                >
-                  <option value="">
-                    {form.mapel ? '-- Pilih Guru --' : 'Pilih mata pelajaran dulu'}
-                  </option>
-                  {guruOptions.map((g) => (
-                    <option key={g.nip} value={g.nip}>{g.nama_guru}</option>
-                  ))}
-                </select>
+                  options={guruSelectOptions}
+                />
                 {form.mapel && guruOptions.length === 0 && (
                   <p className="form-hint form-hint--warn">
                     Belum ada data guru pengampu untuk mapel ini.
@@ -334,21 +354,13 @@ export default function AdminSesiModal({
                 </div>
                 <div className="form-group span-2">
                   <label>Ruangan</label>
-                  <select
-                    className="jp__input w-full"
+                  <InlineSelect
+                    minWidth="100%"
+                    height="42px"
                     value={form.ruangan || ''}
-                    onChange={(e) => setForm({ ...form, ruangan: e.target.value })}
-                  >
-                    <option value="">-- Pilih Ruangan --</option>
-                    {form.ruangan && !ruanganList.some((r) => r.nama === form.ruangan) && (
-                      <option value={form.ruangan}>{form.ruangan}</option>
-                    )}
-                    {ruanganList.map((r) => (
-                      <option key={r.id} value={r.nama}>
-                        {formatLabelRuangan(r)}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(val) => setForm({ ...form, ruangan: val })}
+                    options={ruanganOptions}
+                  />
                   {ruanganList.length === 0 && (
                     <p className="form-hint form-hint--warn">
                       Belum ada daftar ruangan aktif di Master Data &rarr; Ruangan.
