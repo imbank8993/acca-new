@@ -169,7 +169,7 @@ export default function DashboardExamCard({ user, isSiswa, isGuru, isAdmin }: Da
                             <BookOpen size={18} />
                         </span>
                         <div className="exam-title-row">
-                            <h3 className="exam-title">Ujian CBT</h3>
+                            <h3 className="exam-title">Daftar Ujian</h3>
                             {data?.hasActiveExam && (
                                 <span className="exam-active-pill">
                                     <span className="pulse-dot"></span>
