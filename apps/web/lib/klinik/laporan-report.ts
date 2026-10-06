@@ -21,8 +21,11 @@ export function fmtDate(d?: string | Date | null): string {
     }
 }
 
-function fmtJam(v?: string | null): string {
+function fmtJam(v?: string | Date | null): string {
     if (!v) return '-';
+    if (v instanceof Date) {
+        return v.toISOString().slice(11, 16);
+    }
     const s = String(v).trim();
     if (s.includes('T')) return (s.split('T')[1] || '').slice(0, 5);
     return s.slice(0, 5);
@@ -88,12 +91,11 @@ export async function bolehAksesLaporanKlinik(
 export async function buildKlinikReport(input: KlinikReportInput): Promise<KlinikReportResult> {
     const { slotId, origin } = input;
 
-    const slot = await (prisma as any).klinik_slots.findUnique({
+    const slot = await prisma.klinik_slots.findUnique({
         where: { id: slotId },
         include: {
             klinik_peserta: true,
-            klinik_laporan: true,
-            users: { select: { nama: true, nama_lengkap: true } }
+            klinik_laporan: true
         }
     });
 
@@ -103,14 +105,19 @@ export async function buildKlinikReport(input: KlinikReportInput): Promise<Klini
 
     const profil = await prisma.profil_sekolah.findFirst();
 
-    const guruName = slot.nama_guru || slot.users?.nama_lengkap || slot.users?.nama || '-';
+    let guruName = slot.nama_guru || '-';
     let guruNip = '-';
     if (slot.guru_id) {
         const guruData = await (prisma as any).public_users.findUnique({
             where: { id: Number(slot.guru_id) },
-            select: { nip: true }
+            select: { nama: true, nama_lengkap: true, nip: true }
         });
-        if (guruData?.nip) guruNip = guruData.nip;
+        if (guruData) {
+            if (!slot.nama_guru || guruName === '-') {
+                guruName = guruData.nama_lengkap || guruData.nama || '-';
+            }
+            if (guruData.nip) guruNip = guruData.nip;
+        }
     }
     
     const laporan: any = slot.klinik_laporan?.[0] || slot.klinik_laporan || {};
