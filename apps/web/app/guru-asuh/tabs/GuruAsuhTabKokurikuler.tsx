@@ -151,12 +151,6 @@ export default function GuruAsuhTabKokurikuler({ user }: GuruAsuhTabProps) {
                     </div>
                 ) : (
                     <div className="gakk-daily">
-                        <div className="gakk-daily-hdr">
-                            <div className="gakk-daily-hdr-l">
-                                <span className="gakk-daily-date">Anak Asuh Anda</span>
-                                <span className="gakk-daily-class">{siswa.length} Siswa</span>
-                            </div>
-                        </div>
                         <div className="gakk-daily-list">
                             {siswa.filter(s => {
                                 if (!searchQuery) return true;
@@ -256,9 +250,6 @@ export default function GuruAsuhTabKokurikuler({ user }: GuruAsuhTabProps) {
                 @keyframes spin { to { transform: rotate(360deg); } }
                 
                 .gakk-daily { background: var(--n-card); border-radius: 16px; border: 1px solid var(--n-border); overflow: hidden; }
-                .gakk-daily-hdr { padding: 16px; background: linear-gradient(135deg, #1e293b, #334155); color: white; display: flex; justify-content: space-between; }
-                .gakk-daily-date { font-size: 0.95rem; font-weight: 800; display: block; margin-bottom: 6px; }
-                .gakk-daily-class { font-size: 0.75rem; background: rgba(255,255,255,0.15); padding: 4px 12px; border-radius: 20px; font-weight: 600; }
                 
                 .gakk-item { display: flex; justify-content: space-between; align-items: center; padding: 16px; border-bottom: 1px solid var(--n-border); transition: all 0.2s; }
                 .gakk-item:hover { background: var(--n-soft); }
@@ -317,7 +308,6 @@ export default function GuruAsuhTabKokurikuler({ user }: GuruAsuhTabProps) {
                 .gakk-badge-pending { background: #fef9c3; color: #854d0e; }
 
                 :global(.dark) .gakk-daily { background: #0b1329 !important; border: 1px solid rgba(26, 115, 232, 0.35) !important; border-radius: 16px !important; }
-                :global(.dark) .gakk-daily-hdr { background: linear-gradient(135deg, rgba(26, 115, 232, 0.15), rgba(0, 40, 122, 0.25)) !important; border-bottom: 1px solid rgba(26, 115, 232, 0.35) !important; }
                 :global(.dark) .gakk-item { border-bottom-color: rgba(26, 115, 232, 0.2) !important; }
                 :global(.dark) .gakk-item:hover { background: rgba(26, 115, 232, 0.08) !important; }
                 :global(.dark) .gakk-item-name { color: #ffffff !important; }

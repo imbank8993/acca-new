@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import Swal from 'sweetalert2';
-import Select, { components } from 'react-select';
+import MultiSelectDropdown from '@/components/ui/MultiSelectDropdown';
 import { useTimezone } from '@/hooks/use-timezone';
 import { getActiveAcademicYear } from '@/lib/settings-client';
 import { authFetch } from '@/lib/auth-fetch';
@@ -23,22 +23,6 @@ interface LaporanGuruAsuh { id: string; guru_asuh_id: number; nip: string; tangg
 interface LaporanSubmission { id: string; status: 'Submitted' | 'Approved' | 'Revisi'; catatan_reviewer?: string | null; approved_by_name?: string | null; approved_at?: string | null; pdf_url?: string | null; }
 
 const BULAN = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
-
-const CheckboxOption = (props: any) => {
-    return (
-        <components.Option {...props}>
-            <div style={{ display: 'flex', alignItems: 'center' }}>
-                <input
-                    type="checkbox"
-                    checked={props.isSelected}
-                    onChange={() => null}
-                    className="gal__cb"
-                />
-                <label style={{ cursor: 'pointer', margin: 0, flex: 1 }}>{props.label}</label>
-            </div>
-        </components.Option>
-    );
-};
 
 /** Kompres foto dokumentasi di browser: resize maks 1280px & konversi ke WebP untuk ukuran ultra-ringan dengan kualitas tajam */
 async function compressImage(file: File): Promise<File> {
@@ -727,35 +711,15 @@ export default function GuruAsuhTabLaporan({ user }: { user?: any }) {
                     <form id="laporanForm" onSubmit={handleSaveLaporan}>
                         <ModalBody className="gal__modalBd">
                             <div className="gal__fg">
-                                <label>Siswa Asuh</label>
-                                <Select
-                                    isMulti={true}
-                                    closeMenuOnSelect={false}
-                                    hideSelectedOptions={false}
-                                    components={{ Option: CheckboxOption }}
-                                    options={[{ value: 'all', label: '-- PILIH SEMUA --' }, ...siswaOpts]}
-                                    value={selectedStudentIds.map(id => ({ value: id, label: siswaOpts.find(o => o.value === id)?.label || '' }))}
-                                    onChange={(v: any) => {
-                                        if (Array.isArray(v)) {
-                                            const all = v.find((x: any) => x.value === 'all');
-                                            setSelectedStudentIds(all ? myStudents.filter(s => s.aktif && s.tahun_ajaran === activeTa).map(s => s.id) : v.map((x: any) => x.value));
-                                        } else if (v) { setSelectedStudentIds([v.value]); } else { setSelectedStudentIds([]); }
-                                    }}
+                                <MultiSelectDropdown<number>
+                                    label="Siswa Asuh"
+                                    options={siswaOpts}
+                                    value={selectedStudentIds}
+                                    onChange={setSelectedStudentIds}
                                     placeholder="Pilih siswa..."
-                                    className="react-select-container" classNamePrefix="react-select"
-                                    isDisabled={false}
-                                    menuPortalTarget={document.body}
-                                    menuPosition="fixed"
-                                    styles={{
-                                        menuPortal: base => ({ ...base, zIndex: 99999 }),
-                                        menu: base => ({ ...base, backgroundColor: 'var(--n-card)' }),
-                                        option: (base, state) => ({
-                                            ...base,
-                                            backgroundColor: state.isFocused ? 'var(--rs-hover)' : 'transparent',
-                                            color: 'inherit',
-                                            cursor: 'pointer'
-                                        })
-                                    }}
+                                    allSelectedText="Semua Siswa Terpilih"
+                                    showQuickActions={true}
+                                    height="44px"
                                 />
                             </div>
                             <div className="gal__fg">
@@ -768,13 +732,13 @@ export default function GuruAsuhTabLaporan({ user }: { user?: any }) {
                                     defaultValue={editingGroup?.kegiatan} placeholder="Jelaskan kegiatan..." required />
                             </div>
                             <div className="gal__fg">
-                                <label>Bukti Dokumen / Foto (Opsional)</label>
+                                <label>Foto Kegiatan</label>
                                 {dokumenText ? (
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 14px', borderRadius: '12px', border: '1px solid var(--n-border)', background: 'var(--n-surface)' }}>
                                         <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', color: 'var(--n-primary)', fontWeight: 600, fontSize: '0.85rem' }} onClick={() => setPreviewFileUrl(dokumenText)}>
-                                            <i className="bi bi-file-earmark-check-fill" style={{ fontSize: '1.1rem' }}></i> Lihat Dokumen/Foto
+                                            <i className="bi bi-image" style={{ fontSize: '1.1rem' }}></i> Lihat Foto Kegiatan
                                         </div>
-                                        <button type="button" onClick={() => setDokumenText('')} style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '1.1rem', display: 'flex', alignItems: 'center' }} title="Hapus lampiran">
+                                        <button type="button" onClick={() => setDokumenText('')} style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '1.1rem', display: 'flex', alignItems: 'center' }} title="Hapus foto">
                                             <i className="bi bi-x-circle-fill"></i>
                                         </button>
                                     </div>
@@ -782,7 +746,7 @@ export default function GuruAsuhTabLaporan({ user }: { user?: any }) {
                                     <div className="gal__fiRow" style={{ display: 'flex', gap: '8px' }}>
                                         <input type="file" ref={fileInputRef} style={{ display: 'none' }} onChange={handleFileUpload} accept="image/*" />
                                         <button type="button" className="gal__upbtn" onClick={() => fileInputRef.current?.click()} style={{ flex: 1, width: 'auto', padding: '0 16px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontSize: '0.85rem', fontWeight: 600 }}>
-                                            {uploading ? <Spinner variant="buble" size={14} /> : <><i className="bi bi-folder2-open" /> Dari Perangkat</>}
+                                            {uploading ? <Spinner variant="buble" size={14} /> : <><i className="bi bi-folder2-open" /> Penyimpanan</>}
                                         </button>
                                         
                                         <input type="file" ref={camInputRef} style={{ display: 'none' }} onChange={handleFileUpload} accept="image/*" capture="environment" />
@@ -953,13 +917,11 @@ export default function GuruAsuhTabLaporan({ user }: { user?: any }) {
                 /* Modal */
                 :global(.gal__cb) { appearance: none; -webkit-appearance: none; background: transparent; border: 1px solid var(--n-border); border-radius: 4px; width: 16px; height: 16px; margin-right: 12px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; position: relative; flex-shrink: 0; }
                 :global(.gal__cb:checked) { background: var(--n-primary); border-color: var(--n-primary); }
-                :global(.gal__cb:checked::after) { content: ''; position: absolute; width: 4px; height: 8px; border: solid white; border-width: 0 2px 2px 0; transform: rotate(45deg); margin-top: -2px; }
-                :global(:root) { --rs-hover: rgba(0,0,0,0.05); }
-                :global(.dark) { --rs-hover: rgba(255,255,255,0.05); }
-                :global(.dark .gal__cb) { border-color: rgba(255,255,255,0.2); }
                 .gal__modalBd { display: flex; flex-direction: column; flex: 1; }
                 .gal__fg { margin-bottom: 14px; }
-                .gal__fg label { display: block; font-size: 0.7rem; font-weight: 700; color: var(--n-muted); margin-bottom: 6px; }
+                .gal__fg label,
+                .gal__fg :global(.uimsel-label) { display: block; font-size: 0.7rem; font-weight: 700; color: var(--n-muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.03em; }
+                .gal__fg :global(.uimsel-trigger) { width: 100%; height: 44px; padding: 0 14px; border-radius: 12px; border: 1px solid var(--n-border); font-size: 0.88rem; background-color: var(--n-card); color: var(--n-ink); }
                 .gal__fi { width: 100%; height: 44px; padding: 10px 14px; border-radius: 12px; border: 1px solid var(--n-border); font-size: 0.88rem; background: var(--n-card); color: var(--n-ink); outline: none; transition: border-color 0.2s; }
                 .gal__fi:focus { border-color: var(--n-primary); }
                 .gal__fi--ta { min-height: 90px; height: auto; resize: vertical; line-height: 1.5; }
@@ -974,7 +936,8 @@ export default function GuruAsuhTabLaporan({ user }: { user?: any }) {
                 /* Dark */
                 :global(.dark) .gal__fi,
                 :global(.dark) .gal__upbtn,
-                :global(.dark .react-select__control) { background: #0b1329 !important; border: 1px solid rgba(26, 115, 232, 0.35) !important; color: #ffffff !important; }
+                :global(.dark) .gal__fg :global(.uimsel-trigger) { background: #0b1329 !important; border: 1px solid rgba(26, 115, 232, 0.35) !important; color: #ffffff !important; }
+                :global(.dark) .gal__fg :global(.uimsel-label) { color: #94a3b8 !important; }
                 :global(.dark) .gal__upbtn { color: #94a3b8; }
                 :global(.dark) .gal__upbtn:hover { border-color: #60a5fa !important; color: #60a5fa; }
                 :global(.dark) .gal__statCard { background: #0b1329 !important; border: 1px solid rgba(26, 115, 232, 0.35) !important; border-radius: 16px !important; }
@@ -1009,14 +972,6 @@ export default function GuruAsuhTabLaporan({ user }: { user?: any }) {
                     background-color: #0b1329 !important;
                     color: #ffffff !important;
                 }
-                :global(.dark .react-select__menu) { background: #0b1329 !important; border: 1px solid rgba(26, 115, 232, 0.35) !important; }
-                :global(.dark .react-select__option) { background: #0b1329 !important; color: #ffffff !important; cursor: pointer; }
-                :global(.dark .react-select__option--is-focused) { background: rgba(96, 165, 250, 0.15) !important; }
-                :global(.dark .react-select__option--is-selected) { background: #1d6bf3 !important; color: #fff !important; }
-                :global(.dark .react-select__single-value) { color: #ffffff !important; }
-                :global(.dark .react-select__multi-value) { background: rgba(96, 165, 250, 0.2) !important; border-radius: 6px; }
-                :global(.dark .react-select__multi-value__label) { color: #60a5fa !important; }
-                :global(.dark .react-select__input-container) { color: #ffffff !important; }
                 :global(.dark) .gal__tableWrap { background: #0b1329 !important; border: 1px solid rgba(37, 99, 235, 0.35) !important; border-radius: 16px !important; }
                 :global(.dark) .gal__table { background: #0b1329 !important; }
                 :global(.dark) .gal__table th { background: linear-gradient(135deg, rgba(26, 115, 232, 0.15), rgba(0, 40, 122, 0.25)) !important; border-bottom: 1px solid rgba(26, 115, 232, 0.35) !important; color: #94a3b8 !important; }

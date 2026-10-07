@@ -86,15 +86,7 @@ export default function DashboardExamCard({ user, isSiswa, isGuru, isAdmin }: Da
             const json: DashboardExamsResponse = await res.json();
             if (json.ok) {
                 setData(json);
-                if (json.hasActiveExam) {
-                    setActiveTab('active');
-                } else if (json.counts.upcoming > 0) {
-                    setActiveTab('upcoming');
-                } else if (json.counts.completed > 0) {
-                    setActiveTab('completed');
-                } else {
-                    setActiveTab('all');
-                }
+                setActiveTab('all');
             }
         } catch (err) {
             console.error('[DashboardExamCard] Gagal memuat data ujian:', err);
@@ -155,7 +147,7 @@ export default function DashboardExamCard({ user, isSiswa, isGuru, isAdmin }: Da
 
     const displayedExams = data
         ? activeTab === 'all'
-            ? data.exams.all
+            ? [...(data.exams.active || []), ...(data.exams.upcoming || []), ...(data.exams.completed || [])]
             : data.exams[activeTab] || []
         : [];
 
@@ -180,15 +172,17 @@ export default function DashboardExamCard({ user, isSiswa, isGuru, isAdmin }: Da
                     </div>
 
                     <div className="exam-header-actions">
-                        {/* Dropdown Filter Kategori Ujian */}
+                        {/* Dropdown Filter Kategori Ujian (Hanya Desktop) */}
                         {data && (
-                            <InlineSelect
-                                value={activeTab}
-                                onChange={(val) => setActiveTab(val as 'all' | 'active' | 'upcoming' | 'completed')}
-                                options={filterOptions}
-                                height="28px"
-                                minWidth="135px"
-                            />
+                            <div className="exam-filter-desktop">
+                                <InlineSelect
+                                    value={activeTab}
+                                    onChange={(val) => setActiveTab(val as 'all' | 'active' | 'upcoming' | 'completed')}
+                                    options={filterOptions}
+                                    height="28px"
+                                    minWidth="135px"
+                                />
+                            </div>
                         )}
 
                         {/* Scroll buttons */}
@@ -274,7 +268,7 @@ export default function DashboardExamCard({ user, isSiswa, isGuru, isAdmin }: Da
                                     {/* Line 4: Info Sasaran / Nilai & Tombol Aksi */}
                                     <div className="exam-item-foot">
                                         {isSiswa ? (
-                                            /* Siswa View */
+                                             /* Siswa View */
                                             <>
                                                 {isCompleted ? (
                                                     <div className="exam-foot-row">
@@ -296,7 +290,7 @@ export default function DashboardExamCard({ user, isSiswa, isGuru, isAdmin }: Da
                                                     </div>
                                                 ) : isActive ? (
                                                     <div className="exam-foot-row">
-                                                        <span className="exam-foot-meta text-emerald-600">
+                                                        <span className="exam-foot-meta exam-foot-meta--active">
                                                             {exam.isInProgress ? 'Sedang dikerjakan' : 'Siap dikerjakan'}
                                                         </span>
                                                         <a
@@ -444,9 +438,9 @@ export default function DashboardExamCard({ user, isSiswa, isGuru, isAdmin }: Da
                     display: inline-flex;
                     align-items: center;
                     gap: 5px;
-                    background: #ecfdf5;
-                    color: #059669;
-                    border: 1px solid #a7f3d0;
+                    background: var(--n-soft, #E0ECFF);
+                    color: var(--n-primary, #3083FF);
+                    border: 1px solid #bfdbfe;
                     border-radius: 20px;
                     font-size: 0.68rem;
                     font-weight: 700;
@@ -454,16 +448,16 @@ export default function DashboardExamCard({ user, isSiswa, isGuru, isAdmin }: Da
                 }
 
                 :global(.dark) .exam-active-pill {
-                    background: rgba(16, 185, 129, 0.15) !important;
-                    color: #34d399 !important;
-                    border-color: rgba(16, 185, 129, 0.3) !important;
+                    background: rgba(48, 131, 255, 0.15) !important;
+                    color: #60a5fa !important;
+                    border-color: rgba(48, 131, 255, 0.3) !important;
                 }
 
                 .pulse-dot {
                     width: 6px;
                     height: 6px;
                     border-radius: 50%;
-                    background: #10b981;
+                    background: var(--n-primary, #3083FF);
                     display: inline-block;
                 }
 
@@ -473,6 +467,17 @@ export default function DashboardExamCard({ user, isSiswa, isGuru, isAdmin }: Da
                     align-items: center;
                     gap: 8px;
                     flex-wrap: wrap;
+                }
+
+                .exam-filter-desktop {
+                    display: inline-flex;
+                    align-items: center;
+                }
+
+                @media (max-width: 767.98px) {
+                    .exam-filter-desktop {
+                        display: none !important;
+                    }
                 }
 
                 .exam-nav-btns {
@@ -562,7 +567,7 @@ export default function DashboardExamCard({ user, isSiswa, isGuru, isAdmin }: Da
 
                 .exam-item.is-active-exam {
                     background: #ffffff;
-                    border-color: #a7f3d0;
+                    border-color: #93c5fd;
                 }
 
                 :global(.dark) .exam-item {
@@ -572,7 +577,7 @@ export default function DashboardExamCard({ user, isSiswa, isGuru, isAdmin }: Da
 
                 :global(.dark) .exam-item.is-active-exam {
                     background: #11264a !important;
-                    border-color: rgba(16, 185, 129, 0.4) !important;
+                    border-color: rgba(48, 131, 255, 0.4) !important;
                 }
 
                 /* Line 1: Meta */
@@ -601,11 +606,11 @@ export default function DashboardExamCard({ user, isSiswa, isGuru, isAdmin }: Da
                 }
 
                 .exam-dot--active {
-                    background: #10b981;
+                    background: var(--n-primary, #3083FF);
                 }
 
                 .exam-dot--upcoming {
-                    background: #3b82f6;
+                    background: #f59e0b;
                 }
 
                 .exam-dot--completed {
@@ -617,11 +622,11 @@ export default function DashboardExamCard({ user, isSiswa, isGuru, isAdmin }: Da
                 }
 
                 .exam-status-text--active {
-                    color: #059669;
+                    color: #2563eb;
                 }
 
                 .exam-status-text--upcoming {
-                    color: #2563eb;
+                    color: #d97706;
                 }
 
                 .exam-status-text--completed {
@@ -629,11 +634,11 @@ export default function DashboardExamCard({ user, isSiswa, isGuru, isAdmin }: Da
                 }
 
                 :global(.dark) .exam-status-text--active {
-                    color: #34d399;
+                    color: #60a5fa;
                 }
 
                 :global(.dark) .exam-status-text--upcoming {
-                    color: #60a5fa;
+                    color: #fbbf24;
                 }
 
                 :global(.dark) .exam-status-text--completed {
@@ -734,13 +739,22 @@ export default function DashboardExamCard({ user, isSiswa, isGuru, isAdmin }: Da
                     color: #94a3b8;
                 }
 
+                .exam-foot-meta--active {
+                    color: #2563eb;
+                    font-weight: 600;
+                }
+
+                :global(.dark) .exam-foot-meta--active {
+                    color: #60a5fa;
+                }
+
                 .exam-foot-meta strong {
                     font-weight: 700;
-                    color: #059669;
+                    color: #2563eb;
                 }
 
                 :global(.dark) .exam-foot-meta strong {
-                    color: #34d399;
+                    color: #60a5fa;
                 }
 
                 .exam-action-btn {
