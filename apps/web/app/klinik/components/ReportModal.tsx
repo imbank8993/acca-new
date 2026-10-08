@@ -1,5 +1,6 @@
 'use client';
 
+import React, { useRef } from 'react';
 import { Modal, ModalBody, ModalFooter } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 
@@ -12,7 +13,7 @@ interface ReportModalProps {
     fotos: string[];
   };
   setReportForm: React.Dispatch<React.SetStateAction<any>>;
-  fileRef: React.RefObject<HTMLInputElement | null>;
+  fileRef?: React.RefObject<HTMLInputElement | null>;
   uploading: boolean;
   handleFileUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onSubmit: () => void;
@@ -31,6 +32,10 @@ export default function ReportModal({
   onSubmit,
   submitting = false,
 }: ReportModalProps) {
+  const localFileRef = useRef<HTMLInputElement | null>(null);
+  const camRef = useRef<HTMLInputElement | null>(null);
+  const activeFileRef = fileRef || localFileRef;
+
   if (!slot) return null;
 
   const laporan = Array.isArray(slot.klinik_laporan)
@@ -74,30 +79,63 @@ export default function ReportModal({
             )}
           </h3>
 
-          <button
-            type="button"
-            className={`upload-drop ${uploading ? 'is-loading' : ''}`}
-            onClick={() => !uploading && fileRef.current?.click()}
-            disabled={uploading}
-          >
-            {uploading ? (
-              <>
-                <span className="upload-spinner" />
-                <span className="upload-drop__title">Mengunggah foto...</span>
-              </>
-            ) : (
-              <>
-                <i className="bi bi-cloud-arrow-up-fill" />
-                <span className="upload-drop__title">Ambil Foto / Unggah</span>
-                <span className="upload-drop__sub">
-                  Gunakan kamera HP untuk dokumentasi langsung
-                </span>
-              </>
-            )}
-          </button>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '10px' }}>
+            <button
+              type="button"
+              className={`upload-drop ${uploading ? 'is-loading' : ''}`}
+              onClick={() => !uploading && activeFileRef.current?.click()}
+              disabled={uploading}
+            >
+              {uploading ? (
+                <>
+                  <span className="upload-spinner" />
+                  <span className="upload-drop__title">Mengunggah...</span>
+                </>
+              ) : (
+                <>
+                  <i className="bi bi-folder2-open" />
+                  <span className="upload-drop__title">Pilih dari Perangkat</span>
+                  <span className="upload-drop__sub">
+                    Galeri foto / file memori
+                  </span>
+                </>
+              )}
+            </button>
+
+            <button
+              type="button"
+              className={`upload-drop ${uploading ? 'is-loading' : ''}`}
+              onClick={() => !uploading && camRef.current?.click()}
+              disabled={uploading}
+            >
+              {uploading ? (
+                <>
+                  <span className="upload-spinner" />
+                  <span className="upload-drop__title">Mengunggah...</span>
+                </>
+              ) : (
+                <>
+                  <i className="bi bi-camera-fill" />
+                  <span className="upload-drop__title">Ambil dari Kamera</span>
+                  <span className="upload-drop__sub">
+                    Buka kamera foto langsung
+                  </span>
+                </>
+              )}
+            </button>
+          </div>
+
           <input
             type="file"
-            ref={fileRef as any}
+            ref={activeFileRef as any}
+            className="hidden"
+            accept="image/*"
+            multiple
+            onChange={handleFileUpload}
+          />
+          <input
+            type="file"
+            ref={camRef as any}
             className="hidden"
             accept="image/*"
             capture="environment"

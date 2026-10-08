@@ -84,6 +84,7 @@ export default function GuruAsuhTabLaporan({ user }: { user?: any }) {
     const [previewHtml, setPreviewHtml] = useState<string | null>(null);
     const [previewFileUrl, setPreviewFileUrl] = useState<string | null>(null);
     const [loadingPreview, setLoadingPreview] = useState(false);
+    const [modalStudents, setModalStudents] = useState<{ activityTitle: string; tanggal: string; students: LaporanGuruAsuh[] } | null>(null);
     const [showActionMenu, setShowActionMenu] = useState(false);
     const actionMenuRef = useRef<HTMLDivElement>(null);
 
@@ -99,8 +100,8 @@ export default function GuruAsuhTabLaporan({ user }: { user?: any }) {
 
     const { registerModal } = useModalBlur();
     useEffect(() => {
-        if (showForm || previewHtml || previewFileUrl) return registerModal();
-    }, [showForm, previewHtml, previewFileUrl, registerModal]);
+        if (showForm || previewHtml || previewFileUrl || modalStudents) return registerModal();
+    }, [showForm, previewHtml, previewFileUrl, modalStudents, registerModal]);
 
     const fileInputRef = useRef<HTMLInputElement>(null);
     const camInputRef = useRef<HTMLInputElement>(null);
@@ -310,12 +311,11 @@ export default function GuruAsuhTabLaporan({ user }: { user?: any }) {
             if (res.headers.get('content-type')?.includes('application/pdf')) {
                 const blob = await res.blob();
                 const url = window.URL.createObjectURL(blob);
-                window.open(url, '_blank');
-                setTimeout(() => window.URL.revokeObjectURL(url), 60_000);
+                setPreviewFileUrl(url);
             } else {
                 const data = await res.json();
                 if (!res.ok || !data.ok) throw new Error(data.error || 'Gagal membuat PDF');
-                if (data.file_url) window.open(data.file_url, '_blank');
+                if (data.file_url) setPreviewFileUrl(data.file_url);
             }
         } catch (e: any) { showMsg('error', e.message || 'Gagal membuat PDF'); }
         finally { setPrintingPdf(false); }
@@ -683,7 +683,7 @@ export default function GuruAsuhTabLaporan({ user }: { user?: any }) {
                                             <div className="gal__cardTxt">{g.kegiatan}</div>
                                         </div>
                                         <div className="gal__cardStudents">
-                                            {g.items.map(l => (
+                                            {g.items.slice(0, 2).map(l => (
                                                 <div key={l.id} className="gal__cardStudentRow">
                                                     <div className="gal__cardBody">
                                                         <div className="gal__cardName">{l.guru_asuh?.nama_siswa || '-'}</div>
@@ -691,6 +691,15 @@ export default function GuruAsuhTabLaporan({ user }: { user?: any }) {
                                                     </div>
                                                 </div>
                                             ))}
+                                            {g.items.length > 2 && (
+                                                <button
+                                                    type="button"
+                                                    className="gal__moreChipBtn"
+                                                    onClick={() => setModalStudents({ activityTitle: g.kegiatan, tanggal: g.tanggal, students: g.items })}
+                                                >
+                                                    <i className="bi bi-people" /> +{g.items.length - 2} lainnya
+                                                </button>
+                                            )}
                                         </div>
                                     </div>
                                 );
@@ -781,6 +790,42 @@ export default function GuruAsuhTabLaporan({ user }: { user?: any }) {
                     </ModalBody>
                     <ModalFooter>
                         <Button type="button" variant="cancel" onClick={() => setPreviewFileUrl(null)} leftIcon={<i className="bi bi-x-lg" />}>Tutup</Button>
+                    </ModalFooter>
+                </Modal>
+            )}
+
+            {modalStudents && (
+                <Modal
+                    open={true}
+                    onClose={() => setModalStudents(null)}
+                    size="sm"
+                    title="Daftar Siswa Bimbingan"
+                    subtitle={`${new Date(modalStudents.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })} · ${modalStudents.students.length} Siswa`}
+                    icon="people"
+                >
+                    <ModalBody>
+                        <div className="gal__modalStudentsContent">
+                            <div className="gal__modalKegiatan">
+                                <span className="gal__modalKegiatanLabel">Kegiatan</span>
+                                <p className="gal__modalKegiatanText">{modalStudents.activityTitle}</p>
+                            </div>
+                            <div className="gal__modalList">
+                                {modalStudents.students.map((e, idx) => (
+                                    <div key={e.id || idx} className="gal__modalItem">
+                                        <span className="gal__modalItemNum">{idx + 1}</span>
+                                        <div className="gal__modalItemInfo">
+                                            <span className="gal__modalItemName">{e.guru_asuh?.nama_siswa || '-'}</span>
+                                            <span className="gal__modalItemClass">Kelas {e.guru_asuh?.kelas || '-'}</span>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </ModalBody>
+                    <ModalFooter>
+                        <Button variant="cancel" onClick={() => setModalStudents(null)}>
+                            Tutup
+                        </Button>
                     </ModalFooter>
                 </Modal>
             )}
@@ -911,6 +956,38 @@ export default function GuruAsuhTabLaporan({ user }: { user?: any }) {
                 .gal__cardTxt { font-size: 0.83rem; color: var(--n-ink); line-height: 1.5; }
                 .gal__cardStudents { display: flex; flex-direction: column; gap: 8px; border-top: 1px solid var(--n-border); padding-top: 10px; }
                 .gal__cardStudentRow { display: flex; align-items: center; gap: 10px; }
+                .gal__moreChipBtn {
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 6px;
+                    background: rgba(37, 99, 235, 0.08);
+                    color: #2563eb;
+                    border: 1px dashed rgba(37, 99, 235, 0.4);
+                    border-radius: 8px;
+                    padding: 6px 12px;
+                    font-size: 0.74rem;
+                    font-weight: 700;
+                    cursor: pointer;
+                    width: fit-content;
+                    margin-top: 4px;
+                    transition: all 0.15s ease;
+                }
+                .gal__moreChipBtn:hover {
+                    background: rgba(37, 99, 235, 0.16);
+                    border-color: #2563eb;
+                }
+
+                /* Modal Siswa */
+                .gal__modalStudentsContent { display: flex; flex-direction: column; gap: 12px; }
+                .gal__modalKegiatan { background: var(--n-soft); border: 1px solid var(--n-border); border-radius: 10px; padding: 10px 12px; }
+                .gal__modalKegiatanLabel { display: block; font-size: 0.65rem; font-weight: 700; text-transform: uppercase; color: var(--n-muted); letter-spacing: 0.03em; margin-bottom: 2px; }
+                .gal__modalKegiatanText { margin: 0; font-size: 0.82rem; color: var(--n-ink); line-height: 1.4; }
+                .gal__modalList { display: flex; flex-direction: column; gap: 8px; max-height: 52vh; overflow-y: auto; padding-right: 2px; }
+                .gal__modalItem { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 10px; background: var(--n-card); border: 1px solid var(--n-border); }
+                .gal__modalItemNum { width: 22px; height: 22px; border-radius: 6px; background: rgba(37, 99, 235, 0.08); color: #2563eb; font-size: 0.72rem; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+                .gal__modalItemInfo { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+                .gal__modalItemName { font-size: 0.82rem; font-weight: 700; color: var(--n-ink); word-break: break-word; }
+                .gal__modalItemClass { font-size: 0.7rem; color: var(--n-muted); font-weight: 500; }
                 .gal__cardActions { display: flex; gap: 6px; flex-shrink: 0; }
                 .gal__cardActions .gal__ibtn { width: 28px; height: 28px; }
 
@@ -984,6 +1061,21 @@ export default function GuruAsuhTabLaporan({ user }: { user?: any }) {
                 :global(.dark) .gal__card { background: #0b1329 !important; border: 1px solid rgba(37, 99, 235, 0.35) !important; border-radius: 16px !important; }
                 :global(.dark) .gal__cardName { color: #ffffff !important; }
                 :global(.dark) .gal__cardTxt { color: #ffffff !important; }
+                :global(.dark) .gal__moreChipBtn {
+                    background: rgba(59, 130, 246, 0.16) !important;
+                    color: #60a5fa !important;
+                    border-color: rgba(59, 130, 246, 0.4) !important;
+                }
+                :global(.dark) .gal__moreChipBtn:hover {
+                    background: rgba(59, 130, 246, 0.25) !important;
+                }
+                :global(.dark) .gal__modalKegiatan { background: #0b1329 !important; border-color: rgba(26, 115, 232, 0.35) !important; }
+                :global(.dark) .gal__modalKegiatanLabel { color: #94a3b8 !important; }
+                :global(.dark) .gal__modalKegiatanText { color: #f1f5f9 !important; }
+                :global(.dark) .gal__modalItem { background: #0b1329 !important; border-color: rgba(26, 115, 232, 0.3) !important; }
+                :global(.dark) .gal__modalItemNum { background: rgba(59, 130, 246, 0.2) !important; color: #60a5fa !important; }
+                :global(.dark) .gal__modalItemName { color: #ffffff !important; }
+                :global(.dark) .gal__modalItemClass { color: #94a3b8 !important; }
 
                 :global(.dark) .gal__btn,
                 :global(.dark) .gal__btn--ghost,

@@ -883,7 +883,24 @@ export async function handleGet(req: any, action: string, searchParams: URLSearc
         // apakah tombol absensi tampil, supaya jam perangkat siswa yang meleset
         // (atau sengaja digeser) tidak menghasilkan tampilan yang berbeda dari
         // keputusan server saat absennya dikirim.
-        return { ok: true, data, now: await getCurrentDateTimeInTz(db) };
+        let userTingkat: string | null = null;
+        let userKelas: string | null = null;
+        if (roles.includes('SISWA')) {
+            const ident = identitasSiswa(user);
+            if (ident) {
+                const ts = await tingkatSiswa(db, ident);
+                userTingkat = ts.tingkat;
+                userKelas = ts.kelas;
+            }
+        }
+
+        return {
+            ok: true,
+            data,
+            now: await getCurrentDateTimeInTz(db),
+            user_tingkat: userTingkat,
+            user_kelas: userKelas,
+        };
     } catch (err: any) {
         // HttpException (termasuk Forbidden/Unauthorized) sudah membawa status
         // dan pesan yang memang ditulis untuk pengguna — diteruskan apa adanya.
@@ -1115,20 +1132,14 @@ export async function handlePost(req: any, action: string, payload: any, db: Pri
                     .filter((v: number) => Number.isFinite(v))
             )] as number[];
 
-            if (pesertaIds.length < PESERTA_MINIMAL) {
-                throw new HttpException({
-                    ok: false,
-                    error: `Pilih minimal ${PESERTA_MINIMAL} siswa sebagai peserta sesi`,
-                }, 400);
-            }
-
-            // TIDAK ada validasi seangkatan di sini — justru inti fiturnya:
-            // admin boleh menggabung siswa lintas kelas dan lintas tingkat.
-            // Yang tetap dijaga: setiap peserta harus punya akun `users`.
-            const { count: jumlahAkun } = await db
-                .from('users').select('id', { count: 'exact', head: true }).in('id', pesertaIds);
-            if ((jumlahAkun || 0) !== pesertaIds.length) {
-                throw new HttpException({ ok: false, error: 'Ada siswa terpilih yang datanya tidak ditemukan' }, 400);
+            // Penunjukan peserta bersifat opsional: admin boleh menunjuk peserta langsung,
+            // atau mengosongkannya agar siswa mengklaim / mendaftar sendiri.
+            if (pesertaIds.length > 0) {
+                const { count: jumlahAkun } = await db
+                    .from('users').select('id', { count: 'exact', head: true }).in('id', pesertaIds);
+                if ((jumlahAkun || 0) !== pesertaIds.length) {
+                    throw new HttpException({ ok: false, error: 'Ada siswa terpilih yang datanya tidak ditemukan' }, 400);
+                }
             }
 
             // Kuota merangkap saklar keterbukaan: kuota = jumlah peserta ⇒ sesi
@@ -1148,7 +1159,8 @@ export async function handlePost(req: any, action: string, payload: any, db: Pri
                 jam_selesai: payload.jam_selesai,
                 max_siswa: maxSiswa,
                 // Tidak lewat approval: pembentuknya sudah reviewer terakhir.
-                status: pesertaIds.length >= maxSiswa ? 'full' : 'open',
+                // Jika peserta kosong atau belum penuh, sesi langsung 'open' agar siswa bisa mendaftar/mengklaim sendiri.
+                status: pesertaIds.length > 0 && pesertaIds.length >= maxSiswa ? 'full' : 'open',
                 initiator_type: 'ADMIN',
                 dibuat_oleh: pembuat.id,
                 // target_kelas SENGAJA dikosongkan: filter itu menolak pendaftar
@@ -1158,28 +1170,27 @@ export async function handlePost(req: any, action: string, payload: any, db: Pri
             }]).select().single();
             if (slotErr) throw slotErr;
 
-            const pesertaRows = await bangunBarisPeserta(
-                db, slotBaru.id, pesertaIds, STATUS_DITUGASKAN);
-            const { error: pesertaErr } = await db.from('klinik_peserta').insert(pesertaRows);
-            if (pesertaErr) {
-                // Sesi tanpa peserta tidak berguna. Trigger notifikasi sudah
-                // menyala saat INSERT slot, jadi barisnya ikut dibuang supaya
-                // guru tidak mengklik notifikasi menuju sesi yang sudah mati.
-                await db.from('klinik_slots').delete().eq('id', slotBaru.id);
-                await db.from('notifications').delete()
-                    .eq('source_table', 'klinik_slots').eq('source_id', String(slotBaru.id));
-                throw new Error('Gagal menyimpan peserta: ' + pesertaErr.message);
-            }
+            if (pesertaIds.length > 0) {
+                const pesertaRows = await bangunBarisPeserta(
+                    db, slotBaru.id, pesertaIds, STATUS_DITUGASKAN);
+                const { error: pesertaErr } = await db.from('klinik_peserta').insert(pesertaRows);
+                if (pesertaErr) {
+                    await db.from('klinik_slots').delete().eq('id', slotBaru.id);
+                    await db.from('notifications').delete()
+                        .eq('source_table', 'klinik_slots').eq('source_id', String(slotBaru.id));
+                    throw new Error('Gagal menyimpan peserta: ' + pesertaErr.message);
+                }
 
-            await kabariPesertaTunjukan(db, {
-                slotId: slotBaru.id,
-                siswaIds: pesertaIds,
-                mapel: payload.mapel,
-                namaGuru: guruRecord.nama,
-                tanggal: payload.tanggal,
-                jamMulai: payload.jam_mulai,
-                ruangan: ruanganVal,
-            });
+                await kabariPesertaTunjukan(db, {
+                    slotId: slotBaru.id,
+                    siswaIds: pesertaIds,
+                    mapel: payload.mapel,
+                    namaGuru: guruRecord.nama,
+                    tanggal: payload.tanggal,
+                    jamMulai: payload.jam_mulai,
+                    ruangan: ruanganVal,
+                });
+            }
 
             if (guruRecord.auth_id) {
                 const tanggalTampil = new Date(`${payload.tanggal}T12:00:00`)
@@ -1500,16 +1511,12 @@ export async function handlePost(req: any, action: string, payload: any, db: Pri
                         .map((v: any) => Number(v))
                         .filter((v: number) => Number.isFinite(v))
                 )] as number[];
-                if (anggotaIds.length < PESERTA_MINIMAL) {
-                    throw new HttpException({
-                        ok: false,
-                        error: `Sesi harus memiliki minimal ${PESERTA_MINIMAL} peserta`,
-                    }, 400);
-                }
-                const { count: jumlahAkun } = await db
-                    .from('users').select('id', { count: 'exact', head: true }).in('id', anggotaIds);
-                if ((jumlahAkun || 0) !== anggotaIds.length) {
-                    throw new HttpException({ ok: false, error: 'Ada siswa terpilih yang datanya tidak ditemukan' }, 400);
+                if (anggotaIds.length > 0) {
+                    const { count: jumlahAkun } = await db
+                        .from('users').select('id', { count: 'exact', head: true }).in('id', anggotaIds);
+                    if ((jumlahAkun || 0) !== anggotaIds.length) {
+                        throw new HttpException({ ok: false, error: 'Ada siswa terpilih yang datanya tidak ditemukan' }, 400);
+                    }
                 }
                 maxSiswa = Math.max(Number(updateData.max_siswa) || 0, anggotaIds.length, PESERTA_MINIMAL);
             } else if (kelompokSiswa) {

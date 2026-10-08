@@ -384,8 +384,13 @@ export default function AdminSesiModal({
                     }}
                   />
                   <p className="form-hint">
-                    Kuota sama dengan jumlah peserta &rarr; sesi tertutup. Kuota lebih
-                    besar &rarr; siswa lain masih bisa mendaftar sendiri.
+                    {peserta.length > 0 ? (
+                      peserta.length >= form.max_siswa
+                        ? 'Kuota sama dengan jumlah peserta (sesi tertutup langsung).'
+                        : `Kuota lebih besar (${form.max_siswa - peserta.length} sisa kuota) → siswa lain dapat mendaftar sendiri.`
+                    ) : (
+                      'Peserta tidak ditandai (0 peserta) → sesi akan dibuka langsung di Klinik Tersedia agar siswa dapat mengklaim sendiri sesuai kuota.'
+                    )}
                   </p>
                 </div>
               </div>
@@ -397,13 +402,21 @@ export default function AdminSesiModal({
             <section className="form-section">
               <h3 className="form-section__title">
                 <i className="bi bi-people-fill" /> Peserta
-                <span className="form-section__count">{peserta.length} siswa</span>
+                <span className="form-section__count">
+                  {peserta.length > 0 ? `${peserta.length} siswa` : 'Opsional (0 siswa)'}
+                </span>
               </h3>
 
               <div className="form-group">
                 <p className="form-hint">
-                  Pilih satu atau beberapa kelas, lalu centang siswanya. Boleh
-                  digabung lintas kelas maupun lintas tingkat.
+                  {peserta.length === 0 ? (
+                    <span style={{ color: 'var(--n-primary)', fontWeight: 600 }}>
+                      <i className="bi bi-info-circle mr-1" />
+                      Tidak wajib menandai peserta. Bisa dikosongkan agar siswa mengklaim / mendaftar sendiri melalui tab Klinik Tersedia.
+                    </span>
+                  ) : (
+                    'Pilih satu atau beberapa kelas, lalu centang siswanya. Boleh digabung lintas kelas maupun lintas tingkat.'
+                  )}
                 </p>
 
                 <div className="kas-kelas-picker">

@@ -269,11 +269,17 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
   // Filters & Search
   const [search, setSearch] = useState('');
   const [filterMapel, setFilterMapel] = useState('');
+  const [filterStatusKelola, setFilterStatusKelola] = useState('');
+  const [filterInisiator, setFilterInisiator] = useState('');
 
   // Tabs
   const [activeTab, setActiveTab] = useTabParam<'available' | 'my_sessions' | 'kelompok' | 'approval' | 'kelola' | 'rekap'>('available', [
     'available', 'my_sessions', 'kelompok', 'approval', 'kelola', 'rekap'
   ]);
+
+  // Tingkat dan kelas siswa aktif (untuk penyaringan target kelas & notifikasi badge)
+  const [userTingkat, setUserTingkat] = useState<string | null>(null);
+  const [userKelas, setUserKelas] = useState<string | null>(null);
 
   // Selisih jam server (zona madrasah) vs jam perangkat, dipakai jendela absensi.
   const [skewMs, setSkewMs] = useState(0);
@@ -294,6 +300,7 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
   const [savingSlot, setSavingSlot] = useState(false);
   const [slotToDelete, setSlotToDelete] = useState<KlinikSlot | null>(null);
   const [deletingSlot, setDeletingSlot] = useState(false);
+  const [alasanModal, setAlasanModal] = useState<{ mapel: string; topik: string; catatan: string } | null>(null);
   const [showReportModal, setShowReportModal] = useState<KlinikSlot | null>(null);
   const [showViewReportModal, setShowViewReportModal] = useState<KlinikSlot | null>(null);
   const [showParticipantsModal, setShowParticipantsModal] = useState<KlinikSlot | null>(null);
@@ -332,14 +339,14 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
   // Modal blur integration
   const { openModal, closeModal } = useModalBlur();
   useEffect(() => {
-    const isOpen = showCreateModal || showAdminModal || showAbsensiModal || showReportModal || previewHtml || showParticipantsModal || showViewReportModal || !!slotToDelete;
+    const isOpen = showCreateModal || showAdminModal || showAbsensiModal || showReportModal || previewHtml || showParticipantsModal || showViewReportModal || !!slotToDelete || !!alasanModal;
     if (isOpen) {
       openModal();
     } else {
       closeModal();
     }
     return () => closeModal();
-  }, [showCreateModal, showAdminModal, showAbsensiModal, showReportModal, previewHtml, showParticipantsModal, showViewReportModal, slotToDelete, openModal, closeModal]);
+  }, [showCreateModal, showAdminModal, showAbsensiModal, showReportModal, previewHtml, showParticipantsModal, showViewReportModal, slotToDelete, alasanModal, openModal, closeModal]);
 
   const openParticipants = (id: string) => {
     setShowParticipantsModal(slots.find((s) => s.id === id) || null);
@@ -425,6 +432,8 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
         const json = await safeJson(res);
         if (json.ok) {
           setSlots(json.data);
+          if (json.user_tingkat) setUserTingkat(json.user_tingkat);
+          if (json.user_kelas) setUserKelas(json.user_kelas);
           // Jam server dipakai sebagai acuan jendela absensi; yang disimpan
           // selisihnya, supaya waktunya tetap berjalan tanpa polling.
           if (json.now) {
@@ -784,8 +793,16 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
       Swal.fire('Jam Tidak Valid', 'Jam selesai harus setelah jam mulai', 'warning');
       return;
     }
-    if (adminPeserta.length < PESERTA_MINIMAL) {
-      Swal.fire('Peserta Kurang', `Pilih minimal ${PESERTA_MINIMAL} siswa sebagai peserta sesi`, 'warning');
+    if ((adminForm.max_siswa || 0) < PESERTA_MINIMAL) {
+      Swal.fire('Kuota Tidak Valid', `Kuota peserta klinik minimal harus ${PESERTA_MINIMAL} siswa`, 'warning');
+      return;
+    }
+    if (adminPeserta.length > (adminForm.max_siswa || 0)) {
+      Swal.fire(
+        'Kuota Terlampaui',
+        `Jumlah peserta terpilih (${adminPeserta.length}) melebihi kuota siswa (${adminForm.max_siswa}). Hapus sebagian peserta atau naikkan kuota.`,
+        'warning'
+      );
       return;
     }
 
@@ -807,7 +824,9 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
           'Berhasil',
           adminEditSlotId
             ? 'Sesi klinik berhasil diperbarui'
-            : `Sesi klinik dibuat dengan ${anggota.length} peserta. Guru pengampu dan peserta sudah dikabari.`,
+            : anggota.length > 0
+              ? `Sesi klinik dibuat dengan ${anggota.length} peserta. Guru pengampu dan peserta sudah dikabari.`
+              : 'Sesi klinik berhasil dibuat dan terbuka untuk pendaftaran mandiri siswa.',
           'success'
         );
         closeAdminModal();
@@ -1222,34 +1241,51 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
   }
 
   async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
 
     setUploading(true);
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('folder', 'klinik-dokumentasi');
-    formData.append('customName', `klinik_${showReportModal?.id}_${Date.now()}`);
+    const uploadedUrls: string[] = [];
+    let lastError = '';
 
     try {
-      const res = await fetch('/api/upload', {
-        method: 'POST',
-        body: formData,
-      });
-      const json = await safeJson(res);
-      if (json.ok && json.publicUrl) {
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('folder', 'klinik-dokumentasi');
+        formData.append('customName', `klinik_${showReportModal?.id}_${Date.now()}_${i}`);
+
+        const res = await fetch('/api/upload', {
+          method: 'POST',
+          body: formData,
+        });
+        const json = await safeJson(res);
+        if (json.ok && json.publicUrl) {
+          uploadedUrls.push(json.publicUrl);
+        } else {
+          lastError = json.error || 'Gagal mengunggah ke server';
+        }
+      }
+
+      if (uploadedUrls.length > 0) {
         setReportForm((prev) => ({
           ...prev,
-          fotos: [...prev.fotos, json.publicUrl],
+          fotos: [...prev.fotos, ...uploadedUrls],
         }));
-        Swal.fire('Berhasil', 'Foto berhasil diunggah', 'success');
+        if (uploadedUrls.length === 1) {
+          Swal.fire('Berhasil', 'Foto berhasil diunggah', 'success');
+        } else {
+          Swal.fire('Berhasil', `${uploadedUrls.length} foto berhasil diunggah`, 'success');
+        }
       } else {
-        Swal.fire('Gagal', json.error || 'Gagal mengunggah ke server', 'error');
+        Swal.fire('Gagal', lastError || 'Gagal mengunggah foto', 'error');
       }
-    } catch (err) {
-      Swal.fire('Error', 'Gagal mengunggah foto', 'error');
+    } catch (err: any) {
+      Swal.fire('Error', err?.message || 'Gagal mengunggah foto', 'error');
     } finally {
       setUploading(false);
+      if (e.target) e.target.value = '';
     }
   }
 
@@ -1379,12 +1415,41 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
         if (!isSameId(s.guru_id, user?.id)) return false;
         if (s.status === 'cancelled') return false;
       } else if (tabAktif === 'kelompok') {
-        if (!(s.initiator_type === 'SISWA' && STATUS_PENGAJUAN.includes(s.status))) return false;
+        if (s.initiator_type !== 'SISWA') return false;
+        if (STATUS_PENGAJUAN.includes(s.status)) return true;
+        if (s.status === 'cancelled') {
+          return isSameId(s.initiator_siswa_id, user?.id) ||
+            (s.klinik_peserta || []).some((p) => isSameId(p.siswa_id, user?.id));
+        }
+        return false;
       } else if (tabAktif === 'approval') {
         if (s.status !== 'pending' && !pengajuanDitolak(s)) return false;
       }
-      // Tab 'kelola' sengaja tanpa saringan status: di situlah pengelola melihat
-      // seluruh sesi, termasuk yang sudah selesai maupun dibatalkan.
+      // Saringan status khusus tab Kelola Sesi
+      if (tabAktif === 'kelola' && filterStatusKelola) {
+        if (filterStatusKelola === 'terbuka') {
+          // Sesi terbuka: status open dan belum lewat jadwalnya
+          if (s.status !== 'open' || sesiSudahLewat(s)) return false;
+        } else if (filterStatusKelola === 'akan_datang') {
+          // Yang akan datang: jadwal belum lewat, dan sesi belum selesai/batal
+          if (s.status === 'cancelled' || s.status === 'finished' || s.status === 'paid' || sesiSudahLewat(s)) return false;
+        } else if (filterStatusKelola === 'selesai') {
+          // Telah selesai: status finished / paid, atau waktu sesi sudah lewat (dan bukan cancelled)
+          const isSelesai = s.status === 'finished' || s.status === 'paid' || (sesiSudahLewat(s) && s.status !== 'cancelled');
+          if (!isSelesai) return false;
+        } else if (filterStatusKelola === 'batal') {
+          if (s.status !== 'cancelled') return false;
+        }
+      }
+
+      // Saringan pembuat khusus tab Kelola Sesi (Siswa vs Akademik)
+      if (tabAktif === 'kelola' && filterInisiator) {
+        if (filterInisiator === 'siswa') {
+          if (s.initiator_type !== 'SISWA') return false;
+        } else if (filterInisiator === 'akademik') {
+          if (s.initiator_type === 'SISWA') return false;
+        }
+      }
 
       if (filterMapel && s.mapel !== filterMapel) return false;
 
@@ -1399,7 +1464,7 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
 
       return true;
     });
-  }, [slots, tabAktif, user?.id, filterMapel, search]);
+  }, [slots, tabAktif, user?.id, filterMapel, search, filterStatusKelola, filterInisiator]);
 
   /**
    * Aksi siswa pada sebuah sesi yang sedang berjalan atau sedang antre laporan:
@@ -1458,6 +1523,93 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
     );
   };
 
+  /** Tingkat kelas efektif siswa yang sedang login */
+  const activeTingkatSiswa = useMemo(() => {
+    if (userTingkat) return userTingkat;
+    if (temanTingkat) return temanTingkat;
+    const fromUser = tingkatKelas(userKelas || user?.kelas);
+    if (fromUser) return fromUser;
+    for (const s of slots) {
+      const p = (s.klinik_peserta || []).find((part) => isSameId(part.siswa_id, user?.id));
+      if (p?.kelas) {
+        const t = tingkatKelas(p.kelas);
+        if (t) return t;
+      }
+    }
+    return null;
+  }, [userTingkat, temanTingkat, userKelas, user?.kelas, slots, user?.id]);
+
+  /** Pengajuan kelompok siswa yang ditolak oleh guru atau akademik */
+  const ajuansDitolakSiswa = useMemo(() => {
+    if (!isSiswa) return [];
+    return slots.filter((s) => {
+      if (s.initiator_type !== 'SISWA') return false;
+      if (s.status !== 'cancelled') return false;
+      return isSameId(s.initiator_siswa_id, user?.id) ||
+        (s.klinik_peserta || []).some((p) => isSameId(p.siswa_id, user?.id));
+    });
+  }, [slots, isSiswa, user?.id]);
+
+  /** Jumlah sesi klinik yang terbuka dan sesuai kriteria untuk siswa */
+  const jumlahKlinikTersediaSiswa = useMemo(() => {
+    if (!isSiswa) return 0;
+    return slots.filter((slot) => {
+      if (slot.status !== 'open') return false;
+      if (sesiSudahLewat(slot)) return false;
+      const kuotaPenuh = (slot.klinik_peserta?.length || 0) >= slot.max_siswa;
+      if (kuotaPenuh) return false;
+      const sudahDaftar = (slot.klinik_peserta || []).some((p) => isSameId(p.siswa_id, user?.id));
+      if (sudahDaftar) return false;
+      if (slot.target_kelas && slot.target_kelas.length > 0) {
+        if (activeTingkatSiswa && !slot.target_kelas.includes(activeTingkatSiswa)) {
+          return false;
+        }
+      }
+      return true;
+    }).length;
+  }, [slots, isSiswa, user?.id, activeTingkatSiswa]);
+
+  /** Jumlah ajuan kelompok siswa (ditolak atau masih dalam proses) */
+  const jumlahNotifKelompokSiswa = useMemo(() => {
+    if (!isSiswa) return 0;
+    return slots.filter((slot) => {
+      if (slot.initiator_type !== 'SISWA') return false;
+      const sayaTerkait = isSameId(slot.initiator_siswa_id, user?.id) ||
+        (slot.klinik_peserta || []).some((p) => isSameId(p.siswa_id, user?.id));
+      if (!sayaTerkait) return false;
+      return slot.status === 'cancelled' || STATUS_PENGAJUAN.includes(slot.status);
+    }).length;
+  }, [slots, isSiswa, user?.id]);
+
+  /** Jumlah sesi guru yang aktif atau membutuhkan tindakan guru */
+  const jumlahNotifGuru = useMemo(() => {
+    if (!isGuru || !user?.id) return 0;
+    return slots.filter((s) => {
+      if (!isSameId(s.guru_id, user.id)) return false;
+      if (s.status === 'pending_guru') return true;
+      if (getLaporan(s)?.status === 'Revisi') return true;
+      if (s.status === 'open' || s.status === 'full') return true;
+      return false;
+    }).length;
+  }, [slots, isGuru, user?.id]);
+
+  /** Jumlah antrean menunggu approval (pengajuan sesi + pengesahan laporan) */
+  const jumlahMenungguApproval = useMemo(() => {
+    if (!bisaApproveSesi && !bisaApproveLaporan) return 0;
+    let count = 0;
+    for (const slot of slots) {
+      if (bisaApproveSesi && slot.status === 'pending') count++;
+      if (bisaApproveLaporan && getLaporan(slot)?.status === 'Submitted') count++;
+    }
+    return count;
+  }, [slots, bisaApproveSesi, bisaApproveLaporan]);
+
+  /** Jumlah sesi berjalan bagi pengelola sesi */
+  const jumlahKelolaAktif = useMemo(() => {
+    if (!bisaKelolaSesi) return 0;
+    return slots.filter((s) => s.status === 'open' || s.status === 'full').length;
+  }, [slots, bisaKelolaSesi]);
+
   /**
    * Di tab Approval, daftar sesi yang kosong ditampilkan sebagai kartu ringkas
    * seukuran blok laporan di bawahnya — bukan tabel kosong setinggi layar.
@@ -1465,28 +1617,43 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
    */
   const sesiKosongDiApproval = tabAktif === 'approval' && displayedSlots.length === 0;
   const jumlahMenungguSesiApproval = displayedSlots.filter((slot) => slot.status === 'pending').length;
-  const jumlahSesiAktifGuru = useMemo(() => {
-    if (!isGuru || !user?.id) return 0;
-    return slots.filter((s) => isSameId(s.guru_id, user.id) && (s.status === 'open' || s.status === 'full')).length;
-  }, [slots, isGuru, user?.id]);
 
   const tabs: TabItem<'available' | 'my_sessions' | 'kelompok' | 'approval' | 'kelola' | 'rekap'>[] = [
-    { key: 'available', label: 'Klinik Tersedia', icon: 'bi-grid-fill' },
+    {
+      key: 'available',
+      label: 'Klinik Tersedia',
+      icon: 'bi-grid-fill',
+      badge: isSiswa && jumlahKlinikTersediaSiswa > 0 ? jumlahKlinikTersediaSiswa : undefined,
+    },
     ...(isGuru ? [{
       key: 'my_sessions' as const,
       label: 'Sesi Saya',
       icon: 'bi-person-video3',
-      badge: jumlahSesiAktifGuru > 0 ? jumlahSesiAktifGuru : undefined,
+      badge: jumlahNotifGuru > 0 ? jumlahNotifGuru : undefined,
     }] : []),
-    ...(isSiswa && !isGuru ? [{ key: 'kelompok' as const, label: 'Ajukan Kelompok', icon: 'bi-people-fill' }] : []),
+    ...(isSiswa && !isGuru ? [{
+      key: 'kelompok' as const,
+      label: 'Ajukan Kelompok',
+      icon: 'bi-people-fill',
+      badge: jumlahNotifKelompokSiswa > 0 ? jumlahNotifKelompokSiswa : undefined,
+    }] : []),
     ...(bisaApproveSesi || bisaApproveLaporan ? [{
       key: 'approval' as const,
       label: 'Approval',
       icon: 'bi-shield-check',
-      badge: jumlahMenungguSesiApproval > 0 ? jumlahMenungguSesiApproval : undefined,
+      badge: jumlahMenungguApproval > 0 ? jumlahMenungguApproval : undefined,
     }] : []),
-    ...(bisaKelolaSesi ? [{ key: 'kelola' as const, label: 'Kelola Sesi', icon: 'bi-calendar2-week' }] : []),
-    ...(bisaRekap ? [{ key: 'rekap' as const, label: 'Laporan', icon: 'bi-file-earmark-arrow-down' }] : []),
+    ...(bisaKelolaSesi ? [{
+      key: 'kelola' as const,
+      label: 'Kelola Sesi',
+      icon: 'bi-calendar2-week',
+      badge: jumlahKelolaAktif > 0 ? jumlahKelolaAktif : undefined,
+    }] : []),
+    ...(bisaRekap ? [{
+      key: 'rekap' as const,
+      label: 'Laporan',
+      icon: 'bi-file-earmark-arrow-down',
+    }] : []),
   ];
 
   /**
@@ -1526,6 +1693,46 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
           sesi yang dibuat. */}
       {fab && <DesktopFab label={fab.label} icon="plus-lg" mobileLabel={fab.mobileLabel} onClick={fab.onClick} />}
       {fab && <MobileFab label={fab.mobileLabel} icon="plus-lg" onClick={fab.onClick} />}
+      {/* ── Alert Notifikasi Siswa jika ada ajuan kelompok yang ditolak ── */}
+      {isSiswa && ajuansDitolakSiswa.length > 0 && (
+        <div
+          className="alert-ditolak-banner"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 12,
+            padding: '12px 16px',
+            marginBottom: 16,
+            borderRadius: 12,
+            background: 'rgba(239, 68, 68, 0.08)',
+            border: '1.5px solid rgba(239, 68, 68, 0.3)',
+            color: '#dc2626',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <i className="bi bi-exclamation-triangle-fill" style={{ fontSize: '1.25rem', color: '#ef4444' }} />
+            <div>
+              <strong style={{ fontSize: '0.88rem', fontWeight: 700, display: 'block' }}>
+                {ajuansDitolakSiswa.length} Pengajuan Klinik Kelompok Tidak Disetujui / Ditolak
+              </strong>
+              <span style={{ fontSize: '0.78rem', color: 'var(--n-ink)', opacity: 0.85 }}>
+                Buka tab <strong>Ajukan Kelompok</strong> untuk melihat catatan penolakan dari guru atau pihak akademik.
+              </span>
+            </div>
+          </div>
+          {tabAktif !== 'kelompok' && (
+            <Button
+              size="sm"
+              variant="danger"
+              onClick={() => setActiveTab('kelompok')}
+              style={{ whiteSpace: 'nowrap' }}
+            >
+              Lihat Pengajuan
+            </Button>
+          )}
+        </div>
+      )}
 
       {/* ── Tabs Navigation ──────────────────────────────────────────── */}
       {(isGuru || isSiswa || isAdmin || bisaKelolaSesi || bisaApproveSesi || bisaApproveLaporan || bisaRekap) && (
@@ -1556,6 +1763,34 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
                 Ajukan Klinik Kelompok
               </Button>
             </FilterActions>
+          )}
+          {tabAktif === 'kelola' && (
+            <>
+              <FilterSelect
+                label="Status Sesi"
+                icon="funnel"
+                value={filterStatusKelola}
+                onChange={setFilterStatusKelola}
+                options={[
+                  { value: '', label: 'Semua Status' },
+                  { value: 'terbuka', label: 'Terbuka' },
+                  { value: 'akan_datang', label: 'Yang Akan Datang' },
+                  { value: 'selesai', label: 'Telah Selesai' },
+                  { value: 'batal', label: 'Dibatalkan' },
+                ]}
+              />
+              <FilterSelect
+                label="Dibuat Oleh"
+                icon="people"
+                value={filterInisiator}
+                onChange={setFilterInisiator}
+                options={[
+                  { value: '', label: 'Semua Pembuat' },
+                  { value: 'siswa', label: 'Siswa' },
+                  { value: 'akademik', label: 'Akademik' },
+                ]}
+              />
+            </>
           )}
           <FilterSelect
             label="Mata Pelajaran"
@@ -1683,16 +1918,15 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
                   <tr>
                     <th>Mata Pelajaran / Guru</th>
                     <th>Topik Pembelajaran</th>
-                    <th>Waktu &amp; Tanggal</th>
-                    <th>Kuota</th>
-                    <th>Status</th>
+                    <th className="th-waktu">Waktu</th>
+                    <th className="th-status-kuota">Status &amp; Kuota</th>
                     <th className="text-right">Aksi</th>
                   </tr>
                 </thead>
                 <tbody>
                   {displayedSlots.length === 0 ? (
                     <tr>
-                      <td colSpan={6}>
+                      <td colSpan={5}>
                         <div className="empty-state">
                           <i className="bi bi-folder2-open" />
                           <p>Belum ada data klinik yang sesuai</p>
@@ -1701,7 +1935,7 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
                     </tr>
                   ) : (
                     displayedSlots.map((slot) => {
-                      const isRejected = pengajuanDitolak(slot);
+                      const isRejected = slot.status === 'cancelled' || pengajuanDitolak(slot);
                       const isCreator = isSameId(slot.guru_id, user?.id) || (slot.initiator_type === 'SISWA' && isSameId(slot.initiator_siswa_id, user?.id));
                       const sesiAdmin = slot.initiator_type === 'ADMIN';
                       // Sesi bentukan admin lahir langsung 'open'; kalau syarat editnya
@@ -1721,9 +1955,6 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
                           <tr>
                             <td>
                               <div className="table-col-guru flex items-center gap-3">
-                                <div className="guru-avatar">
-                                  {slot.nama_guru?.charAt(0) || 'G'}
-                                </div>
                                 <div className="flex-1 min-w-0">
                                   <p className="m-0 text-sm font-semibold text-[var(--n-ink)] truncate">{slot.mapel}</p>
                                   <p className="m-0 text-xs text-[var(--n-muted)] mt-1 truncate max-w-[200px]" title={slot.nama_guru}>{slot.nama_guru}</p>
@@ -1740,9 +1971,9 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
                                 </div>
                               )}
                               {sesiAdmin && (
-                                <div className="pengaju-tag">
+                                <div className="pengaju-tag pengaju-tag--akademik">
                                   <i className="bi bi-building-fill-check" />
-                                  Dibentuk madrasah · peserta ditunjuk
+                                  Dibuat Akademik · peserta ditunjuk
                                 </div>
                               )}
                               {slot.target_kelas && slot.target_kelas.length > 0 && (
@@ -1769,28 +2000,40 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
                               </div>
                             </td>
                             <td>
-                              <div
-                                className={`table-col-kuota cursor-pointer ${(slot.klinik_peserta?.length || 0) >= slot.max_siswa ? 'kuota-full' : ''}`}
-                                onClick={() => openParticipants(slot.id)}
-                                title="Lihat Daftar Peserta & Absensi"
-                                style={{ flexDirection: 'column', alignItems: 'flex-start', gap: 2 }}
-                              >
-                                <span className="kuota-text">
-                                  <i className="bi bi-people-fill mr-1" />
-                                  {slot.klinik_peserta?.length || 0}/{slot.max_siswa}
-                                </span>
-                                {adaAbsen && (
-                                  <span style={{ fontSize: '0.68rem', color: '#0284c7', fontWeight: 700, whiteSpace: 'nowrap' }}>
-                                    Hadir: {jmlHadir}
+                              <div className="status-kuota-stack">
+                                <div className="status-kuota-row">
+                                  <span className={`status-pill ${isRejected ? 'rejected' : slot.status}`}>
+                                    {isRejected ? 'Ditolak' : labelStatus(slot.status)}
                                   </span>
-                                )}
-                              </div>
-                            </td>
-                            <td>
-                              <div className="status-stack">
-                                <span className={`status-pill ${isRejected ? 'rejected' : slot.status}`}>
-                                  {isRejected ? 'Ditolak' : labelStatus(slot.status)}
-                                </span>
+                                  {isRejected && slot.catatan_penolakan && (
+                                    <button
+                                      type="button"
+                                      className="btn-info-icon"
+                                      onClick={() => setAlasanModal({
+                                        mapel: slot.mapel,
+                                        topik: slot.topik,
+                                        catatan: slot.catatan_penolakan || '',
+                                      })}
+                                      title="Lihat Alasan Penolakan"
+                                      aria-label="Lihat Alasan Penolakan"
+                                    >
+                                      <i className="bi bi-info-circle-fill" />
+                                    </button>
+                                  )}
+                                  <div
+                                    className={`table-kuota-badge ${(slot.klinik_peserta?.length || 0) >= slot.max_siswa ? 'full' : ''}`}
+                                    onClick={() => openParticipants(slot.id)}
+                                    title="Lihat Peserta & Absensi"
+                                  >
+                                    <i className="bi bi-people-fill" />
+                                    <span>{slot.klinik_peserta?.length || 0}/{slot.max_siswa}</span>
+                                    {adaAbsen && (
+                                      <span className="table-kuota-hadir">
+                                        · Hadir {jmlHadir}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
                                 {getLaporan(slot)?.status && (
                                   <span className={`laporan-badge ${getLaporan(slot).status.toLowerCase()}`}>
                                     {getLaporan(slot).status}
@@ -1963,7 +2206,7 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
                 </div>
               ) : (
                 displayedSlots.map((slot) => {
-                  const isRejected = pengajuanDitolak(slot);
+                  const isRejected = slot.status === 'cancelled' || pengajuanDitolak(slot);
                   const isCreator = isSameId(slot.guru_id, user?.id) || (slot.initiator_type === 'SISWA' && isSameId(slot.initiator_siswa_id, user?.id));
                   const sesiAdmin = slot.initiator_type === 'ADMIN';
                   const canEdit = !isRejected && ((STATUS_PENGAJUAN.includes(slot.status) && (bisaKelolaSesi || isCreator))
@@ -1977,17 +2220,33 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
                   const jmlHadir = (slot.klinik_peserta || []).filter((p) => p.kehadiran === 'H').length;
 
                   return (
-                    <div key={slot.id} className="slot-card">
+                    <div key={slot.id} className={`slot-card ${tabAktif === 'kelola' ? 'slot-card--kelola' : ''}`}>
                       <div className="slot-header">
-                        <div className="guru-avatar">{slot.nama_guru?.charAt(0) || 'G'}</div>
                         <div className="slot-meta">
-                          <h4>{slot.mapel}</h4>
-                          <h3>{slot.nama_guru}</h3>
+                          <h3>{slot.mapel}</h3>
+                          <h4>{slot.nama_guru}</h4>
                         </div>
                         <div className="status-stack" style={{ alignItems: 'flex-end' }}>
-                          <span className={`status-tag ${isRejected ? 'rejected' : slot.status}`}>
-                            {isRejected ? 'Ditolak' : labelStatus(slot.status)}
-                          </span>
+                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                            <span className={`status-tag ${isRejected ? 'rejected' : slot.status}`}>
+                              {isRejected ? 'Ditolak' : labelStatus(slot.status)}
+                            </span>
+                            {isRejected && slot.catatan_penolakan && (
+                              <button
+                                type="button"
+                                className="btn-info-icon"
+                                onClick={() => setAlasanModal({
+                                  mapel: slot.mapel,
+                                  topik: slot.topik,
+                                  catatan: slot.catatan_penolakan || '',
+                                })}
+                                title="Lihat Alasan Penolakan"
+                                aria-label="Lihat Alasan Penolakan"
+                              >
+                                <i className="bi bi-info-circle-fill" />
+                              </button>
+                            )}
+                          </div>
                           {getLaporan(slot)?.status && (
                             <span className={`laporan-badge ${getLaporan(slot).status.toLowerCase()}`}>
                               {getLaporan(slot).status}
@@ -2005,27 +2264,30 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
                         <div className="topic-box">
                           <span>Topik Pembahasan</span>
                           <p>{slot.topik}</p>
-                          {slot.initiator_type === 'SISWA' && (
-                            <div className="pengaju-tag">
-                              <i className="bi bi-person-badge-fill" />
-                              Diajukan siswa: <strong>{slot.initiator_nama || 'Tidak diketahui'}</strong>
-                              {slot.initiator_kelas ? ` (${slot.initiator_kelas})` : ''}
-                            </div>
-                          )}
-                          {sesiAdmin && (
-                            <div className="pengaju-tag">
-                              <i className="bi bi-building-fill-check" />
-                              Dibentuk madrasah · peserta ditunjuk
-                            </div>
-                          )}
-                          {slot.target_kelas && slot.target_kelas.length > 0 && (
-                            <div className="mt-2">
-                              <span className="text-[0.65rem] font-bold px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-400 rounded uppercase tracking-wider">
-                                Khusus Kelas: {slot.target_kelas.join(', ')}
-                              </span>
-                            </div>
-                          )}
                         </div>
+
+                        {(slot.initiator_type === 'SISWA' || sesiAdmin || (slot.target_kelas && slot.target_kelas.length > 0)) && (
+                          <div className="slot-card-tags">
+                            {slot.initiator_type === 'SISWA' && (
+                              <div className="pengaju-tag">
+                                <i className="bi bi-person-badge-fill" />
+                                Diajukan siswa: <strong>{slot.initiator_nama || 'Tidak diketahui'}</strong>
+                                {slot.initiator_kelas ? ` (${slot.initiator_kelas})` : ''}
+                              </div>
+                            )}
+                            {sesiAdmin && (
+                              <div className="pengaju-tag pengaju-tag--akademik">
+                                <i className="bi bi-building-fill-check" />
+                                Dibuat Akademik · peserta ditunjuk
+                              </div>
+                            )}
+                            {slot.target_kelas && slot.target_kelas.length > 0 && (
+                              <div className="target-kelas-pill">
+                                Khusus Kelas: {slot.target_kelas.join(', ')}
+                              </div>
+                            )}
+                          </div>
+                        )}
 
                         <div className="slot-info-row">
                           <div className="info-chip">
@@ -2435,6 +2697,51 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
               leftIcon={<i className="bi bi-trash3-fill" />}
             >
               Ya, Hapus
+            </Button>
+          </ModalFooter>
+        </Modal>
+      )}
+
+      {/* ── Modal Alasan Penolakan Sesi ─────────────────────────────────── */}
+      {alasanModal && (
+        <Modal
+          open={!!alasanModal}
+          size="sm"
+          variant="delete"
+          icon="exclamation-circle"
+          title="Alasan Penolakan Sesi"
+          subtitle={alasanModal.mapel ? `${alasanModal.mapel}${alasanModal.topik ? ` · ${alasanModal.topik}` : ''}` : undefined}
+          onClose={() => setAlasanModal(null)}
+        >
+          <ModalBody>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--n-muted)' }}>
+                Pengajuan sesi klinik ini ditolak dengan catatan berikut:
+              </p>
+              <div
+                style={{
+                  padding: '12px 14px',
+                  borderRadius: 10,
+                  background: 'rgba(239, 68, 68, 0.08)',
+                  border: '1.5px solid rgba(239, 68, 68, 0.22)',
+                  color: '#dc2626',
+                  fontSize: '0.88rem',
+                  lineHeight: 1.5,
+                  whiteSpace: 'pre-wrap',
+                  fontWeight: 600,
+                }}
+              >
+                {alasanModal.catatan || 'Tidak ada catatan alasan penolakan yang disertakan.'}
+              </div>
+            </div>
+          </ModalBody>
+          <ModalFooter align="end">
+            <Button
+              type="button"
+              variant="cancel"
+              onClick={() => setAlasanModal(null)}
+            >
+              Tutup
             </Button>
           </ModalFooter>
         </Modal>
