@@ -864,5 +864,18 @@
     .dark .actab-wrap:not(.actab-wrap--folder) .actab-tab.isActive {
         color: #60a5fa !important;
     }
+
+    /* Badge pada tab aktif di tampilan desktop polos mewarisi warna putih
+       dari layout pill (karena dulu tab aktif berupa blok biru), sehingga
+       tidak terbaca di atas latar terang. Kita kembalikan ke warna aslinya. */
+    .actab-wrap:not(.actab-wrap--folder) .actab-tab.isActive .actab-tabBadge {
+        background: rgba(48, 131, 255, 0.12) !important;
+        color: #3083FF !important;
+    }
+
+    .dark .actab-wrap:not(.actab-wrap--folder) .actab-tab.isActive .actab-tabBadge {
+        background: rgba(96, 165, 250, 0.15) !important;
+        color: #60a5fa !important;
+    }
 }
 

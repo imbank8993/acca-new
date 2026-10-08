@@ -271,6 +271,7 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
   const [filterMapel, setFilterMapel] = useState('');
   const [filterStatusKelola, setFilterStatusKelola] = useState('');
   const [filterInisiator, setFilterInisiator] = useState('');
+  const [filterStatusApproval, setFilterStatusApproval] = useState('menunggu');
 
   // Tabs
   const [activeTab, setActiveTab] = useTabParam<'available' | 'my_sessions' | 'kelompok' | 'approval' | 'kelola' | 'rekap'>('available', [
@@ -991,32 +992,51 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
 
   async function handleApproveLaporan(laporanId: string, laporanAction: 'approve' | 'revisi') {
     if (actionLoadingId) return;
-    if (laporanAction === 'revisi' && !laporanNote[laporanId]?.trim()) {
-      Swal.fire('Catatan Wajib', 'Isi alasan pengembalian laporan terlebih dahulu', 'warning');
-      return;
+
+    let catatan = '';
+    if (laporanAction === 'revisi') {
+      const { value, isConfirmed } = await Swal.fire({
+        title: 'Kembalikan Laporan Pembelajaran?',
+        text: 'Masukkan alasan / catatan pengembalian agar guru pengampu dapat memperbaiki laporan.',
+        input: 'textarea',
+        inputLabel: 'Catatan Alasan Pengembalian (Wajib)',
+        inputPlaceholder: 'Misal: Dokumentasi foto kegiatan belum lengkap...',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Kembalikan (Revisi)',
+        cancelButtonText: 'Batal',
+        inputValidator: (v) => (!v?.trim() ? 'Alasan pengembalian wajib diisi' : undefined),
+      });
+      if (!isConfirmed || !value?.trim()) return;
+      catatan = value.trim();
+    } else {
+      const confirm = await Swal.fire({
+        title: 'Setujui Laporan Pembelajaran?',
+        text: 'Laporan klinik ini akan disahkan.',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Ya, Setujui',
+        cancelButtonText: 'Batal',
+      });
+      if (!confirm.isConfirmed) return;
     }
-    const confirm = await Swal.fire({
-      title: laporanAction === 'approve' ? 'Setujui Laporan?' : 'Kembalikan Laporan?',
-      icon: laporanAction === 'approve' ? 'question' : 'warning',
-      showCancelButton: true,
-    });
-    if (!confirm.isConfirmed) return;
+
     setActionLoadingId(`laporan_${laporanId}`);
     try {
       const res = await fetch('/api/klinik', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'approve_laporan', id: laporanId, laporanAction, catatan: laporanNote[laporanId] || '' }),
+        body: JSON.stringify({ action: 'approve_laporan', id: laporanId, laporanAction, catatan }),
       });
       const json = await safeJson(res);
       if (json.ok) {
         Swal.fire('Berhasil', laporanAction === 'approve' ? 'Laporan telah disetujui' : 'Laporan telah dikembalikan', 'success');
         fetchUserAndSlots();
       } else {
-        Swal.fire('Gagal', json.error, 'error');
+        Swal.fire('Gagal', json.error || 'Gagal memproses laporan', 'error');
       }
-    } catch (err) {
-      Swal.fire('Error', 'Gagal memproses laporan', 'error');
+    } catch (err: any) {
+      Swal.fire('Error', err?.message || 'Gagal memproses laporan', 'error');
     } finally {
       setActionLoadingId(null);
     }
@@ -1423,7 +1443,15 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
         }
         return false;
       } else if (tabAktif === 'approval') {
-        if (s.status !== 'pending' && !pengajuanDitolak(s)) return false;
+        if (filterStatusApproval === 'menunggu') {
+          if (s.status !== 'pending') return false;
+        } else if (filterStatusApproval === 'disetujui') {
+          if (!['open', 'full', 'finished', 'paid'].includes(s.status)) return false;
+        } else if (filterStatusApproval === 'ditolak') {
+          if (!pengajuanDitolak(s)) return false;
+        } else if (filterStatusApproval !== 'semua') {
+          if (s.status !== 'pending' && !pengajuanDitolak(s)) return false;
+        }
       }
       // Saringan status khusus tab Kelola Sesi
       if (tabAktif === 'kelola' && filterStatusKelola) {
@@ -1464,7 +1492,7 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
 
       return true;
     });
-  }, [slots, tabAktif, user?.id, filterMapel, search, filterStatusKelola, filterInisiator]);
+  }, [slots, tabAktif, user?.id, filterMapel, search, filterStatusKelola, filterInisiator, filterStatusApproval]);
 
   /**
    * Aksi siswa pada sebuah sesi yang sedang berjalan atau sedang antre laporan:
@@ -1792,6 +1820,20 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
               />
             </>
           )}
+          {tabAktif === 'approval' && (
+            <FilterSelect
+              label="Status Approval"
+              icon="shield-check"
+              value={filterStatusApproval}
+              onChange={setFilterStatusApproval}
+              options={[
+                { value: 'menunggu', label: 'Menunggu' },
+                { value: 'disetujui', label: 'Disetujui' },
+                { value: 'ditolak', label: 'Ditolak/Dikembalikan' },
+                { value: 'semua', label: 'Semua' },
+              ]}
+            />
+          )}
           <FilterSelect
             label="Mata Pelajaran"
             icon="journal-bookmark"
@@ -1802,18 +1844,20 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
               ...mapelList.map((m) => ({ value: m.nama, label: m.nama })),
             ]}
           />
-          <FilterActions>
-            <Button
-              variant="outline"
-              size="sm"
-              icon="arrow-clockwise"
-              onClick={() => fetchUserAndSlots()}
-              disabled={loading}
-              title="Perbarui data"
-            >
-              Segarkan
-            </Button>
-          </FilterActions>
+          {tabAktif !== 'approval' && tabAktif !== 'kelola' && (
+            <FilterActions>
+              <Button
+                variant="outline"
+                size="sm"
+                icon="arrow-clockwise"
+                onClick={() => fetchUserAndSlots()}
+                disabled={loading}
+                title="Perbarui data"
+              >
+                Segarkan
+              </Button>
+            </FilterActions>
+          )}
         </FilterToolbar>
       )}
 
@@ -2035,8 +2079,8 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
                                   </div>
                                 </div>
                                 {getLaporan(slot)?.status && (
-                                  <span className={`laporan-badge ${getLaporan(slot).status.toLowerCase()}`}>
-                                    {getLaporan(slot).status}
+                                  <span className={`laporan-badge ${getLaporan(slot).status.toLowerCase().replace(/\s+/g, '-')}`}>
+                                    {getLaporan(slot).status.toLowerCase() === 'menunggu laporan' ? 'Menunggu' : getLaporan(slot).status}
                                   </span>
                                 )}
                                 {batal ? (
@@ -2248,8 +2292,8 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
                             )}
                           </div>
                           {getLaporan(slot)?.status && (
-                            <span className={`laporan-badge ${getLaporan(slot).status.toLowerCase()}`}>
-                              {getLaporan(slot).status}
+                            <span className={`laporan-badge ${getLaporan(slot).status.toLowerCase().replace(/\s+/g, '-')}`}>
+                              {getLaporan(slot).status.toLowerCase() === 'menunggu laporan' ? 'Menunggu' : getLaporan(slot).status}
                             </span>
                           )}
                           {batal ? (
@@ -2451,103 +2495,228 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
                   {sortedSlots.length === 0 ? (
                     <div className="laporan-approval-empty">Tidak ada laporan yang menunggu approval.</div>
                   ) : (
-                    <div className="laporan-approval-list">
-                      {sortedSlots.map((slot) => {
-                        const laporan = getLaporan(slot);
-                        return (
-                          <div key={slot.id} className="laporan-approval-card">
-                            <div className="laporan-approval-head">
-                              <div>
-                                <strong>{slot.mapel}</strong> &bull; {slot.nama_guru}
-                                <div className="laporan-approval-sub">
-                                  {slot.topik} —{' '}
+                    <>
+                      {/* TABLE VIEW (DESKTOP) */}
+                      <div className="klinik-table-container">
+                        <table className="klinik-table">
+                          <thead>
+                            <tr>
+                              <th>Mata Pelajaran / Guru</th>
+                              <th>Topik Pembelajaran</th>
+                              <th className="th-waktu">Waktu</th>
+                              <th className="th-status-kuota">Status Laporan</th>
+                              <th className="text-right">Aksi</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {sortedSlots.map((slot) => {
+                              const laporan = getLaporan(slot);
+                              return (
+                                <tr key={slot.id}>
+                                  <td>
+                                    <div className="table-col-guru flex items-center gap-3">
+                                      <div className="flex-1 min-w-0">
+                                        <p className="m-0 text-sm font-semibold text-[var(--n-ink)] truncate">{slot.mapel}</p>
+                                        <p className="m-0 text-xs text-[var(--n-muted)] mt-1 truncate max-w-[200px]" title={slot.nama_guru}>{slot.nama_guru}</p>
+                                      </div>
+                                    </div>
+                                  </td>
+                                  <td>
+                                    <p className="table-col-topik m-0 text-sm" title={slot.topik}>{slot.topik}</p>
+                                    {(laporan.status === 'Revisi' || laporan.status === 'Rejected') && laporan.catatan_reviewer && (
+                                      <div className="text-[0.72rem] text-red-600 dark:text-red-400 font-semibold mt-1" title={laporan.catatan_reviewer}>
+                                        <i className="bi bi-info-circle mr-1" />
+                                        Revisi: {laporan.catatan_reviewer}
+                                      </div>
+                                    )}
+                                  </td>
+                                  <td>
+                                    <div className="table-col-waktu">
+                                      <span className="date">
+                                        {parseTanggalTampil(slot.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                      </span>
+                                      <span className="time">
+                                        {formatJam(slot.jam_mulai)} – {formatJam(slot.jam_selesai)}
+                                      </span>
+                                      {slot.ruangan && (
+                                        <span style={{ fontSize: '0.75rem', color: 'var(--n-primary)', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                                          <i className="bi bi-geo-alt-fill" /> {slot.ruangan}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </td>
+                                  <td>
+                                    <div className="status-stack">
+                                      {laporan.status === 'Approved' && (
+                                        <span className="status-pill finished">Disetujui</span>
+                                      )}
+                                      {(laporan.status === 'Revisi' || laporan.status === 'Rejected') && (
+                                        <span className="status-pill rejected">Dikembalikan</span>
+                                      )}
+                                      {laporan.status === 'Submitted' && (
+                                        <span className="status-pill pending">Menunggu</span>
+                                      )}
+                                    </div>
+                                  </td>
+                                  <td className="text-right">
+                                    <ActionGroup>
+                                      <ActionButton
+                                        action="view"
+                                        title="Lihat Detail Laporan"
+                                        onClick={() => setShowViewReportModal(slot)}
+                                      />
+                                      {laporan.status === 'Submitted' && (
+                                        <>
+                                          <button
+                                            type="button"
+                                            className="btn-icon-soft"
+                                            data-tooltip="Setujui Laporan"
+                                            aria-label="Setujui Laporan"
+                                            onClick={() => handleApproveLaporan(laporan.id, 'approve')}
+                                          >
+                                            <i className="bi bi-check-lg" style={{ color: '#0284c7' }} />
+                                          </button>
+                                          <button
+                                            type="button"
+                                            className="btn-icon-soft"
+                                            data-tooltip="Kembalikan (Revisi)"
+                                            aria-label="Kembalikan Laporan"
+                                            onClick={() => handleApproveLaporan(laporan.id, 'revisi')}
+                                          >
+                                            <i className="bi bi-arrow-return-left" style={{ color: '#ef4444' }} />
+                                          </button>
+                                        </>
+                                      )}
+                                      {laporan.status === 'Approved' && slot.status !== 'paid' && (
+                                        <button
+                                          type="button"
+                                          className="btn-icon-soft"
+                                          data-tooltip="Batalkan Persetujuan (Revisi)"
+                                          aria-label="Batalkan Persetujuan"
+                                          onClick={() => handleKembalikanApproved(laporan.id)}
+                                        >
+                                          <i className="bi bi-arrow-return-left" style={{ color: '#ef4444' }} />
+                                        </button>
+                                      )}
+                                    </ActionGroup>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+
+                      {/* GRID VIEW (MOBILE) */}
+                      <div className="klinik-grid">
+                        {sortedSlots.map((slot) => {
+                          const laporan = getLaporan(slot);
+                          return (
+                            <div key={slot.id} className="laporan-approval-card">
+                              <div className="laporan-approval-head">
+                                <div className="slot-meta">
+                                  <h3>{slot.mapel}</h3>
+                                  <h4>{slot.nama_guru}</h4>
+                                </div>
+                                <div className="status-stack" style={{ alignItems: 'flex-end' }}>
+                                  {laporan.status === 'Approved' && (
+                                    <span className="status-tag finished">Disetujui</span>
+                                  )}
+                                  {(laporan.status === 'Revisi' || laporan.status === 'Rejected') && (
+                                    <span className="status-tag rejected">Dikembalikan</span>
+                                  )}
+                                  {laporan.status === 'Submitted' && (
+                                    <span className="status-tag pending">Menunggu</span>
+                                  )}
+                                </div>
+                              </div>
+
+                              <div className="topic-box" style={{ marginTop: 2 }}>
+                                <span>Topik Pembahasan</span>
+                                <p>{slot.topik}</p>
+                              </div>
+
+                              <div className="slot-info-row" style={{ marginTop: 2 }}>
+                                <div className="info-chip">
+                                  <i className="bi bi-calendar-check" />
                                   {parseTanggalTampil(slot.tanggal).toLocaleDateString('id-ID', {
                                     day: 'numeric',
                                     month: 'long',
                                     year: 'numeric',
                                   })}
                                 </div>
-                                {laporan.status === 'Approved' && (
-                                  <span className="inline-block mt-2 px-2 py-1 bg-sky-100 dark:bg-sky-500/20 text-sky-700 dark:text-sky-400 text-[10px] font-bold rounded uppercase tracking-wider border border-sky-200 dark:border-sky-500/30">
-                                    Disetujui
-                                  </span>
-                                )}
-                                {(laporan.status === 'Revisi' || laporan.status === 'Rejected') && (
-                                  <span className="inline-block mt-2 px-2 py-1 bg-red-100 dark:bg-red-500/20 text-red-700 dark:text-red-400 text-[10px] font-bold rounded uppercase tracking-wider border border-red-200 dark:border-red-500/30">
-                                    Dikembalikan
-                                  </span>
-                                )}
-                                {laporan.status === 'Submitted' && (
-                                  <span className="inline-block mt-2 px-2 py-1 bg-yellow-100 dark:bg-yellow-500/20 text-yellow-700 dark:text-yellow-400 text-[10px] font-bold rounded uppercase tracking-wider border border-yellow-200 dark:border-yellow-500/30">
-                                    Menunggu Persetujuan
-                                  </span>
+                                <div className="info-chip">
+                                  <i className="bi bi-clock" />
+                                  {formatJam(slot.jam_mulai)} – {formatJam(slot.jam_selesai)}
+                                </div>
+                                {slot.ruangan && (
+                                  <div className="info-chip">
+                                    <i className="bi bi-geo-alt" />
+                                    {slot.ruangan}
+                                  </div>
                                 )}
                               </div>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => setShowViewReportModal(slot)}
-                                leftIcon={<i className="bi bi-eye" />}
-                              >
-                                Lihat Detail
-                              </Button>
-                            </div>
 
-                            {laporan.status === 'Submitted' && (
-                              <>
-                                <textarea
-                                  className="laporan-approval-note"
-                                  placeholder="Catatan (wajib diisi kalau dikembalikan)..."
-                                  value={laporanNote[laporan.id] || ''}
-                                  onChange={(e) => setLaporanNote((prev) => ({ ...prev, [laporan.id]: e.target.value }))}
-                                />
-                                <div className="laporan-approval-actions">
-                                  <Button
-                                    size="sm"
-                                    variant="danger"
-                                    onClick={() => handleApproveLaporan(laporan.id, 'revisi')}
-                                    leftIcon={<i className="bi bi-arrow-return-left" />}
-                                  >
-                                    Kembalikan
-                                  </Button>
-                                  <Button
-                                    size="sm"
-                                    variant="primary"
-                                    onClick={() => handleApproveLaporan(laporan.id, 'approve')}
-                                    leftIcon={<i className="bi bi-check2" />}
-                                  >
-                                    Setujui
-                                  </Button>
+                              {(laporan.status === 'Revisi' || laporan.status === 'Rejected') && laporan.catatan_reviewer && (
+                                <div className="mt-1 p-2.5 bg-red-50 dark:bg-red-950/30 rounded-lg text-xs border border-red-100 dark:border-red-900/40">
+                                  <strong className="text-red-700 dark:text-red-400 font-bold block mb-0.5 uppercase tracking-wider">
+                                    Catatan Revisi / Pengembalian:
+                                  </strong>
+                                  <span className="text-red-800 dark:text-red-300 font-medium">{laporan.catatan_reviewer}</span>
                                 </div>
-                              </>
-                            )}
+                              )}
 
-                            {laporan.status === 'Approved' && slot.status !== 'paid' && bisaApproveLaporan && (
-                              <div className="laporan-approval-actions" style={{ marginTop: 12 }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10, paddingTop: 10, borderTop: '1px solid var(--n-border)', marginTop: 4 }}>
                                 <Button
                                   size="sm"
-                                  variant="danger"
-                                  onClick={() => handleKembalikanApproved(laporan.id)}
-                                  isLoading={actionLoadingId === `laporan_${laporan.id}`}
-                                  leftIcon={<i className="bi bi-arrow-return-left" />}
+                                  variant="outline"
+                                  onClick={() => setShowViewReportModal(slot)}
+                                  leftIcon={<i className="bi bi-eye" />}
                                 >
-                                  Batalkan Persetujuan (Kembalikan ke Revisi)
+                                  Lihat Detail
                                 </Button>
-                              </div>
-                            )}
 
-                            {(laporan.status === 'Revisi' || laporan.status === 'Rejected') && laporan.catatan_reviewer && (
-                              <div className="mt-2 p-3 bg-red-50 dark:bg-red-950/30 rounded-lg text-sm border border-red-100 dark:border-red-900/40">
-                                <strong className="text-red-700 dark:text-red-400 text-xs uppercase tracking-wider block mb-1">
-                                  Catatan Pengembalian:
-                                </strong>
-                                <span className="text-red-800 dark:text-red-300">{laporan.catatan_reviewer}</span>
+                                <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                                  {laporan.status === 'Submitted' && (
+                                    <>
+                                      <Button
+                                        size="sm"
+                                        variant="danger"
+                                        onClick={() => handleApproveLaporan(laporan.id, 'revisi')}
+                                        leftIcon={<i className="bi bi-arrow-return-left" />}
+                                        isLoading={actionLoadingId === `laporan_${laporan.id}`}
+                                      >
+                                        Kembalikan
+                                      </Button>
+                                      <Button
+                                        size="sm"
+                                        variant="primary"
+                                        onClick={() => handleApproveLaporan(laporan.id, 'approve')}
+                                        leftIcon={<i className="bi bi-check-lg" />}
+                                        isLoading={actionLoadingId === `laporan_${laporan.id}`}
+                                      >
+                                        Setujui
+                                      </Button>
+                                    </>
+                                  )}
+                                  {laporan.status === 'Approved' && slot.status !== 'paid' && bisaApproveLaporan && (
+                                    <Button
+                                      size="sm"
+                                      variant="danger"
+                                      onClick={() => handleKembalikanApproved(laporan.id)}
+                                      isLoading={actionLoadingId === `laporan_${laporan.id}`}
+                                      leftIcon={<i className="bi bi-arrow-return-left" />}
+                                    >
+                                      Batalkan Persetujuan (Revisi)
+                                    </Button>
+                                  )}
+                                </div>
                               </div>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </>
                   )}
                 </div>
               );
