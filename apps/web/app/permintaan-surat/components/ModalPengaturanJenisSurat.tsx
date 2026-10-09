@@ -14,7 +14,7 @@ interface ModalPengaturanJenisSuratProps {
   initialData?: JenisSuratConfig | null;
 }
 
-const ROLE_OPTIONS = [
+export const ROLE_OPTIONS = [
   { value: 'WKM_AKADEMIK', label: 'WKM Bidang Akademik / Kurikulum' },
   { value: 'WKM_KESISWAAN', label: 'WKM Bidang Kesiswaan' },
   { value: 'WKM_SARPRAS', label: 'WKM Bidang Sarana & Prasarana' },

@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import Swal from 'sweetalert2';
 import { Spinner } from '@/components/ui/Spinner';
 import { Button } from '@/components/ui/Button';
+import { FilterToolbar, FilterSearch, FilterSelect, FilterActions } from '@/components/ui/FilterToolbar';
 import { ActionButton, ActionGroup } from '@/components/ui/ActionButtons';
-import ModalPengaturanJenisSurat from '../components/ModalPengaturanJenisSurat';
+import ModalPengaturanJenisSurat, { ROLE_OPTIONS } from '../components/ModalPengaturanJenisSurat';
 import { getRoleApproverLabel, JenisSuratConfig } from '../components/AddPermintaanModal';
 
 interface TabPengaturanSuratProps {
@@ -16,6 +17,8 @@ export default function TabPengaturanSurat({ onSaved }: TabPengaturanSuratProps 
   const [configs, setConfigs] = useState<JenisSuratConfig[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [search, setSearch] = useState('');
+  const [filterApprover, setFilterApprover] = useState('');
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -123,76 +126,159 @@ export default function TabPengaturanSurat({ onSaved }: TabPengaturanSuratProps 
     await saveAllConfigs(updated);
   };
 
-  return (
-    <div className="ps-card">
-      {/* Header Pengaturan */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: '18px 22px',
-          borderBottom: '1px solid var(--ps-tb-border)',
-          flexWrap: 'wrap',
-          gap: 12,
-        }}
-      >
-        <div>
-          <h2 style={{ fontSize: '1.05rem', fontWeight: 600, margin: 0, color: 'var(--ps-text-primary)' }}>
-            Konfigurasi Jenis Surat & Alur Persetujuan
-          </h2>
-          <p style={{ fontSize: '0.82rem', color: 'var(--ps-text-secondary)', margin: '4px 0 0 0' }}>
-            Tentukan jenis surat apa saja yang dapat diajukan serta alur pihak berwenang yang berhak menyetujui.
-          </p>
-        </div>
+  const approverOptions = useMemo(() => {
+    const opts = [
+      { value: '', label: 'Semua Approver' },
+      { value: 'NONE', label: 'Langsung TU (Tanpa Verifikasi)' },
+    ];
 
-        <div style={{ display: 'flex', gap: 10 }}>
+    // Standard roles
+    ROLE_OPTIONS.forEach((r) => {
+      opts.push({ value: r.value, label: r.label });
+    });
+
+    // Custom roles jika ada dalam konfigurasi
+    const standardRoleValues = new Set(ROLE_OPTIONS.map((r) => r.value));
+    configs.forEach((c) => {
+      if (c.perlu_approval && c.approver_type === 'ROLE' && c.approver_role && !standardRoleValues.has(c.approver_role)) {
+        standardRoleValues.add(c.approver_role);
+        opts.push({
+          value: c.approver_role,
+          label: getRoleApproverLabel(c.approver_role),
+        });
+      }
+    });
+
+    // Specific user approvers jika ada dalam konfigurasi
+    const seenUsers = new Set<string>();
+    configs.forEach((c) => {
+      if (c.perlu_approval && c.approver_type === 'USER') {
+        const userKey = c.approver_user_nip || c.approver_user_nama || '';
+        if (userKey && !seenUsers.has(userKey)) {
+          seenUsers.add(userKey);
+          opts.push({
+            value: `USER:${userKey}`,
+            label: c.approver_user_nama
+              ? `${c.approver_user_nama} (Pegawai)`
+              : `NIP ${c.approver_user_nip}`,
+          });
+        }
+      }
+    });
+
+    return opts;
+  }, [configs]);
+
+  const filteredConfigs = useMemo(() => {
+    return configs.filter((item) => {
+      // 1. Filter Pencarian
+      if (search.trim()) {
+        const q = search.trim().toLowerCase();
+        const matchesSearch =
+          (item.nama && item.nama.toLowerCase().includes(q)) ||
+          (item.deskripsi && item.deskripsi.toLowerCase().includes(q)) ||
+          (item.id && item.id.toLowerCase().includes(q)) ||
+          (item.approver_user_nama && item.approver_user_nama.toLowerCase().includes(q)) ||
+          (item.approver_user_nip && item.approver_user_nip.toLowerCase().includes(q)) ||
+          (item.approver_role && getRoleApproverLabel(item.approver_role).toLowerCase().includes(q));
+        if (!matchesSearch) return false;
+      }
+
+      // 2. Filter Sesuai Siapa yang Mengapprove
+      if (filterApprover) {
+        if (filterApprover === 'NONE') {
+          return !item.perlu_approval || item.approver_type === 'NONE';
+        }
+
+        if (!item.perlu_approval) return false;
+
+        if (filterApprover.startsWith('USER:')) {
+          const targetKey = filterApprover.slice(5);
+          return (
+            item.approver_type === 'USER' &&
+            (item.approver_user_nip === targetKey || item.approver_user_nama === targetKey)
+          );
+        }
+
+        return item.approver_type === 'ROLE' && item.approver_role === filterApprover;
+      }
+
+      return true;
+    });
+  }, [configs, search, filterApprover]);
+
+  return (
+    <>
+      {/* Toolbar Filter & Pencarian */}
+      <FilterToolbar>
+        <FilterSearch
+          label="Pencarian"
+          placeholder="Cari jenis surat atau keterangan..."
+          value={search}
+          onChange={setSearch}
+          grow={2}
+        />
+
+        <FilterSelect
+          label="Pihak Berwenang"
+          icon="person-check"
+          value={filterApprover}
+          onChange={setFilterApprover}
+          options={approverOptions}
+        />
+
+        <FilterActions>
           <Button
             variant="primary"
-            icon="plus-circle"
+            icon="add"
             onClick={handleOpenAdd}
             disabled={loading || saving}
           >
             Tambah Jenis Surat
           </Button>
-        </div>
-      </div>
+        </FilterActions>
+      </FilterToolbar>
 
-      {/* Tabel Konfigurasi */}
-      <div className="ps-table-wrap">
-        <table className="ps-table">
-          <thead>
-            <tr>
-              <th style={{ width: 40, textAlign: 'center' }}>No</th>
-              <th>Nama Jenis Surat</th>
-              <th>Keterangan / Deskripsi</th>
-              <th>Alur Persetujuan (Workflow)</th>
-              <th style={{ textAlign: 'center' }}>Status</th>
-              <th style={{ textAlign: 'center' }}>Aksi</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
+      {/* Tabel Konfigurasi Data */}
+      <div className="ps-card">
+        <div className="ps-table-wrap">
+          <table className="ps-table">
+            <thead>
               <tr>
-                <td colSpan={6} style={{ padding: '48px 0', textAlign: 'center' }}>
-                  <Spinner variant="buble" label="Memuat konfigurasi jenis surat..." />
-                </td>
+                <th style={{ width: 40, textAlign: 'center' }}>No</th>
+                <th>Nama Jenis Surat</th>
+                <th>Keterangan / Deskripsi</th>
+                <th>Alur Persetujuan (Workflow)</th>
+                <th style={{ textAlign: 'center' }}>Status</th>
+                <th style={{ textAlign: 'center' }}>Aksi</th>
               </tr>
-            ) : configs.length === 0 ? (
-              <tr>
-                <td colSpan={6}>
-                  <div className="ps-empty">
-                    <i className="bi bi-gear" />
-                    <p>Belum ada konfigurasi jenis surat</p>
-                  </div>
-                </td>
-              </tr>
-            ) : (
-              configs.map((item, idx) => {
-                const approverText =
-                  item.approver_type === 'USER'
-                    ? item.approver_user_nama
-                      ? `${item.approver_user_nama} (NIP: ${item.approver_user_nip || '—'})`
+            </thead>
+            <tbody>
+              {loading ? (
+                <tr>
+                  <td colSpan={6} style={{ padding: '48px 0', textAlign: 'center' }}>
+                    <Spinner variant="buble" label="Memuat konfigurasi jenis surat..." />
+                  </td>
+                </tr>
+              ) : filteredConfigs.length === 0 ? (
+                <tr>
+                  <td colSpan={6}>
+                    <div className="ps-empty">
+                      <i className="bi bi-gear" />
+                      <p>
+                        {configs.length === 0
+                          ? 'Belum ada konfigurasi jenis surat'
+                          : 'Tidak ada jenis surat yang cocok dengan filter / pencarian'}
+                      </p>
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                filteredConfigs.map((item, idx) => {
+                  const approverText =
+                    item.approver_type === 'USER'
+                      ? item.approver_user_nama
+                        ? `${item.approver_user_nama} (NIP: ${item.approver_user_nip || '—'})`
                       : `NIP ${item.approver_user_nip}`
                     : getRoleApproverLabel(item.approver_role);
 
@@ -320,6 +406,7 @@ export default function TabPengaturanSurat({ onSaved }: TabPengaturanSuratProps 
           </tbody>
         </table>
       </div>
+      </div>
 
       {/* Modal Pengaturan Item */}
       <ModalPengaturanJenisSurat
@@ -331,6 +418,6 @@ export default function TabPengaturanSurat({ onSaved }: TabPengaturanSuratProps 
         onSave={handleSaveModal}
         initialData={editItem}
       />
-    </div>
+    </>
   );
 }
