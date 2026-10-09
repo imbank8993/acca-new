@@ -7,7 +7,7 @@ import Tab, { TabItem } from '@/components/ui/Tab';
 import { FilterToolbar, FilterSelect, FilterSearch, FilterActions } from '@/components/ui/FilterToolbar';
 import { Button } from '@/components/ui/Button';
 import { DesktopFab } from '@/components/ui/DesktopFab';
-import { MobileFab } from '@/components/mobile';
+import { MobileFab, MobileList, MobileListItem, MobileEmpty } from '@/components/mobile';
 import { ActionButton, ActionGroup } from '@/components/ui/ActionButtons';
 import { Modal, ModalBody, ModalFooter } from '@/components/ui/Modal';
 import { Spinner } from '@/components/ui/Spinner';
@@ -25,7 +25,56 @@ import AbsensiModal from './components/AbsensiModal';
 import ReportModal from './components/ReportModal';
 import ViewReportModal from './components/ViewReportModal';
 import ParticipantsModal from './components/ParticipantsModal';
+import DetailSlotModal from './components/DetailSlotModal';
 import './klinik.css';
+
+/**
+ * Capitalize string to Title Case (e.g., "IMRAN PUTRA BUGIS" -> "Imran Putra Bugis")
+ */
+function toTitleCase(str?: string | null): string {
+  if (!str) return '';
+  return str
+    .toLowerCase()
+    .split(' ')
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+}
+
+function getDurasiMenit(jamMulai?: string | null, jamSelesai?: string | null): number {
+  if (!jamMulai || !jamSelesai || !jamMulai.includes(':') || !jamSelesai.includes(':')) return 0;
+  const [h1, m1] = jamMulai.split(':').map((v) => parseInt(v, 10) || 0);
+  const [h2, m2] = jamSelesai.split(':').map((v) => parseInt(v, 10) || 0);
+  const menitMulai = h1 * 60 + m1;
+  const menitSelesai = h2 * 60 + m2;
+  return menitSelesai - menitMulai;
+}
+
+/**
+ * Validasi pendaftaran siswa: ditutup 30 menit sebelum sesi klinik berakhir.
+ */
+function pendaftaranSudahTutup(slot?: KlinikSlot | null): boolean {
+  if (!slot || !slot.tanggal || !slot.jam_selesai) return false;
+  try {
+    const parts = slot.jam_selesai.split(':');
+    const h = parseInt(parts[0], 10) || 0;
+    const m = parseInt(parts[1], 10) || 0;
+
+    let tglStr = slot.tanggal;
+    if (typeof tglStr === 'string' && tglStr.includes('T')) {
+      tglStr = tglStr.split('T')[0];
+    }
+    const [year, month, day] = String(tglStr).split('-').map((v) => parseInt(v, 10));
+    if (!year || !month || !day) return false;
+
+    const tglSelesai = new Date(year, month - 1, day, h, m, 0, 0);
+    const now = new Date();
+    const sisaMenit = (tglSelesai.getTime() - now.getTime()) / (1000 * 60);
+
+    return sisaMenit < 30;
+  } catch {
+    return false;
+  }
+}
 
 interface KlinikPeserta {
   id: string;
@@ -269,9 +318,10 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
   // Filters & Search
   const [search, setSearch] = useState('');
   const [filterMapel, setFilterMapel] = useState('');
+  const [filterKetersediaan, setFilterKetersediaan] = useState('semua');
   const [filterStatusKelola, setFilterStatusKelola] = useState('');
   const [filterInisiator, setFilterInisiator] = useState('');
-  const [filterStatusApproval, setFilterStatusApproval] = useState('menunggu');
+  const [filterStatusApproval, setFilterStatusApproval] = useState('semua');
 
   // Tabs
   const [activeTab, setActiveTab] = useTabParam<'available' | 'my_sessions' | 'kelompok' | 'approval' | 'kelola' | 'rekap'>('available', [
@@ -305,7 +355,23 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
   const [showReportModal, setShowReportModal] = useState<KlinikSlot | null>(null);
   const [showViewReportModal, setShowViewReportModal] = useState<KlinikSlot | null>(null);
   const [showParticipantsModal, setShowParticipantsModal] = useState<KlinikSlot | null>(null);
+  const [selectedDetailSlot, setSelectedDetailSlot] = useState<KlinikSlot | null>(null);
   const [previewHtml, setPreviewHtml] = useState<string | null>(null);
+
+  // Tab Laporan (rekap) mobile 3-dots menu
+  const [rekapMenuOpen, setRekapMenuOpen] = useState(false);
+  const rekapMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!rekapMenuOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (rekapMenuRef.current && !rekapMenuRef.current.contains(e.target as Node)) {
+        setRekapMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [rekapMenuOpen]);
 
   // ── Sesi bentukan admin ──────────────────────────────────────────────────
   const [showAdminModal, setShowAdminModal] = useState(false);
@@ -325,7 +391,7 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
   // Rekap bulanan kolektif (tab Laporan)
   const [rekapBulan, setRekapBulan] = useState(new Date().getMonth() + 1);
   const [rekapTahun, setRekapTahun] = useState(new Date().getFullYear());
-  const [rekapSemua, setRekapSemua] = useState(false);
+  const [rekapSemua, setRekapSemua] = useState(true);
   const [rekapLoading, setRekapLoading] = useState<'preview' | 'pdf' | null>(null);
   const [loadingPreviewSlotId, setLoadingPreviewSlotId] = useState<string | null>(null);
   const [printingPdfSlotId, setPrintingPdfSlotId] = useState<string | null>(null);
@@ -570,9 +636,9 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
     'available',
     ...(isGuru ? ['my_sessions'] : []),
     ...(isSiswa && !isGuru ? ['kelompok'] : []),
-    ...(bisaApproveSesi || bisaApproveLaporan ? ['approval'] : []),
+    ...(bisaApproveSesi ? ['approval'] : []),
     ...(bisaKelolaSesi ? ['kelola'] : []),
-    ...(bisaRekap ? ['rekap'] : []),
+    ...(bisaRekap || bisaApproveLaporan ? ['rekap'] : []),
   ];
 
   const tabAktif = tabDiizinkan.includes(activeTab) ? activeTab : 'available';
@@ -794,6 +860,15 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
       Swal.fire('Jam Tidak Valid', 'Jam selesai harus setelah jam mulai', 'warning');
       return;
     }
+    const durasiAdmin = getDurasiMenit(jam_mulai, jam_selesai);
+    if (durasiAdmin < 75) {
+      Swal.fire(
+        'Durasi Sesi Minimal 75 Menit',
+        `Durasi pelaksanaan sesi klinik (${durasiAdmin > 0 ? durasiAdmin + ' menit' : 'invalid'}) kurang dari batas minimal 75 menit. Mohon atur kembali jam mulai dan jam selesai.`,
+        'warning'
+      );
+      return;
+    }
     if ((adminForm.max_siswa || 0) < PESERTA_MINIMAL) {
       Swal.fire('Kuota Tidak Valid', `Kuota peserta klinik minimal harus ${PESERTA_MINIMAL} siswa`, 'warning');
       return;
@@ -897,6 +972,15 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
     }
     if (form.jam_selesai <= form.jam_mulai) {
       Swal.fire('Jam Tidak Valid', 'Jam selesai harus setelah jam mulai', 'warning');
+      return;
+    }
+    const durasiSlot = getDurasiMenit(form.jam_mulai, form.jam_selesai);
+    if (durasiSlot < 75) {
+      Swal.fire(
+        'Durasi Sesi Minimal 75 Menit',
+        `Durasi pelaksanaan sesi klinik (${durasiSlot > 0 ? durasiSlot + ' menit' : 'invalid'}) kurang dari batas minimal 75 menit. Mohon atur kembali jam mulai dan jam selesai.`,
+        'warning'
+      );
       return;
     }
     if (!isPengajuanSiswa && form.max_siswa < 2) {
@@ -1088,6 +1172,15 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
 
   async function handleRegister(slotId: string) {
     if (!user || actionLoadingId) return;
+    const targetSlot = slots.find((s) => s.id === slotId);
+    if (targetSlot && pendaftaranSudahTutup(targetSlot)) {
+      Swal.fire(
+        'Pendaftaran Ditutup',
+        'Pendaftaran sesi klinik ditutup 30 menit sebelum pelaksanaan sesi berakhir.',
+        'warning'
+      );
+      return;
+    }
     const confirm = await Swal.fire({
       title: 'Konfirmasi Pendaftaran',
       text: 'Apakah Anda yakin ingin mendaftar di klinik ini?',
@@ -1424,9 +1517,9 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
     }
   };
 
-  // Filter slots for rendering
+  // Filter & sort slots for rendering
   const displayedSlots = useMemo(() => {
-    return slots.filter((s) => {
+    const filtered = slots.filter((s) => {
       if (tabAktif === 'available') {
         const lapStatus = getLaporan(s)?.status;
         const antreLaporan = s.status === 'finished' && ['Submitted', 'Revisi'].includes(lapStatus);
@@ -1481,6 +1574,24 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
 
       if (filterMapel && s.mapel !== filterMapel) return false;
 
+      // Filter Ketersediaan (Default: semua)
+      if (filterKetersediaan && filterKetersediaan !== 'semua') {
+        const isRejected = s.status === 'cancelled' || pengajuanDitolak(s);
+        const isFinished = s.status === 'finished' || s.status === 'paid' || sesiSudahLewat(s);
+        const isFull = s.status === 'full' || (s.klinik_peserta?.length || 0) >= s.max_siswa;
+        const pendaftaranTutup = pendaftaranSudahTutup(s);
+
+        const bisaMendaftar = s.status === 'open' && !isFull && !isFinished && !isRejected && !pendaftaranTutup;
+
+        if (filterKetersediaan === 'tersedia') {
+          if (!bisaMendaftar) return false;
+        } else if (filterKetersediaan === 'penuh') {
+          if (!isFull || isFinished || isRejected) return false;
+        } else if (filterKetersediaan === 'selesai') {
+          if (!isFinished && !isRejected && !pendaftaranTutup) return false;
+        }
+      }
+
       if (search.trim()) {
         const q = search.toLowerCase();
         const m = (s.mapel || '').toLowerCase();
@@ -1492,7 +1603,51 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
 
       return true;
     });
-  }, [slots, tabAktif, user?.id, filterMapel, search, filterStatusKelola, filterInisiator, filterStatusApproval]);
+
+    // Hierarki urutan data:
+    // 1. Sesi yang belum selesai / aktif / pending (Paling atas)
+    // 2. Sesi yang sudah selesai (Tengah)
+    // 3. Sesi yang dibatalkan / ditolak (Bagian akhir)
+    const getGroupPriority = (s: KlinikSlot) => {
+      const isRejected = s.status === 'cancelled' || pengajuanDitolak(s);
+      const isFinished = s.status === 'finished' || s.status === 'paid' || sesiSudahLewat(s);
+      const isFull = s.status === 'full' || (s.klinik_peserta?.length || 0) >= s.max_siswa;
+      const pendaftaranTutup = pendaftaranSudahTutup(s);
+
+      if (tabAktif === 'approval') {
+        if (s.status === 'pending') return 0; // 1. Menunggu persetujuan: PALING ATAS
+        if (!isFinished && !isRejected) return 1; // 2. Belum selesai / Aktif: TENGAH ATAS
+        if (isFinished && !isRejected) return 2; // 3. Selesai: TENGAH BAWAH
+        return 3; // 4. Ditolak / Batal: PALING BAWAH
+      }
+
+      const bisaMendaftar = s.status === 'open' && !isFull && !isFinished && !isRejected && !pendaftaranTutup;
+
+      if (bisaMendaftar) return 0; // Paling atas (Bisa mendaftar)
+      if (!isFinished && !isRejected) return 1; // Sesi aktif / belum selesai
+      if (isFinished && !isRejected) return 2; // Sesi yang sudah selesai
+      return 3; // Sesi yang dibatalkan / ditolak
+    };
+
+    return [...filtered].sort((a, b) => {
+      const prioA = getGroupPriority(a);
+      const prioB = getGroupPriority(b);
+      if (prioA !== prioB) return prioA - prioB;
+
+      const dateA = parseTanggalTampil(a.tanggal).getTime();
+      const dateB = parseTanggalTampil(b.tanggal).getTime();
+
+      // Untuk kelompok yang sudah selesai / batal (prio >= 2), urutkan berdasar tanggal pelaksanaan (terbaru dulu)
+      if (prioA >= 2) {
+        if (dateA !== dateB) return dateB - dateA;
+        return (b.jam_mulai || '').localeCompare(a.jam_mulai || '');
+      }
+
+      // Untuk kelompok aktif / belum selesai (prio 0 & 1), urutkan berdasar tanggal pelaksanaan (terdekat dulu)
+      if (dateA !== dateB) return dateA - dateB;
+      return (a.jam_mulai || '').localeCompare(b.jam_mulai || '');
+    });
+  }, [slots, tabAktif, user?.id, filterMapel, filterKetersediaan, search, filterStatusKelola, filterInisiator, filterStatusApproval]);
 
   /**
    * Aksi siswa pada sebuah sesi yang sedang berjalan atau sedang antre laporan:
@@ -1505,7 +1660,7 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
 
     const saya = pesertaSaya(slot);
     if (!saya) {
-      if (slot.status !== 'open') return null;
+      if (slot.status !== 'open' || pendaftaranSudahTutup(slot)) return null;
       return (
         <Button size="sm" variant="primary" onClick={() => handleRegister(slot.id)}>
           Daftar
@@ -1621,16 +1776,17 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
     }).length;
   }, [slots, isGuru, user?.id]);
 
-  /** Jumlah antrean menunggu approval (pengajuan sesi + pengesahan laporan) */
-  const jumlahMenungguApproval = useMemo(() => {
-    if (!bisaApproveSesi && !bisaApproveLaporan) return 0;
-    let count = 0;
-    for (const slot of slots) {
-      if (bisaApproveSesi && slot.status === 'pending') count++;
-      if (bisaApproveLaporan && getLaporan(slot)?.status === 'Submitted') count++;
-    }
-    return count;
-  }, [slots, bisaApproveSesi, bisaApproveLaporan]);
+  /** Jumlah antrean menunggu approval pengajuan sesi */
+  const jumlahMenungguSesiApproval = useMemo(() => {
+    if (!bisaApproveSesi) return 0;
+    return slots.filter((slot) => slot.status === 'pending').length;
+  }, [slots, bisaApproveSesi]);
+
+  /** Jumlah antrean menunggu pengesahan laporan */
+  const jumlahMenungguLaporanApproval = useMemo(() => {
+    if (!bisaApproveLaporan) return 0;
+    return slots.filter((slot) => getLaporan(slot)?.status === 'Submitted').length;
+  }, [slots, bisaApproveLaporan]);
 
   /** Jumlah sesi berjalan bagi pengelola sesi */
   const jumlahKelolaAktif = useMemo(() => {
@@ -1639,12 +1795,9 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
   }, [slots, bisaKelolaSesi]);
 
   /**
-   * Di tab Approval, daftar sesi yang kosong ditampilkan sebagai kartu ringkas
-   * seukuran blok laporan di bawahnya — bukan tabel kosong setinggi layar.
-   * Tab lain tetap memakai tabel/kartu seperti biasa.
+   * Di tab Approval, daftar sesi yang kosong ditampilkan sebagai kartu ringkas.
    */
   const sesiKosongDiApproval = tabAktif === 'approval' && displayedSlots.length === 0;
-  const jumlahMenungguSesiApproval = displayedSlots.filter((slot) => slot.status === 'pending').length;
 
   const tabs: TabItem<'available' | 'my_sessions' | 'kelompok' | 'approval' | 'kelola' | 'rekap'>[] = [
     {
@@ -1665,11 +1818,11 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
       icon: 'bi-people-fill',
       badge: jumlahNotifKelompokSiswa > 0 ? jumlahNotifKelompokSiswa : undefined,
     }] : []),
-    ...(bisaApproveSesi || bisaApproveLaporan ? [{
+    ...(bisaApproveSesi ? [{
       key: 'approval' as const,
-      label: 'Approval',
+      label: 'Approval Sesi',
       icon: 'bi-shield-check',
-      badge: jumlahMenungguApproval > 0 ? jumlahMenungguApproval : undefined,
+      badge: jumlahMenungguSesiApproval > 0 ? jumlahMenungguSesiApproval : undefined,
     }] : []),
     ...(bisaKelolaSesi ? [{
       key: 'kelola' as const,
@@ -1677,10 +1830,11 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
       icon: 'bi-calendar2-week',
       badge: jumlahKelolaAktif > 0 ? jumlahKelolaAktif : undefined,
     }] : []),
-    ...(bisaRekap ? [{
+    ...(bisaRekap || bisaApproveLaporan ? [{
       key: 'rekap' as const,
       label: 'Laporan',
       icon: 'bi-file-earmark-arrow-down',
+      badge: jumlahMenungguLaporanApproval > 0 ? jumlahMenungguLaporanApproval : undefined,
     }] : []),
   ];
 
@@ -1827,13 +1981,25 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
               value={filterStatusApproval}
               onChange={setFilterStatusApproval}
               options={[
-                { value: 'menunggu', label: 'Menunggu' },
-                { value: 'disetujui', label: 'Disetujui' },
-                { value: 'ditolak', label: 'Ditolak/Dikembalikan' },
                 { value: 'semua', label: 'Semua' },
+                { value: 'menunggu', label: 'Menunggu' },
+                { value: 'disetujui', label: 'Selesai / Disetujui' },
+                { value: 'ditolak', label: 'Ditolak' },
               ]}
             />
           )}
+          <FilterSelect
+            label="Ketersediaan"
+            icon="door-open"
+            value={filterKetersediaan}
+            onChange={setFilterKetersediaan}
+            options={[
+              { value: 'semua', label: 'Semua' },
+              { value: 'tersedia', label: 'Tersedia' },
+              { value: 'penuh', label: 'Penuh' },
+              { value: 'selesai', label: 'Selesai' },
+            ]}
+          />
           <FilterSelect
             label="Mata Pelajaran"
             icon="journal-bookmark"
@@ -1844,20 +2010,6 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
               ...mapelList.map((m) => ({ value: m.nama, label: m.nama })),
             ]}
           />
-          {tabAktif !== 'approval' && tabAktif !== 'kelola' && (
-            <FilterActions>
-              <Button
-                variant="outline"
-                size="sm"
-                icon="arrow-clockwise"
-                onClick={() => fetchUserAndSlots()}
-                disabled={loading}
-                title="Perbarui data"
-              >
-                Segarkan
-              </Button>
-            </FilterActions>
-          )}
         </FilterToolbar>
       )}
 
@@ -1868,83 +2020,307 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
             <Spinner variant="buble" label="Memuat jadwal klinik pembelajaran..." />
           </div>
         ) : tabAktif === 'rekap' ? (
-          /* Rekap bulanan kolektif */
-          <div className="rekap-card">
-            <div className="rekap-head">
-              <span className="rekap-head__icon">
-                <i className="bi bi-file-earmark-text-fill" />
-              </span>
-              <div>
-                <h3>Rekap Bulanan Klinik Pembelajaran</h3>
-                <p>
-                  Dokumen kolektif seluruh guru yang melaksanakan sesi klinik pada bulan terpilih, dilengkapi lampiran absensi setiap sesi, foto dokumentasi, dan pengesahan digital WKM Akademik dengan QR Code verifikasi.
-                </p>
-              </div>
-            </div>
+          <div className="flex flex-col gap-0 md:gap-4">
+            <FilterToolbar actionsInline>
+              <FilterSearch
+                placeholder="Cari mata pelajaran / topik / nama guru..."
+                value={search}
+                onChange={setSearch}
+                grow={2}
+              />
+              <FilterSelect
+                label="Bulan"
+                icon="calendar-month"
+                value={rekapBulan.toString()}
+                onChange={(v) => setRekapBulan(Number(v))}
+                options={NAMA_BULAN.map((b, i) => ({ value: (i + 1).toString(), label: b }))}
+              />
+              <FilterSelect
+                label="Tahun"
+                icon="calendar3"
+                value={rekapTahun.toString()}
+                onChange={(v) => setRekapTahun(Number(v))}
+                options={Array.from({ length: 5 }, (_, i) => {
+                  const yr = (new Date().getFullYear() - 3 + i).toString();
+                  return { value: yr, label: yr };
+                })}
+              />
+              <FilterSelect
+                label="Cakupan Data"
+                icon="check2-circle"
+                value={rekapSemua ? 'semua' : 'sah'}
+                onChange={(v) => setRekapSemua(v === 'semua')}
+                options={[
+                  { value: 'semua', label: 'Semua Laporan Diajukan' },
+                  { value: 'sah', label: 'Hanya Laporan Disahkan' },
+                ]}
+              />
+              <FilterActions>
+                <Button
+                  className="hidden md:inline-flex"
+                  variant="outline"
+                  onClick={() => handleRekap('preview')}
+                  isLoading={rekapLoading === 'preview'}
+                  disabled={rekapLoading !== null}
+                  leftIcon={<i className="bi bi-eye" />}
+                >
+                  Pratinjau
+                </Button>
+                <Button
+                  className="hidden md:inline-flex"
+                  variant="primary"
+                  onClick={() => handleRekap('pdf')}
+                  isLoading={rekapLoading === 'pdf'}
+                  disabled={rekapLoading !== null}
+                  leftIcon={<i className="bi bi-printer-fill" />}
+                >
+                  Cetak PDF
+                </Button>
 
-            <div style={{ padding: '18px 24px' }}>
-              <FilterToolbar>
-                <FilterSelect
-                  label="Bulan"
-                  icon="calendar-month"
-                  value={rekapBulan.toString()}
-                  onChange={(v) => setRekapBulan(Number(v))}
-                  options={NAMA_BULAN.map((b, i) => ({ value: (i + 1).toString(), label: b }))}
-                />
-                <FilterSelect
-                  label="Tahun"
-                  icon="calendar3"
-                  value={rekapTahun.toString()}
-                  onChange={(v) => setRekapTahun(Number(v))}
-                  options={Array.from({ length: 5 }, (_, i) => {
-                    const yr = (new Date().getFullYear() - 3 + i).toString();
-                    return { value: yr, label: yr };
-                  })}
-                />
-                <FilterSelect
-                  label="Cakupan Data"
-                  icon="check2-circle"
-                  value={rekapSemua ? 'semua' : 'sah'}
-                  onChange={(v) => setRekapSemua(v === 'semua')}
-                  options={[
-                    { value: 'sah', label: 'Hanya Laporan Disahkan' },
-                    { value: 'semua', label: 'Semua Laporan Diajukan' },
-                  ]}
-                />
-                <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', marginLeft: 'auto' }}>
-                  <Button
-                    variant="outline"
-                    onClick={() => handleRekap('preview')}
-                    isLoading={rekapLoading === 'preview'}
-                    disabled={rekapLoading !== null}
-                    leftIcon={<i className="bi bi-eye" />}
+                <div className="sk__more mobile-only" ref={rekapMenuRef}>
+                  <button
+                    type="button"
+                    className="ui-btn ftb-btn-icon-mobile"
+                    onClick={() => setRekapMenuOpen((v) => !v)}
+                    title="Menu Aksi Laporan"
+                    aria-label="Menu Aksi Laporan"
                   >
-                    Pratinjau
-                  </Button>
-                  <Button
-                    variant="primary"
-                    onClick={() => handleRekap('pdf')}
-                    isLoading={rekapLoading === 'pdf'}
-                    disabled={rekapLoading !== null}
-                    leftIcon={<i className="bi bi-printer-fill" />}
-                  >
-                    Cetak PDF
-                  </Button>
+                    <i className="bi bi-three-dots" />
+                  </button>
+                  {rekapMenuOpen && (
+                    <div className="sk__moreMenu" role="menu">
+                      <button
+                        type="button"
+                        role="menuitem"
+                        disabled={rekapLoading !== null}
+                        onClick={() => {
+                          setRekapMenuOpen(false);
+                          handleRekap('preview');
+                        }}
+                      >
+                        <span className="sk__menuIcon">
+                          <i className="bi bi-eye" style={{ color: '#3083FF' }} />
+                        </span>
+                        <span className="sk__menuLabel">Pratinjau Laporan</span>
+                      </button>
+                      <button
+                        type="button"
+                        role="menuitem"
+                        disabled={rekapLoading !== null}
+                        onClick={() => {
+                          setRekapMenuOpen(false);
+                          handleRekap('pdf');
+                        }}
+                      >
+                        <span className="sk__menuIcon">
+                          <i className="bi bi-printer-fill" style={{ color: '#10b981' }} />
+                        </span>
+                        <span className="sk__menuLabel">Cetak PDF</span>
+                      </button>
+                    </div>
+                  )}
                 </div>
-              </FilterToolbar>
-            </div>
+              </FilterActions>
+            </FilterToolbar>
+
+            {/* Filtered Reports List */}
+            {(bisaApproveLaporan || bisaRekap) && (() => {
+              const laporanSlots = slots.filter((s) => {
+                const l = getLaporan(s);
+                if (!l) return false;
+
+                // 1. Filter status laporan berdasarkan Cakupan Data:
+                const statusValid = rekapSemua
+                  ? ['Submitted', 'Approved', 'Revisi', 'Rejected'].includes(l.status)
+                  : l.status === 'Approved';
+
+                if (!statusValid) return false;
+
+                // 2. Filter berdasarkan Bulan & Tahun pelaksanaan:
+                if (s.tanggal) {
+                  const d = parseTanggalTampil(s.tanggal);
+                  const m = d.getMonth() + 1;
+                  const y = d.getFullYear();
+                  if (m !== rekapBulan || y !== rekapTahun) return false;
+                }
+
+                // 3. Filter berdasarkan pencarian (search):
+                if (search.trim()) {
+                  const q = search.toLowerCase();
+                  const m = (s.mapel || '').toLowerCase();
+                  const t = (s.topik || '').toLowerCase();
+                  const g = (s.nama_guru || '').toLowerCase();
+                  const r = (s.ruangan || '').toLowerCase();
+                  if (!m.includes(q) && !t.includes(q) && !g.includes(q) && !r.includes(q)) return false;
+                }
+
+                return true;
+              });
+
+              const sortedSlots = [...laporanSlots].sort((a, b) => {
+                const statusA = getLaporan(a)?.status;
+                const statusB = getLaporan(b)?.status;
+                const getWeight = (status: string) => {
+                  if (status === 'Submitted') return 1;
+                  if (status === 'Approved') return 2;
+                  if (status === 'Revisi' || status === 'Rejected') return 3;
+                  return 4;
+                };
+                return getWeight(statusA) - getWeight(statusB);
+              });
+
+              return (
+                <div className="laporan-approval-section">
+                  {sortedSlots.length === 0 ? (
+                    <div className="laporan-approval-empty">Tidak ada data laporan yang sesuai dengan filter bulan, tahun, dan cakupan data.</div>
+                  ) : (
+                    <>
+                      {/* TABLE VIEW (DESKTOP) */}
+                      <div className="klinik-table-container klinik-desktop-view hidden md:block">
+                        <table className="klinik-table">
+                          <thead>
+                            <tr>
+                              <th>Mata Pelajaran / Guru</th>
+                              <th>Topik Pembelajaran</th>
+                              <th className="th-waktu">Waktu</th>
+                              <th className="th-status-kuota">Status Laporan</th>
+                              <th className="text-right">Aksi</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {sortedSlots.map((slot) => {
+                              const laporan = getLaporan(slot);
+                              return (
+                                <tr key={slot.id}>
+                                  <td>
+                                    <div className="table-col-guru flex items-center gap-3">
+                                      <div className="flex-1 min-w-0">
+                                        <p className="m-0 text-sm font-semibold text-[var(--n-ink)] truncate">{slot.mapel}</p>
+                                        <p className="m-0 text-xs text-[var(--n-muted)] mt-1 truncate max-w-[200px]" title={slot.nama_guru}>{slot.nama_guru}</p>
+                                      </div>
+                                    </div>
+                                  </td>
+                                  <td>
+                                    <p className="table-col-topik m-0 text-sm" title={slot.topik}>{slot.topik}</p>
+                                    {(laporan.status === 'Revisi' || laporan.status === 'Rejected') && laporan.catatan_reviewer && (
+                                      <div className="text-[0.72rem] text-red-600 dark:text-red-400 font-semibold mt-1" title={laporan.catatan_reviewer}>
+                                        <i className="bi bi-info-circle mr-1" />
+                                        Revisi: {laporan.catatan_reviewer}
+                                      </div>
+                                    )}
+                                  </td>
+                                  <td>
+                                    <div className="table-col-waktu">
+                                      <span className="date">
+                                        {parseTanggalTampil(slot.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                      </span>
+                                      <span className="time">
+                                        {formatJam(slot.jam_mulai)} – {formatJam(slot.jam_selesai)}
+                                      </span>
+                                      {slot.ruangan && (
+                                        <span style={{ fontSize: '0.75rem', color: 'var(--n-primary)', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                                          <i className="bi bi-geo-alt-fill" /> {slot.ruangan}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </td>
+                                  <td>
+                                    <div className="status-stack">
+                                      {laporan.status === 'Approved' && (
+                                        <span className="status-pill finished">Disetujui</span>
+                                      )}
+                                      {(laporan.status === 'Revisi' || laporan.status === 'Rejected') && (
+                                        <span className="status-pill rejected">Dikembalikan</span>
+                                      )}
+                                      {laporan.status === 'Submitted' && (
+                                        <span className="status-pill pending">Menunggu</span>
+                                      )}
+                                    </div>
+                                  </td>
+                                  <td className="text-right">
+                                    <ActionGroup>
+                                      <ActionButton
+                                        action="view"
+                                        title="Lihat Detail Laporan"
+                                        onClick={() => setShowViewReportModal(slot)}
+                                      />
+                                      {laporan.status === 'Submitted' && (
+                                        <>
+                                          <button
+                                            type="button"
+                                            className="btn-icon-soft"
+                                            data-tooltip="Setujui Laporan"
+                                            aria-label="Setujui Laporan"
+                                            onClick={() => handleApproveLaporan(laporan.id, 'approve')}
+                                          >
+                                            <i className="bi bi-check-lg" style={{ color: '#0284c7' }} />
+                                          </button>
+                                          <button
+                                            type="button"
+                                            className="btn-icon-soft"
+                                            data-tooltip="Kembalikan (Revisi)"
+                                            aria-label="Kembalikan Laporan"
+                                            onClick={() => handleApproveLaporan(laporan.id, 'revisi')}
+                                          >
+                                            <i className="bi bi-arrow-return-left" style={{ color: '#ef4444' }} />
+                                          </button>
+                                        </>
+                                      )}
+                                      {laporan.status === 'Approved' && slot.status !== 'paid' && (
+                                        <button
+                                          type="button"
+                                          className="btn-icon-soft"
+                                          data-tooltip="Batalkan Persetujuan (Revisi)"
+                                          aria-label="Batalkan Persetujuan"
+                                          onClick={() => handleKembalikanApproved(laporan.id)}
+                                        >
+                                          <i className="bi bi-arrow-return-left" style={{ color: '#ef4444' }} />
+                                        </button>
+                                      )}
+                                    </ActionGroup>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+
+                      {/* LIST VIEW (MOBILE) - APPROVAL */}
+                      <div className="klinik-mobile-view block md:hidden">
+                        <MobileList label="Daftar laporan menunggu pengesahan">
+                          {sortedSlots.map((slot) => {
+                            const laporan = getLaporan(slot);
+                            let badgeNode: React.ReactNode = undefined;
+                            if (laporan.status === 'Revisi' || laporan.status === 'Rejected') {
+                              badgeNode = <span className="mui-badge isDanger">Dikembalikan</span>;
+                            } else if (laporan.status === 'Submitted') {
+                              badgeNode = <span className="mui-badge isWarn">Menunggu</span>;
+                            }
+
+                            return (
+                              <MobileListItem
+                                key={slot.id}
+                                title={slot.mapel}
+                                subtitle={slot.nama_guru}
+                                seed={laporan.status === 'Approved' ? 'finished_3' : 'full_2'}
+                                icon="journal-check"
+                                badge={badgeNode}
+                                onClick={() => setShowViewReportModal(slot)}
+                              />
+                            );
+                          })}
+                        </MobileList>
+                      </div>
+                    </>
+                  )}
+                </div>
+              );
+            })()}
           </div>
         ) : (
           <>
-            {tabAktif === 'approval' && (
-              <SeksiApproval
-                nada="sesi"
-                ikon="bi-shield-check"
-                judul="Pengajuan Sesi"
-                deskripsi="Jadwal menunggu persetujuan dan pengajuan yang ditolak"
-                jumlah={jumlahMenungguSesiApproval}
-              />
-            )}
+
 
             {sesiKosongDiApproval ? (
               /* Sejajar dengan blok laporan di bawahnya. Tabel setinggi layar
@@ -1956,7 +2332,7 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
             ) : (
             <>
             {/* TABLE VIEW (DESKTOP) */}
-            <div className="klinik-table-container">
+            <div className="klinik-table-container klinik-desktop-view hidden md:block">
               <table className="klinik-table">
                 <thead>
                   <tr>
@@ -1985,7 +2361,7 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
                       // Sesi bentukan admin lahir langsung 'open'; kalau syarat editnya
                       // tetap "masih pengajuan", sesi itu tak akan pernah bisa disunting.
                       const canEdit = !isRejected && ((STATUS_PENGAJUAN.includes(slot.status) && (bisaKelolaSesi || isCreator))
-                        || (bisaKelolaSesi && STATUS_BERJALAN.includes(slot.status)));
+                        || (bisaKelolaSesi && sesiAdmin && STATUS_BERJALAN.includes(slot.status)));
                       const canDelete = !isRejected && (bisaKelolaSesi || (STATUS_PENGAJUAN.includes(slot.status) && isCreator));
                       const canAbsensi = bolehIsiAbsensi(slot);
                       const canViewLaporan = bisaLihatLaporan(slot);
@@ -2010,14 +2386,14 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
                               {slot.initiator_type === 'SISWA' && (
                                 <div className="pengaju-tag">
                                   <i className="bi bi-person-badge-fill" />
-                                  Diajukan siswa: <strong>{slot.initiator_nama || 'Tidak diketahui'}</strong>
+                                  Diajukan siswa: <strong>{toTitleCase(slot.initiator_nama) || 'Tidak diketahui'}</strong>
                                   {slot.initiator_kelas ? ` (${slot.initiator_kelas})` : ''}
                                 </div>
                               )}
                               {sesiAdmin && (
                                 <div className="pengaju-tag pengaju-tag--akademik">
                                   <i className="bi bi-building-fill-check" />
-                                  Dibuat Akademik · peserta ditunjuk
+                                  Dibuat Akademik
                                 </div>
                               )}
                               {slot.target_kelas && slot.target_kelas.length > 0 && (
@@ -2079,8 +2455,8 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
                                   </div>
                                 </div>
                                 {getLaporan(slot)?.status && (
-                                  <span className={`laporan-badge ${getLaporan(slot).status.toLowerCase().replace(/\s+/g, '-')}`}>
-                                    {getLaporan(slot).status.toLowerCase() === 'menunggu laporan' ? 'Menunggu' : getLaporan(slot).status}
+                                  <span className={`laporan-badge ${getLaporan(slot).status.toLowerCase().replace(/\s+/g, '-')}`} title={getLaporan(slot).status === 'Submitted' ? 'Laporan telah dikirim guru dan menunggu pengesahan Akademik' : undefined}>
+                                    {getLaporan(slot).status === 'Submitted' ? 'Dilaporkan' : getLaporan(slot).status.toLowerCase() === 'menunggu laporan' ? 'Menunggu' : getLaporan(slot).status}
                                   </span>
                                 )}
                                 {batal ? (
@@ -2096,21 +2472,6 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
                             </td>
                             <td className="text-right">
                               <ActionGroup>
-                                {!isRejected && getLaporan(slot) && canViewLaporan && (
-                                  <>
-                                    <ActionButton
-                                      action="view"
-                                      title="Lihat Detail Laporan"
-                                      onClick={() => setShowViewReportModal(slot)}
-                                    />
-                                    <ActionButton
-                                      action="print"
-                                      title="Cetak Laporan PDF"
-                                      onClick={() => handleCetakPdf(slot.id)}
-                                    />
-                                  </>
-                                )}
-
                                 {/* Gerbang pertama: guru pengampu yang ditunjuk siswa
                                     menyatakan kesediaannya sebelum reviewer menilai. */}
                                 {isGuru && slot.status === 'pending_guru' && isSameId(slot.guru_id, user?.id) && (
@@ -2241,486 +2602,72 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
               </table>
             </div>
 
-            {/* GRID VIEW (MOBILE) */}
-            <div className="klinik-grid">
+            {/* LIST VIEW (MOBILE) */}
+            <div className="klinik-mobile-view block md:hidden">
               {displayedSlots.length === 0 ? (
-                <div className="empty-state">
-                  <i className="bi bi-folder2-open" />
-                  <p>Belum ada data klinik yang sesuai</p>
-                </div>
+                <MobileEmpty
+                  icon="folder2-open"
+                  title="Belum ada data klinik"
+                  subtitle="Tidak ada data klinik yang sesuai dengan saringan saat ini"
+                />
               ) : (
-                displayedSlots.map((slot) => {
-                  const isRejected = slot.status === 'cancelled' || pengajuanDitolak(slot);
-                  const isCreator = isSameId(slot.guru_id, user?.id) || (slot.initiator_type === 'SISWA' && isSameId(slot.initiator_siswa_id, user?.id));
-                  const sesiAdmin = slot.initiator_type === 'ADMIN';
-                  const canEdit = !isRejected && ((STATUS_PENGAJUAN.includes(slot.status) && (bisaKelolaSesi || isCreator))
-                    || (bisaKelolaSesi && STATUS_BERJALAN.includes(slot.status)));
-                  const canDelete = !isRejected && (bisaKelolaSesi || (STATUS_PENGAJUAN.includes(slot.status) && isCreator));
-                  const canAbsensi = bolehIsiAbsensi(slot);
-                  const canViewLaporan = bisaLihatLaporan(slot);
-                  const perluRevisi = getLaporan(slot)?.status === 'Revisi';
-                  const { kurang, batal } = cekPeserta(slot);
-                  const adaAbsen = (slot.klinik_peserta || []).some((p) => p.kehadiran);
-                  const jmlHadir = (slot.klinik_peserta || []).filter((p) => p.kehadiran === 'H').length;
+                <MobileList label="Daftar klinik">
+                  {displayedSlots.map((slot) => {
+                    const isRejected = slot.status === 'cancelled' || pengajuanDitolak(slot);
+                    const isFinished = slot.status === 'finished' || slot.status === 'paid' || sesiSudahLewat(slot);
+                    const isFull = slot.status === 'full' || (slot.klinik_peserta?.length || 0) >= slot.max_siswa;
+                    const isPending = slot.status === 'pending';
+                    const pendaftaranTutup = pendaftaranSudahTutup(slot);
+                    const bisaMendaftar = slot.status === 'open' && !isFull && !isFinished && !isRejected && !pendaftaranTutup;
+                    const laporan = getLaporan(slot);
 
-                  return (
-                    <div key={slot.id} className={`slot-card ${tabAktif === 'kelola' ? 'slot-card--kelola' : ''}`}>
-                      <div className="slot-header">
-                        <div className="slot-meta">
-                          <h3>{slot.mapel}</h3>
-                          <h4>{slot.nama_guru}</h4>
-                        </div>
-                        <div className="status-stack" style={{ alignItems: 'flex-end' }}>
-                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                            <span className={`status-tag ${isRejected ? 'rejected' : slot.status}`}>
-                              {isRejected ? 'Ditolak' : labelStatus(slot.status)}
-                            </span>
-                            {isRejected && slot.catatan_penolakan && (
-                              <button
-                                type="button"
-                                className="btn-info-icon"
-                                onClick={() => setAlasanModal({
-                                  mapel: slot.mapel,
-                                  topik: slot.topik,
-                                  catatan: slot.catatan_penolakan || '',
-                                })}
-                                title="Lihat Alasan Penolakan"
-                                aria-label="Lihat Alasan Penolakan"
-                              >
-                                <i className="bi bi-info-circle-fill" />
-                              </button>
-                            )}
-                          </div>
-                          {getLaporan(slot)?.status && (
-                            <span className={`laporan-badge ${getLaporan(slot).status.toLowerCase().replace(/\s+/g, '-')}`}>
-                              {getLaporan(slot).status.toLowerCase() === 'menunggu laporan' ? 'Menunggu' : getLaporan(slot).status}
-                            </span>
-                          )}
-                          {batal ? (
-                            <span className="status-tag batal">Batal · peserta kurang</span>
-                          ) : kurang > 0 ? (
-                            <span className="status-tag kurang">Butuh {kurang} siswa lagi</span>
-                          ) : null}
-                        </div>
-                      </div>
+                    // Group icon color:
+                    // Bisa Mendaftar (Open & Kuota Tersedia): biru utama ('open_2' -> t0)
+                    // Penuh (Full): amber/orange ('full_2' -> t3)
+                    // Selesai (Finished): grey/slate ('finished_3' -> t5)
+                    // Pending: amber ('full_2' -> t3)
+                    // Ditolak: pink/red ('finished_0' -> t2)
+                    let groupSeed = 'open_2';
+                    if (bisaMendaftar) {
+                      groupSeed = 'open_2';
+                    } else if (isRejected) {
+                      groupSeed = 'finished_0';
+                    } else if (isFinished) {
+                      groupSeed = 'finished_3';
+                    } else if (isFull) {
+                      groupSeed = 'full_2';
+                    } else if (isPending) {
+                      groupSeed = 'full_2';
+                    }
 
-                      <div className="slot-body">
-                        <div className="topic-box">
-                          <span>Topik Pembahasan</span>
-                          <p>{slot.topik}</p>
-                        </div>
+                    // Badge hanya untuk status menyimpang (Menunggu, Ditolak, Revisi)
+                    // Status normal (Selesai, Penuh, Dilaporkan, Disetujui) tidak perlu badge di list item
+                    let badgeNode: React.ReactNode = undefined;
+                    if (isRejected) {
+                      badgeNode = <span className="mui-badge isDanger">Ditolak</span>;
+                    } else if (isPending) {
+                      badgeNode = <span className="mui-badge isWarn">Menunggu</span>;
+                    } else if (laporan?.status === 'Revisi' || laporan?.status === 'Rejected') {
+                      badgeNode = <span className="mui-badge isDanger">Revisi</span>;
+                    }
 
-                        {(slot.initiator_type === 'SISWA' || sesiAdmin || (slot.target_kelas && slot.target_kelas.length > 0)) && (
-                          <div className="slot-card-tags">
-                            {slot.initiator_type === 'SISWA' && (
-                              <div className="pengaju-tag">
-                                <i className="bi bi-person-badge-fill" />
-                                Diajukan siswa: <strong>{slot.initiator_nama || 'Tidak diketahui'}</strong>
-                                {slot.initiator_kelas ? ` (${slot.initiator_kelas})` : ''}
-                              </div>
-                            )}
-                            {sesiAdmin && (
-                              <div className="pengaju-tag pengaju-tag--akademik">
-                                <i className="bi bi-building-fill-check" />
-                                Dibuat Akademik · peserta ditunjuk
-                              </div>
-                            )}
-                            {slot.target_kelas && slot.target_kelas.length > 0 && (
-                              <div className="target-kelas-pill">
-                                Khusus Kelas: {slot.target_kelas.join(', ')}
-                              </div>
-                            )}
-                          </div>
-                        )}
-
-                        <div className="slot-info-row">
-                          <div className="info-chip">
-                            <i className="bi bi-calendar-check" />
-                            {parseTanggalTampil(slot.tanggal).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long' })}
-                          </div>
-                          <div className="info-chip">
-                            <i className="bi bi-clock" />
-                            {formatJam(slot.jam_mulai)} - {formatJam(slot.jam_selesai)}
-                          </div>
-                          {slot.ruangan && (
-                            <div className="info-chip">
-                              <i className="bi bi-geo-alt" />
-                              {slot.ruangan}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="slot-footer">
-                        <div
-                          className={`quota-badge cursor-pointer hover:bg-[var(--n-soft)] transition-colors ${
-                            slot.klinik_peserta && slot.klinik_peserta.length >= slot.max_siswa ? 'full' : ''
-                          }`}
-                          onClick={() => openParticipants(slot.id)}
-                          title="Lihat Peserta & Absensi"
-                        >
-                          <i className="bi bi-people-fill" />
-                          {slot.klinik_peserta?.length || 0} / {slot.max_siswa}
-                          {adaAbsen && (
-                            <span style={{ fontSize: '0.68rem', color: '#0284c7', fontWeight: 800 }}>
-                              · Hadir {jmlHadir}
-                            </span>
-                          )}
-                        </div>
-
-                        <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-                          {canEdit && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => (sesiAdmin && bisaKelolaSesi ? openEditAdminSesi(slot) : openEditModal(slot))}
-                              leftIcon={<i className="bi bi-pencil" />}
-                            >
-                              Edit
-                            </Button>
-                          )}
-                          {canDelete && (
-                            <Button size="sm" variant="danger" onClick={() => setSlotToDelete(slot)} leftIcon={<i className="bi bi-trash" />}>
-                              Hapus
-                            </Button>
-                          )}
-                          {canAbsensi && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => setShowAbsensiModal(slot)}
-                              leftIcon={<i className="bi bi-clipboard-check" />}
-                            >
-                              Absensi
-                            </Button>
-                          )}
-                          {aksiSiswa(slot)}
-                          {isSiswa && tabAktif === 'kelompok' && STATUS_PENGAJUAN.includes(slot.status) && (
-                            (slot.klinik_peserta?.length || 0) >= slot.max_siswa ? (
-                              <span className="act-note">Kuota Penuh</span>
-                            ) : slot.klinik_peserta?.some((p) => isSameId(p.siswa_id, user?.id)) ? (
-                              <span className="act-note act-note--ok">
-                                <i className="bi bi-check-circle-fill" /> Sudah Gabung
-                              </span>
-                            ) : (
-                              <Button size="sm" variant="primary" onClick={() => handleJoinRequest(slot.id)}>
-                                Gabung
-                              </Button>
-                            )
-                          )}
-                          {bisaApproveSesi && tabAktif === 'approval' && slot.status === 'pending' && (
-                            <div className="flex gap-2">
-                              <Button size="sm" variant="primary" onClick={() => handleApprove(slot.id, 'open')} leftIcon={<i className="bi bi-check-lg" />}>
-                                Setujui
-                              </Button>
-                              <Button size="sm" variant="danger" onClick={() => handleApprove(slot.id, 'cancelled')} leftIcon={<i className="bi bi-x-lg" />}>
-                                Tolak
-                              </Button>
-                            </div>
-                          )}
-                          {isGuru && slot.status === 'pending_guru' && isSameId(slot.guru_id, user?.id) && (
-                            <div className="flex gap-2">
-                              <Button size="sm" variant="primary" onClick={() => handleApproveGuru(slot.id, 'terima')} leftIcon={<i className="bi bi-check-lg" />}>
-                                Bersedia
-                              </Button>
-                              <Button size="sm" variant="danger" onClick={() => handleApproveGuru(slot.id, 'tolak')} leftIcon={<i className="bi bi-x-lg" />}>
-                                Tidak Bersedia
-                              </Button>
-                            </div>
-                          )}
-                          {isGuru && tabAktif === 'my_sessions' && isSameId(user?.id, slot.guru_id) && (slot.status === 'open' || slot.status === 'full') && (
-                            kurang > 0 ? (
-                              <span className={`act-note ${batal ? 'act-note--batal' : ''}`}>
-                                {batal ? 'Klinik batal · laporan ditutup' : `Butuh ${kurang} siswa lagi`}
-                              </span>
-                            ) : (
-                              <Button size="sm" variant="primary" onClick={() => openReportModal(slot)} leftIcon={<i className="bi bi-journal-plus" />}>
-                                {perluRevisi ? 'Perbaiki Laporan' : 'Buat Laporan'}
-                              </Button>
-                            )
-                          )}
-                          {isGuru && tabAktif === 'my_sessions' && slot.status === 'finished' && canViewLaporan && (
-                            <Button size="sm" variant="outline" onClick={() => setShowViewReportModal(slot)} leftIcon={<i className="bi bi-journal-text" />}>
-                              Laporan
-                            </Button>
-                          )}
-                          {isRejected && (
-                            <span className="act-note act-note--batal" title={slot.catatan_penolakan || undefined}>
-                              Ditolak
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })
+                    return (
+                      <MobileListItem
+                        key={slot.id}
+                        title={slot.mapel}
+                        subtitle={slot.nama_guru}
+                        seed={groupSeed}
+                        icon="journal-bookmark-fill"
+                        badge={badgeNode}
+                        onClick={() => setSelectedDetailSlot(slot)}
+                      />
+                    );
+                  })}
+                </MobileList>
               )}
             </div>
             </>
             )}
-
-            {/* Admin Approval of Reports */}
-            {bisaApproveLaporan && tabAktif === 'approval' && (() => {
-              const laporanSlots = slots.filter((s) => {
-                const l = getLaporan(s);
-                return l && ['Submitted', 'Approved', 'Revisi', 'Rejected'].includes(l.status);
-              });
-
-              const sortedSlots = [...laporanSlots].sort((a, b) => {
-                const statusA = getLaporan(a)?.status;
-                const statusB = getLaporan(b)?.status;
-                const getWeight = (status: string) => {
-                  if (status === 'Submitted') return 1;
-                  if (status === 'Approved') return 2;
-                  if (status === 'Revisi' || status === 'Rejected') return 3;
-                  return 4;
-                };
-                return getWeight(statusA) - getWeight(statusB);
-              });
-
-              const menungguPengesahan = sortedSlots.filter(
-                (s) => getLaporan(s)?.status === 'Submitted'
-              ).length;
-
-              return (
-                <div className="laporan-approval-section">
-                  <hr className="apr-pisah" />
-                  <SeksiApproval
-                    nada="laporan"
-                    ikon="bi-journal-check"
-                    judul="Laporan Pembelajaran"
-                    deskripsi="Dokumentasi menunggu pengesahan"
-                    jumlah={menungguPengesahan}
-                  />
-                  {sortedSlots.length === 0 ? (
-                    <div className="laporan-approval-empty">Tidak ada laporan yang menunggu approval.</div>
-                  ) : (
-                    <>
-                      {/* TABLE VIEW (DESKTOP) */}
-                      <div className="klinik-table-container">
-                        <table className="klinik-table">
-                          <thead>
-                            <tr>
-                              <th>Mata Pelajaran / Guru</th>
-                              <th>Topik Pembelajaran</th>
-                              <th className="th-waktu">Waktu</th>
-                              <th className="th-status-kuota">Status Laporan</th>
-                              <th className="text-right">Aksi</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {sortedSlots.map((slot) => {
-                              const laporan = getLaporan(slot);
-                              return (
-                                <tr key={slot.id}>
-                                  <td>
-                                    <div className="table-col-guru flex items-center gap-3">
-                                      <div className="flex-1 min-w-0">
-                                        <p className="m-0 text-sm font-semibold text-[var(--n-ink)] truncate">{slot.mapel}</p>
-                                        <p className="m-0 text-xs text-[var(--n-muted)] mt-1 truncate max-w-[200px]" title={slot.nama_guru}>{slot.nama_guru}</p>
-                                      </div>
-                                    </div>
-                                  </td>
-                                  <td>
-                                    <p className="table-col-topik m-0 text-sm" title={slot.topik}>{slot.topik}</p>
-                                    {(laporan.status === 'Revisi' || laporan.status === 'Rejected') && laporan.catatan_reviewer && (
-                                      <div className="text-[0.72rem] text-red-600 dark:text-red-400 font-semibold mt-1" title={laporan.catatan_reviewer}>
-                                        <i className="bi bi-info-circle mr-1" />
-                                        Revisi: {laporan.catatan_reviewer}
-                                      </div>
-                                    )}
-                                  </td>
-                                  <td>
-                                    <div className="table-col-waktu">
-                                      <span className="date">
-                                        {parseTanggalTampil(slot.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
-                                      </span>
-                                      <span className="time">
-                                        {formatJam(slot.jam_mulai)} – {formatJam(slot.jam_selesai)}
-                                      </span>
-                                      {slot.ruangan && (
-                                        <span style={{ fontSize: '0.75rem', color: 'var(--n-primary)', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                                          <i className="bi bi-geo-alt-fill" /> {slot.ruangan}
-                                        </span>
-                                      )}
-                                    </div>
-                                  </td>
-                                  <td>
-                                    <div className="status-stack">
-                                      {laporan.status === 'Approved' && (
-                                        <span className="status-pill finished">Disetujui</span>
-                                      )}
-                                      {(laporan.status === 'Revisi' || laporan.status === 'Rejected') && (
-                                        <span className="status-pill rejected">Dikembalikan</span>
-                                      )}
-                                      {laporan.status === 'Submitted' && (
-                                        <span className="status-pill pending">Menunggu</span>
-                                      )}
-                                    </div>
-                                  </td>
-                                  <td className="text-right">
-                                    <ActionGroup>
-                                      <ActionButton
-                                        action="view"
-                                        title="Lihat Detail Laporan"
-                                        onClick={() => setShowViewReportModal(slot)}
-                                      />
-                                      {laporan.status === 'Submitted' && (
-                                        <>
-                                          <button
-                                            type="button"
-                                            className="btn-icon-soft"
-                                            data-tooltip="Setujui Laporan"
-                                            aria-label="Setujui Laporan"
-                                            onClick={() => handleApproveLaporan(laporan.id, 'approve')}
-                                          >
-                                            <i className="bi bi-check-lg" style={{ color: '#0284c7' }} />
-                                          </button>
-                                          <button
-                                            type="button"
-                                            className="btn-icon-soft"
-                                            data-tooltip="Kembalikan (Revisi)"
-                                            aria-label="Kembalikan Laporan"
-                                            onClick={() => handleApproveLaporan(laporan.id, 'revisi')}
-                                          >
-                                            <i className="bi bi-arrow-return-left" style={{ color: '#ef4444' }} />
-                                          </button>
-                                        </>
-                                      )}
-                                      {laporan.status === 'Approved' && slot.status !== 'paid' && (
-                                        <button
-                                          type="button"
-                                          className="btn-icon-soft"
-                                          data-tooltip="Batalkan Persetujuan (Revisi)"
-                                          aria-label="Batalkan Persetujuan"
-                                          onClick={() => handleKembalikanApproved(laporan.id)}
-                                        >
-                                          <i className="bi bi-arrow-return-left" style={{ color: '#ef4444' }} />
-                                        </button>
-                                      )}
-                                    </ActionGroup>
-                                  </td>
-                                </tr>
-                              );
-                            })}
-                          </tbody>
-                        </table>
-                      </div>
-
-                      {/* GRID VIEW (MOBILE) */}
-                      <div className="klinik-grid">
-                        {sortedSlots.map((slot) => {
-                          const laporan = getLaporan(slot);
-                          return (
-                            <div key={slot.id} className="laporan-approval-card">
-                              <div className="laporan-approval-head">
-                                <div className="slot-meta">
-                                  <h3>{slot.mapel}</h3>
-                                  <h4>{slot.nama_guru}</h4>
-                                </div>
-                                <div className="status-stack" style={{ alignItems: 'flex-end' }}>
-                                  {laporan.status === 'Approved' && (
-                                    <span className="status-tag finished">Disetujui</span>
-                                  )}
-                                  {(laporan.status === 'Revisi' || laporan.status === 'Rejected') && (
-                                    <span className="status-tag rejected">Dikembalikan</span>
-                                  )}
-                                  {laporan.status === 'Submitted' && (
-                                    <span className="status-tag pending">Menunggu</span>
-                                  )}
-                                </div>
-                              </div>
-
-                              <div className="topic-box" style={{ marginTop: 2 }}>
-                                <span>Topik Pembahasan</span>
-                                <p>{slot.topik}</p>
-                              </div>
-
-                              <div className="slot-info-row" style={{ marginTop: 2 }}>
-                                <div className="info-chip">
-                                  <i className="bi bi-calendar-check" />
-                                  {parseTanggalTampil(slot.tanggal).toLocaleDateString('id-ID', {
-                                    day: 'numeric',
-                                    month: 'long',
-                                    year: 'numeric',
-                                  })}
-                                </div>
-                                <div className="info-chip">
-                                  <i className="bi bi-clock" />
-                                  {formatJam(slot.jam_mulai)} – {formatJam(slot.jam_selesai)}
-                                </div>
-                                {slot.ruangan && (
-                                  <div className="info-chip">
-                                    <i className="bi bi-geo-alt" />
-                                    {slot.ruangan}
-                                  </div>
-                                )}
-                              </div>
-
-                              {(laporan.status === 'Revisi' || laporan.status === 'Rejected') && laporan.catatan_reviewer && (
-                                <div className="mt-1 p-2.5 bg-red-50 dark:bg-red-950/30 rounded-lg text-xs border border-red-100 dark:border-red-900/40">
-                                  <strong className="text-red-700 dark:text-red-400 font-bold block mb-0.5 uppercase tracking-wider">
-                                    Catatan Revisi / Pengembalian:
-                                  </strong>
-                                  <span className="text-red-800 dark:text-red-300 font-medium">{laporan.catatan_reviewer}</span>
-                                </div>
-                              )}
-
-                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10, paddingTop: 10, borderTop: '1px solid var(--n-border)', marginTop: 4 }}>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => setShowViewReportModal(slot)}
-                                  leftIcon={<i className="bi bi-eye" />}
-                                >
-                                  Lihat Detail
-                                </Button>
-
-                                <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                                  {laporan.status === 'Submitted' && (
-                                    <>
-                                      <Button
-                                        size="sm"
-                                        variant="danger"
-                                        onClick={() => handleApproveLaporan(laporan.id, 'revisi')}
-                                        leftIcon={<i className="bi bi-arrow-return-left" />}
-                                        isLoading={actionLoadingId === `laporan_${laporan.id}`}
-                                      >
-                                        Kembalikan
-                                      </Button>
-                                      <Button
-                                        size="sm"
-                                        variant="primary"
-                                        onClick={() => handleApproveLaporan(laporan.id, 'approve')}
-                                        leftIcon={<i className="bi bi-check-lg" />}
-                                        isLoading={actionLoadingId === `laporan_${laporan.id}`}
-                                      >
-                                        Setujui
-                                      </Button>
-                                    </>
-                                  )}
-                                  {laporan.status === 'Approved' && slot.status !== 'paid' && bisaApproveLaporan && (
-                                    <Button
-                                      size="sm"
-                                      variant="danger"
-                                      onClick={() => handleKembalikanApproved(laporan.id)}
-                                      isLoading={actionLoadingId === `laporan_${laporan.id}`}
-                                      leftIcon={<i className="bi bi-arrow-return-left" />}
-                                    >
-                                      Batalkan Persetujuan (Revisi)
-                                    </Button>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </>
-                  )}
-                </div>
-              );
-            })()}
           </>
         )}
       </div>
@@ -2914,6 +2861,45 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
             </Button>
           </ModalFooter>
         </Modal>
+      )}
+
+      {/* ── Modal Detail Sesi Klinik Pembelajaran ─────────────────────────── */}
+      {selectedDetailSlot && (
+        <DetailSlotModal
+          isOpen={!!selectedDetailSlot}
+          onClose={() => setSelectedDetailSlot(null)}
+          slot={selectedDetailSlot}
+          user={user}
+          isGuru={isGuru}
+          isSiswa={isSiswa}
+          isAdmin={isAdmin}
+          bisaKelolaSesi={bisaKelolaSesi}
+          bisaApproveSesi={bisaApproveSesi}
+          bisaApproveLaporan={bisaApproveLaporan}
+          bisaLihatLaporan={bisaLihatLaporan}
+          bolehIsiAbsensi={bolehIsiAbsensi}
+          pengajuanDitolak={pengajuanDitolak}
+          getLaporan={getLaporan}
+          cekPeserta={cekPeserta}
+          labelStatus={labelStatus}
+          toTitleCase={toTitleCase}
+          formatJam={formatJam}
+          parseTanggalTampil={parseTanggalTampil}
+          onEdit={(slotToEdit) => (slotToEdit.initiator_type === 'ADMIN' && bisaKelolaSesi ? openEditAdminSesi(slotToEdit) : openEditModal(slotToEdit))}
+          onDelete={(slotToDelete) => setSlotToDelete(slotToDelete)}
+          onAbsensi={(slotToAbsen) => setShowAbsensiModal(slotToAbsen)}
+          onJoinRequest={handleJoinRequest}
+          onApproveSesi={handleApprove}
+          onApproveGuru={handleApproveGuru}
+          onOpenReport={openReportModal}
+          onViewReport={(slotToView) => setShowViewReportModal(slotToView)}
+          onCetakPdf={handleCetakPdf}
+          onOpenParticipants={(slotId) => openParticipants(slotId)}
+          isSameId={isSameId}
+          STATUS_PENGAJUAN={STATUS_PENGAJUAN}
+          STATUS_BERJALAN={STATUS_BERJALAN}
+          PESERTA_MINIMAL={PESERTA_MINIMAL}
+        />
       )}
 
       {viewer}

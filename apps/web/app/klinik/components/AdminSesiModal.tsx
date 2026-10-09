@@ -347,9 +347,34 @@ export default function AdminSesiModal({
                     return null;
                   })()}
                 </div>
-                <div style={{ gridColumn: '1 / -1', marginTop: -4 }}>
-                  <p style={{ margin: 0, fontSize: '0.72rem', color: '#64748b' }}>
-                    💡 Tips: Gunakan format 24 jam (misal <strong>20:00</strong> untuk jam 8 malam), atau pilih <strong>PM</strong> jika di HP Anda muncul opsi AM/PM.
+                <div style={{ gridColumn: '1 / -1', marginTop: -2, marginBottom: 2 }}>
+                  {form.jam_mulai && form.jam_selesai && form.jam_mulai.includes(':') && form.jam_selesai.includes(':') && (() => {
+                    const [h1, m1] = form.jam_mulai.split(':').map((v) => parseInt(v, 10) || 0);
+                    const [h2, m2] = form.jam_selesai.split(':').map((v) => parseInt(v, 10) || 0);
+                    const durasi = (h2 * 60 + m2) - (h1 * 60 + m1);
+                    if (durasi <= 0) return null;
+                    const isKurang = durasi < 75;
+                    return (
+                      <span
+                        style={{
+                          fontSize: '0.75rem',
+                          fontWeight: 700,
+                          padding: '3px 9px',
+                          borderRadius: '6px',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          background: isKurang ? 'rgba(239, 68, 68, 0.12)' : 'rgba(16, 185, 129, 0.12)',
+                          color: isKurang ? '#dc2626' : '#059669',
+                          border: `1px solid ${isKurang ? 'rgba(239, 68, 68, 0.25)' : 'rgba(16, 185, 129, 0.25)'}`,
+                        }}
+                      >
+                        {isKurang ? '⚠️' : '⏱️'} Durasi sesi: <strong>{durasi} menit</strong> {isKurang ? '(Kurang dari minimal 75 menit)' : '✓ Memenuhi syarat (min. 75 menit)'}
+                      </span>
+                    );
+                  })()}
+                  <p style={{ margin: '4px 0 0', fontSize: '0.72rem', color: '#64748b' }}>
+                    💡 Tips: Durasi sesi klinik minimal <strong>75 menit</strong>. Gunakan format 24 jam (misal <strong>20:00</strong> untuk jam 8 malam).
                   </p>
                 </div>
                 <div className="form-group span-2">

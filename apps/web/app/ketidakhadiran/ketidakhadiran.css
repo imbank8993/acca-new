@@ -159,9 +159,17 @@ body.dark .rm-card-box,
   gap: 8px;
 }
 
-@media (max-width: 639px) {
+.rm-input-card {
+  padding: 20px 24px;
+}
+
+@media (max-width: 767px) {
+  .rm-input-card {
+    padding: 14px 16px !important;
+  }
+
   .rm-card-box {
-    padding: 14px 12px;
+    padding: 12px 14px !important;
   }
   
   .rm-card-box-head {
@@ -171,6 +179,16 @@ body.dark .rm-card-box,
 
   .kh-pill-input {
     line-height: 1.45;
+  }
+}
+
+@media (max-width: 480px) {
+  .rm-input-card {
+    padding: 12px 12px !important;
+  }
+
+  .rm-card-box {
+    padding: 12px 12px !important;
   }
 }
 

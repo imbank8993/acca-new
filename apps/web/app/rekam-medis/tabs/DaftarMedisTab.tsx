@@ -4,6 +4,8 @@ import React from 'react';
 import Spinner from '@/components/ui/Spinner';
 import { ActionButton, ActionGroup } from '@/components/ui/ActionButtons';
 
+import Pagination from '@/components/ui/Pagination';
+
 export interface RekamMedisRow {
     id: string;
     no_rekam_medis: string;
@@ -47,9 +49,16 @@ export interface StudentGroupItem {
 interface DaftarMedisTabProps {
     loadingList: boolean;
     filteredRows: RekamMedisRow[];
+    displayRows: RekamMedisRow[];
     studentSpanInfo: SpanInfoItem[];
     studentGroups: StudentGroupItem[];
     syncingId: string | null;
+    page: number;
+    limit: number;
+    totalPages: number;
+    totalItems: number;
+    onPageChange: (page: number) => void;
+    onLimitChange: (limit: number) => void;
     handleOpenEditModal: (row: RekamMedisRow) => void;
     setSelectedRowDetail: (row: RekamMedisRow | null) => void;
     handleDeleteRecord: (row: RekamMedisRow) => void;
@@ -60,9 +69,16 @@ interface DaftarMedisTabProps {
 export default function DaftarMedisTab({
     loadingList,
     filteredRows,
+    displayRows,
     studentSpanInfo,
     studentGroups,
     syncingId,
+    page,
+    limit,
+    totalPages,
+    totalItems,
+    onPageChange,
+    onLimitChange,
     handleOpenEditModal,
     setSelectedRowDetail,
     handleDeleteRecord,
@@ -116,9 +132,9 @@ export default function DaftarMedisTab({
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {filteredRows.map((row, idx) => {
+                                        {displayRows.map((row, idx) => {
                                             const span = studentSpanInfo[idx];
-                                            const isLastInGroup = (idx === filteredRows.length - 1) || studentSpanInfo[idx + 1]?.showStudentCell;
+                                            const isLastInGroup = (idx === displayRows.length - 1) || studentSpanInfo[idx + 1]?.showStudentCell;
                                             return (
                                                 <tr key={row.id} style={{ borderBottom: isLastInGroup ? '1px solid rgba(59, 130, 246, 0.35)' : '1px solid var(--kh-tb-border)' }}>
                                                     {span && span.showStudentCell && (
@@ -137,7 +153,7 @@ export default function DaftarMedisTab({
                                                                 borderRight: '1px solid var(--kh-tb-border)'
                                                             }}
                                                         >
-                                                            {(typeof span.studentIndex === 'number' ? span.studentIndex : idx) + 1}
+                                                            {(page - 1) * limit + (typeof span.studentIndex === 'number' ? span.studentIndex : idx) + 1}
                                                         </td>
                                                     )}
                                                     {span && span.showStudentCell && (
@@ -305,6 +321,17 @@ export default function DaftarMedisTab({
                                 </div>
                             ))}
                         </div>
+
+                        <Pagination
+                            currentPage={page}
+                            totalPages={totalPages}
+                            limit={limit}
+                            totalItems={totalItems}
+                            recordCount={filteredRows.length}
+                            itemLabel="rekam medis"
+                            onPageChange={onPageChange}
+                            onLimitChange={onLimitChange}
+                        />
                     </>
                 )}
             </div>

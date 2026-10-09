@@ -111,6 +111,16 @@ export default function EditModal({ isOpen, onClose, onSuccess, data, canDo, isA
     fetchWaktu();
   }, []);
 
+  const extractHHMM = (val: any): string => {
+    if (!val) return '';
+    const s = String(val).trim();
+    if (s.includes('T')) {
+      const timePart = s.split('T')[1];
+      return timePart ? timePart.slice(0, 5) : '';
+    }
+    return s.slice(0, 5);
+  };
+
   useEffect(() => {
     if (isOpen && data) {
       setJenis(data.jenis ?? "IZIN");
@@ -124,9 +134,11 @@ export default function EditModal({ isOpen, onClose, onSuccess, data, canDo, isA
       setIsKontinu(!!data.is_kontinu);
       setScope(data.is_kontinu ? "ALL" : "ONE");
 
-      if (data.waktu_mulai_real || data.waktu_selesai_real) {
-        if (data.waktu_mulai_real) setWaktuMulai(data.waktu_mulai_real.substring(0, 5));
-        if (data.waktu_selesai_real) setWaktuSelesai(data.waktu_selesai_real.substring(0, 5));
+      const wm = extractHHMM(data.waktu_mulai_real);
+      const ws = extractHHMM(data.waktu_selesai_real);
+      if (wm || ws) {
+        setWaktuMulai(wm);
+        setWaktuSelesai(ws);
       } else {
         const opts = getJamOptions();
         if (opts.length > 0) {

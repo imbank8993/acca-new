@@ -619,20 +619,10 @@ export class KetidakhadiranService {
     if (payload.is_kontinu !== undefined) updateData.is_kontinu = Boolean(payload.is_kontinu);
 
     if (payload.waktu_mulai_real !== undefined) {
-      if (payload.waktu_mulai_real) {
-        const t = String(payload.waktu_mulai_real).slice(0, 8);
-        updateData.waktu_mulai_real = new Date(`1970-01-01T${t.length === 5 ? t + ':00' : t}Z`);
-      } else {
-        updateData.waktu_mulai_real = null;
-      }
+      updateData.waktu_mulai_real = parseTimeToDate(payload.waktu_mulai_real);
     }
     if (payload.waktu_selesai_real !== undefined) {
-      if (payload.waktu_selesai_real) {
-        const t = String(payload.waktu_selesai_real).slice(0, 8);
-        updateData.waktu_selesai_real = new Date(`1970-01-01T${t.length === 5 ? t + ':00' : t}Z`);
-      } else {
-        updateData.waktu_selesai_real = null;
-      }
+      updateData.waktu_selesai_real = parseTimeToDate(payload.waktu_selesai_real);
     }
 
     if (payload.scope === 'ALL') {

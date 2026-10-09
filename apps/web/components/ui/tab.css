@@ -426,6 +426,32 @@
         color: #60a5fa !important;
         font-weight: 700 !important;
     }
+
+    /* Lencana notifikasi (badge) pada kartu tab mobile: posisikan melayang di kanan atas kartu dengan kontras jelas */
+    .actab-wrap.actab-wrap--slider .actab-tabBadge {
+        position: absolute !important;
+        top: 4px !important;
+        right: 6px !important;
+        margin-left: 0 !important;
+        font-size: 0.65rem !important;
+        padding: 2px 6px !important;
+        line-height: 1 !important;
+        z-index: 5 !important;
+        background: rgba(48, 131, 255, 0.15) !important;
+        color: #3083FF !important;
+    }
+
+    .actab-wrap.actab-wrap--slider .actab-tab.isActive .actab-tabBadge {
+        background: #3083FF !important;
+        color: #ffffff !important;
+        box-shadow: 0 2px 6px rgba(48, 131, 255, 0.35) !important;
+    }
+
+    .dark .actab-wrap.actab-wrap--slider .actab-tab.isActive .actab-tabBadge {
+        background: #3083FF !important;
+        color: #ffffff !important;
+        box-shadow: 0 2px 8px rgba(48, 131, 255, 0.5) !important;
+    }
 }
 
 /* =====================================================

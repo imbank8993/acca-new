@@ -70,15 +70,23 @@ export default function ViewReportModal({
     <Modal
       open={isOpen}
       onClose={onClose}
-      size="lg"
+      size="md"
       variant="default"
       icon="file-earmark-text"
-      title="Detail Laporan Klinik"
-      subtitle={`${slot.mapel} • ${slot.nama_guru}`}
+      title="Laporan Klinik Pembelajaran"
     >
       <ModalBody>
         <section className="form-section" style={{ paddingTop: 0 }}>
-          <h3 className="form-section__title">
+          <div className="flex flex-col gap-1 pb-3 border-b border-[var(--n-border)]">
+            <h3 className="m-0 text-base font-extrabold text-[var(--n-ink)]">
+              {slot.mapel}
+            </h3>
+            <p className="m-0 text-xs font-semibold text-[var(--n-ink)]">
+              {slot.nama_guru}
+            </p>
+          </div>
+
+          <h3 className="form-section__title" style={{ marginTop: 12 }}>
             <i className="bi bi-info-circle-fill" /> Ringkasan Sesi
             {laporan?.status && (
               <span
@@ -86,7 +94,7 @@ export default function ViewReportModal({
                   laporan.status
                 ).toLowerCase()}`}
               >
-                {laporan.status}
+                {laporan.status === 'Submitted' ? 'Dilaporkan' : laporan.status}
               </span>
             )}
           </h3>
@@ -94,12 +102,12 @@ export default function ViewReportModal({
           <table className="klinik-detail-table" style={{ marginTop: 8 }}>
             <tbody>
               <tr>
-                <td className="kdt-label">Topik Pembahasan</td>
+                <td className="kdt-label">Topik</td>
                 <td className="kdt-colon">:</td>
-                <td className="kdt-value" style={{ fontWeight: 600 }}>{slot.topik || '-'}</td>
+                <td className="kdt-value font-semibold">{slot.topik || '-'}</td>
               </tr>
               <tr>
-                <td className="kdt-label">Tanggal Pelaksanaan</td>
+                <td className="kdt-label">Tanggal</td>
                 <td className="kdt-colon">:</td>
                 <td className="kdt-value">
                   {new Date(slot.tanggal?.includes('T') ? slot.tanggal : `${slot.tanggal}T12:00:00`).toLocaleDateString('id-ID', {
@@ -114,16 +122,21 @@ export default function ViewReportModal({
                 <td className="kdt-label">Waktu</td>
                 <td className="kdt-colon">:</td>
                 <td className="kdt-value">
-                  {formatJam(slot.jam_mulai)} – {formatJam(slot.jam_selesai)}
+                  {formatJam(slot.jam_mulai)} – {formatJam(slot.jam_selesai)} WIB
                 </td>
               </tr>
+              {slot.ruangan && (
+                <tr>
+                  <td className="kdt-label">Ruangan</td>
+                  <td className="kdt-colon">:</td>
+                  <td className="kdt-value font-semibold text-sky-600 dark:text-sky-400">
+                    <i className="bi bi-geo-alt-fill mr-1" />
+                    {slot.ruangan}
+                  </td>
+                </tr>
+              )}
               <tr>
-                <td className="kdt-label">Ruangan</td>
-                <td className="kdt-colon">:</td>
-                <td className="kdt-value">{slot.ruangan || '-'}</td>
-              </tr>
-              <tr>
-                <td className="kdt-label">Peserta &amp; Absensi</td>
+                <td className="kdt-label">Peserta</td>
                 <td className="kdt-colon">:</td>
                 <td className="kdt-value">
                   <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 6 }}>
@@ -152,11 +165,11 @@ export default function ViewReportModal({
               </tr>
               {slot.initiator_type === 'SISWA' && (
                 <tr>
-                  <td className="kdt-label">Diajukan Oleh Siswa</td>
+                  <td className="kdt-label">Pembuat</td>
                   <td className="kdt-colon">:</td>
                   <td className="kdt-value">
-                    {slot.initiator_nama || 'Tidak diketahui'}{' '}
-                    {slot.initiator_kelas ? `(${slot.initiator_kelas})` : ''}
+                    Diajukan siswa: <strong>{slot.initiator_nama || 'Tidak diketahui'}</strong>
+                    {slot.initiator_kelas ? ` (${slot.initiator_kelas})` : ''}
                   </td>
                 </tr>
               )}
@@ -273,21 +286,16 @@ export default function ViewReportModal({
         )}
       </ModalBody>
 
-      <ModalFooter align="between">
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          <Button variant="cancel" onClick={onClose}>
-            Tutup
+      <ModalFooter align={canRevisiApproved && laporan?.status === 'Approved' && onRevisiApproved ? 'between' : 'end'}>
+        {canRevisiApproved && laporan?.status === 'Approved' && onRevisiApproved && (
+          <Button
+            variant="danger"
+            onClick={() => onRevisiApproved(laporan.id)}
+            leftIcon={<i className="bi bi-arrow-return-left" />}
+          >
+            Batalkan Persetujuan (Revisi)
           </Button>
-          {canRevisiApproved && laporan?.status === 'Approved' && onRevisiApproved && (
-            <Button
-              variant="danger"
-              onClick={() => onRevisiApproved(laporan.id)}
-              leftIcon={<i className="bi bi-arrow-return-left" />}
-            >
-              Batalkan Persetujuan (Revisi)
-            </Button>
-          )}
-        </div>
+        )}
         <Button
           variant="primary"
           onClick={() => onPrintPreview(slot.id)}

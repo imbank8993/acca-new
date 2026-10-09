@@ -490,7 +490,7 @@ export default function InputMedisTab({
     };
 
     return (
-        <div className="kh-filter-card animate-fade-in" style={{ padding: '24px' }}>
+        <div className="kh-filter-card animate-fade-in rm-input-card">
             <form onSubmit={handleSubmitForm}>
                 {/* SECTION: CARI SISWA */}
                 <div style={{ marginBottom: '20px' }}>
@@ -686,7 +686,7 @@ export default function InputMedisTab({
                 )}
 
                 {/* SECTION: WAKTU & NO REKAM MEDIS */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '20px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: selectedStudent ? 'repeat(auto-fit, minmax(260px, 1fr))' : '1fr', gap: '16px', marginBottom: '20px' }}>
                     {selectedStudent && (
                         <div>
                             <label className="kh-filter-label">No. Rekam Medis</label>
@@ -702,27 +702,32 @@ export default function InputMedisTab({
                                     cursor: 'not-allowed',
                                     opacity: 0.9,
                                     fontWeight: 700,
-                                    color: 'var(--kh-accent)'
+                                    color: 'var(--kh-accent)',
+                                    height: '42px',
+                                    boxSizing: 'border-box'
                                 }}
                             />
                         </div>
                     )}
-                    <div>
-                        <label className="kh-filter-label">Hari/Tanggal</label>
-                        <DatePicker
-                            value={tanggal}
-                            onChange={setTanggal}
-                            style={{ height: '42px', width: '100%', fontSize: '0.85rem' }}
-                        />
-                    </div>
-                    <div>
-                        <label className="kh-filter-label">Waktu</label>
-                        <input
-                            type="time"
-                            className="kh-pill-input"
-                            value={waktu}
-                            onChange={e => setWaktu(e.target.value)}
-                        />
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', alignItems: 'end' }}>
+                        <div>
+                            <label className="kh-filter-label">Tanggal</label>
+                            <DatePicker
+                                value={tanggal}
+                                onChange={setTanggal}
+                                style={{ height: '42px', width: '100%', fontSize: '0.85rem' }}
+                            />
+                        </div>
+                        <div>
+                            <label className="kh-filter-label">Waktu</label>
+                            <input
+                                type="time"
+                                className="kh-pill-input"
+                                value={waktu}
+                                onChange={e => setWaktu(e.target.value)}
+                                style={{ height: '42px', width: '100%', fontSize: '0.85rem', margin: 0, boxSizing: 'border-box' }}
+                            />
+                        </div>
                     </div>
                 </div>
 
@@ -884,101 +889,90 @@ export default function InputMedisTab({
                         />
 
                         <div style={{
-                            background: currentMappedStatus === 'NONE' ? 'var(--n-card)' : 'rgba(5, 150, 105, 0.05)',
-                            border: currentMappedStatus === 'NONE' ? '1px solid rgba(26, 115, 232, 0.35)' : '1px solid rgba(5, 150, 105, 0.35)',
-                            borderRadius: '12px', padding: '12px 16px'
+                            background: currentMappedStatus === 'NONE' ? 'var(--kh-bg-subtle, rgba(0,0,0,0.02))' : (autoSyncKetidakhadiran ? 'rgba(5, 150, 105, 0.03)' : 'var(--kh-bg-subtle, rgba(0,0,0,0.02))'),
+                            border: currentMappedStatus === 'NONE' ? '1px solid var(--kh-border, #e5e7eb)' : (autoSyncKetidakhadiran ? '1px solid rgba(5, 150, 105, 0.25)' : '1px solid var(--kh-border, #e5e7eb)'),
+                            borderRadius: '8px',
+                            padding: '8px 12px',
+                            transition: 'all 0.2s ease'
                         }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                    <i className={`bi bi-${currentMappedStatus === 'NONE' ? 'dash-circle' : 'cloud-check-fill'}`} style={{ color: currentMappedStatus === 'NONE' ? 'var(--kh-text-muted)' : '#059669', fontSize: '1.1rem' }}></i>
-                                    <div>
-                                        <div style={{ fontWeight: 700, fontSize: '0.85rem', color: currentMappedStatus === 'NONE' ? 'var(--kh-text-secondary)' : '#059669' }}>
-                                            Sinkronisasi ke Modul Ketidakhadiran Siswa (Sakit)
-                                        </div>
-                                        <div style={{ fontSize: '0.78rem', color: 'var(--kh-text-secondary)' }}>
-                                            {currentMappedStatus === 'NONE' ? (
-                                                <span>Siswa kembali belajar di kelas (TIDAK dicatat sebagai absensi sakit).</span>
-                                            ) : (
-                                                <span>Otomatis membuat/memperbarui data absensi <b>Sakit {currentMappedStatus}</b>.</span>
-                                            )}
-                                        </div>
-                                    </div>
+                            {currentMappedStatus === 'NONE' ? (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--kh-text-secondary)', fontSize: '0.75rem' }}>
+                                    <i className="bi bi-info-circle" style={{ color: 'var(--kh-text-muted)', fontSize: '0.8rem' }}></i>
+                                    <span>Siswa kembali belajar di kelas (tidak dicatat sebagai absensi sakit).</span>
                                 </div>
-
-                                {currentMappedStatus !== 'NONE' && (
-                                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 700, color: '#059669' }}>
-                                        <input
-                                            type="checkbox"
-                                            checked={autoSyncKetidakhadiran}
-                                            onChange={e => setAutoSyncKetidakhadiran(e.target.checked)}
-                                            style={{ width: '18px', height: '18px', accentColor: '#059669', cursor: 'pointer' }}
-                                        />
-                                        Otomatis Sinkronkan
-                                    </label>
-                                )}
-                            </div>
-
-                            {currentMappedStatus !== 'NONE' && autoSyncKetidakhadiran && (
-                                <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px dashed rgba(5, 150, 105, 0.3)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                            ) : (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
-                                        <label className="kh-filter-label" style={{ fontSize: '0.78rem', margin: 0, color: '#059669', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                            <i className="bi bi-calendar-range-fill"></i> Estimasi Durasi & Tanggal Selesai Sakit / Rujuk
-                                        </label>
-                                        <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', alignItems: 'center' }}>
-                                            <span style={{ fontSize: '0.72rem', color: 'var(--kh-text-secondary)', marginRight: '2px' }}>Pilih Durasi:</span>
-                                            <button
-                                                type="button"
-                                                onClick={() => setDaysDuration(1)}
-                                                style={{ background: tglSelesaiSakit === tanggal ? '#059669' : 'rgba(5, 150, 105, 0.1)', color: tglSelesaiSakit === tanggal ? '#fff' : '#059669', border: '1px solid #059669', cursor: 'pointer', padding: '3px 10px', borderRadius: '6px', fontSize: '0.72rem', fontWeight: 700 }}
-                                            >
-                                                1 Hari (Hari Ini)
-                                            </button>
-                                            <button
-                                                type="button"
-                                                onClick={() => setDaysDuration(2)}
-                                                style={{ background: calculateTotalDays(tanggal, tglSelesaiSakit) === 2 ? '#059669' : 'rgba(5, 150, 105, 0.1)', color: calculateTotalDays(tanggal, tglSelesaiSakit) === 2 ? '#fff' : '#059669', border: '1px solid #059669', cursor: 'pointer', padding: '3px 10px', borderRadius: '6px', fontSize: '0.72rem', fontWeight: 700 }}
-                                            >
-                                                2 Hari
-                                            </button>
-                                            <button
-                                                type="button"
-                                                onClick={() => setDaysDuration(3)}
-                                                style={{ background: calculateTotalDays(tanggal, tglSelesaiSakit) === 3 ? '#059669' : 'rgba(5, 150, 105, 0.1)', color: calculateTotalDays(tanggal, tglSelesaiSakit) === 3 ? '#fff' : '#059669', border: '1px solid #059669', cursor: 'pointer', padding: '3px 10px', borderRadius: '6px', fontSize: '0.72rem', fontWeight: 700 }}
-                                            >
-                                                3 Hari
-                                            </button>
-                                        </div>
-                                    </div>
-
-                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '10px', alignItems: 'end' }}>
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                            <label className="kh-filter-label" style={{ fontSize: '0.72rem', margin: 0 }}>Sampai Tanggal (Selesai):</label>
-                                            <DatePicker
-                                                value={tglSelesaiSakit}
-                                                onChange={setTglSelesaiSakit}
-                                                style={{ height: '36px', width: '100%' }}
+                                        <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600, color: autoSyncKetidakhadiran ? '#059669' : 'var(--kh-text-primary)' }}>
+                                            <input
+                                                type="checkbox"
+                                                checked={autoSyncKetidakhadiran}
+                                                onChange={e => setAutoSyncKetidakhadiran(e.target.checked)}
+                                                style={{ width: '15px', height: '15px', accentColor: '#059669', cursor: 'pointer' }}
                                             />
-                                        </div>
-                                        {tindakLanjutText.toLowerCase().includes('istirahat di uks') && (
-                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                                <label className="kh-filter-label" style={{ fontSize: '0.72rem', margin: 0 }}>Jam Selesai Istirahat UKS:</label>
-                                                <input
-                                                    type="time"
-                                                    className="kh-pill-input"
-                                                    value={waktuSelesaiUks}
-                                                    onChange={e => setWaktuSelesaiUks(e.target.value)}
-                                                    style={{ height: '36px', width: '100%', margin: 0, fontSize: '0.8rem' }}
-                                                />
+                                            <span>Sinkronkan Absensi Sakit <span style={{ fontWeight: 500, fontSize: '0.78rem', color: autoSyncKetidakhadiran ? '#047857' : 'var(--kh-text-secondary)' }}>({currentMappedStatus})</span></span>
+                                        </label>
+
+                                        {autoSyncKetidakhadiran && (
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                <span style={{ fontSize: '0.72rem', color: 'var(--kh-text-secondary)', marginRight: '2px' }}>Durasi:</span>
+                                                {[1, 2, 3].map(days => {
+                                                    const isSelected = days === 1 ? tglSelesaiSakit === tanggal : calculateTotalDays(tanggal, tglSelesaiSakit) === days;
+                                                    return (
+                                                        <button
+                                                            key={days}
+                                                            type="button"
+                                                            onClick={() => setDaysDuration(days)}
+                                                            style={{
+                                                                background: isSelected ? '#059669' : 'rgba(5, 150, 105, 0.08)',
+                                                                color: isSelected ? '#fff' : '#059669',
+                                                                border: '1px solid ' + (isSelected ? '#059669' : 'rgba(5, 150, 105, 0.2)'),
+                                                                cursor: 'pointer',
+                                                                padding: '2px 8px',
+                                                                borderRadius: '5px',
+                                                                fontSize: '0.72rem',
+                                                                fontWeight: 600,
+                                                                transition: 'all 0.15s ease'
+                                                            }}
+                                                        >
+                                                            {days} Hari
+                                                        </button>
+                                                    );
+                                                })}
                                             </div>
                                         )}
                                     </div>
 
-                                    <div style={{ background: 'rgba(5, 150, 105, 0.08)', border: '1px solid rgba(5, 150, 105, 0.25)', padding: '6px 10px', borderRadius: '8px', fontSize: '0.75rem', color: '#047857', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                        <i className="bi bi-info-circle-fill" style={{ fontSize: '0.85rem' }}></i>
-                                        <span>
-                                            Sinkronkan Absensi SAKIT: <b>{tzFormatDate(tanggal)}</b> s/d <b>{tzFormatDate(tglSelesaiSakit)}</b> (Total <b>{calculateTotalDays(tanggal, tglSelesaiSakit)} Hari</b>).
-                                        </span>
-                                    </div>
+                                    {autoSyncKetidakhadiran && (
+                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', alignItems: 'center', paddingTop: '6px', borderTop: '1px dashed rgba(5, 150, 105, 0.2)' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: '1 1 180px' }}>
+                                                <label style={{ fontSize: '0.75rem', color: 'var(--kh-text-secondary)', whiteSpace: 'nowrap', fontWeight: 400 }}>Sampai Tanggal:</label>
+                                                <DatePicker
+                                                    value={tglSelesaiSakit}
+                                                    onChange={setTglSelesaiSakit}
+                                                    style={{ height: '32px', flex: 1 }}
+                                                />
+                                            </div>
+
+                                            {tindakLanjutText.toLowerCase().includes('istirahat di uks') && (
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: '1 1 160px' }}>
+                                                    <label style={{ fontSize: '0.75rem', color: 'var(--kh-text-secondary)', whiteSpace: 'nowrap', fontWeight: 400 }}>Jam Selesai UKS:</label>
+                                                    <input
+                                                        type="time"
+                                                        className="kh-pill-input"
+                                                        value={waktuSelesaiUks}
+                                                        onChange={e => setWaktuSelesaiUks(e.target.value)}
+                                                        style={{ height: '32px', flex: 1, margin: 0, fontSize: '0.75rem' }}
+                                                    />
+                                                </div>
+                                            )}
+
+                                            <div style={{ fontSize: '0.7rem', color: 'var(--kh-text-secondary)', fontWeight: 400, background: 'rgba(5, 150, 105, 0.05)', border: '1px solid rgba(5, 150, 105, 0.15)', padding: '3px 8px', borderRadius: '5px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                <i className="bi bi-calendar-check" style={{ fontSize: '0.75rem', color: '#059669' }}></i>
+                                                <span>Total <b style={{ color: '#059669', fontWeight: 600 }}>{calculateTotalDays(tanggal, tglSelesaiSakit)} Hari</b> ({tzFormatDate(tanggal)} s/d {tzFormatDate(tglSelesaiSakit)})</span>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             )}
                         </div>

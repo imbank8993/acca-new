@@ -635,6 +635,11 @@ html.dark .ftb-backBtn:hover {
         gap: 6px;
     }
 
+    .ftb-mobile-actions:empty,
+    .ftb-mobile-inlineActions:empty {
+        display: none !important;
+    }
+
     /* Sembunyikan tombol 'Tambah' & aksi biasa di bar atas mobile (karena sudah masuk ke menu titik 3 dan FAB) */
     .ftb-mobile-inlineActions > button,
     .ftb-mobile-inlineActions > .ui-btn,

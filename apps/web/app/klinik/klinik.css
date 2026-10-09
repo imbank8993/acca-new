@@ -6,7 +6,7 @@
 .klinik-container {
     display: flex;
     flex-direction: column;
-    gap: var(--page-gap, 12px);
+    gap: 10px;
     width: 100%;
     animation: fadeIn 0.4s ease-out;
     padding-bottom: 32px;
@@ -22,11 +22,18 @@
     to { opacity: 1; transform: scale(1) translateY(0); }
 }
 
+.klinik-content {
+    margin-top: 0;
+    display: flex;
+    flex-direction: column;
+}
+
 /* Grid View (Mobile / Tablet) */
 .klinik-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-    gap: 20px;
+    gap: 10px;
+    margin-top: 0;
 }
 
 /* Slot Card */
@@ -242,7 +249,8 @@
     white-space: nowrap;
     line-height: 1.2;
 }
-.laporan-badge.submitted { background: #eff6ff; color: #1d4ed8; }
+.laporan-badge.submitted,
+.laporan-badge.dilaporkan { background: #eff6ff; color: #1d4ed8; }
 .laporan-badge.approved { background: #e0f2fe; color: #0284c7; }
 .laporan-badge.revisi { background: #fee2e2; color: #dc2626; }
 .laporan-badge.draft { background: var(--n-soft); color: var(--n-muted); }
@@ -273,6 +281,14 @@
     text-transform: uppercase;
     letter-spacing: 0.08em;
     border-bottom: 1px solid var(--n-border);
+    text-align: left;
+}
+
+.klinik-table th.th-waktu,
+.klinik-table th.th-status-kuota,
+.klinik-table th.text-center,
+.klinik-table th.text-right {
+    text-align: center;
 }
 
 .klinik-table td {
@@ -280,6 +296,10 @@
     border-bottom: 1px solid var(--n-border);
     vertical-align: middle;
     font-size: 0.88rem;
+}
+
+.klinik-table td.text-center {
+    text-align: center;
 }
 
 .klinik-table tr:last-child td { border-bottom: none; }
@@ -303,12 +323,16 @@
 .th-waktu {
     min-width: 155px;
     white-space: nowrap;
+    text-align: center;
 }
 .table-col-waktu { 
     display: flex; 
     flex-direction: column; 
+    align-items: center;
+    justify-content: center;
     gap: 4px; 
     min-width: 150px;
+    text-align: center;
 }
 .table-col-waktu .date { 
     font-weight: 600; 
@@ -355,18 +379,21 @@
 .th-status-kuota {
     min-width: 170px;
     white-space: nowrap;
+    text-align: center;
 }
 
 .status-kuota-stack {
     display: flex;
     flex-direction: column;
     gap: 5px;
-    align-items: flex-start;
+    align-items: center;
+    justify-content: center;
 }
 
 .status-kuota-row {
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 6px;
     flex-wrap: wrap;
 }
@@ -442,14 +469,18 @@
     display: inline-flex;
     align-items: center;
     gap: 5px;
-    color: #0369a1;
-    background: rgba(2, 132, 199, 0.08);
-    border: 1px solid rgba(2, 132, 199, 0.22);
-    padding: 2px 8px;
-    border-radius: 6px;
-    font-size: 0.7rem;
+    color: #0284c7;
+    background: transparent;
+    border: none;
+    padding: 0;
+    margin-top: 4px;
+    font-size: 0.72rem;
     font-weight: 600;
     width: fit-content;
+}
+.pengaju-tag--akademik i {
+    color: #0284c7;
+    font-size: 0.75rem;
 }
 .pengaju-tag--akademik i {
     color: #0284c7;
@@ -733,13 +764,228 @@
 .foto-thumb { position: relative; border: 1px solid var(--n-border); border-radius: 10px; overflow: hidden; aspect-ratio: 1; background: var(--n-surface); }
 .foto-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .foto-thumb button { position: absolute; top: 4px; right: 4px; width: 22px; height: 22px; border-radius: 50%; border: none; background: rgba(15, 23, 42, 0.75); color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 0.75rem; }
-.foto-thumb button:hover { background: #ef4444; }
-
-@media (max-width: 1024px) {
-    .klinik-table-container { display: none; }
+/* Mobile Klinik List Cards (Enhanced Visual Hierarchy) */
+.mobile-klinik-card {
+    background: var(--n-card);
+    border: 1px solid var(--n-border);
+    border-radius: 14px;
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.03);
+    position: relative;
+    overflow: hidden;
 }
-@media (min-width: 1024.02px) {
-    .klinik-grid { display: none; }
+
+.mobile-klinik-card:hover,
+.mobile-klinik-card:active {
+    border-color: var(--n-primary);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+}
+
+.mobile-klinik-card--kelola {
+    border-left: 4px solid var(--n-primary) !important;
+}
+
+.mobile-card-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.mobile-card-mapel-wrap {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    flex: 1;
+}
+
+.mobile-card-title-group {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.mobile-card-mapel {
+    margin: 0;
+    font-size: 0.95rem;
+    font-weight: 800;
+    color: var(--n-ink);
+    line-height: 1.25;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.mobile-card-guru {
+    margin: 2px 0 0;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--n-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.mobile-card-status-stack {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+.mobile-card-topic {
+    background: var(--n-soft);
+    border-radius: 8px;
+    padding: 8px 12px;
+    border-left: 3.5px solid var(--n-primary);
+}
+
+.mobile-topic-label {
+    display: block;
+    font-size: 0.65rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--n-muted);
+    margin-bottom: 2px;
+}
+
+.mobile-topic-text {
+    margin: 0;
+    font-size: 0.84rem;
+    font-weight: 700;
+    color: var(--n-ink);
+    line-height: 1.35;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.mobile-card-tags {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.mobile-card-foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding-top: 8px;
+    border-top: 1px dashed var(--n-border);
+}
+
+.mobile-foot-meta {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    flex-wrap: wrap;
+}
+
+.mobile-meta-chip {
+    font-size: 0.74rem;
+    font-weight: 600;
+    color: var(--n-muted);
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.mobile-meta-chip i {
+    color: #0284c7;
+    font-size: 0.8rem;
+}
+
+.mobile-foot-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.mobile-kuota-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px;
+    border-radius: 6px;
+    background: var(--n-soft);
+    border: 1px solid var(--n-border);
+    font-size: 0.72rem;
+    font-weight: 800;
+    color: var(--n-ink);
+}
+
+.mobile-kuota-badge.full {
+    background: #e0f2fe;
+    color: #0284c7;
+    border-color: #bae6fd;
+}
+
+.dark .mobile-klinik-card {
+    background: var(--n-card);
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
+.dark .mobile-card-topic {
+    background: rgba(255, 255, 255, 0.04);
+}
+
+.dark .mobile-meta-chip i {
+    color: #38bdf8;
+}
+
+.dark .mobile-kuota-badge {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.12);
+    color: #f1f5f9;
+}
+
+.dark .mobile-kuota-badge.full {
+    background: rgba(2, 132, 199, 0.2);
+    border-color: rgba(2, 132, 199, 0.45);
+    color: #38bdf8;
+}
+
+/* Pemisahan Ketat Tampilan Desktop & Mobile */
+@media (max-width: 768px) {
+    .klinik-table-container,
+    .desktop-only,
+    .klinik-desktop-view {
+        display: none !important;
+    }
+    .klinik-mobile-view,
+    .mobile-only,
+    .mui-list {
+        display: flex !important;
+    }
+}
+@media (min-width: 768.01px) {
+    .klinik-mobile-view,
+    .mobile-only,
+    .mui-list {
+        display: none !important;
+    }
+    .klinik-desktop-view,
+    .klinik-table-container,
+    .desktop-only {
+        display: block !important;
+    }
 }
 @media (max-width: 900px) {
     .modal-split-grid { grid-template-columns: minmax(0, 1fr); }
@@ -923,14 +1169,16 @@
 .dark .act-note--batal { color: #f87171; }
 .dark .pengaju-tag--akademik {
     color: #38bdf8 !important;
-    background: rgba(2, 132, 199, 0.18) !important;
-    border-color: rgba(56, 189, 248, 0.35) !important;
+    background: transparent !important;
+    border: none !important;
+    padding: 0 !important;
 }
 .dark .pengaju-tag--akademik i {
     color: #38bdf8 !important;
 }
 
-.dark .laporan-badge.submitted { background: rgba(37, 99, 235, 0.2) !important; color: #60a5fa !important; border: 1.5px solid rgba(59, 130, 246, 0.4) !important; }
+.dark .laporan-badge.submitted,
+.dark .laporan-badge.dilaporkan { background: rgba(37, 99, 235, 0.2) !important; color: #60a5fa !important; border: 1.5px solid rgba(59, 130, 246, 0.4) !important; }
 .dark .laporan-badge.approved { background: rgba(14, 165, 233, 0.18) !important; color: #38bdf8 !important; border: 1.5px solid rgba(56, 189, 248, 0.5) !important; }
 .dark .laporan-badge.revisi { background: rgba(220, 38, 38, 0.2) !important; color: #f87171 !important; border: 1.5px solid rgba(220, 38, 38, 0.45) !important; }
 .dark .laporan-badge.draft { background: rgba(100, 116, 139, 0.2) !important; color: #94a3b8 !important; border: 1.5px solid rgba(100, 116, 139, 0.4) !important; }

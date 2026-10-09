@@ -79,6 +79,10 @@ export default function RekamMedisView() {
     const [availableClasses, setAvailableClasses] = useState<string[]>([]);
     const [selectedRowDetail, setSelectedRowDetail] = useState<RekamMedisRow | null>(null);
 
+    // List Pagination States
+    const [listPage, setListPage] = useState(1);
+    const [listLimit, setListLimit] = useState(10);
+
     // Delete Modal States
     const [deletingRow, setDeletingRow] = useState<RekamMedisRow | null>(null);
     const [isDeletingRecord, setIsDeletingRecord] = useState(false);
@@ -517,6 +521,7 @@ export default function RekamMedisView() {
             const params = new URLSearchParams();
             if (searchQuery) params.append('q', searchQuery);
             if (filterKelas) params.append('kelas', filterKelas);
+            params.append('limit', '10000');
 
             const res = await fetch(`/api/ketidakhadiran/rekam-medis-siswa?${params.toString()}`);
             const json = await res.json();
@@ -1086,6 +1091,10 @@ export default function RekamMedisView() {
         }
     }, [activeTab]);
 
+    useEffect(() => {
+        setListPage(1);
+    }, [searchQuery, filterKelas, filterStatus, filterPetugas]);
+
     const filteredRows = useMemo(() => {
         const list = rows.filter(r => {
             const q = searchQuery.toLowerCase();
@@ -1120,14 +1129,22 @@ export default function RekamMedisView() {
         });
     }, [rows, searchQuery, filterKelas, filterStatus, filterPetugas]);
 
+    const totalItems = filteredRows.length;
+    const totalPages = Math.ceil(totalItems / listLimit) || 1;
+
+    const displayRows = useMemo(() => {
+        const start = (listPage - 1) * listLimit;
+        return filteredRows.slice(start, start + listLimit);
+    }, [filteredRows, listPage, listLimit]);
+
     const studentSpanInfo = useMemo(() => {
         const spanInfo: { showStudentCell: boolean; rowSpan: number; studentIndex: number }[] = [];
         let i = 0;
         let sIdx = 0;
-        while (i < filteredRows.length) {
-            const currentKey = filteredRows[i].nisn || filteredRows[i].nama_siswa;
+        while (i < displayRows.length) {
+            const currentKey = displayRows[i].nisn || displayRows[i].nama_siswa;
             let count = 1;
-            while (i + count < filteredRows.length && (filteredRows[i + count].nisn || filteredRows[i + count].nama_siswa) === currentKey) {
+            while (i + count < displayRows.length && (displayRows[i + count].nisn || displayRows[i + count].nama_siswa) === currentKey) {
                 count++;
             }
             spanInfo.push({ showStudentCell: true, rowSpan: count, studentIndex: sIdx });
@@ -1138,11 +1155,11 @@ export default function RekamMedisView() {
             sIdx++;
         }
         return spanInfo;
-    }, [filteredRows]);
+    }, [displayRows]);
 
     const studentGroups = useMemo(() => {
         const groups: { nisn: string; nama_siswa: string; kelas: string; guru_asuh: string; records: RekamMedisRow[] }[] = [];
-        filteredRows.forEach(r => {
+        displayRows.forEach(r => {
             const key = r.nisn || r.nama_siswa || '';
             let group = groups.find(g => g.nisn === key);
             if (!group) {
@@ -1158,7 +1175,7 @@ export default function RekamMedisView() {
             group.records.push(r);
         });
         return groups;
-    }, [filteredRows]);
+    }, [displayRows]);
 
     return (
         <div className="kh-wrap">
@@ -1249,9 +1266,16 @@ export default function RekamMedisView() {
                     <DaftarMedisTab
                         loadingList={loadingList}
                         filteredRows={filteredRows}
+                        displayRows={displayRows}
                         studentSpanInfo={studentSpanInfo}
                         studentGroups={studentGroups}
                         syncingId={syncingId}
+                        page={listPage}
+                        limit={listLimit}
+                        totalPages={totalPages}
+                        totalItems={totalItems}
+                        onPageChange={setListPage}
+                        onLimitChange={setListLimit}
                         handleOpenEditModal={handleOpenEditModal}
                         setSelectedRowDetail={setSelectedRowDetail}
                         handleDeleteRecord={handleDeleteRecord}

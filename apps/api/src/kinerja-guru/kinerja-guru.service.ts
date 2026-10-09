@@ -54,10 +54,17 @@ export class KinerjaGuruService {
 
     const [sy, sm] = periodStart.split('-').map(Number);
     const [ey, em] = periodEnd.split('-').map(Number);
+
+    const periodStartStr = `${sy}-${String(sm).padStart(2, '0')}-01`;
+    const lastDay = new Date(ey, em, 0).getDate();
+    const periodEndStr = `${ey}-${String(em).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+
     const periodStartDate = new Date(sy, sm - 1, 1);
-    const periodEndDate = new Date(ey, em, 0);
-    const periodStartStr = periodStartDate.toISOString().split('T')[0];
-    const periodEndStr = periodEndDate.toISOString().split('T')[0];
+    const periodEndDate = new Date(ey, em - 1, lastDay);
+
+    const diffMs = periodEndDate.getTime() - periodStartDate.getTime();
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24)) + 1;
+    const effectiveWeeks = Math.max(1, Math.round(diffDays / 7));
 
     // 1. Fetch effective schedule
     let allJadwal: any[] = [];
@@ -80,10 +87,9 @@ export class KinerjaGuruService {
       teacherWeeklyJP[nip] = slots.size;
     });
 
-    const EFFECTIVE_WEEKS = 7;
     const teacherTotalJP: Record<string, number> = {};
     Object.entries(teacherWeeklyJP).forEach(([nip, weeklyJP]) => {
-      teacherTotalJP[nip] = weeklyJP * EFFECTIVE_WEEKS;
+      teacherTotalJP[nip] = weeklyJP * effectiveWeeks;
     });
 
     // 2. Classes & Waktu
@@ -133,12 +139,15 @@ export class KinerjaGuruService {
       return '';
     };
 
-    // 3. Jurnal Guru
+    // 3. Jurnal Guru (Include full end date)
+    const startQueryDate = new Date(`${periodStartStr}T00:00:00.000Z`);
+    const endQueryDate = new Date(`${periodEndStr}T23:59:59.999Z`);
+
     const allJurnals = await this.prisma.jurnal_guru.findMany({
       where: {
         tanggal: {
-          gte: new Date(periodStartStr),
-          lte: new Date(periodEndStr),
+          gte: startQueryDate,
+          lte: endQueryDate,
         },
       },
       orderBy: { tanggal: 'desc' },
@@ -148,8 +157,8 @@ export class KinerjaGuruService {
     const allLaporanPiket = await this.prisma.laporan_piket.findMany({
       where: {
         tanggal: {
-          gte: new Date(periodStartStr),
-          lte: new Date(periodEndStr),
+          gte: startQueryDate,
+          lte: endQueryDate,
         },
       },
       include: {
@@ -208,7 +217,7 @@ export class KinerjaGuruService {
       return key;
     };
 
-    // Calculate Piket stats
+    // Calculate Piket stats (strictly bounded within selected period)
     try {
       if (jadwalPiket.length > 0 && allLaporanPiket.length > 0) {
         const slotReportedTable = new Set<string>();
@@ -226,22 +235,24 @@ export class KinerjaGuruService {
           scheduleByDay[s.hari].push(s);
         });
 
-        const pDates = allLaporanPiket
-          .map((l) => (l.tanggal instanceof Date ? l.tanggal.toISOString().split('T')[0] : String(l.tanggal || '')))
-          .filter(Boolean)
-          .sort();
-        const startDateStr = pDates[0];
-        const endDateStr = new Date().toISOString().split('T')[0];
+        const todayStr = new Date().toISOString().split('T')[0];
+        const calcPiketStart = periodStartStr;
+        const calcPiketEnd = periodEndStr < todayStr ? periodEndStr : todayStr;
 
-        if (startDateStr) {
-          const current = new Date(startDateStr);
-          const end = new Date(endDateStr);
+        if (calcPiketStart <= calcPiketEnd) {
+          const [csY, csM, csD] = calcPiketStart.split('-').map(Number);
+          const [ceY, ceM, ceD] = calcPiketEnd.split('-').map(Number);
+          const current = new Date(csY, csM - 1, csD);
+          const end = new Date(ceY, ceM - 1, ceD);
           const dayNames = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
 
           let securityCounter = 0;
           while (current <= end && securityCounter < 500) {
             securityCounter++;
-            const dateStr = current.toISOString().split('T')[0];
+            const cY = current.getFullYear();
+            const cM = String(current.getMonth() + 1).padStart(2, '0');
+            const cD = String(current.getDate()).padStart(2, '0');
+            const dateStr = `${cY}-${cM}-${cD}`;
             const dayName = dayNames[current.getDay()];
 
             if (dayName !== 'Minggu') {
@@ -330,19 +341,11 @@ export class KinerjaGuruService {
       const guruPengganti = (j.guru_pengganti || '').trim();
       const isGuruPengganti = guruPengganti && guruPengganti !== '-' && guruPengganti !== '';
       const kategoriUtama = (j.kategori_kehadiran || '').trim().toLowerCase();
-      const isDenganPendampingan = kategoriUtama.includes('dengan pendampingan');
 
-      let targetNama = '';
-      let targetNip = '';
-
-      if (isGuruPengganti && !isDenganPendampingan) {
-        targetNama = guruPengganti;
-        targetNip = j.nip || '';
-      } else {
-        targetNama = (j.nama_guru || '').trim();
-        if (!targetNama && j.nip) targetNama = `Guru (${j.nip})`;
-      }
-      if (!targetNama) return;
+      // Incident always belongs to the main scheduled teacher (j.nama_guru / j.nip)
+      const targetNama = (j.nama_guru || '').trim() || (j.nip ? `Guru (${j.nip})` : '');
+      const targetNip = j.nip || '';
+      if (!targetNama && !targetNip) return;
 
       const targetKey = ensureKey(targetNama, targetNip);
 
@@ -353,13 +356,16 @@ export class KinerjaGuruService {
       const statusT2 = (j.status_tambahan_2 || '').trim().toLowerCase();
       const statusT3 = (j.status_tambahan_3 || '').trim().toLowerCase();
 
-      const allStatuses = [
-        isGuruPengganti && !isDenganPendampingan ? statusPengganti : statusUtama,
+      const rawStatuses = [
+        isGuruPengganti ? statusPengganti : statusUtama,
         statusTambahan,
         statusT1,
         statusT2,
         statusT3,
       ].filter((s) => s && s !== '-' && s !== '');
+
+      // Deduplicate statuses for the same jurnal entry
+      const uniqueStatuses = Array.from(new Set(rawStatuses));
 
       const kelasKey = (j.kelas || '').trim();
       const prog = kelasProgramMap[kelasKey] || 'Reguler';
@@ -392,7 +398,7 @@ export class KinerjaGuruService {
       const durasiKeluar = parseInt(j.durasi_keluar_awal, 10) || 0;
       const ketTambahan = (j.keterangan_tambahan || '').trim();
 
-      allStatuses.forEach((status) => {
+      uniqueStatuses.forEach((status) => {
         if (status === 'terlambat') {
           stats[targetKey].terlambat++;
           stats[targetKey].total_menit += durasiTerlambat;
@@ -443,6 +449,12 @@ export class KinerjaGuruService {
         e.durasi = durasiKeluar;
         e.keterangan = `${durasiKeluar} Menit`;
         stats[targetKey].details.push(e);
+      }
+    });
+
+    Object.values(stats).forEach((s) => {
+      if (s.nip && teacherTotalJP[s.nip]) {
+        s.total_jp = teacherTotalJP[s.nip];
       }
     });
 
