@@ -1007,7 +1007,7 @@
 .ig-info-table .ig-dt-label {
   color: var(--ig-text-secondary);
   font-weight: 600;
-  width: 160px;
+  width: 135px;
   white-space: nowrap;
   padding-right: 4px;
 }
@@ -1015,14 +1015,15 @@
 .ig-info-table .ig-dt-colon {
   color: var(--ig-text-secondary);
   font-weight: 600;
-  width: 14px;
+  width: 12px;
   text-align: center;
-  padding-right: 8px;
+  padding-right: 6px;
 }
 
 .ig-info-table .ig-dt-value {
   color: var(--ig-text-primary);
   word-break: break-word;
+  overflow-wrap: anywhere;
 }
 
 .dark .ig-info-table .ig-dt-label {
@@ -1039,8 +1040,8 @@
 
 @media (max-width: 540px) {
   .ig-info-table .ig-dt-label {
-    width: 130px;
-    font-size: 0.8rem;
+    width: 110px;
+    font-size: 0.78rem;
   }
 }
 

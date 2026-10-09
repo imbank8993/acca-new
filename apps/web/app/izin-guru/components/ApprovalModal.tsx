@@ -124,12 +124,12 @@ export default function ApprovalModal({ isOpen, onClose, onSuccess, row }: Appro
                 <tr>
                   <td className="ig-dt-label">Nama Guru</td>
                   <td className="ig-dt-colon">:</td>
-                  <td className="ig-dt-value" style={{ fontWeight: 600 }}>{row.nama_guru}</td>
+                  <td className="ig-dt-value font-semibold">{row.nama_guru}</td>
                 </tr>
                 <tr>
                   <td className="ig-dt-label">NIP</td>
                   <td className="ig-dt-colon">:</td>
-                  <td className="ig-dt-value" style={{ fontFamily: 'monospace' }}>{row.nip}</td>
+                  <td className="ig-dt-value font-mono">{row.nip || '—'}</td>
                 </tr>
                 <tr>
                   <td className="ig-dt-label">Jenis Pengajuan</td>
@@ -156,7 +156,7 @@ export default function ApprovalModal({ isOpen, onClose, onSuccess, row }: Appro
                   <tr>
                     <td className="ig-dt-label">No. Surat Tugas</td>
                     <td className="ig-dt-colon">:</td>
-                    <td className="ig-dt-value">{row.nomor_surat}</td>
+                    <td className="ig-dt-value font-mono">{row.nomor_surat}</td>
                   </tr>
                 )}
                 <tr>

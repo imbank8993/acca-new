@@ -49,8 +49,8 @@ export default function UserSettingsPage({ initialTab, user }: { initialTab?: st
   const tabs = useMemo<TabItem<TabType>[]>(
     () => [
       { key: 'user_data', label: 'Data & Status User', icon: 'bi-person-gear' },
-      { key: 'role_pages', label: 'Akses Halaman', icon: 'bi-layout-text-window-reverse' },
-      { key: 'feature_access', label: 'Hak Akses Fitur', icon: 'bi-sliders2' },
+      { key: 'role_pages', label: 'Akses Halaman', icon: 'PanelsTopLeft' },
+      { key: 'feature_access', label: 'Hak Akses Fitur', icon: 'SlidersHorizontal' },
       { key: 'menu_layout', label: 'Susun Menu', icon: 'bi-list-nested' },
       { key: 'role_permissions', label: 'Daftar Role', icon: 'bi-shield-check' },
       { key: 'atur_halaman', label: 'Mode Maintenance', icon: 'bi-cone-striped' },
@@ -175,4 +175,3 @@ export default function UserSettingsPage({ initialTab, user }: { initialTab?: st
     </>
   )
 }
-

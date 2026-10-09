@@ -2103,8 +2103,8 @@ export default function UserDataTab({ user }: { user?: User }) {
 
         /* ===== MOBILE RESPONSIVE ===== */
         @media (max-width: 768px) {
-          .udt-stats { grid-template-columns: 1fr 1fr; }
-          .udt-stats .udt-stat:last-child { grid-column: span 2; }
+          .udt-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+          .udt-stat { min-width: 0; padding: 12px; gap: 8px; }
           
           .udt-toolbar {
             display: flex;
@@ -2161,8 +2161,18 @@ export default function UserDataTab({ user }: { user?: User }) {
         }
         @media (max-width: 480px) {
           .udt-root { gap: 12px; }
-          .udt-stats { grid-template-columns: 1fr; }
-          .udt-stats .udt-stat:last-child { grid-column: span 1; }
+          .udt-stat {
+            flex-direction: column;
+            justify-content: center;
+            gap: 6px;
+            padding: 10px 4px;
+            border-radius: 14px;
+            text-align: center;
+          }
+          .udt-stat__icon { width: 34px; height: 34px; border-radius: 10px; font-size: 0.95rem; }
+          .udt-stat__body { min-width: 0; }
+          .udt-stat__value { font-size: 1rem; }
+          .udt-stat__label { font-size: 0.58rem; letter-spacing: 0.02em; white-space: nowrap; }
           .udt-card-grid { grid-template-columns: 1fr; }
           .udt-card { padding: 12px; }
           .udt-group__badge { font-size: 0.72rem; }

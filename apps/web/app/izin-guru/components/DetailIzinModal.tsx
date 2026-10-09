@@ -94,12 +94,12 @@ export default function DetailIzinModal({
                 <tr>
                   <td className="ig-dt-label">Nama Guru</td>
                   <td className="ig-dt-colon">:</td>
-                  <td className="ig-dt-value" style={{ fontWeight: 600 }}>{row.nama_guru}</td>
+                  <td className="ig-dt-value font-semibold">{row.nama_guru}</td>
                 </tr>
                 <tr>
                   <td className="ig-dt-label">NIP</td>
                   <td className="ig-dt-colon">:</td>
-                  <td className="ig-dt-value" style={{ fontFamily: 'monospace' }}>{row.nip}</td>
+                  <td className="ig-dt-value font-mono">{row.nip || '—'}</td>
                 </tr>
                 <tr>
                   <td className="ig-dt-label">Jenis Pengajuan</td>
@@ -126,7 +126,7 @@ export default function DetailIzinModal({
                   <tr>
                     <td className="ig-dt-label">No. Surat Tugas</td>
                     <td className="ig-dt-colon">:</td>
-                    <td className="ig-dt-value">{row.nomor_surat}</td>
+                    <td className="ig-dt-value font-mono">{row.nomor_surat}</td>
                   </tr>
                 )}
                 <tr>
@@ -151,14 +151,17 @@ export default function DetailIzinModal({
                     <td className="ig-dt-label">Diverifikasi Oleh</td>
                     <td className="ig-dt-colon">:</td>
                     <td className="ig-dt-value">
-                      {row.approved_by_nama || '—'} <span style={{ color: 'var(--ig-text-muted)', fontSize: '0.8rem' }}>({formatDateTime(row.approved_at)})</span>
+                      <div className="flex flex-col">
+                        <span className="font-semibold text-[var(--ig-text-primary)]">{row.approved_by_nama || '—'}</span>
+                        <span className="text-xs text-[var(--ig-text-muted)] font-mono">({formatDateTime(row.approved_at)})</span>
+                      </div>
                     </td>
                   </tr>
                 )}
                 <tr>
                   <td className="ig-dt-label">Waktu Diajukan</td>
                   <td className="ig-dt-colon">:</td>
-                  <td className="ig-dt-value" style={{ color: 'var(--ig-text-muted)' }}>
+                  <td className="ig-dt-value text-[var(--ig-text-muted)] text-xs">
                     {formatDateTime(row.created_at)}
                   </td>
                 </tr>

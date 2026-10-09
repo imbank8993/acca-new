@@ -341,18 +341,7 @@ function IzinGuruPage() {
 
       </FilterToolbar>
 
-      {/* ── Role info banner ────────────────────────────────────────────── */}
-      {(canApproveIzin || canVerifyDinas || isFullAccess) && viewMode === 'all' && (
-        <div className="ig-info-alert">
-          <i className="bi bi-info-circle-fill" style={{ flexShrink: 0 }} />
-          <span>
-            <strong>Info: </strong>
-            {canApproveIzin && !isFullAccess && 'Anda dapat menyetujui pengajuan Izin & Sakit. '}
-            {canVerifyDinas && !isFullAccess && 'Anda dapat memverifikasi pengajuan Dinas Luar. '}
-            {isFullAccess && 'Anda memiliki akses penuh ke semua pengajuan. '}
-          </span>
-        </div>
-      )}
+
 
       {/* Ajuan tertunda dari periode lain sengaja tetap ditampilkan */}
       {pendingLuarPeriode.length > 0 && (
