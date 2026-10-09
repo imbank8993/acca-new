@@ -1,0 +1,546 @@
+/* ============================================================
+   PERMINTAAN SURAT — Design System
+   Mengikuti pola ig- (izin guru) dengan prefix ps-
+   Serta alias ig- agar tampilan konsisten 100%
+============================================================ */
+
+:root {
+  --ps-accent: #3083FF;
+  --ps-radius: 20px;
+  --ps-radius-sm: 14px;
+  --ps-radius-xs: 10px;
+
+  /* Status Colors */
+  --ps-pending-bg: linear-gradient(135deg, #78350f 0%, #d97706 100%);
+  --ps-approve-bg: linear-gradient(135deg, #1a73e8 0%, #3b82f6 100%);
+  --ps-tolak-bg: linear-gradient(135deg, #7f1d1d 0%, #dc2626 100%);
+  --ps-draft-bg: linear-gradient(135deg, #334155 0%, #64748b 100%);
+
+  /* Glass */
+  --ps-glass-bg: rgba(255, 255, 255, 0.72);
+  --ps-glass-border: rgba(255, 255, 255, 0.5);
+  --ps-glass-shadow: 0 8px 32px rgba(0, 0, 0, .08), 0 2px 8px rgba(0, 0, 0, .04);
+
+  /* Text */
+  --ps-text-primary: #0f172a;
+  --ps-text-secondary: #64748b;
+  --ps-text-muted: #94a3b8;
+
+  /* Table */
+  --ps-tb-th: #f8fafc;
+  --ps-tb-border: #e2e8f0;
+  --ps-tb-hover: #f1f5f9;
+  --ps-tb-stripe: #fafbfc;
+
+  /* Modal Gradients */
+  --ps-modal-add: linear-gradient(135deg, #3083FF 0%, #1a73e8 100%);
+  --ps-modal-approve: linear-gradient(135deg, #1a73e8 0%, #174ea6 100%);
+  --ps-modal-tolak: linear-gradient(135deg, #DC2626 0%, #B91C1C 100%);
+}
+
+.dark {
+  --ps-glass-bg: #0b1329;
+  --ps-glass-border: rgba(26, 115, 232, 0.35);
+  --ps-glass-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+  --ps-text-primary: #f1f5f9;
+  --ps-text-secondary: #94a3b8;
+  --ps-text-muted: #64748b;
+  --ps-tb-th: rgba(37, 99, 235, 0.15);
+  --ps-tb-border: rgba(26, 115, 232, 0.35);
+  --ps-tb-hover: rgba(26, 115, 232, 0.08);
+  --ps-tb-stripe: #0b1329;
+}
+
+/* Container */
+.ps-wrap {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding-bottom: 40px;
+}
+
+/* Card & Table */
+.ps-card {
+  background: var(--ps-glass-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--ps-tb-border);
+  border-radius: var(--ps-radius);
+  box-shadow: var(--ps-glass-shadow);
+  overflow: hidden;
+  transition: all 0.2s ease;
+}
+
+.ps-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  border-radius: var(--ps-radius);
+}
+
+.ps-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+  text-align: left;
+}
+
+.ps-table th {
+  background: var(--ps-tb-th);
+  color: var(--ps-text-secondary);
+  font-weight: 600;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--ps-tb-border);
+  white-space: nowrap;
+}
+
+.ps-table td {
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--ps-tb-border);
+  color: var(--ps-text-primary);
+  vertical-align: middle;
+}
+
+.ps-table tbody tr:hover {
+  background-color: var(--ps-tb-hover);
+}
+
+.ps-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* Empty State */
+.ps-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  color: var(--ps-text-muted);
+  text-align: center;
+}
+
+.ps-empty i {
+  font-size: 3rem;
+  margin-bottom: 12px;
+  opacity: 0.6;
+}
+
+.ps-empty p {
+  font-size: 0.95rem;
+  font-weight: 500;
+  margin: 0;
+}
+
+/* Alert Notification */
+.ps-info-alert {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 18px;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 12px;
+  color: #1e40af;
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+.dark .ps-info-alert {
+  background: rgba(26, 115, 232, 0.08) !important;
+  border: 1px solid rgba(59, 130, 246, 0.35) !important;
+  color: #93c5fd !important;
+}
+
+/* Badges */
+.ps-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 20px;
+  white-space: nowrap;
+  line-height: 1.2;
+}
+
+.ps-badge--pending {
+  background: #fef3c7;
+  color: #b45309;
+  border: 1px solid #fde68a;
+}
+
+.dark .ps-badge--pending {
+  background: rgba(217, 119, 6, 0.2) !important;
+  border: 1.5px solid rgba(217, 119, 6, 0.45) !important;
+  color: #fbbf24 !important;
+}
+
+.ps-badge--disetujui {
+  background: #e0f2fe;
+  color: #0284c7;
+  border: 1px solid #bae6fd;
+}
+
+.dark .ps-badge--disetujui {
+  background: rgba(14, 165, 233, 0.18) !important;
+  border: 1.5px solid rgba(56, 189, 248, 0.5) !important;
+  color: #38bdf8 !important;
+}
+
+.ps-badge--ditolak {
+  background: #fee2e2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+}
+
+.dark .ps-badge--ditolak {
+  background: rgba(220, 38, 38, 0.2) !important;
+  border: 1.5px solid rgba(220, 38, 38, 0.45) !important;
+  color: #f87171 !important;
+}
+
+.ps-badge--draft {
+  background: #f1f5f9;
+  color: #64748b;
+  border: 1px solid #e2e8f0;
+}
+
+.dark .ps-badge--draft {
+  background: rgba(100, 116, 139, 0.2) !important;
+  border: 1.5px solid rgba(100, 116, 139, 0.4) !important;
+  color: #94a3b8 !important;
+}
+
+/* Jenis Badges */
+.ps-jenis-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 4px 10px;
+  border-radius: 8px;
+  white-space: nowrap;
+}
+
+.ps-jenis-badge--keterangan {
+  background: #eff6ff;
+  color: #2563eb;
+  border: 1px solid #dbeafe;
+}
+
+.dark .ps-jenis-badge--keterangan {
+  background: rgba(37, 99, 235, 0.2) !important;
+  border: 1px solid rgba(59, 130, 246, 0.4) !important;
+  color: #60a5fa !important;
+}
+
+.ps-jenis-badge--tugas {
+  background: #eef2ff;
+  color: #4f46e5;
+  border: 1px solid #e0e7ff;
+}
+
+.dark .ps-jenis-badge--tugas {
+  background: rgba(79, 70, 229, 0.2) !important;
+  border: 1px solid rgba(129, 140, 248, 0.4) !important;
+  color: #818cf8 !important;
+}
+
+.ps-jenis-badge--nota {
+  background: #f0fdf4;
+  color: #16a34a;
+  border: 1px solid #dcfce7;
+}
+
+.dark .ps-jenis-badge--nota {
+  background: rgba(22, 163, 74, 0.2) !important;
+  border: 1px solid rgba(34, 197, 94, 0.4) !important;
+  color: #4ade80 !important;
+}
+
+.ps-jenis-badge--rekomendasi {
+  background: #faf5ff;
+  color: #9333ea;
+  border: 1px solid #f3e8ff;
+}
+
+.dark .ps-jenis-badge--rekomendasi {
+  background: rgba(147, 51, 234, 0.2) !important;
+  border: 1px solid rgba(168, 85, 247, 0.4) !important;
+  color: #c084fc !important;
+}
+
+.ps-jenis-badge--pengantar {
+  background: #ecfeff;
+  color: #0891b2;
+  border: 1px solid #cffafe;
+}
+
+.dark .ps-jenis-badge--pengantar {
+  background: rgba(8, 145, 178, 0.2) !important;
+  border: 1px solid rgba(6, 182, 212, 0.4) !important;
+  color: #22d3ee !important;
+}
+
+.ps-jenis-badge--default {
+  background: #f8fafc;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+}
+
+.dark .ps-jenis-badge--default {
+  background: rgba(100, 116, 139, 0.2) !important;
+  border: 1px solid rgba(100, 116, 139, 0.4) !important;
+  color: #cbd5e1 !important;
+}
+
+/* Info Box / Detail Modal */
+.ps-info-box {
+  background: #f8fafc;
+  border: 1px solid var(--ps-tb-border);
+  border-radius: var(--ps-radius-sm);
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.dark .ps-info-box {
+  background: #0f172a;
+  border-color: rgba(26, 115, 232, 0.35);
+}
+
+.ps-info-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.ps-info-table tr td {
+  padding: 8px 6px;
+  vertical-align: top;
+  font-size: 0.88rem;
+  border: none;
+}
+
+.ps-dt-label {
+  width: 150px;
+  color: var(--ps-text-secondary);
+  font-weight: 500;
+}
+
+.ps-dt-colon {
+  width: 16px;
+  text-align: center;
+  color: var(--ps-text-muted);
+}
+
+.ps-dt-value {
+  color: var(--ps-text-primary);
+  word-break: break-word;
+}
+
+/* Form Styles */
+.ps-form-group {
+  margin-bottom: 16px;
+}
+
+.ps-form-label {
+  display: block;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--ps-text-secondary);
+  margin-bottom: 6px;
+}
+
+.ps-form-input,
+.ps-form-select,
+.ps-form-textarea {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid var(--ps-tb-border);
+  border-radius: var(--ps-radius-xs);
+  background: #fff;
+  color: var(--ps-text-primary);
+  font-size: 0.88rem;
+  font-family: inherit;
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+}
+
+.dark .ps-form-input,
+.dark .ps-form-select,
+.dark .ps-form-textarea {
+  background: #0b1329 !important;
+  border-color: rgba(26, 115, 232, 0.35) !important;
+  color: #f1f5f9 !important;
+}
+
+.ps-form-input:focus,
+.ps-form-select:focus,
+.ps-form-textarea:focus {
+  outline: none;
+  border-color: var(--ps-accent);
+  box-shadow: 0 0 0 3px rgba(48, 131, 255, 0.15);
+}
+
+.ps-form-textarea {
+  min-height: 90px;
+  resize: vertical;
+}
+
+/* File Upload Zone */
+.ps-file-upload {
+  border: 2px dashed #cbd5e1;
+  border-radius: var(--ps-radius-sm);
+  padding: 20px;
+  text-align: center;
+  background: #f8fafc;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.dark .ps-file-upload {
+  border-color: rgba(59, 130, 246, 0.3);
+  background: rgba(15, 23, 42, 0.6);
+}
+
+.ps-file-upload:hover {
+  border-color: var(--ps-accent);
+  background: #f0f7ff;
+}
+
+.dark .ps-file-upload:hover {
+  background: rgba(37, 99, 235, 0.1);
+}
+
+.ps-file-preview {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: #f1f5f9;
+  border-radius: var(--ps-radius-xs);
+  border: 1px solid var(--ps-tb-border);
+  margin-top: 8px;
+}
+
+.dark .ps-file-preview {
+  background: #0f172a;
+  border-color: rgba(26, 115, 232, 0.35);
+}
+
+.ps-btn-icon--approve {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: rgba(14, 165, 233, 0.12);
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  color: #0284c7;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.ps-btn-icon--approve:hover {
+  background: #0284c7;
+  color: #fff;
+}
+
+.dark .ps-btn-icon--approve {
+  background: rgba(14, 165, 233, 0.15) !important;
+  border: 1px solid rgba(56, 189, 248, 0.4) !important;
+  color: #38bdf8 !important;
+}
+
+.dark .ps-btn-icon--approve:hover {
+  background: #0284c7 !important;
+  color: #fff !important;
+}
+
+/* Status Diproses (Menunggu Operator TU) */
+.ps-badge--diproses {
+  background: #f3e8ff;
+  color: #7e22ce;
+  border: 1px solid #e9d5ff;
+}
+
+.dark .ps-badge--diproses {
+  background: rgba(126, 34, 206, 0.2) !important;
+  border: 1.5px solid rgba(168, 85, 247, 0.45) !important;
+  color: #c084fc !important;
+}
+
+/* Timeline Stepper */
+.ps-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  position: relative;
+  margin: 14px 0;
+  padding-left: 28px;
+}
+
+.ps-timeline::before {
+  content: '';
+  position: absolute;
+  top: 10px;
+  bottom: 10px;
+  left: 11px;
+  width: 2px;
+  background: var(--ps-tb-border);
+}
+
+.ps-timeline-step {
+  position: relative;
+}
+
+.ps-timeline-dot {
+  position: absolute;
+  left: -28px;
+  top: 4px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #fff;
+  border: 2px solid var(--ps-tb-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.72rem;
+  z-index: 1;
+  color: var(--ps-text-muted);
+}
+
+.ps-timeline-step.completed .ps-timeline-dot {
+  border-color: #0284c7;
+  background: #0284c7;
+  color: #fff;
+}
+
+.ps-timeline-step.active .ps-timeline-dot {
+  border-color: #f59e0b;
+  background: #f59e0b;
+  color: #fff;
+}
+
+.ps-timeline-step.rejected .ps-timeline-dot {
+  border-color: #ef4444;
+  background: #ef4444;
+  color: #fff;
+}
+
+.ps-timeline-content {
+  background: #f8fafc;
+  border: 1px solid var(--ps-tb-border);
+  border-radius: var(--ps-radius-xs);
+  padding: 10px 14px;
+}
+
+.dark .ps-timeline-content {
+  background: #0f172a;
+  border-color: rgba(26, 115, 232, 0.35);
+}
+

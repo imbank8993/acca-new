@@ -539,24 +539,260 @@ export class SuratService {
     return { ok: true, data };
   }
 
-  // ── Permintaan Surat ────────────────────────────────────────
+  // ── Permintaan Surat & Alur Approval ────────────────────────
 
-  async getPermintaanList(query: any) {
-    const { status, jenis, q } = query || {};
+  async getPengaturanAlurSurat() {
+    const setting = await this.prisma.site_settings.findUnique({
+      where: { key: 'config_alur_permintaan_surat' },
+    });
+    if (setting && setting.value) {
+      try {
+        const parsed = JSON.parse(setting.value);
+        if (Array.isArray(parsed) && parsed.length > 0) return { ok: true, data: parsed };
+      } catch (e) {
+        // Fallback default
+      }
+    }
+    return {
+      ok: true,
+      data: [
+        {
+          id: 'transkrip_nilai',
+          nama: 'Transkrip Nilai',
+          deskripsi: 'Permohonan transkrip nilai akademik siswa',
+          perlu_approval: true,
+          approver_type: 'ROLE',
+          approver_role: 'WKM_AKADEMIK',
+          approver_user_nip: null,
+          approver_user_nama: null,
+          is_active: true,
+        },
+        {
+          id: 'surat_tugas',
+          nama: 'Surat Tugas',
+          deskripsi: 'Surat penugasan kegiatan, lomba, atau pelatihan',
+          perlu_approval: true,
+          approver_type: 'ROLE',
+          approver_role: 'WKM_KESISWAAN',
+          approver_user_nip: null,
+          approver_user_nama: null,
+          is_active: true,
+        },
+        {
+          id: 'surat_rekomendasi',
+          nama: 'Surat Rekomendasi',
+          deskripsi: 'Surat rekomendasi beasiswa, studi lanjut, atau lomba',
+          perlu_approval: true,
+          approver_type: 'ROLE',
+          approver_role: 'KAMAD',
+          approver_user_nip: null,
+          approver_user_nama: null,
+          is_active: true,
+        },
+        {
+          id: 'surat_keterangan',
+          nama: 'Surat Keterangan',
+          deskripsi: 'Surat keterangan aktif mengajar atau aktif belajar',
+          perlu_approval: false,
+          approver_type: 'NONE',
+          approver_role: null,
+          approver_user_nip: null,
+          approver_user_nama: null,
+          is_active: true,
+        },
+        {
+          id: 'nota_dinas',
+          nama: 'Nota Dinas',
+          deskripsi: 'Nota dinas komunikasi kedinasan internal',
+          perlu_approval: false,
+          approver_type: 'NONE',
+          approver_role: null,
+          approver_user_nip: null,
+          approver_user_nama: null,
+          is_active: true,
+        },
+        {
+          id: 'surat_pengantar',
+          nama: 'Surat Pengantar',
+          deskripsi: 'Surat pengantar berkas atau dokumen',
+          perlu_approval: false,
+          approver_type: 'NONE',
+          approver_role: null,
+          approver_user_nip: null,
+          approver_user_nama: null,
+          is_active: true,
+        },
+        {
+          id: 'surat_izin',
+          nama: 'Surat Izin',
+          deskripsi: 'Permohonan izin kegiatan kedinasan',
+          perlu_approval: false,
+          approver_type: 'NONE',
+          approver_role: null,
+          approver_user_nip: null,
+          approver_user_nama: null,
+          is_active: true,
+        },
+        {
+          id: 'undangan',
+          nama: 'Undangan',
+          deskripsi: 'Surat undangan pertemuan atau rapat',
+          perlu_approval: false,
+          approver_type: 'NONE',
+          approver_role: null,
+          approver_user_nip: null,
+          approver_user_nama: null,
+          is_active: true,
+        },
+      ],
+    };
+  }
+
+  async savePengaturanAlurSurat(body: any, user: any) {
+    const userRoles: string[] = user
+      ? Array.isArray(user.roles)
+        ? user.roles
+        : String(user.role || '')
+            .split(/[,|]/)
+            .map((r: string) => r.trim().toUpperCase())
+      : [];
+    const isAdminOrLayanan =
+      userRoles.includes('ADMIN') ||
+      userRoles.includes('ADMINISTRATOR') ||
+      userRoles.includes('OP_LAYANAN') ||
+      userRoles.includes('KAMAD');
+    if (!isAdminOrLayanan) {
+      throw new ForbiddenException(
+        'Hanya Admin atau Operator Layanan yang dapat mengubah konfigurasi alur jenis surat',
+      );
+    }
+
+    const dataToSave = Array.isArray(body) ? body : body.data;
+    if (!Array.isArray(dataToSave)) {
+      throw new BadRequestException('Data konfigurasi harus berupa array jenis surat');
+    }
+
+    const valueStr = JSON.stringify(dataToSave);
+    await this.prisma.site_settings.upsert({
+      where: { key: 'config_alur_permintaan_surat' },
+      update: {
+        value: valueStr,
+        updated_at: new Date(),
+      },
+      create: {
+        key: 'config_alur_permintaan_surat',
+        label: 'Konfigurasi Alur Permintaan Surat',
+        description: 'Daftar jenis surat dan pihak berwenang yang menyetujui',
+        value: valueStr,
+        is_active: true,
+      },
+    });
+
+    return { ok: true, data: dataToSave };
+  }
+
+  async getPermintaanList(query: any, user?: any) {
+    const userRoles: string[] = user
+      ? Array.isArray(user.roles)
+        ? user.roles
+        : String(user.role || '')
+            .split(/[,|]/)
+            .map((r: string) => r.trim().toUpperCase())
+      : [];
+    const isAdminOrLayanan =
+      userRoles.includes('ADMIN') ||
+      userRoles.includes('ADMINISTRATOR') ||
+      userRoles.includes('OP_LAYANAN') ||
+      userRoles.includes('KAMAD');
+    const kelola = isAdminOrLayanan;
+
+    const canApproveOperator = isAdminOrLayanan;
+    const canApprovePihakBerwenang = userRoles.some((r) =>
+      ['WKM_AKADEMIK', 'WKM_KESISWAAN', 'WKM_SARPRAS', 'WKM_HUMAS', 'KAMAD', 'WALI_KELAS', 'BK'].includes(r),
+    );
+
+    const { status, jenis, q, bulan, tahun, view_mode } = query || {};
     const where: any = {};
-    if (status) where.status = status;
-    if (jenis) where.jenis_surat = jenis;
-    if (q) {
+
+    if (view_mode === 'personal' || (!kelola && !canApprovePihakBerwenang && user)) {
       where.OR = [
-        { judul: { contains: q, mode: 'insensitive' } },
-        { pemohon_nama: { contains: q, mode: 'insensitive' } },
+        { pemohon_nip: user.nip || '__NO_NIP__' },
+        { created_by: user.auth_id || String(user.id) },
+      ];
+    } else if (canApprovePihakBerwenang && !kelola && view_mode !== 'all') {
+      // Pihak berwenang melihat pengajuan miliknya ATAU pengajuan yang ditujukan ke rolenya
+      where.OR = [
+        { pemohon_nip: user.nip || '__NO_NIP__' },
+        { created_by: user.auth_id || String(user.id) },
       ];
     }
+
+    if (status) {
+      const s = String(status).toLowerCase();
+      if (s === 'pending' || s === 'menunggu') {
+        where.status = { in: ['menunggu', 'draft'] };
+      } else {
+        where.status = s;
+      }
+    }
+
+    if (jenis) {
+      where.jenis_surat = { contains: jenis, mode: 'insensitive' };
+    }
+
+    if (q) {
+      const qConditions = [
+        { judul: { contains: q, mode: 'insensitive' } },
+        { pemohon_nama: { contains: q, mode: 'insensitive' } },
+        { pemohon_nip: { contains: q, mode: 'insensitive' } },
+        { keperluan: { contains: q, mode: 'insensitive' } },
+        { nomor_surat: { contains: q, mode: 'insensitive' } },
+      ];
+      if (where.OR) {
+        where.AND = [
+          { OR: where.OR },
+          { OR: qConditions }
+        ];
+        delete where.OR;
+      } else {
+        where.OR = qConditions;
+      }
+    }
+
+    if (tahun) {
+      const yr = parseInt(tahun, 10);
+      if (!isNaN(yr) && yr >= 2000 && yr <= 2100) {
+        if (bulan && !isNaN(parseInt(bulan, 10))) {
+          const mo = parseInt(bulan, 10);
+          const start = new Date(Date.UTC(yr, mo - 1, 1));
+          const end = new Date(Date.UTC(yr, mo, 0, 23, 59, 59, 999));
+          where.created_at = { gte: start, lte: end };
+        } else {
+          const start = new Date(Date.UTC(yr, 0, 1));
+          const end = new Date(Date.UTC(yr, 11, 31, 23, 59, 59, 999));
+          where.created_at = { gte: start, lte: end };
+        }
+      }
+    }
+
     const data = await this.prisma.permintaan_surat.findMany({
       where,
       orderBy: { created_at: 'desc' },
     });
-    return { ok: true, data };
+
+    return {
+      ok: true,
+      data,
+      akses: {
+        kelola,
+        canApprove: isAdminOrLayanan || canApprovePihakBerwenang,
+        canApproveOperator,
+        canApprovePihakBerwenang,
+        canAdd: true,
+        canManageSettings: isAdminOrLayanan,
+        roles: userRoles,
+      },
+    };
   }
 
   async getPermintaanById(id: string) {
@@ -574,23 +810,51 @@ export class SuratService {
       keperluan,
       data_json = {},
       lampiran_json = [],
+      nomor_surat,
     } = body;
-    if (!jenis_surat || !judul || !keperluan) {
+    if (!jenis_surat || !keperluan) {
       throw new BadRequestException(
-        'jenis_surat, judul, dan keperluan wajib diisi',
+        'jenis_surat dan keperluan wajib diisi',
       );
     }
+
+    // Ambil konfigurasi alur jenis surat
+    const configRes = await this.getPengaturanAlurSurat();
+    const configList = configRes.data || [];
+    const matchedConfig = configList.find(
+      (c: any) =>
+        c.nama?.toLowerCase().trim() === jenis_surat?.toLowerCase().trim() ||
+        c.id?.toLowerCase().trim() === jenis_surat?.toLowerCase().trim(),
+    );
+
+    const perluApproval = Boolean(matchedConfig?.perlu_approval);
+    const alurMetadata = {
+      perlu_approval: perluApproval,
+      approver_type: matchedConfig?.approver_type || 'NONE',
+      approver_role: matchedConfig?.approver_role || null,
+      approver_user_nip: matchedConfig?.approver_user_nip || null,
+      approver_user_nama: matchedConfig?.approver_user_nama || null,
+      step_current: perluApproval ? 'APPROVAL_PIHAK_BERWENANG' : 'OPERATOR',
+    };
+
+    const finalDataJson = {
+      ...(typeof data_json === 'object' && data_json ? data_json : {}),
+      alur: alurMetadata,
+    };
+
+    const finalJudul = judul?.trim() || `Permintaan ${jenis_surat}`;
     const data = await this.prisma.permintaan_surat.create({
       data: {
         jenis_surat,
-        judul,
+        judul: finalJudul,
         keperluan,
+        nomor_surat: nomor_surat || null,
         pemohon_nip: user.nip || '',
         pemohon_nama: user.nama || user.nama_lengkap || '',
         pemohon_role: user.roles?.[0] || user.role || 'GURU',
-        data_json,
-        lampiran_json,
-        status: 'MENUNGGU',
+        data_json: finalDataJson,
+        lampiran_json: Array.isArray(lampiran_json) ? lampiran_json : (lampiran_json ? [lampiran_json] : []),
+        status: 'menunggu',
         created_by: user.auth_id || String(user.id),
       },
     });
@@ -612,14 +876,23 @@ export class SuratService {
     const isAdminOrLayanan =
       userRoles.includes('ADMIN') ||
       userRoles.includes('ADMINISTRATOR') ||
-      userRoles.includes('OP_LAYANAN');
+      userRoles.includes('OP_LAYANAN') ||
+      userRoles.includes('KAMAD');
     const isOwner =
       existing.created_by === (user.auth_id || String(user.id)) ||
-      existing.pemohon_nip === user.nip;
+      (existing.pemohon_nip && existing.pemohon_nip === user.nip);
 
-    if (!isAdminOrLayanan && !isOwner) {
+    const alur = (existing.data_json as any)?.alur || {};
+    const stepCurrent = alur.step_current || 'OPERATOR';
+    const isAuthorizedPihakBerwenang =
+      stepCurrent === 'APPROVAL_PIHAK_BERWENANG' &&
+      (isAdminOrLayanan ||
+        (alur.approver_role && userRoles.includes(alur.approver_role)) ||
+        (alur.approver_user_nip && user.nip === alur.approver_user_nip));
+
+    if (!isAdminOrLayanan && !isOwner && !isAuthorizedPihakBerwenang) {
       throw new ForbiddenException(
-        'Anda tidak memiliki akses untuk mengubah permohonan ini',
+        'Anda tidak memiliki akses untuk mengubah atau memproses permohonan ini',
       );
     }
 
@@ -628,14 +901,93 @@ export class SuratService {
       updated_by: user.auth_id || String(user.id),
     };
 
+    if (body.action !== undefined) {
+      const dataJson = typeof existing.data_json === 'object' && existing.data_json ? { ...(existing.data_json as any) } : {};
+
+      if (stepCurrent === 'APPROVAL_PIHAK_BERWENANG') {
+        // ── Tahap 1: Verifikasi Pihak Berwenang (WKM/Kepala) ──────
+        if (!isAuthorizedPihakBerwenang) {
+          throw new ForbiddenException(
+            `Hanya ${alur.approver_role || 'pihak berwenang yang ditunjuk'} yang dapat menyetujui tahap ini`,
+          );
+        }
+
+        if (body.action === 'approve') {
+          updateData.status = 'diproses';
+          dataJson.alur = { ...(dataJson.alur || {}), step_current: 'OPERATOR' };
+          dataJson.tahap_pihak_berwenang = {
+            status: 'disetujui',
+            by_nip: user.nip || '',
+            by_nama: user.nama || user.nama_lengkap || 'Pihak Berwenang',
+            by_role: alur.approver_role || userRoles[0] || 'VERIFIKATOR',
+            at: new Date(),
+            catatan: body.catatan || null,
+          };
+          updateData.data_json = dataJson;
+        } else if (body.action === 'tolak') {
+          updateData.status = 'ditolak';
+          dataJson.tahap_pihak_berwenang = {
+            status: 'ditolak',
+            by_nip: user.nip || '',
+            by_nama: user.nama || user.nama_lengkap || 'Pihak Berwenang',
+            by_role: alur.approver_role || userRoles[0] || 'VERIFIKATOR',
+            at: new Date(),
+            catatan: body.catatan_penolakan || body.catatan || null,
+          };
+          updateData.data_json = dataJson;
+          updateData.approved_catatan = body.catatan_penolakan || body.catatan || null;
+          updateData.status_catatan = body.catatan_penolakan || body.catatan || null;
+        }
+      } else {
+        // ── Tahap 2: Finalisasi Operator TU ───────────────────────
+        if (!isAdminOrLayanan) {
+          throw new ForbiddenException(
+            'Hanya Admin atau Operator Layanan yang dapat memproses dan menerbitkan surat pada tahap ini',
+          );
+        }
+
+        if (body.action === 'approve') {
+          updateData.status = 'disetujui';
+          updateData.approved_by = user.nama || user.nama_lengkap || user.nip;
+          updateData.approved_at = new Date();
+          if (body.nomor_surat) updateData.nomor_surat = body.nomor_surat;
+          if (body.catatan) updateData.approved_catatan = body.catatan;
+          dataJson.tahap_operator = {
+            status: 'disetujui',
+            by_nip: user.nip || '',
+            by_nama: user.nama || user.nama_lengkap || 'Operator Layanan',
+            nomor_surat: body.nomor_surat || existing.nomor_surat || null,
+            at: new Date(),
+            catatan: body.catatan || null,
+          };
+          updateData.data_json = dataJson;
+        } else if (body.action === 'tolak') {
+          updateData.status = 'ditolak';
+          updateData.approved_by = user.nama || user.nama_lengkap || user.nip;
+          updateData.approved_at = new Date();
+          updateData.approved_catatan = body.catatan_penolakan || body.catatan || body.approved_catatan;
+          updateData.status_catatan = body.catatan_penolakan || body.catatan || body.status_catatan;
+          dataJson.tahap_operator = {
+            status: 'ditolak',
+            by_nip: user.nip || '',
+            by_nama: user.nama || user.nama_lengkap || 'Operator Layanan',
+            at: new Date(),
+            catatan: body.catatan_penolakan || body.catatan || null,
+          };
+          updateData.data_json = dataJson;
+        }
+      }
+    }
+
     if (body.status !== undefined) {
       if (!isAdminOrLayanan) {
         throw new ForbiddenException(
-          'Hanya admin atau operator layanan yang dapat mengubah status',
+          'Hanya admin atau operator layanan yang dapat mengubah status secara manual',
         );
       }
-      updateData.status = body.status;
-      if (body.status === 'DISETUJUI' || body.status === 'DITOLAK') {
+      const s = String(body.status).toLowerCase();
+      updateData.status = s;
+      if (s === 'disetujui' || s === 'ditolak') {
         updateData.approved_by = user.nama || user.nama_lengkap || user.nip;
         updateData.approved_at = new Date();
       }
@@ -644,8 +996,13 @@ export class SuratService {
       updateData.status_catatan = body.status_catatan;
     if (body.approved_catatan !== undefined)
       updateData.approved_catatan = body.approved_catatan;
+    if (body.catatan_penolakan !== undefined) {
+      updateData.approved_catatan = body.catatan_penolakan;
+      updateData.status_catatan = body.catatan_penolakan;
+    }
     if (body.nomor_surat !== undefined)
       updateData.nomor_surat = body.nomor_surat;
+    if (body.jenis_surat !== undefined) updateData.jenis_surat = body.jenis_surat;
     if (body.judul !== undefined) updateData.judul = body.judul;
     if (body.keperluan !== undefined) updateData.keperluan = body.keperluan;
     if (body.data_json !== undefined) updateData.data_json = body.data_json;

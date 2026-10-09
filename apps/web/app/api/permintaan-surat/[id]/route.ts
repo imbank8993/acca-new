@@ -43,6 +43,25 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     }
 }
 
+export async function PATCH(request: NextRequest, { params }: RouteParams) {
+    const { id } = await params;
+    const token = extractRequestToken(request);
+    if (!token) {
+        return corsResponse(NextResponse.json({ ok: false, error: 'Unauthorized' }, { status: 401 }));
+    }
+
+    try {
+        const json = await request.json();
+        const { status, body } = await nestFetchAsUser(`/surat/permintaan/${id}`, token, {
+            method: 'PATCH',
+            body: JSON.stringify(json),
+        });
+        return corsResponse(NextResponse.json(body, { status }));
+    } catch (error: any) {
+        return corsResponse(NextResponse.json({ ok: false, error: error.message }, { status: 500 }));
+    }
+}
+
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
     const { id } = await params;
     const token = extractRequestToken(request);

@@ -34,6 +34,7 @@ const PembayaranPage = lazy(() => import('@/app/pembayaran/view'))
 const IzinGuruPage = lazy(() => import('@/app/izin-guru/view'))
 const SuratPage = lazy(() => import('@/app/surat/view'))
 const DaftarSuratPage = lazy(() => import('@/app/surat/daftar/view'))
+const PermintaanSuratPage = lazy(() => import('@/app/permintaan-surat/view'))
 const ProfilePage = lazy(() => import('@/app/profile/view'))
 const PiketPage = lazy(() => import('@/app/piket/view'))
 const JadwalPage = lazy(() => import('@/app/jadwal/view'))
@@ -78,7 +79,7 @@ const AuditLogPage = lazy(() => import('@/app/audit-log/view'))
  * (route khususnya sendiri) dan di API NestJS.
  */
 export const SPECIAL_PAGES = [
-    'jurnal-banding', 'surat', 'surat-daftar',
+    'jurnal-banding', 'surat', 'surat-daftar', 'permintaan-surat',
     'profile', 'ProfileSaya', 'dashboard', 'jadwal',
     'sanggar-kurikulum', 'form/builder', 'form/responses', 'informasi/kelola',
     'audit-log',
@@ -127,11 +128,14 @@ export const PAGE_COMPONENTS: Record<string, (user: User, onRefreshUser: () => P
     'izin-guru': (user) => <IzinGuruPage />,
     'surat': (user) => <SuratPage />,
     'surat-daftar': (user) => <DaftarSuratPage />,
+    'permintaan-surat': (user) => <PermintaanSuratPage user={user} />,
     'sanggar-kurikulum': (user) => <SanggarKurikulumPage user={user} />,
 
     // ALIASES (BACKWARD COMPATIBILITY)
     'IzinGuru': (user) => <IzinGuruPage />,
     'Izin Guru': (user) => <IzinGuruPage />,
+    'PermintaanSurat': (user) => <PermintaanSuratPage user={user} />,
+    'Permintaan Surat': (user) => <PermintaanSuratPage user={user} />,
     'Dashboard': (user) => <DashboardContent user={user} />,
     'Absensi': (user) => <AbsensiPage />,
     'Ketidakhadiran': (user) => <KetidakhadiranPage />,

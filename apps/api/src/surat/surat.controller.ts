@@ -3,6 +3,7 @@ import {
   Get,
   Post,
   Put,
+  Patch,
   Delete,
   Param,
   Body,
@@ -52,10 +53,12 @@ export class SuratController {
     const access = await this.accessService.resolveUserAccess(req.user);
     const isAdmin = access.roles.some(
       (r: string) =>
-        r.toUpperCase() === 'ADMIN' || r.toUpperCase() === 'ADMINISTRATOR',
+        r.toUpperCase() === 'ADMIN' ||
+        r.toUpperCase() === 'ADMINISTRATOR' ||
+        r.toUpperCase() === 'OP_LAYANAN',
     );
     if (!isAdmin) {
-      throw new ForbiddenException('Hanya admin yang bisa upload template');
+      throw new ForbiddenException('Hanya admin atau operator layanan yang bisa upload template');
     }
 
     const { jenis_surat, template_html, nama_template } = body;
@@ -82,10 +85,12 @@ export class SuratController {
     const access = await this.accessService.resolveUserAccess(req.user);
     const isAdmin = access.roles.some(
       (r: string) =>
-        r.toUpperCase() === 'ADMIN' || r.toUpperCase() === 'ADMINISTRATOR',
+        r.toUpperCase() === 'ADMIN' ||
+        r.toUpperCase() === 'ADMINISTRATOR' ||
+        r.toUpperCase() === 'OP_LAYANAN',
     );
     if (!isAdmin) {
-      throw new ForbiddenException('Unauthorized');
+      throw new ForbiddenException('Hanya admin atau operator layanan yang bisa mengubah template');
     }
 
     const updateData: any = {};
@@ -237,8 +242,24 @@ export class SuratRecordController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Daftar permohonan surat' })
-  async getPermintaanList(@Query() query: any) {
-    return this.suratService.getPermintaanList(query);
+  async getPermintaanList(@Query() query: any, @Request() req: any) {
+    return this.suratService.getPermintaanList(query, req.user);
+  }
+
+  @Get('permintaan/pengaturan')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Ambil konfigurasi jenis surat & alur approval' })
+  async getPengaturanSurat() {
+    return this.suratService.getPengaturanAlurSurat();
+  }
+
+  @Put('permintaan/pengaturan')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Simpan konfigurasi jenis surat & alur approval' })
+  async savePengaturanSurat(@Body() body: any, @Request() req: any) {
+    return this.suratService.savePengaturanAlurSurat(body, req.user);
   }
 
   @Get('permintaan/:id')
@@ -262,6 +283,18 @@ export class SuratRecordController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Ubah / tinjau permohonan surat' })
   async updatePermintaan(
+    @Param('id') id: string,
+    @Body() body: any,
+    @Request() req: any,
+  ) {
+    return this.suratService.updatePermintaan(id, body, req.user);
+  }
+
+  @Patch('permintaan/:id')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Verifikasi / setujui / tolak permohonan surat' })
+  async patchPermintaan(
     @Param('id') id: string,
     @Body() body: any,
     @Request() req: any,
@@ -295,11 +328,13 @@ export class SuratRecordController {
     const access = await this.accessService.resolveUserAccess(req.user);
     const isAdmin = access.roles.some(
       (r: string) =>
-        r.toUpperCase() === 'ADMIN' || r.toUpperCase() === 'ADMINISTRATOR',
+        r.toUpperCase() === 'ADMIN' ||
+        r.toUpperCase() === 'ADMINISTRATOR' ||
+        r.toUpperCase() === 'OP_LAYANAN',
     );
     if (!isAdmin) {
       throw new ForbiddenException(
-        'Hanya admin yang dapat menyimpan konfigurasi surat',
+        'Hanya admin atau operator layanan yang dapat menyimpan konfigurasi surat',
       );
     }
     return this.suratService.saveConfigSurat(body);
@@ -313,11 +348,13 @@ export class SuratRecordController {
     const access = await this.accessService.resolveUserAccess(req.user);
     const isAdmin = access.roles.some(
       (r: string) =>
-        r.toUpperCase() === 'ADMIN' || r.toUpperCase() === 'ADMINISTRATOR',
+        r.toUpperCase() === 'ADMIN' ||
+        r.toUpperCase() === 'ADMINISTRATOR' ||
+        r.toUpperCase() === 'OP_LAYANAN',
     );
     if (!isAdmin) {
       throw new ForbiddenException(
-        'Hanya admin yang dapat mengubah konfigurasi surat',
+        'Hanya admin atau operator layanan yang dapat mengubah konfigurasi surat',
       );
     }
     return this.suratService.saveConfigSurat(body);
