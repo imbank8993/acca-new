@@ -239,6 +239,7 @@
 .mui-list {
     display: flex;
     flex-direction: column;
+    width: 100%;
     background: var(--n-card);
     border: 1px solid var(--n-border);
     border-radius: var(--mui-radius);

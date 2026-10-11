@@ -26,6 +26,13 @@
     margin-top: 0;
     display: flex;
     flex-direction: column;
+    width: 100%;
+}
+
+.klinik-mobile-view {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
 }
 
 /* Grid View (Mobile / Tablet) */
@@ -969,16 +976,23 @@
     .klinik-desktop-view {
         display: none !important;
     }
-    .klinik-mobile-view,
-    .mobile-only,
+    .klinik-mobile-view {
+        display: flex !important;
+        flex-direction: column !important;
+        width: 100% !important;
+    }
+    .mobile-only {
+        display: block !important;
+    }
     .mui-list {
         display: flex !important;
+        flex-direction: column !important;
+        width: 100% !important;
     }
 }
 @media (min-width: 768.01px) {
     .klinik-mobile-view,
-    .mobile-only,
-    .mui-list {
+    .mobile-only {
         display: none !important;
     }
     .klinik-desktop-view,

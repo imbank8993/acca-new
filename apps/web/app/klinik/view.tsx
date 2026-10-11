@@ -2287,7 +2287,7 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
                       </div>
 
                       {/* LIST VIEW (MOBILE) - APPROVAL */}
-                      <div className="klinik-mobile-view block md:hidden">
+                      <div className="klinik-mobile-view w-full block md:hidden">
                         <MobileList label="Daftar laporan menunggu pengesahan">
                           {sortedSlots.map((slot) => {
                             const laporan = getLaporan(slot);
@@ -2603,7 +2603,7 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
             </div>
 
             {/* LIST VIEW (MOBILE) */}
-            <div className="klinik-mobile-view block md:hidden">
+            <div className="klinik-mobile-view w-full block md:hidden">
               {displayedSlots.length === 0 ? (
                 <MobileEmpty
                   icon="folder2-open"
