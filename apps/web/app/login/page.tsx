@@ -1611,7 +1611,7 @@ function LoginContent() {
         .lp-input-wrap input {
           width: 100%;
           height: 42px;
-          padding: 0 14px 0 42px;
+          padding: 0 14px 0 38px;
           background: #ffffff;
           border: 1.5px solid #94a3b8;
           border-radius: 12px;
@@ -1892,30 +1892,35 @@ function LoginContent() {
         .dark .lp-card-head p { color: #94a3b8; }
         .dark .lp-field label { color: #cbd5e1; }
         .dark .lp-req { color: #f87171; }
-        .dark .lp-input-wrap input {
-          background: #070d1e !important;
-          border-color: rgba(37, 99, 235, 0.35) !important;
+        .dark .lp-input-wrap input,
+        .dark .lp-input-wrap input[type="text"],
+        .dark .lp-input-wrap input[type="password"] {
+          background: #0b1329 !important;
+          border: 1.5px solid rgba(59, 130, 246, 0.45) !important;
+          border-radius: 12px !important;
           color: #f8fafc !important;
-          /* Tanpa ini caret mewarisi magenta dari aturan light mode */
+          box-shadow: 0 0 10px rgba(26, 115, 232, 0.2) !important;
           caret-color: #60a5fa;
         }
         .dark .lp-input-wrap input:-webkit-autofill,
         .dark .lp-input-wrap input:-webkit-autofill:hover,
         .dark .lp-input-wrap input:-webkit-autofill:focus,
         .dark .lp-input-wrap input:-webkit-autofill:active {
-          -webkit-box-shadow: 0 0 0 30px #070d1e inset !important;
+          -webkit-box-shadow: 0 0 0 30px #0b1329 inset !important;
           -webkit-text-fill-color: #f8fafc !important;
           caret-color: #60a5fa;
         }
-        .dark .lp-input-wrap input:focus {
-          background: #070d1e;
-          border-color: #1a73e8;
-          box-shadow: 0 0 0 4px rgba(26, 115, 232, 0.2);
+        .dark .lp-input-wrap input:focus,
+        .dark .lp-input-wrap input[type="text"]:focus,
+        .dark .lp-input-wrap input[type="password"]:focus {
+          background: #0b1329 !important;
+          border-color: #3b82f6 !important;
+          box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.25), 0 0 15px rgba(26, 115, 232, 0.35) !important;
         }
         .dark .lp-input-wrap input:focus:-webkit-autofill {
-          -webkit-box-shadow: 0 0 0 30px #070d1e inset !important;
+          -webkit-box-shadow: 0 0 0 30px #0b1329 inset !important;
         }
-        .dark .lp-input-wrap input:disabled { background: rgba(255, 255, 255, 0.05); opacity: 0.5; }
+        .dark .lp-input-wrap input:disabled { background: rgba(255, 255, 255, 0.05) !important; opacity: 0.5; box-shadow: none !important; }
         .dark .lp-input-wrap input::placeholder { color: #64748b; opacity: 1; }
         .dark .lp-icon-field, .dark .lp-toggle-pw { color: #60a5fa; }
         .dark .lp-toggle-pw:hover { color: #93c5fd; }

@@ -810,7 +810,7 @@ export default function DashboardContent({ user, headerExtra }: { user: User; he
                             {/* Row 1: Agenda Madrasah + Tugas Tambahan Grid */}
                             <div className="db__top-grid">
                                 {/* 1. Agenda 4 Hari & List Agenda Compact (Semua Role) */}
-                                <div className="db__widget-card db__agenda-time-card db__area-agenda" style={{ height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                                <div className="db__widget-card db__agenda-time-card db__area-agenda" style={{ height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'flex-start' }}>
                                     <div className="db__widget-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', flexWrap: 'nowrap' }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: '1 1 auto', minWidth: 0 }}>
                                             <span className="db__widgetIcon" style={{
@@ -943,11 +943,11 @@ export default function DashboardContent({ user, headerExtra }: { user: User; he
                                                                             {item.kategori || 'Umum'}
                                                                         </span>
                                                                     </div>
-                                                                    <div className="db__agenda-item-title">
+                                                                    <div className="db__agenda-item-title" title={item.judul}>
                                                                         {item.judul}
                                                                     </div>
                                                                     {item.lokasi && (
-                                                                        <div className="db__agenda-item-location">
+                                                                        <div className="db__agenda-item-location" title={item.lokasi}>
                                                                             📍 {item.lokasi}
                                                                         </div>
                                                                     )}
@@ -956,8 +956,9 @@ export default function DashboardContent({ user, headerExtra }: { user: User; he
                                                         );
                                                     })
                                                 ) : (
-                                                    <div style={{ padding: '12px 8px', color: '#94a3b8', fontSize: '0.8rem', textAlign: 'center' }}>
-                                                        {activeDate === todayISO ? 'Tidak ada agenda hari ini.' : 'Tidak ada agenda pada tanggal ini.'}
+                                                    <div className="db__agenda-empty-state">
+                                                        <Calendar size={24} style={{ opacity: 0.35, marginBottom: '6px' }} />
+                                                        <span>{activeDate === todayISO ? 'Tidak ada agenda hari ini.' : 'Tidak ada agenda pada tanggal ini.'}</span>
                                                     </div>
                                                 )}
                                             </div>
@@ -1753,6 +1754,9 @@ export default function DashboardContent({ user, headerExtra }: { user: User; he
                     position: relative;
                     padding: 12px 4px 8px 4px;
                     margin-bottom: 12px;
+                    -webkit-user-select: none;
+                    user-select: none;
+                    -webkit-touch-callout: none;
                 }
                 .db__agenda-track-line {
                     position: absolute;
@@ -1779,8 +1783,12 @@ export default function DashboardContent({ user, headerExtra }: { user: User; he
                     padding: 0;
                     cursor: pointer;
                     position: relative;
-                    -webkit-tap-highlight-color: transparent;
-                    user-select: none;
+                    -webkit-appearance: none !important;
+                    appearance: none !important;
+                    -webkit-tap-highlight-color: transparent !important;
+                    -webkit-touch-callout: none !important;
+                    -webkit-user-select: none !important;
+                    user-select: none !important;
                 }
                 .db__agenda-day-btn:focus,
                 .db__agenda-day-btn:focus-visible,
@@ -1788,6 +1796,10 @@ export default function DashboardContent({ user, headerExtra }: { user: User; he
                     outline: none !important;
                     border: none !important;
                     box-shadow: none !important;
+                    -webkit-tap-highlight-color: transparent !important;
+                }
+                .db__agenda-day-btn::-moz-focus-inner {
+                    border: 0 !important;
                 }
                 :global(.dark) .db__agenda-day-btn,
                 :global(.dark) .db__agenda-day-btn:focus,
@@ -1830,6 +1842,11 @@ export default function DashboardContent({ user, headerExtra }: { user: User; he
                     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
                     position: relative;
                     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+                    -webkit-backface-visibility: hidden;
+                    backface-visibility: hidden;
+                    -webkit-transform: translateZ(0);
+                    transform: translateZ(0);
+                    isolation: isolate;
                 }
                 .db__agenda-day-btn.has-agenda .db__agenda-circle {
                     border-color: #3083FF;
@@ -1852,7 +1869,9 @@ export default function DashboardContent({ user, headerExtra }: { user: User; he
                     color: #ffffff;
                     border: 3px solid #bfdbfe;
                     box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.3), 0 4px 12px rgba(37, 99, 235, 0.35);
-                    transform: scale(1.08);
+                    transform: scale(1.08) translateZ(0);
+                    -webkit-transform: scale(1.08) translateZ(0);
+                    -webkit-mask-image: -webkit-radial-gradient(white, black);
                 }
                 .db__agenda-dot-marker {
                     position: absolute;
@@ -1923,6 +1942,9 @@ export default function DashboardContent({ user, headerExtra }: { user: User; he
                     border-color: #60a5fa !important;
                     color: #ffffff !important;
                     box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.4), 0 0 20px rgba(37, 99, 235, 0.6) !important;
+                    transform: scale(1.08) translateZ(0) !important;
+                    -webkit-transform: scale(1.08) translateZ(0) !important;
+                    -webkit-mask-image: -webkit-radial-gradient(white, black) !important;
                 }
                 :global(.dark) .db__agenda-dot-marker {
                     border-color: #0b1329 !important;
@@ -1935,9 +1957,47 @@ export default function DashboardContent({ user, headerExtra }: { user: User; he
                     gap: 8px;
                     padding-top: 8px;
                     border-top: 1px solid #f1f5f9;
+                    flex: 1 1 auto;
+                    min-height: 195px;
+                    max-height: 245px;
+                    overflow-y: auto;
+                    scrollbar-width: thin;
+                    scrollbar-color: rgba(148, 163, 184, 0.4) transparent;
+                }
+                .db__agenda-items-container::-webkit-scrollbar {
+                    width: 4px;
+                }
+                .db__agenda-items-container::-webkit-scrollbar-track {
+                    background: transparent;
+                }
+                .db__agenda-items-container::-webkit-scrollbar-thumb {
+                    background: rgba(148, 163, 184, 0.4);
+                    border-radius: 4px;
+                }
+                .db__agenda-items-container::-webkit-scrollbar-thumb:hover {
+                    background: rgba(148, 163, 184, 0.7);
                 }
                 :global(.dark) .db__agenda-items-container {
                     border-top-color: rgba(37, 99, 235, 0.25) !important;
+                    scrollbar-color: rgba(148, 163, 184, 0.25) transparent;
+                }
+                :global(.dark) .db__agenda-items-container::-webkit-scrollbar-thumb {
+                    background: rgba(148, 163, 184, 0.25);
+                }
+                .db__agenda-empty-state {
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    justify-content: center;
+                    flex: 1;
+                    min-height: 175px;
+                    padding: 16px 8px;
+                    color: #94a3b8;
+                    font-size: 0.8rem;
+                    text-align: center;
+                }
+                :global(.dark) .db__agenda-empty-state {
+                    color: #64748b;
                 }
                 .db__agenda-item-card {
                     display: flex;
@@ -1949,6 +2009,9 @@ export default function DashboardContent({ user, headerExtra }: { user: User; he
                     border-left-width: 4px;
                     border-left-style: solid;
                     box-sizing: border-box;
+                    width: 100%;
+                    min-width: 0;
+                    flex-shrink: 0;
                     transition: all 0.2s ease;
                 }
                 :global(.dark) .db__agenda-item-card {
@@ -1981,7 +2044,13 @@ export default function DashboardContent({ user, headerExtra }: { user: User; he
                     font-size: 0.825rem;
                     font-weight: 600;
                     color: #1e293b;
-                    white-space: nowrap;
+                    line-height: 1.35;
+                    word-break: break-word;
+                    overflow-wrap: break-word;
+                    white-space: normal;
+                    display: -webkit-box;
+                    -webkit-line-clamp: 3;
+                    -webkit-box-orient: vertical;
                     overflow: hidden;
                     text-overflow: ellipsis;
                 }
@@ -1995,6 +2064,9 @@ export default function DashboardContent({ user, headerExtra }: { user: User; he
                     display: flex;
                     align-items: center;
                     gap: 4px;
+                    white-space: nowrap;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
                 }
                 :global(.dark) .db__agenda-item-location {
                     color: #94a3b8 !important;

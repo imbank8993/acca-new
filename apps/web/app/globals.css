@@ -137,9 +137,17 @@ body, .header, .sidebar, .main-content, .card, .p-card, .modal-box {
     padding-right: calc(8px + env(safe-area-inset-right)) !important;
     /* Dikurangi tinggi bilah nav, karena bilahnya kini ikut menambah tinggi
        dokumen. Tanpa pengurangan ini halaman pendek jadi bisa digulir ~62px
-       tanpa ada isinya. */
+       tanpa ada isinya.
+
+       `100vh`, BUKAN `100dvh`.
+       Di Safari iOS `100vh` setara large viewport height: KONSTAN, tidak
+       terpengaruh animasi bilah alamat. `100dvh` berubah saat bilah alamat
+       bergerak — dan perubahan itu menghitung ulang tinggi dokumen MID-SCROLL,
+       menggeser slot aliran sticky bottom-nav sehingga terlihat bergetar.
+       Konsekuensi: pada halaman pendek, dokumen ~50px lebih tinggi dari area
+       terlihat saat bilah alamat muncul — ruang itu di balik bilah alamat,
+       tidak terlihat, dan tidak memengaruhi UX. */
     min-height: calc(100vh - var(--app-bottomnav-h, 62px) - env(safe-area-inset-bottom)) !important;
-    min-height: calc(100dvh - var(--app-bottomnav-h, 62px) - env(safe-area-inset-bottom)) !important;
     box-sizing: border-box !important;
   }
 
@@ -1438,7 +1446,10 @@ select::placeholder {
 html,
 body {
   min-height: 100%;
-  min-height: 100dvh;
+  /* `100vh` (large viewport), bukan `100dvh` — konstan terhadap animasi
+     bilah alamat Safari iOS, mencegah sticky bottom-nav bergetar.
+     Lihat catatan pada .content-area di blok mobile di atas. */
+  min-height: 100vh;
   overflow-x: clip;
 
   /* Matikan pantulan (rubber-band) di ujung guliran.
@@ -1528,23 +1539,20 @@ html.dark .acca-ambient-bg,
   html,
   body {
     min-height: 100% !important;
-    min-height: 100dvh !important;
-    /* `-webkit-fill-available` DIHAPUS dari sini — dulu dipasang sebagai
-       mitigasi gap di iOS standalone, dengan catatan "perlu diverifikasi di HP
-       iOS nyata" yang tidak pernah terjadi.
+    /* `100vh` (large viewport), bukan `100dvh`.
 
-       Ia justru sumber masalah untuk bilah nav yang sticky: di WebKit nilainya
-       membeku pada tinggi viewport SAAT BILAH ALAMAT TERKEMBANG dan tidak ikut
-       dihitung ulang ketika bilah alamat menyusut. Menggulir cepat adalah
-       persis saat bilah alamat menyusut, jadi tinggi dokumen sesaat lebih
-       pendek daripada viewport — dan slot aliran bilah nav (yang menentukan
-       sampai mana `sticky` menempel) ikut naik bersamanya. Yang terlihat:
-       bilah nav sekejap terangkat dari dasar layar lalu kembali.
+       Riwayat: `-webkit-fill-available` dulu di sini, tapi membeku pada tinggi
+       saat bilah alamat terkembang dan membuat bilah nav sekejap terangkat.
+       `100dvh` menggantikannya dan memang ikut berubah saat bilah alamat
+       beranimasi (dukungan penuh sejak iOS 16), tapi perubahan itu menghitung
+       ulang tinggi dokumen MID-SCROLL sehingga sticky bottom-nav masih
+       bergetar — kini berpindah dari tersentak SEKALI ke gemetar KONTINU.
 
-       `100dvh` di baris sebelumnya sudah menangani kasus yang sama dan MEMANG
-       ikut berubah saat bilah alamat beranimasi; dukungannya penuh sejak
-       iOS 16. Jadi baris ini bukan cadangan tambahan, melainkan penimpa yang
-       mengalahkan nilai yang benar. */
+       `100vh` di Safari iOS setara large viewport height: KONSTAN, tidak
+       pernah berubah selama bilah alamat bergerak. Konsekuensinya dokumen
+       ~50px lebih tinggi dari area terlihat saat bilah alamat terkembang —
+       ruang itu di balik bilah alamat dan tidak terlihat. */
+    min-height: 100vh !important;
   /* `clip`, bukan `hidden` — lihat catatan di aturan html,body di atas.
      Justru di breakpoint inilah bilah nav bawah yang sticky hidup. */
     overflow-x: clip !important;
@@ -8336,7 +8344,12 @@ html.dark body .db__agenda-day-btn:active {
   outline: none !important;
   border: none !important;
   box-shadow: none !important;
+  -webkit-appearance: none !important;
+  appearance: none !important;
   -webkit-tap-highlight-color: transparent !important;
+  -webkit-touch-callout: none !important;
+  -webkit-user-select: none !important;
+  user-select: none !important;
 }
 
 .dark .db__agenda-track-line,
@@ -8380,6 +8393,9 @@ html.dark body .db__agenda-day-btn.is-selected .db__agenda-circle {
   border-color: #60a5fa !important;
   color: #ffffff !important;
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.4), 0 0 20px rgba(37, 99, 235, 0.6) !important;
+  transform: scale(1.08) translateZ(0) !important;
+  -webkit-transform: scale(1.08) translateZ(0) !important;
+  -webkit-mask-image: -webkit-radial-gradient(white, black) !important;
 }
 
 .dark .db__agenda-dot-marker,
@@ -8455,4 +8471,14 @@ html.dark body .db__agenda-see-all-link:hover {
   .kh-page-wrap {
     gap: 14px;
   }
+}
+
+/* Safari iOS: hilangkan kotak & tautan auto data detectors untuk tanggal */
+a[x-apple-data-detectors] {
+  color: inherit !important;
+  text-decoration: none !important;
+  font-size: inherit !important;
+  font-family: inherit !important;
+  font-weight: inherit !important;
+  line-height: inherit !important;
 }

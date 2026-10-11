@@ -648,19 +648,33 @@ export class SuratService {
     };
   }
 
+  private extractUserRoles(user: any): string[] {
+    if (!user) return [];
+    const raw = user.roles ?? user.role ?? [];
+    if (Array.isArray(raw)) {
+      return raw.map((r: any) => String(r).trim().toUpperCase()).filter(Boolean);
+    }
+    if (typeof raw === 'string') {
+      return raw.split(/[,|]/).map((r: string) => r.trim().toUpperCase()).filter(Boolean);
+    }
+    return [];
+  }
+
+  private isUserAdminOrLayanan(user: any): boolean {
+    if (!user) return false;
+    if (user.isAdmin === true || user.is_admin === true) return true;
+    const roles = this.extractUserRoles(user);
+    return (
+      roles.includes('ADMIN') ||
+      roles.includes('ADMINISTRATOR') ||
+      roles.includes('SUPERADMIN') ||
+      roles.includes('OP_LAYANAN') ||
+      roles.includes('KAMAD')
+    );
+  }
+
   async savePengaturanAlurSurat(body: any, user: any) {
-    const userRoles: string[] = user
-      ? Array.isArray(user.roles)
-        ? user.roles
-        : String(user.role || '')
-            .split(/[,|]/)
-            .map((r: string) => r.trim().toUpperCase())
-      : [];
-    const isAdminOrLayanan =
-      userRoles.includes('ADMIN') ||
-      userRoles.includes('ADMINISTRATOR') ||
-      userRoles.includes('OP_LAYANAN') ||
-      userRoles.includes('KAMAD');
+    const isAdminOrLayanan = this.isUserAdminOrLayanan(user);
     if (!isAdminOrLayanan) {
       throw new ForbiddenException(
         'Hanya Admin atau Operator Layanan yang dapat mengubah konfigurasi alur jenis surat',
@@ -692,18 +706,8 @@ export class SuratService {
   }
 
   async getPermintaanList(query: any, user?: any) {
-    const userRoles: string[] = user
-      ? Array.isArray(user.roles)
-        ? user.roles
-        : String(user.role || '')
-            .split(/[,|]/)
-            .map((r: string) => r.trim().toUpperCase())
-      : [];
-    const isAdminOrLayanan =
-      userRoles.includes('ADMIN') ||
-      userRoles.includes('ADMINISTRATOR') ||
-      userRoles.includes('OP_LAYANAN') ||
-      userRoles.includes('KAMAD');
+    const userRoles = this.extractUserRoles(user);
+    const isAdminOrLayanan = this.isUserAdminOrLayanan(user);
     const kelola = isAdminOrLayanan;
 
     const canApproveOperator = isAdminOrLayanan;
@@ -868,16 +872,8 @@ export class SuratService {
     if (!existing)
       throw new NotFoundException('Permintaan surat tidak ditemukan');
 
-    const userRoles: string[] = Array.isArray(user.roles)
-      ? user.roles
-      : String(user.role || '')
-          .split(/[,|]/)
-          .map((r: string) => r.trim().toUpperCase());
-    const isAdminOrLayanan =
-      userRoles.includes('ADMIN') ||
-      userRoles.includes('ADMINISTRATOR') ||
-      userRoles.includes('OP_LAYANAN') ||
-      userRoles.includes('KAMAD');
+    const userRoles = this.extractUserRoles(user);
+    const isAdminOrLayanan = this.isUserAdminOrLayanan(user);
     const isOwner =
       existing.created_by === (user.auth_id || String(user.id)) ||
       (existing.pemohon_nip && existing.pemohon_nip === user.nip);
@@ -1023,15 +1019,8 @@ export class SuratService {
     if (!existing)
       throw new NotFoundException('Permintaan surat tidak ditemukan');
 
-    const userRoles: string[] = Array.isArray(user.roles)
-      ? user.roles
-      : String(user.role || '')
-          .split(/[,|]/)
-          .map((r: string) => r.trim().toUpperCase());
-    const isAdminOrLayanan =
-      userRoles.includes('ADMIN') ||
-      userRoles.includes('ADMINISTRATOR') ||
-      userRoles.includes('OP_LAYANAN');
+    const userRoles = this.extractUserRoles(user);
+    const isAdminOrLayanan = this.isUserAdminOrLayanan(user);
     const isOwner =
       existing.created_by === (user.auth_id || String(user.id)) ||
       existing.pemohon_nip === user.nip;

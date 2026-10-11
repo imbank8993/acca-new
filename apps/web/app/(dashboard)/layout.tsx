@@ -404,8 +404,10 @@ export default function DashboardShellLayout({ children }: { children: React.Rea
             position: relative !important;
             inset: auto !important;
             width: 100% !important;
+            /* 100vh (large viewport, konstan) — mencegah sticky bottom-nav
+               bergetar saat bilah alamat Safari iOS beranimasi. Lihat catatan
+               lengkap di app/globals.css. */
             min-height: 100vh !important;
-            min-height: 100dvh !important;
             height: auto !important;
             overflow: visible !important;
             overflow-x: clip !important;
@@ -443,8 +445,8 @@ export default function DashboardShellLayout({ children }: { children: React.Rea
           .dashboard-content-wrapper {
             position: relative;
             width: 100%;
+            /* 100vh, bukan 100dvh — lihat catatan di .dashboard-layout. */
             min-height: 100vh;
-            min-height: 100dvh;
             background: var(--n-bg, #EBECF1);
             transform: none !important;
             border-radius: 0;
@@ -479,7 +481,7 @@ export default function DashboardShellLayout({ children }: { children: React.Rea
           }
 
           :global(.dark) .dashboard-layout.sidebar-mobile-open {
-            background: #000000 !important;
+            background: var(--sidebar-bg, #0b1329) !important;
           }
 
           .dashboard-layout.sidebar-mobile-open .dashboard-content-wrapper {
@@ -500,15 +502,14 @@ export default function DashboardShellLayout({ children }: { children: React.Rea
             box-shadow: -10px 0 28px rgba(0, 0, 0, 0.16), -1px 0 0 rgba(0, 0, 0, 0.06) !important;
             overflow: hidden !important;
             pointer-events: none;
-            -webkit-mask-image: -webkit-radial-gradient(white, black);
-            mask-image: radial-gradient(white, black);
+            isolation: isolate;
           }
 
           :global(.dark) .dashboard-layout.sidebar-mobile-open .dashboard-content-wrapper {
-            background: #000000 !important;
-            border: 1px solid rgba(255, 255, 255, 0.16) !important;
+            background: var(--n-bg, #020718) !important;
+            border: 1px solid rgba(255, 255, 255, 0.12) !important;
             border-right: none !important;
-            box-shadow: -12px 0 32px rgba(0, 0, 0, 0.8), -1px 0 0 rgba(255, 255, 255, 0.12) !important;
+            box-shadow: -12px 0 32px rgba(0, 0, 0, 0.45), -1px 0 0 rgba(255, 255, 255, 0.08) !important;
           }
 
           /* Area klik untuk menutup sidebar saat halaman tergeser sekaligus memberi efek pudar lembut (soft dim) */
@@ -528,7 +529,7 @@ export default function DashboardShellLayout({ children }: { children: React.Rea
           }
 
           :global(.dark) .sidebar-mobile-backdrop {
-            background: rgba(0, 0, 0, 0.35);
+            background: rgba(2, 7, 24, 0.45);
           }
 
           @keyframes fadeInBackdrop {
@@ -577,8 +578,10 @@ export default function DashboardShellLayout({ children }: { children: React.Rea
             padding-bottom: 12px !important;
             padding-left: calc(8px + env(safe-area-inset-left)) !important;
             padding-right: calc(8px + env(safe-area-inset-right)) !important;
+            /* 100vh (large viewport, konstan) — lihat catatan di globals.css.
+               Mencegah sticky bottom-nav bergetar saat bilah alamat Safari
+               beranimasi. */
             min-height: calc(100vh - var(--app-bottomnav-h, 62px) - env(safe-area-inset-bottom)) !important;
-            min-height: calc(100dvh - var(--app-bottomnav-h, 62px) - env(safe-area-inset-bottom)) !important;
             box-sizing: border-box !important;
           }
 

@@ -4,8 +4,9 @@ import MaintenanceBanner from '@/components/MaintenanceBanner';
 import { FilterToolbar, FilterSelect, FilterSearch } from '@/components/ui/FilterToolbar';
 import { MobileFab } from '@/components/mobile';
 import { DesktopFab } from '@/components/ui/DesktopFab';
-import Tab from '@/components/ui/Tab';
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import Tab, { TabItem } from '@/components/ui/Tab';
+import { useState, useEffect, useCallback, useMemo, Suspense } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import './permintaan-surat.css';
 import Swal from 'sweetalert2';
 import AddPermintaanModal, { JenisSuratConfig } from './components/AddPermintaanModal';
@@ -14,6 +15,9 @@ import ApprovalModal from './components/ApprovalModal';
 import EditPermintaanModal from './components/EditPermintaanModal';
 import TabSemuaPermintaan from './tabs/TabSemuaPermintaan';
 import TabPengaturanSurat from './tabs/TabPengaturanSurat';
+import { isUserAdmin, getUserRoles } from '@/lib/auth-client';
+import { useOptionalDashboardUser } from '@/components/UserContext';
+import type { User } from '@/lib/types';
 
 const BULAN = [
   { v: '',   l: 'Semua Bulan' },
@@ -38,13 +42,28 @@ const STATUS_OPTS = [
   { v: 'ditolak',   l: 'Ditolak' },
 ];
 
+type PermintaanTabMode = 'all' | 'personal' | 'pengaturan';
+
 function PermintaanSuratPageContent({ user }: { user?: any }) {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+
+  const contextUser = useOptionalDashboardUser()?.user;
+  const effectiveUser = user || contextUser;
+
   const [rows, setRows]         = useState<PermintaanSuratRow[]>([]);
   const [loading, setLoading]   = useState(true);
 
+  // Tab mode & URL sync
+  const tabParam = searchParams?.get('tab')?.toLowerCase();
+  const [viewMode, setViewModeState] = useState<PermintaanTabMode>(() => {
+    if (tabParam === 'pengaturan') return 'pengaturan';
+    if (tabParam === 'personal' || tabParam === 'saya') return 'personal';
+    return 'all';
+  });
+
   // Filters
   const [filterJenis, setFilterJenis]   = useState('');
-  const [viewMode, setViewMode]         = useState<'all' | 'personal' | 'pengaturan'>('all');
   const [filterStatus, setFilterStatus] = useState('');
   const [filterBulan, setFilterBulan]   = useState(() => {
     const m = new Date().getMonth() + 1;
@@ -74,41 +93,104 @@ function PermintaanSuratPageContent({ user }: { user?: any }) {
     roles: [] as string[],
   });
 
-  const [userRoles, setUserRoles] = useState<string[]>(
-    user?.roles || (user?.role ? String(user.role).split(/[,|]/).map((r: string) => r.trim().toUpperCase()) : [])
-  );
-  const [userNip, setUserNip]   = useState(user?.nip || '');
-  const [userName, setUserName] = useState(user?.nama_lengkap || user?.nama || '');
-  const [authDone, setAuthDone] = useState(Boolean(user));
+  const [authDone, setAuthDone] = useState(Boolean(effectiveUser));
+  const [fetchedUser, setFetchedUser] = useState<any>(null);
 
   // ── Auth ──────────────────────────────────────────────────────────────────
   useEffect(() => {
-    if (user) {
-      setUserNip(user.nip || '');
-      setUserName(user.nama_lengkap || user.nama || '');
-      const r = user.roles || (user.role ? String(user.role).split(/[,|]/).map((x: string) => x.trim().toUpperCase()) : []);
-      setUserRoles(r);
+    if (effectiveUser) {
       setAuthDone(true);
       return;
     }
 
+    let cancelled = false;
     (async () => {
       try {
         const meRes = await fetch('/api/auth/me');
         const meData = await meRes.json();
-        if (meData.ok && meData.user) {
-          setUserNip(meData.user.nip || '');
-          setUserName(meData.user.nama_lengkap || meData.user.nama || '');
-          const r = meData.user.roles || (meData.user.role ? String(meData.user.role).split(/[,|]/).map((x: string) => x.trim().toUpperCase()) : []);
-          setUserRoles(r);
+        if (!cancelled && meData.ok && meData.user) {
+          setFetchedUser(meData.user);
         }
       } catch (e) {
-        console.error('Auth error:', e);
+        console.error('Auth error in permintaan-surat:', e);
       } finally {
-        setAuthDone(true);
+        if (!cancelled) setAuthDone(true);
       }
     })();
-  }, [user]);
+    return () => {
+      cancelled = true;
+    };
+  }, [effectiveUser]);
+
+  const activeUser = effectiveUser || fetchedUser;
+  const userNip = activeUser?.nip || '';
+  const userName = activeUser?.nama_lengkap || activeUser?.nama || '';
+
+  const userRoles = useMemo(() => {
+    return getUserRoles(activeUser);
+  }, [activeUser]);
+
+  const isAdmin = useMemo(() => {
+    return isUserAdmin(activeUser);
+  }, [activeUser]);
+
+  const isOperatorOrAdmin = useMemo(() => {
+    if (isAdmin) return true;
+    const combinedRoles = [
+      ...userRoles,
+      ...(akses.roles || []).map((r) => String(r).toUpperCase()),
+    ];
+    return (
+      Boolean(akses.canManageSettings) ||
+      Boolean(akses.kelola) ||
+      combinedRoles.some((r) =>
+        ['ADMIN', 'ADMINISTRATOR', 'SUPERADMIN', 'OP_LAYANAN', 'KAMAD'].includes(r)
+      )
+    );
+  }, [isAdmin, userRoles, akses]);
+
+  const isFullAccess = Boolean(akses.kelola || akses.canApprove || isOperatorOrAdmin);
+  const hasDualRole  = isFullAccess;
+
+  // ── Tab Navigation & URL Sync ─────────────────────────────────────────────
+  useEffect(() => {
+    if (tabParam === 'pengaturan') {
+      setViewModeState('pengaturan');
+    } else if (tabParam === 'personal' || tabParam === 'saya') {
+      setViewModeState('personal');
+    } else if (tabParam === 'all' || tabParam === 'semua') {
+      setViewModeState('all');
+    }
+  }, [tabParam]);
+
+  const handleTabChange = useCallback((key: PermintaanTabMode) => {
+    setViewModeState(key);
+    try {
+      const sp = new URLSearchParams(searchParams?.toString() || '');
+      sp.set('tab', key);
+      router.replace(`?${sp.toString()}`, { scroll: false });
+    } catch {
+      // ignore
+    }
+  }, [searchParams, router]);
+
+  // Fallback jika tab pengaturan aktif tetapi user bukan operator/admin setelah auth selesai
+  useEffect(() => {
+    if (viewMode === 'pengaturan' && authDone && !isOperatorOrAdmin) {
+      handleTabChange('all');
+    }
+  }, [viewMode, authDone, isOperatorOrAdmin, handleTabChange]);
+
+  const tabsList = useMemo<TabItem<PermintaanTabMode>[]>(() => {
+    const list: TabItem<PermintaanTabMode>[] = [
+      { key: 'all', label: 'Semua Permintaan', icon: 'grid-fill' },
+      { key: 'personal', label: 'Permintaan Saya', icon: 'person-badge-fill' },
+    ];
+    if (isOperatorOrAdmin) {
+      list.push({ key: 'pengaturan', label: 'Pengaturan', icon: 'gear-fill' });
+    }
+    return list;
+  }, [isOperatorOrAdmin]);
 
   // Ajuan pending di luar periode bulan/tahun yang dipilih
   const pendingLuarPeriode = useMemo(() => {
@@ -204,38 +286,6 @@ function PermintaanSuratPageContent({ user }: { user?: any }) {
     return options;
   }, [pengaturanList, rows]);
 
-  const isOperatorOrAdmin = useMemo(() => {
-    const combinedRoles = [...userRoles, ...(akses.roles || [])];
-    return (
-      Boolean(akses.canManageSettings) ||
-      Boolean(akses.kelola) ||
-      combinedRoles.some((r) =>
-        ['ADMIN', 'ADMINISTRATOR', 'OP_LAYANAN', 'KAMAD'].includes(r.toUpperCase())
-      )
-    );
-  }, [userRoles, akses]);
-
-  const isFullAccess = Boolean(akses.kelola || akses.canApprove || isOperatorOrAdmin);
-  const hasDualRole  = isFullAccess;
-
-  const tabsList = useMemo(() => {
-    const list = [
-      { key: 'all', label: 'Semua Permintaan', icon: 'bi-grid-fill' },
-      { key: 'personal', label: 'Permintaan Saya', icon: 'bi-person-badge-fill' },
-    ];
-    if (isOperatorOrAdmin) {
-      list.push({ key: 'pengaturan', label: 'Pengaturan', icon: 'bi-gear-fill' });
-    }
-    return list;
-  }, [isOperatorOrAdmin]);
-
-  // Fallback jika tab pengaturan aktif tetapi user bukan operator/admin
-  useEffect(() => {
-    if (viewMode === 'pengaturan' && !isOperatorOrAdmin && authDone) {
-      setViewMode('all');
-    }
-  }, [viewMode, isOperatorOrAdmin, authDone]);
-
   // ── Actions ────────────────────────────────────────────────────────────────
   const handleAjukan = () => {
     setIsAddOpen(true);
@@ -310,17 +360,22 @@ function PermintaanSuratPageContent({ user }: { user?: any }) {
 
   return (
     <div className="ps-wrap">
-      {/* Tombol Ajukan (Floating Desktop + Mobile) */}
-      <DesktopFab label="Ajukan Surat" icon="plus-lg" onClick={handleAjukan} />
-      <MobileFab label="Ajukan" icon="plus-lg" onClick={handleAjukan} />
+      {/* Tombol Ajukan (Floating Desktop + Mobile) - hanya di tab permintaan */}
+      {viewMode !== 'pengaturan' && (
+        <>
+          <DesktopFab label="Ajukan Surat" icon="plus-lg" onClick={handleAjukan} />
+          <MobileFab label="Ajukan" icon="plus-lg" onClick={handleAjukan} />
+        </>
+      )}
 
-      {/* Navigasi Tab (jika memiliki hak akses manajerial) */}
+      {/* Navigasi Tab (jika memiliki hak akses manajerial / multi-tab) */}
       {hasDualRole && (
-        <Tab
+        <Tab<PermintaanTabMode>
           tabs={tabsList}
           activeTab={viewMode}
-          onChange={(key) => setViewMode(key as 'all' | 'personal' | 'pengaturan')}
+          onChange={handleTabChange}
           ariaLabel="Navigasi Permintaan Surat"
+          variant="slider"
         />
       )}
 
@@ -474,7 +529,9 @@ export default function MaintenanceWrappedPermintaanSuratPage(props: any) {
   return (
     <>
       <MaintenanceBanner pageKey="maintenance_permintaan_surat" />
-      <PermintaanSuratPageContent {...props} />
+      <Suspense fallback={<div className="p-4 text-center">Memuat Permintaan Surat...</div>}>
+        <PermintaanSuratPageContent {...props} />
+      </Suspense>
     </>
   );
 }

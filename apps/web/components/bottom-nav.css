@@ -120,6 +120,22 @@
         -webkit-backface-visibility: hidden;
         backface-visibility: hidden;
 
+        /* Safari iOS: petunjuk eksplisit agar WebKit mempromosikan bilah ini
+           ke compositor layer tersendiri. `backface-visibility: hidden` di atas
+           seharusnya sudah cukup, tapi beberapa versi WebKit memerlukan
+           `will-change` tambahan — khususnya saat bilah alamat beranimasi dan
+           tinggi viewport berubah mid-scroll, yang memaksa layout-ulang dan
+           dapat menggeser posisi sticky sesaat.
+           Tidak boleh `will-change: position`: spesifikasi belum menjamin
+           semantiknya pada elemen sticky, sedangkan `transform` sudah mapan
+           sebagai pemicu promosi layer di semua mesin. Identity transform yang
+           dihasilkannya tidak menggeser apa pun. */
+        will-change: transform;
+        /* Cegah Scroll Anchoring: browser kadang mengoreksi posisi gulir saat
+           elemen keluar/masuk viewport, dan koreksi itu membuat halaman melompat
+           kecil yang terlihat sebagai bilah nav yang "bergetar". */
+        overflow-anchor: none;
+
         display: grid;
         grid-template-columns: repeat(5, 1fr);
         align-items: stretch;

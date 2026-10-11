@@ -20,6 +20,12 @@ export const metadata: Metadata = {
     apple: "/logo-icon.png",
   },
   manifest: "/manifest.json",
+  formatDetection: {
+    telephone: false,
+    date: false,
+    address: false,
+    email: false,
+  },
 };
 
 // Single source of truth for the viewport so Next.js doesn't also inject a
@@ -49,6 +55,7 @@ export default function RootLayout({
       <head>
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="format-detection" content="telephone=no, date=no, address=no, email=no" />
         {/* Disamakan dengan bilah nav bawah & header mobile (keduanya sewarna:
             #ffffff / #000000) supaya chrome browser — bilah status di atas dan
             bilah alamat di bawah — menyatu dengan bilah yang bersebelahan
