@@ -24,7 +24,7 @@ WORKDIR /app
 # Disable Next.js telemetry & skip puppeteer browser download during build
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV PUPPETEER_SKIP_DOWNLOAD=true
-ENV NODE_OPTIONS="--max-old-space-size=2048"
+ENV NODE_OPTIONS="--max-old-space-size=3072"
 ENV DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy?schema=public"
 
 # Copy root monorepo metadata and ALL workspace definitions
@@ -36,12 +36,13 @@ COPY apps/api/package.json ./apps/api/
 # Install dependencies (--ignore-scripts avoids C++ compilation of canvas)
 RUN npm ci --legacy-peer-deps --ignore-scripts
 
-# Ensure Linux x64 native binaries for Tailwind CSS 4 & LightningCSS are present
-RUN npm install @tailwindcss/oxide-linux-x64-gnu@4.1.18 lightningcss-linux-x64-gnu@1.30.2 --no-save || true
+# Ensure Linux x64 native binaries for Tailwind CSS 4, LightningCSS & Sharp are present
+RUN npm install @tailwindcss/oxide-linux-x64-gnu@4.1.18 lightningcss-linux-x64-gnu@1.30.2 @img/sharp-linux-x64@0.34.5 --no-save || true
 
 # Direct-link native binaries into their parent packages to ensure instant loading
 RUN cp -f node_modules/@tailwindcss/oxide-linux-x64-gnu/*.node node_modules/@tailwindcss/oxide/ 2>/dev/null || true
 RUN cp -f node_modules/lightningcss-linux-x64-gnu/*.node node_modules/lightningcss/ 2>/dev/null || true
+RUN cp -f node_modules/@img/sharp-linux-x64/lib/*.node node_modules/sharp/build/Release/ 2>/dev/null || true
 
 # Test & verify native bindings (fails fast if anything is missing)
 RUN node -e "require('@tailwindcss/oxide'); require('lightningcss'); console.log('✅ Tailwind CSS 4 & LightningCSS native bindings verified successfully!')"

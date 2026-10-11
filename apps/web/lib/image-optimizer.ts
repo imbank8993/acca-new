@@ -1,11 +1,25 @@
-import sharp from 'sharp';
-
 /**
  * Cache in-memory hasil optimasi gambar (Maksimal 100 item)
  * Memastikan URL gambar yang sama tidak diunduh/dikonversi berulang kali.
  */
 const imageCache = new Map<string, string>();
 const MAX_CACHE_SIZE = 100;
+
+/**
+ * Lazy-load modul sharp secara dinamis.
+ * Mencegah error build Next.js / Webpack saat libvips/sharp platform binary tidak tersedia di Docker/CI.
+ */
+let sharpCache: any = undefined;
+async function getSharpInstance(): Promise<any> {
+    if (sharpCache !== undefined) return sharpCache;
+    try {
+        const mod = await import('sharp');
+        sharpCache = mod.default || mod;
+    } catch {
+        sharpCache = null;
+    }
+    return sharpCache;
+}
 
 /**
  * Mengompres dan mengubah ukuran gambar (URL / Base64) khusus untuk dokumen PDF / Pratinjau.
@@ -50,22 +64,29 @@ export async function optimizeImageForDoc(srcUrl: string | null | undefined): Pr
             return trimmed; // Fallback ke URL asli jika gagal unduh
         }
 
-        // Jalankan kompresi resolusi & kualitas gambar via sharp (C++ native, ~15ms per image)
-        const compressedBuffer = await sharp(inputBuffer)
-            .resize({ width: 800, withoutEnlargement: true }) // Maksimal 800px lebar, tidak membesarkan jika gambar kecil
-            .jpeg({ quality: 75, progressive: true })       // Format JPEG kompresi 75%
-            .toBuffer();
+        const sharp = await getSharpInstance();
+        if (sharp) {
+            // Jalankan kompresi resolusi & kualitas gambar via sharp (C++ native, ~15ms per image)
+            const compressedBuffer = await sharp(inputBuffer)
+                .resize({ width: 800, withoutEnlargement: true }) // Maksimal 800px lebar, tidak membesarkan jika gambar kecil
+                .jpeg({ quality: 75, progressive: true })       // Format JPEG kompresi 75%
+                .toBuffer();
 
-        const dataUri = `data:image/jpeg;base64,${compressedBuffer.toString('base64')}`;
+            const dataUri = `data:image/jpeg;base64,${compressedBuffer.toString('base64')}`;
 
-        // Simpan ke cache jika tidak melebihi kapasitas
-        if (imageCache.size >= MAX_CACHE_SIZE) {
-            const firstKey = imageCache.keys().next().value;
-            if (firstKey) imageCache.delete(firstKey);
+            // Simpan ke cache jika tidak melebihi kapasitas
+            if (imageCache.size >= MAX_CACHE_SIZE) {
+                const firstKey = imageCache.keys().next().value;
+                if (firstKey) imageCache.delete(firstKey);
+            }
+            imageCache.set(trimmed, dataUri);
+
+            return dataUri;
         }
-        imageCache.set(trimmed, dataUri);
 
-        return dataUri;
+        // Fallback jika modul sharp tidak tersedia di environment saat ini
+        if (trimmed.startsWith('data:image/')) return trimmed;
+        return `data:image/jpeg;base64,${inputBuffer.toString('base64')}`;
     } catch (err) {
         console.warn('[image-optimizer] Gagal mengompres gambar, menggunakan sumber asli:', err);
         return trimmed;
