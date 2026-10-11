@@ -126,6 +126,9 @@ export default function PDFViewer({ url, title, onClose, inline = false }: PDFVi
     const [excelData, setExcelData] = useState<{ sheetName: string; data: any[][] }[]>([]);
     const [activeSheetIndex, setActiveSheetIndex] = useState(0);
     const [blobUrl, setBlobUrl] = useState<string | null>(null);
+    const [htmlContent, setHtmlContent] = useState<string | null>(null);
+    const [isHtmlFullPage, setIsHtmlFullPage] = useState(true);
+    const [isFullscreen, setIsFullscreen] = useState(false);
     const [loading, setLoading] = useState(false);
     const [downloading, setDownloading] = useState(false);
     const [error, setError] = useState('');
@@ -638,6 +641,7 @@ export default function PDFViewer({ url, title, onClose, inline = false }: PDFVi
         autoFitRef.current = false;
         pageDimsRef.current = {};
         setBlobUrl(null);
+        setHtmlContent(null);
         setNumPages(null);
         setError('');
         setWordHtml(null);
@@ -715,6 +719,17 @@ export default function PDFViewer({ url, title, onClose, inline = false }: PDFVi
                 objectUrl = URL.createObjectURL(finalBlob);
                 setBlobUrl(objectUrl);
 
+                if (isHtmlByExt || isPdfPreview || mimeAsli?.startsWith('text/html') || ext === 'html' || ext === 'htm') {
+                    try {
+                        const text = await blob.text();
+                        if (!cancelledRef.current) {
+                            setHtmlContent(text);
+                        }
+                    } catch (err) {
+                        console.warn('[PDFViewer] Gagal membaca isi teks HTML:', err);
+                    }
+                }
+
                 // Native Excel Parsing - Load ALL sheets
                 if (excelSekarang) {
                     try {
@@ -789,6 +804,7 @@ export default function PDFViewer({ url, title, onClose, inline = false }: PDFVi
         const mimeToExt: Record<string, string> = {
             'application/pdf': 'pdf',
             'text/html': 'html',
+            'application/xhtml+xml': 'html',
             'image/png': 'png',
             'image/jpeg': 'jpg',
             'image/webp': 'webp',
@@ -802,7 +818,7 @@ export default function PDFViewer({ url, title, onClose, inline = false }: PDFVi
             'image/heif': 'heif',
             'image/avif': 'avif',
         };
-        const targetExt = isPdfPreview ? 'pdf' : (ext || (detectedMime ? mimeToExt[detectedMime] || '' : ''));
+        const targetExt = isPdfPreview ? 'pdf' : (ext || (detectedMime ? mimeToExt[detectedMime] || '' : (isHtml ? 'html' : '')));
         const base = (title || 'dokumen')
             .replace(/[\\/:*?"<>|]+/g, '-')  // karakter yang dilarang di nama file
             .replace(/\s+/g, ' ')
@@ -841,12 +857,38 @@ export default function PDFViewer({ url, title, onClose, inline = false }: PDFVi
             return;
         }
 
-        const a = document.createElement('a');
-        a.href = blobUrl || fileUrl;
-        a.download = downloadName;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
+        try {
+            setDownloading(true);
+            let dlUrl = blobUrl;
+            let tempCreated = false;
+
+            if (!dlUrl) {
+                const proxyUrl = fileUrl.startsWith('http')
+                    ? `/api/pdf-proxy?url=${encodeURIComponent(fileUrl)}`
+                    : fileUrl;
+                const res = await fetch(proxyUrl);
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const blob = await res.blob();
+                dlUrl = window.URL.createObjectURL(blob);
+                tempCreated = true;
+            }
+
+            const a = document.createElement('a');
+            a.href = dlUrl;
+            a.download = downloadName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+
+            if (tempCreated) {
+                setTimeout(() => window.URL.revokeObjectURL(dlUrl!), 1000);
+            }
+        } catch (err: any) {
+            console.error('[PDFViewer] Download error:', err);
+            alert('Gagal mengunduh berkas: ' + (err?.message || 'Terjadi kesalahan'));
+        } finally {
+            setDownloading(false);
+        }
     }, [isPdfPreview, fileUrl, downloadName, blobUrl]);
 
     const getFileIcon = () => {
@@ -862,6 +904,22 @@ export default function PDFViewer({ url, title, onClose, inline = false }: PDFVi
         return 'bi bi-file-earmark-fill';
     };
 
+    useEffect(() => {
+        const handleFsChange = () => setIsFullscreen(Boolean(document.fullscreenElement));
+        document.addEventListener('fullscreenchange', handleFsChange);
+        return () => document.removeEventListener('fullscreenchange', handleFsChange);
+    }, []);
+
+    const handleToggleFullscreen = () => {
+        if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen().catch(() => {});
+            setIsFullscreen(true);
+        } else {
+            document.exitFullscreen().catch(() => {});
+            setIsFullscreen(false);
+        }
+    };
+
     if (!mounted) return null;
 
     // ── HTML VIEWER ──────────────────────────────────────────────────
@@ -869,7 +927,10 @@ export default function PDFViewer({ url, title, onClose, inline = false }: PDFVi
         const srcUrl = blobUrl || fileUrl;
         const content = (
             <>
-                {!inline && <div onClick={onClose} style={{
+                {!inline && <div onClick={() => {
+                    if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+                    onClose();
+                }} style={{
                     position: 'fixed', inset: 0, zIndex: 99990,
                     background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(6px)',
                     WebkitBackdropFilter: 'blur(6px)'
@@ -878,7 +939,8 @@ export default function PDFViewer({ url, title, onClose, inline = false }: PDFVi
                     className="pdf-viewer-modal"
                     style={{
                         position: inline ? 'absolute' : 'fixed', inset: 0, zIndex: inline ? 1 : 99999,
-                        display: 'flex', flexDirection: 'column', background: '#eef1f5'
+                        display: 'flex', flexDirection: 'column',
+                        background: isHtmlFullPage ? '#ffffff' : '#eef1f5'
                     }}
                     onWheel={(e) => {
                         const iframe = e.currentTarget.querySelector('iframe');
@@ -898,22 +960,88 @@ export default function PDFViewer({ url, title, onClose, inline = false }: PDFVi
                         minHeight: '52px'
                     }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, minWidth: 0 }}>
-                            <i className={`bi ${getFileIcon()}`} style={{ fontSize: '1rem', opacity: 0.7, flexShrink: 0 }}></i>
+                            <i className={`bi ${getFileIcon()}`} style={{ fontSize: '1.05rem', color: '#ea580c', flexShrink: 0 }}></i>
                             <h2 style={{
-                                margin: 0, fontSize: '0.82rem', fontWeight: '600',
+                                margin: 0, fontSize: '0.85rem', fontWeight: '600',
                                 overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                                opacity: 0.9
+                                opacity: 0.95
                             }}>{title}</h2>
+                            <span style={{
+                                fontSize: '0.65rem',
+                                background: 'rgba(234, 88, 12, 0.25)',
+                                color: '#fdba74',
+                                border: '1px solid rgba(234, 88, 12, 0.4)',
+                                padding: '1px 6px',
+                                borderRadius: '4px',
+                                fontWeight: '700',
+                                letterSpacing: '0.5px',
+                                flexShrink: 0
+                            }}>
+                                HTML
+                            </span>
+                            {isHtmlFullPage && (
+                                <span style={{
+                                    fontSize: '0.65rem',
+                                    background: 'rgba(59, 130, 246, 0.2)',
+                                    color: '#93c5fd',
+                                    border: '1px solid rgba(59, 130, 246, 0.3)',
+                                    padding: '1px 6px',
+                                    borderRadius: '4px',
+                                    fontWeight: '600',
+                                    flexShrink: 0
+                                }}>
+                                    Full Page
+                                </span>
+                            )}
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
+                            {/* Toggle Fullpage / Boxed */}
+                            <button
+                                onClick={() => setIsHtmlFullPage(prev => !prev)}
+                                title={isHtmlFullPage ? "Ubah ke Tampilan Box (1024px)" : "Ubah ke Tampilan Layar Penuh (Full Page)"}
+                                style={{
+                                    background: isHtmlFullPage ? 'rgba(59, 130, 246, 0.25)' : 'rgba(255,255,255,0.08)',
+                                    border: isHtmlFullPage ? '1px solid rgba(59, 130, 246, 0.4)' : 'none',
+                                    borderRadius: '6px',
+                                    color: isHtmlFullPage ? '#93c5fd' : 'rgba(255,255,255,0.7)',
+                                    cursor: 'pointer', width: '30px', height: '30px',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    fontSize: '0.85rem', transition: 'all 0.2s ease'
+                                }}
+                                onMouseEnter={(e) => { e.currentTarget.style.background = isHtmlFullPage ? 'rgba(59, 130, 246, 0.35)' : 'rgba(255,255,255,0.15)'; }}
+                                onMouseLeave={(e) => { e.currentTarget.style.background = isHtmlFullPage ? 'rgba(59, 130, 246, 0.25)' : 'rgba(255,255,255,0.08)'; }}
+                            >
+                                <i className={`bi ${isHtmlFullPage ? 'bi-arrows-angle-contract' : 'bi-arrows-angle-expand'}`}></i>
+                            </button>
+
+                            {/* Toggle Browser Fullscreen */}
+                            <button
+                                onClick={handleToggleFullscreen}
+                                title={isFullscreen ? "Keluar Layar Penuh" : "Layar Penuh Browser"}
+                                style={{
+                                    background: isFullscreen ? 'rgba(59, 130, 246, 0.25)' : 'rgba(255,255,255,0.08)',
+                                    border: isFullscreen ? '1px solid rgba(59, 130, 246, 0.4)' : 'none',
+                                    borderRadius: '6px',
+                                    color: isFullscreen ? '#93c5fd' : 'rgba(255,255,255,0.7)',
+                                    cursor: 'pointer', width: '30px', height: '30px',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    fontSize: '0.85rem', transition: 'all 0.2s ease'
+                                }}
+                                onMouseEnter={(e) => { e.currentTarget.style.background = isFullscreen ? 'rgba(59, 130, 246, 0.35)' : 'rgba(255,255,255,0.15)'; }}
+                                onMouseLeave={(e) => { e.currentTarget.style.background = isFullscreen ? 'rgba(59, 130, 246, 0.25)' : 'rgba(255,255,255,0.08)'; }}
+                            >
+                                <i className={`bi ${isFullscreen ? 'bi-fullscreen-exit' : 'bi-fullscreen'}`}></i>
+                            </button>
+
+                            {/* Print Document */}
                             <button
                                 onClick={() => {
                                     const iframe = document.querySelector('.pdf-viewer-modal iframe') as HTMLIFrameElement;
                                     if (iframe && iframe.contentWindow) {
                                         iframe.contentWindow.focus();
                                         iframe.contentWindow.print();
-                                    } else {
-                                        window.open(srcUrl, '_blank');
+                                    } else if (blobUrl) {
+                                        window.open(blobUrl, '_blank');
                                     }
                                 }}
                                 title="Cetak Dokumen"
@@ -929,10 +1057,12 @@ export default function PDFViewer({ url, title, onClose, inline = false }: PDFVi
                             >
                                 <i className="bi bi-printer"></i>
                             </button>
+
+                            {/* Download Button */}
                             <button
                                 onClick={handleDownload}
                                 disabled={downloading}
-                                title={downloading ? "Mengunduh PDF..." : (isPdfPreview ? "Download PDF" : "Download")}
+                                title={downloading ? "Mengunduh file..." : "Download"}
                                 style={{
                                     background: 'rgba(255,255,255,0.08)', border: 'none',
                                     borderRadius: '6px', color: 'rgba(255,255,255,0.7)',
@@ -955,7 +1085,14 @@ export default function PDFViewer({ url, title, onClose, inline = false }: PDFVi
                                     <i className="bi bi-download"></i>
                                 )}
                             </button>
-                            <button onClick={onClose} title="Tutup" style={{
+
+                            {/* Close Button */}
+                            <button onClick={() => {
+                                if (document.fullscreenElement) {
+                                    document.exitFullscreen().catch(() => {});
+                                }
+                                onClose();
+                            }} title="Tutup" style={{
                                 background: 'rgba(255,255,255,0.05)', border: 'none',
                                 borderRadius: '6px', color: 'rgba(255,255,255,0.5)',
                                 cursor: 'pointer', width: '30px', height: '30px',
@@ -970,7 +1107,18 @@ export default function PDFViewer({ url, title, onClose, inline = false }: PDFVi
                         </div>
                     </div>
                     
-                    <div style={{ flex: 1, overflow: 'hidden', display: 'flex', justifyContent: 'center', padding: inline ? '0' : '20px', position: 'relative' }}>
+                    <div style={{
+                        flex: 1,
+                        overflow: 'hidden',
+                        display: 'flex',
+                        justifyContent: isHtmlFullPage ? 'stretch' : 'center',
+                        alignItems: 'stretch',
+                        padding: isHtmlFullPage ? 0 : (inline ? 0 : '20px'),
+                        position: 'relative',
+                        background: isHtmlFullPage ? '#ffffff' : '#eef1f5',
+                        width: '100%',
+                        height: '100%'
+                    }}>
                         {loading ? (
                             <div style={{
                                 position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column',
@@ -996,9 +1144,19 @@ export default function PDFViewer({ url, title, onClose, inline = false }: PDFVi
                             </div>
                         ) : (
                             <iframe 
-                                src={srcUrl} 
+                                title={title}
+                                srcDoc={htmlContent || undefined}
+                                src={!htmlContent ? srcUrl : undefined} 
                                 sandbox="allow-scripts allow-forms allow-popups allow-same-origin allow-modals"
-                                style={{ width: '100%', maxWidth: '1024px', height: '100%', background: '#fff', border: 'none', borderRadius: inline ? '0' : '8px', boxShadow: inline ? 'none' : '0 10px 34px rgba(0,0,0,0.2)' }} 
+                                style={{
+                                    width: '100%',
+                                    maxWidth: isHtmlFullPage ? 'none' : '1024px',
+                                    height: '100%',
+                                    background: '#fff',
+                                    border: 'none',
+                                    borderRadius: isHtmlFullPage || inline ? '0' : '8px',
+                                    boxShadow: isHtmlFullPage || inline ? 'none' : '0 10px 34px rgba(0,0,0,0.2)'
+                                }} 
                             />
                         )}
                     </div>

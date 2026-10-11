@@ -3,6 +3,7 @@ import { extractRequestToken } from '@/lib/app-jwt';
 import { buildLaporanReport } from '@/lib/guru-asuh/laporan-report';
 import { launchPuppeteerBrowser } from '@/lib/puppeteer-launcher';
 import { getPublicOrigin } from '@/lib/public-url';
+import { fetchSafeFile } from '@/lib/proxy-guard';
 
 export const dynamic = 'force-dynamic';
 
@@ -10,6 +11,26 @@ async function convertHtmlToPdf(html: string): Promise<Buffer> {
     const browser = await launchPuppeteerBrowser();
     try {
         const page = await browser.newPage();
+        await page.setJavaScriptEnabled(false);
+        await page.setRequestInterception(true);
+        page.on('request', async request => {
+            try {
+                // Chromium tidak boleh membuka koneksi sendiri. Unduh gambar
+                // melalui allowlist, pemeriksaan redirect, dan DNS yang dipin.
+                if (request.resourceType() !== 'image') { await request.abort(); return; }
+                if (/^data:image\/(png|jpeg|gif|webp);base64,[a-z0-9+/=]+$/i.test(request.url())) {
+                    await request.continue(); return;
+                }
+                const response = await fetchSafeFile(request.url());
+                const contentType = (response.headers.get('content-type') || '').split(';')[0];
+                if (!/^image\/(png|jpeg|gif|webp|avif|bmp)$/.test(contentType)) {
+                    await request.abort(); return;
+                }
+                await request.respond({ status: 200, contentType, body: Buffer.from(await response.arrayBuffer()) });
+            } catch {
+                if (!request.isInterceptResolutionHandled()) await request.abort();
+            }
+        });
         await page.setContent(html, { waitUntil: 'networkidle0' as any });
         const pdfBuffer = await page.pdf({
             format: 'A4',

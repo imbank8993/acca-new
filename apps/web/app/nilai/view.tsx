@@ -133,6 +133,20 @@ export default function NilaiPage() {
     const [changes, setChanges] = useState<Record<string, string | number>>({});
 
     const [loading, setLoading] = useState(false);
+    const scopeKey = JSON.stringify([user?.nip, kelas, mapel, semester, tahunAjaran]);
+    const currentScope = useRef(scopeKey);
+    currentScope.current = scopeKey;
+    const [loadedScope, setLoadedScope] = useState<string | null>(null);
+    const dataRequest = useRef(0);
+    const apresiasiRequest = useRef(0);
+    const teacherScopeRequest = useRef(0);
+    const savingRef = useRef(false);
+    const dataReady = loadedScope === scopeKey;
+    useEffect(() => () => {
+        currentScope.current = '';
+        dataRequest.current++;
+        apresiasiRequest.current++;
+    }, []);
     const [showConfigModal, setShowConfigModal] = useState(false);
     /** Siswa yang baris nilainya dibuka di modal (daftar mobile). */
     const [nilaiDetailSiswa, setNilaiDetailSiswa] = useState<any | null>(null);
@@ -287,9 +301,11 @@ export default function NilaiPage() {
 
     const loadTeacherScopes = useCallback(async (ta: string, sem: string, nip: string) => {
         if (!nip || !ta || !sem) return;
+        const requestId = ++teacherScopeRequest.current;
         try {
             const res = await fetch(`/api/nilai/filters?nip=${encodeURIComponent(nip)}&tahun_ajaran=${encodeURIComponent(ta)}&semester=${encodeURIComponent(sem)}`);
             const json = await res.json();
+            if (requestId !== teacherScopeRequest.current) return;
             if (json.ok && json.data) {
                 const kList: string[] = json.data.kelasList || [];
                 const mByK: Record<string, string[]> = json.data.mapelByKelas || {};
@@ -358,60 +374,79 @@ export default function NilaiPage() {
         }
     }, [tahunAjaran, semester, user?.nip, loadTeacherScopes]);
 
-    // Auto-load data when filters change
+    // Invalidate old responses and drafts as soon as the selected scope changes.
     useEffect(() => {
-        // Only load if essential filters are set
-        if (user && kelas && mapel && tahunAjaran && semester) {
-            loadData();
+        dataRequest.current++;
+        apresiasiRequest.current++;
+        setLoadedScope(null);
+        setSiswa([]);
+        setNilaiData([]);
+        setTagihanConfig([]);
+        setBobot(DEFAULT_BOBOT);
+        setChanges({});
+        setApresiasiSesi([]);
+        setApresiasiPoin([]);
+        setNilaiDetailSiswa(null);
+        setShowSesiApresiasi(false);
+        setShowImportModal(false);
+        setShowTagihanModal(false);
+        setShowConfigModal(false);
+        if (user?.nip && kelas && mapel && tahunAjaran && semester) {
+            void loadData();
+        } else {
+            setLoading(false);
         }
-    }, [user, kelas, mapel, semester, tahunAjaran]);
+    }, [scopeKey]);
 
     const loadData = async () => {
-        if (!user || !user.nip || !kelas || !mapel || !tahunAjaran || !semester) return;
+        if (currentScope.current !== scopeKey || !user?.nip || !kelas || !mapel || !tahunAjaran || !semester) return;
+        const requestId = ++dataRequest.current;
+        const isCurrent = () => currentScope.current === scopeKey && requestId === dataRequest.current;
         setLoading(true);
         try {
-            const url = `/api/nilai?nip=${user.nip}&kelas=${encodeURIComponent(kelas)}&mapel=${encodeURIComponent(mapel)}&semester=${semester}&tahun_ajaran=${encodeURIComponent(tahunAjaran)}&_t=${Date.now()}`;
-            const res = await authFetch(url, { cache: 'no-store' });
+            const params = new URLSearchParams({ nip: user.nip, kelas, mapel, semester, tahun_ajaran: tahunAjaran });
+            const res = await authFetch('/api/nilai?' + params, { cache: 'no-store' });
             const json = await res.json();
-            if (json.ok && json.data) {
+            if (!isCurrent()) return;
+            if (res.ok && json.ok && json.data) {
                 setNilaiData(json.data.nilai || []);
                 setSiswa(json.data.siswa || []);
                 setTagihanConfig(json.data.tagihan || []);
                 setBobot(json.data.bobot || DEFAULT_BOBOT);
                 setChanges({});
+                setLoadedScope(scopeKey);
             } else {
                 notif.error(json.error || 'Gagal memuat data nilai');
             }
         } catch (err: any) {
-            notif.error(err.message || 'Gagal memuat data nilai');
-        } finally { setLoading(false); }
-
-        // Query terpisah, dan kegagalannya sengaja tidak membatalkan pemuatan
-        // nilai di atas: tabel apresiasi baru, jadi selama migrasinya belum
-        // dijalankan halaman nilai harus tetap hidup seperti biasa.
-        loadApresiasi();
+            if (isCurrent()) notif.error(err.message || 'Gagal memuat data nilai');
+        } finally {
+            if (isCurrent()) setLoading(false);
+        }
+        if (isCurrent()) void loadApresiasi();
     };
 
     const loadApresiasi = async () => {
-        if (!user || !user.nip || !kelas || !mapel || !tahunAjaran || !semester) return;
+        if (currentScope.current !== scopeKey || !user?.nip || !kelas || !mapel || !tahunAjaran || !semester) return;
+        const requestId = ++apresiasiRequest.current;
+        const isCurrent = () => currentScope.current === scopeKey && requestId === apresiasiRequest.current;
         try {
-            const url = `/api/nilai/apresiasi?nip=${user.nip}&kelas=${encodeURIComponent(kelas)}&mapel=${encodeURIComponent(mapel)}&semester=${semester}&tahun_ajaran=${encodeURIComponent(tahunAjaran)}&_t=${Date.now()}`;
-            const res = await authFetch(url, { cache: 'no-store' });
+            const params = new URLSearchParams({ nip: user.nip, kelas, mapel, semester, tahun_ajaran: tahunAjaran });
+            const res = await authFetch('/api/nilai/apresiasi?' + params, { cache: 'no-store' });
             const json = await res.json();
-            if (json.ok && json.data) {
-                setApresiasiSesi(json.data.sesi || []);
-                setApresiasiPoin(json.data.poin || []);
-            } else {
+            if (!isCurrent()) return;
+            setApresiasiSesi(res.ok && json.ok ? json.data?.sesi || [] : []);
+            setApresiasiPoin(res.ok && json.ok ? json.data?.poin || [] : []);
+        } catch {
+            if (isCurrent()) {
                 setApresiasiSesi([]);
                 setApresiasiPoin([]);
             }
-        } catch {
-            setApresiasiSesi([]);
-            setApresiasiPoin([]);
         }
     };
 
     const handleSimpanSesiApresiasi = async (payload: SesiApresiasiPayload): Promise<boolean> => {
+        if (!dataReady || currentScope.current !== scopeKey) return false;
         try {
             const res = await authFetch('/api/nilai/apresiasi', {
                 method: 'POST',
@@ -689,6 +724,7 @@ export default function NilaiPage() {
     };
 
     const handleScoreChange = (nisn: string, jenis: string, mtr: string, tag: string, val: string) => {
+        if (!dataReady || loading || savingRef.current || currentScope.current !== scopeKey) return;
         let raw = val.replace(',', '.');
         if (raw !== "") {
             if (!/^\d+\.?\d{0,2}$/.test(raw)) return;
@@ -718,6 +754,8 @@ export default function NilaiPage() {
     };
 
     const handleSave = async () => {
+        if (!dataReady || loading || savingRef.current || currentScope.current !== scopeKey || !Object.keys(changes).length) return;
+        savingRef.current = true;
         const updates = Object.keys(changes).map(key => {
             const [nisn, jenis, mt, tag] = key.split('||');
             return { nisn, jenis, materi: mt, tagihan: tag || '', nilai: changes[key] };
@@ -731,16 +769,20 @@ export default function NilaiPage() {
                 body: JSON.stringify({ nip: saveNip, kelas, mapel, semester, updates, tahun_ajaran: tahunAjaran })
             });
             const json = await res.json().catch(() => ({ ok: false, error: 'Respon server tidak valid' }));
-            if (res.ok && json.ok) {
+            if (currentScope.current !== scopeKey) return;
+            if (res.ok && json.ok && !json.errors?.length) {
                 notif.success('Perubahan disimpan');
-                loadData();
+                await loadData();
             } else {
                 // Jangan diam saat gagal — guru harus tahu nilainya BELUM tersimpan
-                notif.error(json.error || `Gagal menyimpan (HTTP ${res.status}). Perubahan Anda belum tersimpan.`);
+                notif.error(json.errors?.length ? 'Sebagian nilai gagal disimpan. Draf dipertahankan; silakan coba lagi.' : (json.error || `Gagal menyimpan (HTTP ${res.status}). Perubahan Anda belum tersimpan.`));
             }
         } catch (err: any) {
-            notif.error(err.message || 'Gagal menyimpan. Perubahan Anda belum tersimpan.');
-        } finally { setLoading(false); }
+            if (currentScope.current === scopeKey) notif.error(err.message || 'Gagal menyimpan. Perubahan Anda belum tersimpan.');
+        } finally {
+            savingRef.current = false;
+            if (currentScope.current === scopeKey) setLoading(false);
+        }
     };
 
     const sortTags = (tags: any[]) => {
@@ -1024,12 +1066,17 @@ export default function NilaiPage() {
 
 
     const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (!dataReady || loading || savingRef.current || currentScope.current !== scopeKey) return;
+        const assertImportScope = () => {
+            if (currentScope.current !== scopeKey) throw new Error('Filter berubah. Ulangi impor pada kelas yang dipilih.');
+        };
         const file = e.target.files?.[0];
         if (!file) return;
 
         const reader = new FileReader();
         reader.onload = async (evt) => {
             try {
+                assertImportScope();
                 // 1. Read File
                 const bstr = evt.target?.result;
                 const wb = XLSX.read(bstr, { type: 'binary' });
@@ -1228,14 +1275,11 @@ export default function NilaiPage() {
                 }
 
                 if (errors.length > 0) {
-                    const listErr = errors.slice(0, 20).map(e => `<li>${e}</li>`).join('');
-                    const more = errors.length > 20 ? `<li class="italic text-slate-500">... dan ${errors.length - 20} error lainnya.</li>` : '';
-
-                    const errorHtml = `<div class="text-left text-xs text-red-600 max-h-[300px] overflow-y-auto bg-red-50 p-2 border rounded"><ul class="list-disc pl-4">${listErr}${more}</ul></div>`;
-
+                    const details = errors.slice(0, 20).join('\n');
+                    const more = errors.length > 20 ? '\n... dan ' + (errors.length - 20) + ' error lainnya.' : '';
                     Swal.fire({
                         title: 'Validasi Gagal',
-                        html: `<p class="mb-2">Ditemukan ${errors.length} error. Import dibatalkan.</p>${errorHtml}`,
+                        text: 'Ditemukan ' + errors.length + ' error. Import dibatalkan.\n' + details + more,
                         icon: 'error',
                         width: '600px',
                         showConfirmButton: true,
@@ -1251,24 +1295,32 @@ export default function NilaiPage() {
                 if (newTagihans.length > 0 || topicsToUpdate.length > 0) {
                     const impNip = user.nip;
                     for (const t of newTagihans) {
-                        await authFetch('/api/nilai/tagihan', {
+                        assertImportScope();
+                        const response = await authFetch('/api/nilai/tagihan', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ nip: impNip, kelas, mapel, semester, materi: t.materi, jenis: t.jenis, nama: t.nama, topik: t.topik, tahun_ajaran: tahunAjaran })
                         });
+                        const result = await response.json();
+                        if (!response.ok || !result.ok) throw new Error(result.error || 'Gagal menyimpan topik impor');
                     }
                     for (const t of topicsToUpdate) {
-                        await authFetch('/api/nilai/tagihan', {
+                        assertImportScope();
+                        const response = await authFetch('/api/nilai/tagihan', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ nip: impNip, kelas, mapel, semester, ...t, nama: t.nama_tagihan, materi: t.materi_tp, tahun_ajaran: tahunAjaran })
                         });
+                        const result = await response.json();
+                        if (!response.ok || !result.ok) throw new Error(result.error || 'Gagal menyimpan topik impor');
                     }
                     const res = await authFetch(`/api/nilai?nip=${user.nip}&kelas=${encodeURIComponent(kelas)}&mapel=${encodeURIComponent(mapel)}&semester=${semester}&tahun_ajaran=${encodeURIComponent(tahunAjaran)}`);
                     const json = await res.json();
+                    assertImportScope();
                     if (json.ok) setTagihanConfig(json.data.tagihan);
                 }
 
+                assertImportScope();
                 setChanges(prev => {
                     const next = { ...prev };
                     updates.forEach(u => { next[u.key] = u.val; });
@@ -1676,7 +1728,7 @@ export default function NilaiPage() {
                     )}
 
                 {/* Konten Utama: Loader jika sedang memuat data */}
-                {loading ? (
+                {loading || !dataReady ? (
                     <div className="flex flex-col items-center justify-center py-20 gap-3">
                         <Spinner variant="buble" size={32} />
                         <span className="text-sm font-semibold text-slate-400">Memuat data nilai...</span>
@@ -1911,6 +1963,7 @@ export default function NilaiPage() {
                     <Button
                         variant="primary"
                         onClick={handleSave}
+                        disabled={loading || !dataReady}
                         title="Simpan Perubahan Nilai"
                         leftIcon={<UploadCloud size={15} />}
                     >
@@ -1923,7 +1976,8 @@ export default function NilaiPage() {
 
             {/* Sesi Nilai Apresiasi (kuis rebutan) */}
             <SesiApresiasiModal
-                open={showSesiApresiasi}
+                key={scopeKey}
+                open={showSesiApresiasi && dataReady}
                 onClose={() => setShowSesiApresiasi(false)}
                 siswa={siswa}
                 kelas={kelas}

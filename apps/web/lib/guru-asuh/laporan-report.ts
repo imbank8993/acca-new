@@ -7,6 +7,7 @@ import QRCode from 'qrcode';
 import { nestFetchAsUser } from '@/lib/nest-api';
 import { renderKopHTML, KOP_CSS } from '@/lib/lckh/print-shared';
 import { getPublicOrigin } from '@/lib/public-url';
+import { optimizeImageUrls } from '@/lib/image-optimizer';
 
 export const BULAN = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
 
@@ -29,7 +30,7 @@ export function sanitizeMediaUrl(url: unknown): string {
         }
         return esc(trimmed);
     }
-    if (trimmed.startsWith('data:image/')) {
+    if (/^data:image\/(png|jpeg|gif|webp);base64,[a-z0-9+/=]+$/i.test(trimmed)) {
         return trimmed;
     }
     return '';
@@ -159,18 +160,24 @@ export async function buildLaporanReport(input: LaporanReportInput): Promise<Lap
     }).join('');
 
     const validFotoEntries = fotoEntries.filter((e: any) => sanitizeMediaUrl(e.foto_url));
+    const rawGuruUrls = validFotoEntries.map((e: any) => e.foto_url).filter(Boolean);
+    const optimizedGuruMap = await optimizeImageUrls(rawGuruUrls);
+
     const lampiranHtml = validFotoEntries.length === 0 ? '' : `
     <div class="lampiran-page">
       <div class="doc-title"><h1>LAMPIRAN FOTO DOKUMENTASI KEGIATAN</h1></div>
       <div class="foto-grid">
-        ${validFotoEntries.map((e: any, i: number) => `
+        ${validFotoEntries.map((e: any, i: number) => {
+          const imgSrc = optimizedGuruMap.get(e.foto_url) || sanitizeMediaUrl(e.foto_url);
+          return `
           <div class="foto-item" id="foto-${i + 1}">
-            <img src="${sanitizeMediaUrl(e.foto_url)}" alt="Dokumentasi ${esc(e.kegiatan)}" />
+            <img src="${imgSrc}" alt="Dokumentasi ${esc(e.kegiatan)}" />
             <div class="foto-caption">
               <div class="foto-kegiatan">${i + 1}. ${esc(e.kegiatan)}</div>
               <div class="foto-tgl">Diunggah: ${fmtDate(e.created_at)}</div>
             </div>
-          </div>`).join('')}
+          </div>`;
+        }).join('')}
       </div>
     </div>`;
 

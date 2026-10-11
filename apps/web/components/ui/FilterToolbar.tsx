@@ -81,6 +81,7 @@ function isActionElement(element: React.ReactElement): boolean {
     if (type?.displayName === 'FilterActions' || type?.name === 'FilterActions') return true;
     const props = element.props as any;
     if (props?.className && typeof props.className === 'string' && props.className.includes('ftb-field--action')) return true;
+    if (props?.['data-action'] || props?.isAction) return true;
     return false;
 }
 
@@ -686,6 +687,7 @@ export function FilterActions({ children, className = '', style }: { children: R
         </div>
     );
 }
+FilterActions.displayName = 'FilterActions';
 
 /* -------------------------------- Month Select ------------------------------ */
 

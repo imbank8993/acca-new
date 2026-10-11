@@ -71,7 +71,7 @@ export async function GET(
         }
 
         const buffer = await upstream.arrayBuffer();
-        const isInline = contentType.startsWith('image/') || contentType === 'application/pdf';
+        const isInline = contentType.startsWith('image/') || contentType === 'application/pdf' || contentType.startsWith('text/html') || contentType === 'application/xhtml+xml';
 
         return new NextResponse(buffer, {
             status: 200,

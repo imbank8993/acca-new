@@ -27,6 +27,8 @@ function fileIconInfo(fileName: string) {
         case 'zip':
         case 'rar':
         case '7z': return { icon: 'bi-file-earmark-zip-fill', color: '#3b82f6' };
+        case 'html':
+        case 'htm': return { icon: 'bi-filetype-html', color: '#ea580c' };
         default: return { icon: 'bi-file-earmark-text-fill', color: '#3083FF' };
     }
 }

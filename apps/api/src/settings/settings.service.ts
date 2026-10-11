@@ -1951,6 +1951,9 @@ export class SettingsService {
         );
       }
 
+    }
+
+    if (body.aktif !== undefined ? body.aktif : record.aktif) {
       const duplicateClaim = await this.prisma.guru_asuh.findFirst({
         where: {
           nisn_siswa: newNisn,

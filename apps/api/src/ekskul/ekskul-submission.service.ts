@@ -45,7 +45,10 @@ export class EkskulSubmissionService {
       where.pembina_nip = user.nip;
     }
     if (ekskul_id) where.ekskul_id = ekskul_id;
-    if (status) where.status = status;
+    if (status) {
+      if (query.includePaid === 'true') where.OR = [{ status }, { dibayarkan: true }];
+      else where.status = status;
+    }
     if (bulan) where.bulan = parseInt(bulan, 10);
     if (tahun) where.tahun = parseInt(tahun, 10);
 
@@ -245,7 +248,7 @@ export class EkskulSubmissionService {
     if (!submission) {
       throw new NotFoundException('Ajuan tidak ditemukan.');
     }
-    if (submission.status !== 'Disahkan') {
+    if (dibayarkan && submission.status !== 'Disahkan') {
       throw new ConflictException(
         'Hanya laporan berstatus Disahkan yang dapat ditandai pembayaran.',
       );

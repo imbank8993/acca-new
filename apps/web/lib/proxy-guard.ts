@@ -40,7 +40,8 @@ export function isSafeContentType(type: string | null): boolean {
         'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         'application/vnd.ms-powerpoint',
         'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-        'text/plain', 'text/csv'
+        'text/plain', 'text/csv',
+        'text/html', 'application/xhtml+xml'
     ].includes(mime);
 }
 async function allowedHosts(): Promise<Set<string>> {
@@ -167,7 +168,8 @@ export function buildSafeProxyResponse(res: Response, blob: Blob): NextResponse 
     const type = res.headers.get('content-type') || 'application/octet-stream';
     if (!isSafeContentType(type))
         throw new Error('Jenis berkas tidak diizinkan');
+    const isInline = type.startsWith('image/') || type.startsWith('application/pdf') || type.startsWith('text/html') || type === 'application/xhtml+xml';
     return new NextResponse(blob, { headers: { 'Content-Type': type, 'Cache-Control': 'private, max-age=3600',
             'X-Content-Type-Options': 'nosniff', 'Content-Security-Policy': "default-src 'none'; sandbox",
-            'Content-Disposition': type.startsWith('image/') || type.startsWith('application/pdf') ? 'inline' : 'attachment' } });
+            'Content-Disposition': isInline ? 'inline' : 'attachment' } });
 }

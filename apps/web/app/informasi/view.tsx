@@ -117,6 +117,8 @@ function InformasiViewer({
             case 'avi': return { icon: 'bi-file-earmark-play-fill', color: '#3b82f6' };
             case 'mp3':
             case 'wav': return { icon: 'bi-file-earmark-music-fill', color: '#ec4899' };
+            case 'html':
+            case 'htm': return { icon: 'bi-filetype-html', color: '#ea580c' };
             default: return { icon: 'bi-file-earmark-text-fill', color: 'var(--n-primary)' };
         }
     };

@@ -152,7 +152,11 @@ export async function middleware(request: NextRequest) {
         '/templates',
         '/logo-login.png',
         '/logo-sidebar.png',
+        '/logo-sidebar-dark.png',
+        '/logo-sidebar-kecil.png',
+        '/logo-sidebar-kecil.webp',
         '/logo-icon.png',
+        '/monitoring/laporan', // Halaman publik monitoring laporan guru asuh, klinik & ekskul untuk komite
         '/api/auth', // CRITICAL: Allow login/me/logout API calls to pass through
         '/api/public',
         '/api/monitoring',

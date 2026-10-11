@@ -1,0 +1,888 @@
+/* =========================================================
+   MONITORING LAPORAN PUBLIK STYLES
+   Selaras dengan Pembayaran & Modern ACCA Theme
+========================================================= */
+
+@import '../monitoring.css';
+@import '../../pembayaran/pembayaran.css';
+
+.mon-lap-wrap {
+    min-height: 100vh;
+    background: var(--n-bg, #f8fafc);
+    color: var(--n-ink, #0f172a);
+    display: flex;
+    flex-direction: column;
+}
+
+.dark .mon-lap-wrap {
+    background: #080e1e;
+    color: #f1f5f9;
+}
+
+/* ── Top Header Navigation Bar ── */
+.mon-lap-header {
+    background: rgba(255, 255, 255, 0.94);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--n-border, rgba(0, 56, 168, 0.12));
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    padding: 8px 20px;
+    transition: all 0.25s ease;
+}
+
+.dark .mon-lap-header {
+    background: rgba(11, 19, 41, 0.94);
+    border-bottom: 1px solid rgba(26, 115, 232, 0.3);
+}
+
+.mon-lap-header-inner {
+    max-width: 1400px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.mon-lap-brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    text-decoration: none;
+}
+
+/* Wide ACCA logo - sleek, compact, and balanced */
+.mon-lap-logo-img {
+    height: 20px;
+    width: auto;
+    display: block;
+    object-fit: contain;
+    filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.08));
+}
+
+.mon-lap-logo-img.dark-logo {
+    display: none;
+}
+
+.dark .mon-lap-logo-img.light-logo {
+    display: none;
+}
+
+.dark .mon-lap-logo-img.dark-logo {
+    display: block;
+}
+
+.mon-lap-brand-divider {
+    width: 1.5px;
+    height: 20px;
+    background: var(--n-border, rgba(0, 0, 0, 0.12));
+}
+
+.dark .mon-lap-brand-divider {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.mon-lap-brand-text {
+    display: flex;
+    flex-direction: column;
+}
+
+.mon-lap-brand-title {
+    font-size: 0.88rem;
+    font-weight: 800;
+    color: var(--n-ink, #0f172a);
+    line-height: 1.2;
+    letter-spacing: -0.01em;
+}
+
+.dark .mon-lap-brand-title {
+    color: #f1f5f9;
+}
+
+.mon-lap-brand-sub {
+    font-size: 0.68rem;
+    color: var(--n-muted, #64748b);
+    font-weight: 500;
+}
+
+.mon-lap-header-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.mon-lap-dark-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    border: 1px solid var(--n-border, #cbd5e1);
+    background: var(--n-card, #ffffff);
+    color: var(--n-ink, #0f172a);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 1rem;
+}
+
+.mon-lap-dark-btn:hover {
+    background: var(--n-soft, #f1f5f9);
+    transform: translateY(-1px);
+}
+
+.dark .mon-lap-dark-btn {
+    background: #0b1329;
+    border-color: rgba(26, 115, 232, 0.35);
+    color: #60a5fa;
+}
+
+/* ── Main Container ── */
+.mon-lap-main {
+    flex: 1;
+    max-width: 1400px;
+    width: 100%;
+    margin: 0 auto;
+    padding: 20px 20px 40px;
+}
+
+/* Hero Banner */
+.mon-lap-hero {
+    background: linear-gradient(135deg, #1e40af 0%, #2563eb 50%, #0284c7 100%);
+    border-radius: 20px;
+    padding: 24px 28px;
+    color: white;
+    margin-bottom: 16px;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 8px 24px rgba(37, 99, 235, 0.18);
+}
+
+.dark .mon-lap-hero {
+    background: linear-gradient(135deg, #0b1739 0%, #0e2456 50%, #153b8b 100%);
+    border: 1px solid rgba(59, 130, 246, 0.35);
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.4);
+}
+
+.mon-lap-hero h1 {
+    font-size: 1.45rem;
+    font-weight: 800;
+    margin: 0 0 6px 0;
+    letter-spacing: -0.01em;
+}
+
+.mon-lap-hero p {
+    font-size: 0.88rem;
+    margin: 0;
+    opacity: 0.92;
+    max-width: 720px;
+    line-height: 1.45;
+}
+
+/* Teacher Avatar Cell */
+.mon-avatar-cell {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.mon-avatar {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 0.95rem;
+    flex-shrink: 0;
+    position: relative;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.mon-avatar-img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* ── Stats Summary Cards Blue Accent Overrides ── */
+.mon-lap-wrap .gap-stat-item .gap-stat-val {
+    color: #2563eb;
+}
+
+.mon-lap-wrap .gap-stat-item.blue-primary .gap-stat-val,
+.mon-lap-wrap .gap-stat-item.green .gap-stat-val {
+    color: #1d4ed8 !important;
+}
+
+.mon-lap-wrap .gap-stat-item.blue-secondary .gap-stat-val,
+.mon-lap-wrap .gap-stat-item.amber .gap-stat-val {
+    color: #0284c7 !important;
+}
+
+.dark .mon-lap-wrap .gap-stat-item .gap-stat-val {
+    color: #60a5fa;
+}
+
+.dark .mon-lap-wrap .gap-stat-item.blue-primary .gap-stat-val,
+.dark .mon-lap-wrap .gap-stat-item.green .gap-stat-val {
+    color: #3b82f6 !important;
+}
+
+.dark .mon-lap-wrap .gap-stat-item.blue-secondary .gap-stat-val,
+.dark .mon-lap-wrap .gap-stat-item.amber .gap-stat-val {
+    color: #38bdf8 !important;
+}
+
+/* ── ZIP Download Button (Blue Gradient) ── */
+.btn-zip-download {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 16px;
+    background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%);
+    color: white !important;
+    border: none;
+    border-radius: 10px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.btn-zip-download:hover:not(:disabled) {
+    background: linear-gradient(135deg, #1e40af 0%, #1d4ed8 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(37, 99, 235, 0.35);
+}
+
+.btn-zip-download:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.dark .btn-zip-download {
+    background: linear-gradient(135deg, #1e40af 0%, #2563eb 100%);
+    box-shadow: 0 4px 14px rgba(37, 99, 235, 0.3);
+}
+
+/* ── Action button (Lihat Laporan) - Strictly 1 Line ── */
+.btn-action-view {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 7px 14px;
+    background: rgba(37, 99, 235, 0.08);
+    border: 1px solid rgba(37, 99, 235, 0.25);
+    color: #2563eb;
+    border-radius: 9px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-decoration: none;
+    white-space: nowrap !important;
+    flex-shrink: 0;
+}
+
+.btn-action-view:hover {
+    background: #2563eb;
+    color: white;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.28);
+    transform: translateY(-1px);
+}
+
+.dark .btn-action-view {
+    background: rgba(59, 130, 246, 0.15);
+    border-color: rgba(59, 130, 246, 0.35);
+    color: #93c5fd;
+}
+
+.dark .btn-action-view:hover {
+    background: #3b82f6;
+    color: white;
+    box-shadow: 0 4px 14px rgba(59, 130, 246, 0.3);
+}
+
+/* ── Empty Card & Loading Card ── */
+.mon-empty-card,
+.mon-loading-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 20px;
+    text-align: center;
+    color: var(--n-ink, #0f172a);
+    width: 100%;
+}
+
+.mon-empty-card i {
+    font-size: 3rem;
+    color: #2563eb;
+    opacity: 0.4;
+    display: block;
+    margin-bottom: 10px;
+}
+
+.mon-empty-title {
+    font-weight: 700;
+    font-size: 0.96rem;
+    margin-bottom: 4px;
+}
+
+.mon-empty-desc {
+    font-size: 0.82rem;
+    color: var(--n-muted, #64748b);
+    max-width: 420px;
+    line-height: 1.45;
+    margin: 0;
+}
+
+.dark .mon-empty-card,
+.dark .mon-loading-card {
+    color: #f1f5f9;
+}
+
+.dark .mon-empty-desc {
+    color: #94a3b8;
+}
+
+/* ── Modal Download Info Box & Selects ── */
+.mon-modal-info-box {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px 14px;
+    border-radius: 12px;
+    background: rgba(37, 99, 235, 0.07);
+    border: 1px solid rgba(37, 99, 235, 0.2);
+}
+
+.dark .mon-modal-info-box {
+    background: rgba(59, 130, 246, 0.12);
+    border-color: rgba(59, 130, 246, 0.28);
+}
+
+.mon-modal-select {
+    background: var(--n-card, #ffffff);
+    border: 1px solid var(--n-border, #cbd5e1);
+    color: var(--n-ink, #0f172a);
+    font-family: inherit;
+    font-size: 0.88rem;
+    padding: 0 12px;
+}
+
+.dark .mon-modal-select {
+    background: #0f172a;
+    border-color: rgba(255, 255, 255, 0.15);
+    color: #f1f5f9;
+}
+
+/* ── Mobile Teacher List ── */
+.mon-mobile-list {
+    display: none;
+    flex-direction: column;
+    gap: 8px;
+    padding: 8px 0 12px;
+    width: 100%;
+}
+
+.mon-mobile-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 60px;
+    padding: 10px 12px;
+    background: #ffffff;
+    border: 1px solid var(--n-border, #e2e8f0);
+    border-radius: 14px;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.05);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: left;
+    width: 100%;
+    box-sizing: border-box;
+    font-family: inherit;
+    outline: none;
+}
+
+.mon-mobile-item-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+    flex: 1 1 auto;
+}
+
+.mon-mobile-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+    flex: 1 1 auto;
+    position: relative;
+    z-index: 1;
+}
+
+.mon-mobile-item:hover,
+.mon-mobile-item:active {
+    background: rgba(37, 99, 235, 0.05);
+    border-color: rgba(37, 99, 235, 0.3);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.08);
+}
+
+.dark .mon-mobile-item {
+    background: #0f172a;
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
+.dark .mon-mobile-item:hover,
+.dark .mon-mobile-item:active {
+    background: rgba(59, 130, 246, 0.12);
+    border-color: rgba(59, 130, 246, 0.35);
+}
+
+.mon-mobile-name {
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: var(--n-ink, #0f172a);
+    line-height: 1.3;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: block;
+    -webkit-text-fill-color: currentColor;
+}
+
+.dark .mon-mobile-name {
+    color: #f1f5f9;
+}
+
+.mon-mobile-sub {
+    font-size: 0.74rem;
+    color: var(--n-muted, #64748b);
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: block;
+    -webkit-text-fill-color: currentColor;
+}
+
+.dark .mon-mobile-sub {
+    color: #94a3b8;
+}
+
+.mon-mobile-arrow {
+    color: #2563eb;
+    font-size: 1.05rem;
+    margin-left: 10px;
+    flex-shrink: 0;
+}
+
+.dark .mon-mobile-arrow {
+    color: #60a5fa;
+}
+
+.mon-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 0 4px;
+    border-top: 1px solid var(--n-border, #e2e8f0);
+}
+
+.mon-pagination-summary,
+.mon-pagination-page {
+    color: var(--n-muted, #64748b);
+    font-size: 0.78rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.mon-pagination-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.mon-pagination-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: 36px;
+    padding: 0 10px;
+    border: 1px solid var(--n-border, #cbd5e1);
+    border-radius: 9px;
+    background: var(--n-card, #ffffff);
+    color: var(--n-ink, #0f172a);
+    font: inherit;
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.mon-pagination-button:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.dark .mon-pagination {
+    border-color: rgba(255, 255, 255, 0.12);
+}
+
+.dark .mon-pagination-summary,
+.dark .mon-pagination-page {
+    color: #94a3b8;
+}
+
+.dark .mon-pagination-button {
+    border-color: rgba(255, 255, 255, 0.15);
+    background: #0f172a;
+    color: #f1f5f9;
+}
+
+/* ── Teacher Card Inside Detail Modal ── */
+.mon-modal-teacher-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+    padding: 12px 14px;
+    background: rgba(37, 99, 235, 0.06);
+    border-radius: 12px;
+    border: 1px solid rgba(37, 99, 235, 0.18);
+}
+
+.dark .mon-modal-teacher-card {
+    background: rgba(59, 130, 246, 0.12);
+    border-color: rgba(59, 130, 246, 0.28);
+}
+
+.mon-modal-teacher-name {
+    font-weight: 800;
+    font-size: 0.98rem;
+    color: var(--n-ink, #0f172a);
+}
+
+.dark .mon-modal-teacher-name {
+    color: #f1f5f9;
+}
+
+.mon-modal-teacher-nip {
+    font-size: 0.78rem;
+    color: var(--n-muted, #64748b);
+    margin-top: 2px;
+}
+
+.dark .mon-modal-teacher-nip {
+    color: #94a3b8;
+}
+
+/* Responsive adjustment */
+@media (max-width: 768px) {
+    .mon-lap-header {
+        padding: 10px 14px;
+    }
+    .mon-lap-header-inner {
+        gap: 12px;
+    }
+    .mon-lap-brand {
+        gap: 8px;
+        min-width: 0;
+        flex: 1 1 auto;
+    }
+    .mon-lap-main {
+        padding: 12px 10px 90px;
+    }
+    .mon-lap-logo-img {
+        height: 14px;
+        width: auto;
+        flex-shrink: 0;
+    }
+    .mon-lap-brand-divider {
+        width: 1px;
+        height: 16px;
+        background: var(--n-border, rgba(0, 0, 0, 0.15));
+        flex-shrink: 0;
+        display: block !important;
+    }
+    .dark .mon-lap-brand-divider {
+        background: rgba(255, 255, 255, 0.2);
+    }
+    .mon-lap-brand-text {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        min-width: 0;
+    }
+    .mon-lap-brand-title {
+        font-size: 0.82rem;
+        font-weight: 800;
+        white-space: normal !important;
+        overflow: visible !important;
+        text-overflow: clip !important;
+        display: block;
+        line-height: 1.25;
+        letter-spacing: -0.01em;
+    }
+    .mon-lap-brand-sub {
+        display: none !important;
+    }
+    .mon-lap-header-right {
+        flex-shrink: 0;
+    }
+    .mon-lap-dark-btn {
+        width: 34px;
+        height: 34px;
+        border-radius: 9px;
+        font-size: 0.95rem;
+    }
+
+    /* Tab Slider container spacing on mobile */
+    .mon-tab-container {
+        margin-bottom: 8px !important;
+    }
+
+    .mon-lap-main .actab-wrap.actab-wrap--slider,
+    .dark .mon-lap-main .actab-wrap.actab-wrap--slider {
+        margin-top: 0 !important;
+        margin-bottom: 0 !important;
+    }
+
+    /* Stats Cards on mobile - Crisp 3-column cards */
+    .gap-stats {
+        display: grid !important;
+        grid-template-columns: repeat(3, 1fr) !important;
+        gap: 6px !important;
+        width: 100% !important;
+        margin-top: 0 !important;
+        margin-bottom: 10px !important;
+        box-sizing: border-box !important;
+    }
+    .gap-stat-item {
+        height: 54px !important;
+        min-height: 54px !important;
+        max-height: 54px !important;
+        padding: 6px 2px !important;
+        border-radius: 12px !important;
+        background: #ffffff !important;
+        border: 1.5px solid #cbd5e1 !important;
+        box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08) !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+        min-width: 0 !important;
+        box-sizing: border-box !important;
+    }
+    .dark .gap-stat-item {
+        background: #0b1329 !important;
+        border-color: rgba(26, 115, 232, 0.4) !important;
+    }
+    .gap-stat-val {
+        font-size: 1rem !important;
+        font-weight: 800 !important;
+        line-height: 1.1 !important;
+        text-align: center !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        max-width: 100% !important;
+        color: #1d4ed8 !important;
+    }
+    .dark .gap-stat-val {
+        color: #60a5fa !important;
+    }
+    .gap-stat-lbl {
+        font-size: 0.58rem !important;
+        font-weight: 700 !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.02em !important;
+        text-align: center !important;
+        margin-top: 2px !important;
+        line-height: 1.1 !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        max-width: 100% !important;
+        color: #475569 !important;
+    }
+    .dark .gap-stat-lbl {
+        color: #94a3b8 !important;
+    }
+
+    /* Container Card on Mobile */
+    .gap-table-card {
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        overflow: visible !important;
+    }
+
+    /* On Mobile: Hide Desktop Table and Show List */
+    .gap-table-wrap {
+        display: none !important;
+    }
+
+    .mon-mobile-list {
+        display: flex !important;
+    }
+
+    /* Mobile Topbar & Search Wrap Flex (Fits Search + Download Button side-by-side without horizontal scroll) */
+    html,
+    body,
+    .mon-lap-wrap,
+    .mon-lap-main,
+    .gap-table-card,
+    .ftb-toolbar,
+    .ftb-mobile-wrap {
+        max-width: 100% !important;
+        overflow-x: hidden !important;
+        box-sizing: border-box !important;
+    }
+
+    .ftb-mobile-topbar {
+        display: flex !important;
+        align-items: center !important;
+        gap: 6px !important;
+        width: 100% !important;
+        min-width: 0 !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+    }
+
+    .ftb-mobile-search-wrap {
+        flex: 1 1 0% !important;
+        min-width: 0 !important;
+        width: 100% !important;
+    }
+
+    .ftb-mobile-search-wrap .ftb-field,
+    .ftb-mobile-search-wrap .ftb-field--search {
+        min-width: 0 !important;
+        width: 100% !important;
+        flex: 1 1 0% !important;
+        flex-basis: auto !important;
+        margin: 0 !important;
+        --ftb-min: 0px !important;
+        --ftb-basis: auto !important;
+    }
+
+    .ftb-mobile-search-wrap .ftb-box {
+        width: 100% !important;
+        min-width: 0 !important;
+        padding: 0 8px 0 10px !important;
+    }
+
+    .ftb-mobile-inlineActions {
+        flex: 0 0 auto !important;
+        min-width: 0 !important;
+        display: flex !important;
+        align-items: center !important;
+        opacity: 1 !important;
+        visibility: visible !important;
+    }
+
+    /* Tombol download di mobile: SELALU TAMPIL TANPA PERLU HOVER */
+    .ftb-mobile-inlineActions .ftb-actions button.btn-zip-download,
+    .ftb-mobile-inlineActions button.btn-zip-download,
+    .ftb-mobile-inlineActions button.ftb-btn-icon-mobile.btn-zip-download,
+    .btn-zip-download.ftb-btn-icon-mobile,
+    button.btn-zip-download {
+        width: auto !important;
+        min-width: 38px !important;
+        max-width: max-content !important;
+        height: 38px !important;
+        min-height: 38px !important;
+        max-height: 38px !important;
+        border-radius: 10px !important;
+        padding: 0 10px !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 4px !important;
+        background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%) !important;
+        color: white !important;
+        box-shadow: 0 3px 10px rgba(37, 99, 235, 0.35) !important;
+        border: none !important;
+        flex-shrink: 0 !important;
+        cursor: pointer !important;
+        white-space: nowrap !important;
+        opacity: 1 !important;
+        visibility: visible !important;
+    }
+
+    .ftb-mobile-inlineActions button.btn-zip-download .btn-text-mobile,
+    .btn-zip-download.ftb-btn-icon-mobile .btn-text-mobile,
+    button.btn-zip-download .btn-text-mobile {
+        display: inline-block !important;
+        font-size: 0.76rem !important;
+        font-weight: 700 !important;
+        color: white !important;
+        white-space: nowrap !important;
+        opacity: 1 !important;
+        visibility: visible !important;
+    }
+
+    .ftb-mobile-inlineActions button.btn-zip-download .btn-text-desktop,
+    .btn-zip-download.ftb-btn-icon-mobile .btn-text-desktop,
+    button.btn-zip-download .btn-text-desktop {
+        display: none !important;
+    }
+
+    .ftb-mobile-inlineActions button.btn-zip-download i,
+    .btn-zip-download.ftb-btn-icon-mobile i,
+    button.btn-zip-download i {
+        display: inline-block !important;
+        font-size: 0.92rem !important;
+        color: white !important;
+        margin: 0 !important;
+        opacity: 1 !important;
+        visibility: visible !important;
+    }
+
+    .mon-avatar {
+        width: 34px;
+        height: 34px;
+        font-size: 0.85rem;
+        border-radius: 8px;
+    }
+
+    .mon-pagination {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+        padding-top: 10px;
+    }
+
+    .mon-pagination-summary {
+        text-align: center;
+    }
+
+    .mon-pagination-controls {
+        justify-content: space-between;
+        gap: 6px;
+    }
+
+    .mon-pagination-button {
+        min-width: 96px;
+        padding: 0 8px;
+    }
+}

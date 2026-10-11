@@ -1091,10 +1091,13 @@ export class EkskulService {
 
     const submission = await this.prisma.laporan_ekskul_submissions.findUnique({
       where: { id: idLaporan },
-      select: { status: true },
+      select: { status: true, dibayarkan: true },
     });
 
     if (!submission) throw new NotFoundException('Data laporan tidak ditemukan');
+    if (action === 'revisi' && submission.dibayarkan) {
+      throw new BadRequestException('Batalkan pembayaran terlebih dahulu sebelum merevisi laporan.');
+    }
 
     // Penjaga lama, `status !== 'Menunggu' && action !== 'revisi' && action !== 'approve'`,
     // tidak pernah bisa benar: satu-satunya aksi yang diterima adalah 'approve'

@@ -22,6 +22,7 @@ interface Submission {
 }
 
 interface KlinikSlot {
+    nominal_dibayarkan?: number | string | null;
     id: string; guru_id: number; nama_guru: string; mapel: string; topik: string;
     tanggal: string; status: string; max_siswa: number;
     klinik_peserta?: any[]; klinik_laporan?: any;
@@ -113,7 +114,7 @@ const getCatatanData = (raw: string | null | undefined): CatatanData => {
             return {
                 text: typeof p.text === 'string' ? p.text : '',
                 url: typeof p.url === 'string' ? p.url : '',
-                nominal: parsedNominal !== null && parsedNominal > 0 ? parsedNominal : null,
+                nominal: parsedNominal !== null && Number.isFinite(parsedNominal) && parsedNominal >= 0 ? parsedNominal : null,
                 paid_at: typeof p.paid_at === 'string' ? p.paid_at : null,
             };
         }
@@ -238,7 +239,7 @@ export default function PembayaranPage({ user: propUser }: PembayaranPageProps =
     const fetchSubmissions = useCallback(async () => {
         setLoading(true);
         try {
-            const res = await authFetch('/api/guru-asuh/laporan-submission?status=Approved');
+            const res = await authFetch('/api/guru-asuh/laporan-submission?status=Approved&includePaid=true');
             const data = await res.json();
             if (data.ok) setSubmissions(data.data || []);
         } catch (e) { console.error(e); }
@@ -280,7 +281,7 @@ export default function PembayaranPage({ user: propUser }: PembayaranPageProps =
     const fetchEkskulSubmissions = useCallback(async () => {
         setLoadingEkskul(true);
         try {
-            const res = await authFetch('/api/ekskul/submission?status=Disahkan');
+            const res = await authFetch('/api/ekskul/submission?status=Disahkan&includePaid=true');
             const data = await res.json();
             if (data.ok) setEkskulSubmissions(data.data || []);
         } catch (e) { console.error(e); }
@@ -560,7 +561,8 @@ export default function PembayaranPage({ user: propUser }: PembayaranPageProps =
             const d = new Date(s.tanggal);
             return (rekapanBulan === 0 || (d.getMonth() + 1) === rekapanBulan) && d.getFullYear() === rekapanTahun;
         });
-        const totalKlinik = klinikPaid.length * parseNominal(getTarif('KLINIK'));
+        const totalKlinik = klinikPaid.reduce((sum, slot) => sum + parseNominal(slot.nominal_dibayarkan), 0);
+        const klinikTanpaNominal = klinikPaid.filter(slot => slot.nominal_dibayarkan == null).length;
 
         const ekskulPaid = ekskulSubmissions.filter(s => s.dibayarkan && (rekapanBulan === 0 || s.bulan === rekapanBulan) && s.tahun === rekapanTahun);
         let totalEkskul = 0;
@@ -576,6 +578,7 @@ export default function PembayaranPage({ user: propUser }: PembayaranPageProps =
         return {
             guruAsuh: totalGuruAsuh,
             klinik: totalKlinik,
+            klinikTanpaNominal,
             ekskul: totalEkskul,
             total: totalGuruAsuh + totalKlinik + totalEkskul
         };
@@ -896,7 +899,9 @@ export default function PembayaranPage({ user: propUser }: PembayaranPageProps =
                                             </td>
                                             <td>{new Date(slot.tanggal).toLocaleDateString('id-ID', { dateStyle: 'medium' })}</td>
                                             <td>{slot.mapel} — {slot.topik}</td>
-                                            <td style={{ fontWeight: 700 }}>{fmtRupiah(getTarif('KLINIK'))}</td>
+                                            <td style={{ fontWeight: 700 }}>{slot.status === 'paid'
+                                                ? slot.nominal_dibayarkan == null ? 'Nominal belum tercatat' : fmtRupiah(slot.nominal_dibayarkan)
+                                                : fmtRupiah(getTarif('KLINIK'))}</td>
                                             <td>
                                                 <span className={`gap-badge gap-badge--${slot.status === 'paid' ? 'sudah' : 'belum'}`}>
                                                     {slot.status === 'paid' ? 'Dibayar' : 'Belum'}
@@ -1149,6 +1154,11 @@ export default function PembayaranPage({ user: propUser }: PembayaranPageProps =
 
             {activeTab === 'REKAPAN' && (
                 <div className="gap-table-card">
+                    {rekapanData.klinikTanpaNominal > 0 && (
+                        <p role="status" style={{ padding: '12px 16px', color: '#92400e' }}>
+                            Total belum lengkap: {rekapanData.klinikTanpaNominal} pembayaran klinik lama belum memiliki nominal tersimpan dan belum termasuk dalam total.
+                        </p>
+                    )}
                     <div className="gap-toolbar" style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
                         <select className="gap-select" value={rekapanBulan} onChange={e => setRekapanBulan(Number(e.target.value))}>
                             <option value={0}>Semua Bulan</option>

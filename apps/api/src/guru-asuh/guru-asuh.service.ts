@@ -65,7 +65,10 @@ export class GuruAsuhService {
       where.nip = user.nip;
     }
 
-    if (status) where.status = status;
+    if (status) {
+      if (query.includePaid === 'true') where.OR = [{ status }, { dibayarkan: true }];
+      else where.status = status;
+    }
     if (bulan) where.bulan = parseInt(bulan, 10);
     if (tahun) where.tahun = parseInt(tahun, 10);
 
@@ -255,7 +258,7 @@ export class GuruAsuhService {
     if (!submission) {
       throw new NotFoundException('Ajuan tidak ditemukan.');
     }
-    if (submission.status !== 'Approved') {
+    if (dibayarkan && submission.status !== 'Approved') {
       throw new ConflictException(
         'Hanya laporan berstatus Disahkan yang dapat ditandai pembayaran.',
       );
@@ -317,6 +320,9 @@ export class GuruAsuhService {
     }
 
     const isRevokingApproval = action === 'revisi' && submission.status === 'Approved';
+    if (action === 'revisi' && submission.dibayarkan) {
+      throw new ConflictException('Batalkan pembayaran terlebih dahulu sebelum merevisi laporan.');
+    }
     const validTransition =
       action === 'approve'
         ? submission.status === 'Submitted'
@@ -389,7 +395,6 @@ export class GuruAsuhService {
         submitted_at: true,
         approved_at: true,
         approved_by_name: true,
-        pdf_url: true,
       },
     });
 
@@ -1111,39 +1116,11 @@ export class GuruAsuhService {
     };
   }
 
-  async updatePdfUrl(user: any, id: string, pdf_url: string) {
-    if (!id || !pdf_url) throw new BadRequestException('id dan pdf_url wajib diisi');
-
-    const trimmedUrl = String(pdf_url).trim();
-    if (!trimmedUrl.startsWith('https://') && !trimmedUrl.startsWith('http://') && !trimmedUrl.startsWith('/')) {
-      throw new BadRequestException('Format URL dokumen tidak valid.');
-    }
-    if (trimmedUrl.includes('169.254.169.254') || trimmedUrl.includes('metadata.google.internal')) {
-      throw new BadRequestException('URL dokumen tidak diizinkan.');
-    }
-
-    const submission = await this.prisma.laporan_guru_asuh_submissions.findUnique({
-      where: { id },
-      select: { id: true, nip: true },
-    });
-    if (!submission) throw new NotFoundException('Ajuan laporan tidak ditemukan');
-
-    const isApproverUser = await this.isApprover(user);
-    const isAuthorized =
-      isApproverUser ||
-      user.role === 'ADMIN' ||
-      user.nip === submission.nip;
-    if (!isAuthorized) {
-      throw new ForbiddenException('Anda tidak berwenang memperbarui tautan dokumen ini.');
-    }
-
-    const updated = await this.prisma.laporan_guru_asuh_submissions.update({
-      where: { id },
-      data: { pdf_url, updated_at: new Date() },
-    });
-    return { ok: true, data: serializeBigInt(updated) };
+  async updatePdfUrl(_user: any, _id: string, _pdf_url: string) {
+    // PDF sekarang dibuat langsung dari data laporan melalui endpoint pdf.
+    // URL yang dikirim klien tidak boleh menjadi dokumen terverifikasi.
+    throw new BadRequestException('Tautan PDF tidak dapat diubah. Gunakan cetak laporan untuk membuat dokumen dari data resmi.');
   }
-
   async bulkCopy(body: any, user: any) {
     const { nip, from_tahun_ajaran, to_tahun_ajaran } = body;
     if (!nip || !from_tahun_ajaran || !to_tahun_ajaran) {

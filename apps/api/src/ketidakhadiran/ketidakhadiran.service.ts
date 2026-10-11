@@ -67,6 +67,13 @@ export class KetidakhadiranService {
 
   constructor(private readonly prisma: PrismaService) {}
 
+  private async getSchoolToday(): Promise<string> {
+    const setting = await this.prisma.site_settings.findUnique({ where: { key: 'timezone' }, select: { value: true } });
+    const zone = ['Asia/Jakarta', 'Asia/Makassar', 'Asia/Jayapura'].includes(setting?.value || '')
+      ? setting!.value! : 'Asia/Makassar';
+    return new Date().toLocaleDateString('en-CA', { timeZone: zone });
+  }
+
   /**
    * Mengambil seluruh nama kelas reguler yang terdaftar dan aktif di master_kelas.
    */
@@ -947,7 +954,7 @@ export class KetidakhadiranService {
       orderBy: [{ tahun_ajaran: 'desc' }, { nama_siswa: 'asc' }],
     });
 
-    const todayStr = new Date().toISOString().split('T')[0];
+    const todayStr = await this.getSchoolToday();
     const todayDate = new Date(todayStr);
 
     if (!rawSiswaAsuh || rawSiswaAsuh.length === 0) {

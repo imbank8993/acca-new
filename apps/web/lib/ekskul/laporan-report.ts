@@ -2,6 +2,7 @@ import QRCode from 'qrcode';
 import { nestFetchAsUser } from '@/lib/nest-api';
 import { renderKopHTML, KOP_CSS } from '@/lib/lckh/print-shared';
 import { getPublicOrigin } from '@/lib/public-url';
+import { optimizeImageUrls } from '@/lib/image-optimizer';
 
 export const BULAN = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
 
@@ -86,18 +87,24 @@ export async function buildEkskulReport(input: EkskulReportInput, token: string 
         </tr>`;
     }).join('');
 
+    const rawEkskulUrls = fotoEntries.map((e: any) => e.dokumentasi).filter(Boolean);
+    const optimizedEkskulMap = await optimizeImageUrls(rawEkskulUrls);
+
     const lampiranHtml = fotoEntries.length === 0 ? '' : `
     <div class="lampiran-page">
       <div class="doc-title"><h1>LAMPIRAN FOTO DOKUMENTASI KEGIATAN</h1></div>
       <div class="foto-grid">
-        ${fotoEntries.map((e: any, i: number) => `
+        ${fotoEntries.map((e: any, i: number) => {
+          const imgSrc = optimizedEkskulMap.get(e.dokumentasi) || esc(e.dokumentasi);
+          return `
           <div class="foto-item" id="foto-${i + 1}">
-            <img src="${esc(e.dokumentasi)}" alt="Dokumentasi ${esc(e.materi)}" />
+            <img src="${imgSrc}" alt="Dokumentasi ${esc(e.materi)}" />
             <div class="foto-caption">
               <div class="foto-kegiatan">${i + 1}. ${esc(e.materi || 'Pertemuan ' + (i+1))}</div>
               <div class="foto-tgl">${fmtDate(e.tanggal)}</div>
             </div>
-          </div>`).join('')}
+          </div>`;
+        }).join('')}
       </div>
     </div>`;
 

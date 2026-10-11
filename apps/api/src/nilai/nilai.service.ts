@@ -164,123 +164,97 @@ export class NilaiService {
     };
   }
 
+  private writePeriod(semester: unknown, tahun: unknown) {
+    const value = String(semester ?? '').trim().toLowerCase();
+    if (!['1', '2', 'ganjil', 'genap'].includes(value) || typeof tahun !== 'string' || !tahun.trim()) {
+      throw new BadRequestException('Semester dan tahun ajaran yang valid wajib diisi');
+    }
+    return { semInt: mapSemester(value), ta: tahun.trim() };
+  }
+
+  private async assertClassStudents(nisns: string[], kelas: string, ta: string, semester: number) {
+    if (!nisns.length) return;
+    const students = await this.prisma.siswa_kelas.findMany({
+      where: { nisn: { in: nisns }, kelas, tahun_ajaran: ta,
+        semester: semester === 1 ? 'Ganjil' : 'Genap', aktif: true },
+      select: { nisn: true },
+    });
+    const enrolled = new Set(students.map(s => s.nisn));
+    if (nisns.some(nisn => !enrolled.has(nisn))) {
+      throw new ForbiddenException('Siswa tidak terdaftar di kelas dan periode yang dipilih');
+    }
+  }
+
   async saveNilai(apiUser: any, body: any) {
     const { nip, kelas, mapel, semester, updates, tahun_ajaran } = body || {};
-    if (!nip || !kelas || !mapel || !semester || !updates || !Array.isArray(updates)) {
+    if (!nip || typeof kelas !== 'string' || !kelas.trim() || typeof mapel !== 'string' || !mapel.trim()
+      || !Array.isArray(updates) || !updates.length) {
       throw new BadRequestException('Parameter tidak lengkap atau format updates salah');
     }
-
     const isPriv = this.isPrivileged(apiUser);
     if (!isPriv && nip !== apiUser.nip) {
       throw new ForbiddenException('Anda hanya dapat menyimpan nilai atas nama sendiri.');
     }
-
-    const kelasTrimmed = String(kelas).trim();
-    const mapelTrimmed = String(mapel).trim();
-    const semInt = mapSemester(semester);
-    const ta = (tahun_ajaran || '2024/2025').trim();
-
-    if (!isPriv) {
-      const isAssigned = await this.checkGuruAssignment(apiUser.nip, kelasTrimmed, mapelTrimmed, ta, semInt);
-      if (!isAssigned) {
-        throw new ForbiddenException(`Anda tidak memiliki wewenang mengajar di kelas ${kelasTrimmed} untuk mapel ${mapelTrimmed} pada tahun ajaran ${ta}.`);
-      }
+    const kelasTrimmed = kelas.trim();
+    const mapelTrimmed = mapel.trim();
+    const { semInt, ta } = this.writePeriod(semester, tahun_ajaran);
+    if (!isPriv && !await this.checkGuruAssignment(apiUser.nip, kelasTrimmed, mapelTrimmed, ta, semInt)) {
+      throw new ForbiddenException('Anda tidak memiliki wewenang mengajar kelas dan mapel pada periode ini.');
     }
 
-    // Query existing rows across this class & mapel
-    const existingRows = await this.prisma.nilai_data.findMany({
-      where: {
-        kelas: kelasTrimmed,
-        mapel: { equals: mapelTrimmed, mode: 'insensitive' },
-        semester: semInt,
-        tahun_ajaran: ta,
-      },
-      select: {
-        id: true,
-        nip: true,
-        nisn: true,
-        jenis: true,
-        materi_tp: true,
-        tagihan: true,
-        nilai: true,
-      },
+    // Validate the entire batch before writing anything, including privileged imports.
+    const records = updates.map((u: any) => {
+      if (!u || typeof u.nisn !== 'string' || !u.nisn.trim() || u.nisn.trim().length > 50
+        || !['Kuis', 'Tugas', 'UH', 'PAS'].includes(u.jenis)
+        || (u.materi != null && (typeof u.materi !== 'string' || u.materi.length > 100))
+        || (u.tagihan != null && (typeof u.tagihan !== 'string' || u.tagihan.length > 255))) {
+        throw new BadRequestException('Identitas siswa atau jenis nilai tidak valid');
+      }
+      const empty = u.nilai === '' || u.nilai === null || u.nilai === undefined;
+      const value = empty ? null : Number(u.nilai);
+      if (!empty && (!['number', 'string'].includes(typeof u.nilai) || String(u.nilai).trim() === ''
+        || !Number.isFinite(value) || value! < 0 || value! > 100)) {
+        throw new BadRequestException('Nilai harus berupa angka antara 0 dan 100');
+      }
+      return { nisn: u.nisn.trim(), jenis: u.jenis, materi_tp: u.materi || null,
+        tagihan: u.tagihan || '', nilai: value };
     });
+    await this.assertClassStudents(records.map((r: { nisn: string }) => r.nisn), kelasTrimmed, ta, semInt);
 
-    const keyOf = (r: { nisn: string; jenis: string; materi_tp: string | null; tagihan: string | null }) =>
-      `${r.nisn}||${r.jenis}||${r.materi_tp || ''}||${r.tagihan || ''}`;
-    const existingMap = new Map<string, any>();
-    for (const r of existingRows) {
-      existingMap.set(keyOf(r), r);
-    }
-
-    let inserted = 0;
-    let updated = 0;
-    const errors: any[] = [];
-
-    for (const u of updates) {
-      const rec = {
-        nisn: u.nisn,
-        jenis: u.jenis,
-        materi_tp: u.materi || null,
-        tagihan: u.tagihan || '',
-      };
-      const nilaiVal = u.nilai === '' || u.nilai === null || u.nilai === undefined ? null : parseFloat(u.nilai);
-      if (nilaiVal !== null && (isNaN(nilaiVal) || nilaiVal < 0 || nilaiVal > 100)) {
-        throw new BadRequestException(`Nilai tidak valid (${u.nilai}) untuk NISN ${u.nisn}. Nilai harus berada dalam rentang 0 sampai 100.`);
-      }
-      const found = existingMap.get(keyOf(rec));
-
-      try {
+    // Any database or audit failure rolls back the whole batch.
+    return this.prisma.$transaction(async tx => {
+      const existingRows = await tx.nilai_data.findMany({
+        where: { kelas: kelasTrimmed, mapel: { equals: mapelTrimmed, mode: 'insensitive' },
+          semester: semInt, tahun_ajaran: ta },
+      });
+      const keyOf = (r: any) => JSON.stringify([r.nisn, r.jenis, r.materi_tp || '', r.tagihan || '']);
+      const existingMap = new Map(existingRows.map(r => [keyOf(r), r]));
+      let inserted = 0;
+      let updated = 0;
+      for (const rec of records) {
+        const found = existingMap.get(keyOf(rec));
         if (found) {
-          const oldVal = found.nilai;
-          await this.prisma.nilai_data.update({
-            where: { id: found.id },
-            data: {
-              nilai: nilaiVal,
-              updated_at: new Date(),
-            },
-          });
-          if (oldVal !== null && Number(oldVal) !== Number(nilaiVal)) {
-            await this.prisma.nilai_logs.create({
-              data: {
-                nilai_id: found.id,
-                nip_reviser: apiUser.nip || 'UNKNOWN',
-                old_nilai: oldVal,
-                new_nilai: nilaiVal,
-                action: found.nip !== apiUser.nip ? 'UPDATE_PENGGANTI' : 'UPDATE',
-              },
-            }).catch(() => {});
+          const saved = await tx.nilai_data.update({ where: { id: found.id },
+            data: { nilai: rec.nilai, updated_at: new Date() } });
+          if ((found.nilai === null) !== (rec.nilai === null) || Number(found.nilai) !== Number(rec.nilai)) {
+            await tx.nilai_logs.create({ data: {
+              nilai_id: found.id, nip_reviser: apiUser.nip || 'UNKNOWN',
+              old_nilai: found.nilai, new_nilai: rec.nilai,
+              action: found.nip !== apiUser.nip ? 'UPDATE_PENGGANTI' : 'UPDATE',
+            } });
           }
+          existingMap.set(keyOf(rec), saved);
           updated++;
         } else {
-          await this.prisma.nilai_data.create({
-            data: {
-              nip: apiUser.nip,
-              kelas: kelasTrimmed,
-              mapel: mapelTrimmed,
-              semester: semInt,
-              nisn: u.nisn,
-              jenis: u.jenis,
-              materi_tp: u.materi || null,
-              tagihan: u.tagihan || '',
-              nilai: nilaiVal,
-              tahun_ajaran: ta,
-            },
-          });
+          const saved = await tx.nilai_data.create({ data: {
+            ...rec, nip, kelas: kelasTrimmed, mapel: mapelTrimmed, semester: semInt, tahun_ajaran: ta,
+          } });
+          existingMap.set(keyOf(rec), saved);
           inserted++;
         }
-      } catch (err: any) {
-        errors.push({ update: u, error: err.message });
       }
-    }
-
-    return {
-      ok: true,
-      message: `Berhasil memproses nilai (${inserted} baru, ${updated} diperbarui)`,
-      inserted,
-      updated,
-      errors: errors.length > 0 ? errors : undefined,
-    };
+      return { ok: true, message: 'Seluruh perubahan nilai berhasil disimpan', inserted, updated };
+    });
   }
 
   async getAdminNilai(apiUser: any, query: any) {
@@ -1090,49 +1064,56 @@ export class NilaiService {
   async saveApresiasi(apiUser: any, body: any) {
     const { nip, kelas, mapel, semester, tahun_ajaran, judul, nama_sesi, topik, tanggal, poin_per_soal, poin, items } = body || {};
     const sessionTitle = judul || nama_sesi;
-    if (!nip || !kelas || !mapel || !sessionTitle) {
+    if (!nip || typeof kelas !== 'string' || !kelas.trim() || typeof mapel !== 'string' || !mapel.trim()
+      || typeof sessionTitle !== 'string' || !sessionTitle.trim() || sessionTitle.trim().length > 255) {
       throw new BadRequestException('Parameter sesi tidak lengkap (nip, kelas, mapel, judul)');
     }
-
-    if (!this.isPrivileged(apiUser) && nip !== apiUser.nip) {
+    const isPriv = this.isPrivileged(apiUser);
+    if (!isPriv && nip !== apiUser.nip) {
       throw new ForbiddenException('Anda hanya dapat mengelola apresiasi milik sendiri.');
     }
-
-    const semInt = mapSemester(semester);
-    const ta = tahun_ajaran ? String(tahun_ajaran).trim() : null;
-
-    const sesi = await this.prisma.nilai_apresiasi_sesi.create({
-      data: {
-        nip,
-        kelas: String(kelas).trim(),
-        mapel: String(mapel).trim(),
-        semester: semInt,
-        tahun_ajaran: ta,
-        judul: String(sessionTitle).trim(),
-        topik: topik || null,
-        tanggal: tanggal ? new Date(tanggal) : new Date(),
-        poin_per_soal: poin_per_soal !== undefined ? parseFloat(poin_per_soal) : 1,
-      },
-    });
-
-    const poinList = Array.isArray(poin) ? poin : (Array.isArray(items) ? items : []);
-    if (poinList.length > 0) {
-      for (const it of poinList) {
-        if (!it.nisn) continue;
-        const jm = Number(it.jumlah_menang) || 0;
-        if (jm <= 0) continue;
-        await this.prisma.nilai_apresiasi_poin.create({
-          data: {
-            sesi_id: sesi.id,
-            nisn: String(it.nisn),
-            jumlah_menang: jm,
-            total_poin: it.total_poin !== undefined ? parseFloat(it.total_poin) : jm * (poin_per_soal || 1),
-            catatan: it.catatan || null,
-          },
-        });
-      }
+    const { semInt, ta } = this.writePeriod(semester, tahun_ajaran);
+    const cleanKelas = kelas.trim();
+    const cleanMapel = mapel.trim();
+    if (!isPriv && !await this.checkGuruAssignment(apiUser.nip, cleanKelas, cleanMapel, ta, semInt)) {
+      throw new ForbiddenException('Anda tidak memiliki wewenang mengajar kelas dan mapel pada periode ini.');
     }
-
+    const pointValue = poin_per_soal ?? 1;
+    const points = Number(pointValue);
+    if (!['number', 'string'].includes(typeof pointValue) || !Number.isFinite(points) || points <= 0
+      || points > 999.99 || Math.abs(points * 100 - Math.round(points * 100)) > 0.000001) {
+      throw new BadRequestException('Poin per soal harus positif, maksimal 999,99 dan dua angka desimal');
+    }
+    const date = tanggal ? new Date(tanggal) : new Date();
+    if (isNaN(date.getTime())) throw new BadRequestException('Tanggal tidak valid');
+    const rawItems = poin ?? items ?? [];
+    if (!Array.isArray(rawItems)) throw new BadRequestException('Daftar poin tidak valid');
+    const seen = new Set<string>();
+    const pointRows = rawItems.map((it: any) => {
+      if (!it || typeof it.nisn !== 'string' || !it.nisn.trim() || it.nisn.trim().length > 50
+        || !Number.isInteger(it.jumlah_menang) || it.jumlah_menang < 0 || it.jumlah_menang > 2147483647) {
+        throw new BadRequestException('NISN dan jumlah kemenangan tidak valid');
+      }
+      const nisn = it.nisn.trim();
+      if (seen.has(nisn)) throw new BadRequestException('NISN ganda dalam sesi apresiasi');
+      seen.add(nisn);
+      // Never trust total_poin supplied by the client.
+      const total = Math.round(points * 100) * it.jumlah_menang / 100;
+      if (!Number.isFinite(total) || total > 999.99) throw new BadRequestException('Total poin maksimal 999,99');
+      return { nisn, jumlah_menang: it.jumlah_menang, total_poin: total, catatan: it.catatan || null };
+    });
+    await this.assertClassStudents(pointRows.map((r: { nisn: string }) => r.nisn), cleanKelas, ta, semInt);
+    const sesi = await this.prisma.$transaction(async tx => {
+      const created = await tx.nilai_apresiasi_sesi.create({ data: {
+        nip, kelas: cleanKelas, mapel: cleanMapel, semester: semInt, tahun_ajaran: ta,
+        judul: sessionTitle.trim(), topik: topik || null, tanggal: date, poin_per_soal: points,
+      } });
+      for (const row of pointRows) {
+        if (row.jumlah_menang === 0) continue;
+        await tx.nilai_apresiasi_poin.create({ data: { ...row, sesi_id: created.id } });
+      }
+      return created;
+    });
     return { ok: true, data: serializeBigInt(sesi), message: 'Sesi apresiasi berhasil disimpan' };
   }
 

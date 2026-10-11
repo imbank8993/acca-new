@@ -73,6 +73,9 @@ const getFileIconInfo = (fileName: string) => {
         case 'mp3':
         case 'wav':
             return { icon: 'bi-file-earmark-music-fill', color: '#ec4899' };
+        case 'html':
+        case 'htm':
+            return { icon: 'bi-filetype-html', color: '#ea580c' };
         default: 
             return { icon: 'bi-file-earmark-text-fill', color: 'var(--n-muted)' };
     }
@@ -1174,7 +1177,7 @@ export default function KelolaInformasiTab({
             {selectedDoc && (
                 <PDFViewer
                     url={selectedDoc.file_url}
-                    title={selectedDoc.title}
+                    title={selectedDoc.file_name || selectedDoc.title}
                     onClose={() => setSelectedDoc(null)}
                 />
             )}

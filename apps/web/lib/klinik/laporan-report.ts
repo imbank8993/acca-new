@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { renderKopHTML, KOP_CSS } from '@/lib/lckh/print-shared';
 import { can, type CapabilityHolder } from '@/lib/capabilities';
 import { getPublicOrigin } from '@/lib/public-url';
+import { optimizeImageUrls } from '@/lib/image-optimizer';
 
 export function esc(v: unknown): string {
     if (v === null || v === undefined) return '';
@@ -157,17 +158,22 @@ export async function buildKlinikReport(input: KlinikReportInput): Promise<Klini
         </tr>`;
     }).join('') : `<tr><td colspan="5" style="text-align:center;padding:10px;">Tidak ada data peserta</td></tr>`;
 
+    const optimizedKlinikMap = await optimizeImageUrls(fotos || []);
+
     const lampiranHtml = fotos.length === 0 ? '' : `
     <div class="lampiran-page">
       <div class="doc-title"><h1>LAMPIRAN FOTO DOKUMENTASI KLINIK</h1></div>
       <div class="foto-grid">
-        ${fotos.map((url: string, i: number) => `
+        ${fotos.map((url: string, i: number) => {
+          const imgSrc = optimizedKlinikMap.get(url) || esc(url);
+          return `
           <div class="foto-item" id="foto-${i + 1}">
-            <img src="${esc(url)}" alt="Dokumentasi" />
+            <img src="${imgSrc}" alt="Dokumentasi" />
             <div class="foto-caption">
               <div class="foto-kegiatan">Foto ${i + 1}</div>
             </div>
-          </div>`).join('')}
+          </div>`;
+        }).join('')}
       </div>
     </div>`;
 

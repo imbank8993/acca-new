@@ -2096,11 +2096,19 @@ export async function handlePatch(req: any, action: string, id: any, payload: an
             if (laporan?.status !== 'Approved') {
                 throw new HttpException({ ok: false, error: 'Laporan sesi ini belum disetujui, belum bisa ditandai lunas.' }, 409);
             }
+            const { data: tarif, error: tarifError } = await db.from('tarif_honor').select('nominal').eq('modul', 'KLINIK').maybeSingle();
+            if (tarifError) throw tarifError;
+            const nominal = Number(tarif?.nominal);
+            if (!tarif || !Number.isFinite(nominal) || nominal < 0) {
+                throw new HttpException({ ok: false, error: 'Tarif klinik belum valid.' }, 409);
+            }
             const { data, error } = await db.from('klinik_slots')
-                .update({ status: 'paid' })
+                .update({ status: 'paid', nominal_dibayarkan: nominal, dibayarkan_at: new Date().toISOString() })
                 .eq('id', id)
+                .eq('status', 'finished')
                 .select().single();
             if (error) throw error;
+            if (!data) throw new HttpException({ ok: false, error: 'Status sesi berubah atau sesi sudah dibayar. Muat ulang data.' }, 409);
             return { ok: true, data };
         }
 
@@ -2109,10 +2117,12 @@ export async function handlePatch(req: any, action: string, id: any, payload: an
                 throw new ForbiddenException('Hanya Bendahara Komite/Admin yang dapat membatalkan pembayaran');
             }
             const { data, error } = await db.from('klinik_slots')
-                .update({ status: 'finished' })
+                .update({ status: 'finished', nominal_dibayarkan: null, dibayarkan_at: null })
                 .eq('id', id)
+                .eq('status', 'paid')
                 .select().single();
             if (error) throw error;
+            if (!data) throw new HttpException({ ok: false, error: 'Sesi ini tidak berstatus dibayar.' }, 409);
             return { ok: true, data };
         }
 
