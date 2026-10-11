@@ -667,7 +667,7 @@ export default function MonitoringLaporanView() {
                                 </table>
                             </div>
 
-                            {/* Mobile Only: List data menampilkan avatar, nama guru, sub-informasi, dan panah */}
+                            {/* Mobile Only: List data menampilkan avatar, nama guru, dan sub-informasi */}
                             <div className="mon-mobile-list">
                                 {paginatedDataList.map((row, idx) => {
                                     const teacherName = activeTab === 'GURU_ASUH'
@@ -701,7 +701,6 @@ export default function MonitoringLaporanView() {
                                                     </div>
                                                 </div>
                                             </div>
-                                            <i className="bi bi-chevron-right mon-mobile-arrow" />
                                         </div>
                                     );
                                 })}

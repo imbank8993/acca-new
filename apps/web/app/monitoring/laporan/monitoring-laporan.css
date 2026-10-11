@@ -7,6 +7,9 @@
 @import '../../pembayaran/pembayaran.css';
 
 .mon-lap-wrap {
+    /* Keep the public page above the fixed global ambient canvas (z-index: 0). */
+    position: relative;
+    z-index: 1;
     min-height: 100vh;
     background: var(--n-bg, #f8fafc);
     color: var(--n-ink, #0f172a);
@@ -125,7 +128,7 @@
     justify-content: center;
     cursor: pointer;
     transition: all 0.2s;
-    font-size: 1rem;
+    font-size: 0.9rem;
 }
 
 .mon-lap-dark-btn:hover {
@@ -215,31 +218,7 @@
 
 /* ── Stats Summary Cards Blue Accent Overrides ── */
 .mon-lap-wrap .gap-stat-item .gap-stat-val {
-    color: #2563eb;
-}
-
-.mon-lap-wrap .gap-stat-item.blue-primary .gap-stat-val,
-.mon-lap-wrap .gap-stat-item.green .gap-stat-val {
-    color: #1d4ed8 !important;
-}
-
-.mon-lap-wrap .gap-stat-item.blue-secondary .gap-stat-val,
-.mon-lap-wrap .gap-stat-item.amber .gap-stat-val {
-    color: #0284c7 !important;
-}
-
-.dark .mon-lap-wrap .gap-stat-item .gap-stat-val {
-    color: #60a5fa;
-}
-
-.dark .mon-lap-wrap .gap-stat-item.blue-primary .gap-stat-val,
-.dark .mon-lap-wrap .gap-stat-item.green .gap-stat-val {
-    color: #3b82f6 !important;
-}
-
-.dark .mon-lap-wrap .gap-stat-item.blue-secondary .gap-stat-val,
-.dark .mon-lap-wrap .gap-stat-item.amber .gap-stat-val {
-    color: #38bdf8 !important;
+    color: #3083ff !important;
 }
 
 /* ── ZIP Download Button (Blue Gradient) ── */
@@ -248,20 +227,20 @@
     align-items: center;
     gap: 8px;
     padding: 9px 16px;
-    background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%);
+    background: #3083ff;
     color: white !important;
     border: none;
     border-radius: 10px;
     font-size: 0.82rem;
     font-weight: 700;
     cursor: pointer;
-    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
+    box-shadow: 0 4px 12px rgba(48, 131, 255, 0.25);
     transition: all 0.2s ease;
     white-space: nowrap;
 }
 
 .btn-zip-download:hover:not(:disabled) {
-    background: linear-gradient(135deg, #1e40af 0%, #1d4ed8 100%);
+    background: #1d6bf3;
     transform: translateY(-1px);
     box-shadow: 0 6px 16px rgba(37, 99, 235, 0.35);
 }
@@ -272,8 +251,12 @@
     transform: none;
 }
 
+.btn-zip-download .btn-text-mobile {
+    display: none;
+}
+
 .dark .btn-zip-download {
-    background: linear-gradient(135deg, #1e40af 0%, #2563eb 100%);
+    background: #3083ff;
     box-shadow: 0 4px 14px rgba(37, 99, 235, 0.3);
 }
 
@@ -487,17 +470,6 @@
     color: #94a3b8;
 }
 
-.mon-mobile-arrow {
-    color: #2563eb;
-    font-size: 1.05rem;
-    margin-left: 10px;
-    flex-shrink: 0;
-}
-
-.dark .mon-mobile-arrow {
-    color: #60a5fa;
-}
-
 .mon-pagination {
     display: flex;
     align-items: center;
@@ -633,7 +605,7 @@
         min-width: 0;
     }
     .mon-lap-brand-title {
-        font-size: 0.82rem;
+        font-size: 0.72rem;
         font-weight: 800;
         white-space: normal !important;
         overflow: visible !important;
@@ -652,7 +624,7 @@
         width: 34px;
         height: 34px;
         border-radius: 9px;
-        font-size: 0.95rem;
+        font-size: 0.85rem;
     }
 
     /* Tab Slider container spacing on mobile */
@@ -673,7 +645,7 @@
         gap: 6px !important;
         width: 100% !important;
         margin-top: 0 !important;
-        margin-bottom: 10px !important;
+        margin-bottom: 12px !important;
         box-sizing: border-box !important;
     }
     .gap-stat-item {
@@ -705,10 +677,7 @@
         overflow: hidden !important;
         text-overflow: ellipsis !important;
         max-width: 100% !important;
-        color: #1d4ed8 !important;
-    }
-    .dark .gap-stat-val {
-        color: #60a5fa !important;
+        color: #3083ff !important;
     }
     .gap-stat-lbl {
         font-size: 0.58rem !important;
@@ -741,8 +710,16 @@
         display: none !important;
     }
 
+    .mon-lap-wrap .ftb-toolbar {
+        margin-bottom: 0 !important;
+        padding: 0 !important;
+        background: transparent !important;
+        border: none !important;
+    }
+
     .mon-mobile-list {
         display: flex !important;
+        padding-top: 12px;
     }
 
     /* Mobile Topbar & Search Wrap Flex (Fits Search + Download Button side-by-side without horizontal scroll) */
@@ -806,21 +783,21 @@
     .ftb-mobile-inlineActions button.ftb-btn-icon-mobile.btn-zip-download,
     .btn-zip-download.ftb-btn-icon-mobile,
     button.btn-zip-download {
-        width: auto !important;
-        min-width: 38px !important;
-        max-width: max-content !important;
-        height: 38px !important;
-        min-height: 38px !important;
-        max-height: 38px !important;
-        border-radius: 10px !important;
-        padding: 0 10px !important;
+        width: 42px !important;
+        min-width: 42px !important;
+        max-width: 42px !important;
+        height: 42px !important;
+        min-height: 42px !important;
+        max-height: 42px !important;
+        border-radius: 50% !important;
+        padding: 0 !important;
         display: inline-flex !important;
         align-items: center !important;
         justify-content: center !important;
-        gap: 4px !important;
-        background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%) !important;
+        gap: 0 !important;
+        background: #3083ff !important;
         color: white !important;
-        box-shadow: 0 3px 10px rgba(37, 99, 235, 0.35) !important;
+        box-shadow: 0 3px 10px rgba(48, 131, 255, 0.35) !important;
         border: none !important;
         flex-shrink: 0 !important;
         cursor: pointer !important;
@@ -829,16 +806,10 @@
         visibility: visible !important;
     }
 
-    .ftb-mobile-inlineActions button.btn-zip-download .btn-text-mobile,
+    .mon-lap-wrap .ftb-mobile-inlineActions button.btn-zip-download .btn-text-mobile,
     .btn-zip-download.ftb-btn-icon-mobile .btn-text-mobile,
     button.btn-zip-download .btn-text-mobile {
-        display: inline-block !important;
-        font-size: 0.76rem !important;
-        font-weight: 700 !important;
-        color: white !important;
-        white-space: nowrap !important;
-        opacity: 1 !important;
-        visibility: visible !important;
+        display: none !important;
     }
 
     .ftb-mobile-inlineActions button.btn-zip-download .btn-text-desktop,

@@ -1728,10 +1728,17 @@ export default function NilaiPage() {
                     )}
 
                 {/* Konten Utama: Loader jika sedang memuat data */}
-                {loading || !dataReady ? (
+                {loading ? (
                     <div className="flex flex-col items-center justify-center py-20 gap-3">
                         <Spinner variant="buble" size={32} />
                         <span className="text-sm font-semibold text-slate-400">Memuat data nilai...</span>
+                    </div>
+                ) : !dataReady ? (
+                    <div className="flex flex-col items-center justify-center py-20 gap-3">
+                        <span className="text-sm text-slate-500">Data nilai belum dimuat. Pastikan kelas, mata pelajaran, tahun ajaran, dan semester sudah dipilih.</span>
+                        {kelas && mapel && tahunAjaran && semester && (
+                            <button className="nl__btn nl__btnPrimary" onClick={() => void loadData()}>Muat ulang</button>
+                        )}
                     </div>
                 ) : activeMode === 'APRESIASI' ? (
                     <ApresiasiTab
