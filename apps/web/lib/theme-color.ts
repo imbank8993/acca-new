@@ -96,7 +96,8 @@ function baseColor(): Rgba {
     // DOM dan saat tertutup hanya `opacity: 0` — sedangkan modul ini sengaja
     // mengabaikan opacity (lihat catatan di topOverlayColor), jadi tirai itu
     // akan terbaca "selalu menutupi layar".
-    const sidebarTerbuka = document.querySelector('.dashboard-layout.sidebar-mobile-open')
+    const sidebarTerbuka = window.matchMedia('(max-width: 1023.98px)').matches
+        ? document.querySelector('.dashboard-layout.sidebar-mobile-open') : null
     const sidebar = sidebarTerbuka ? document.querySelector('.sidebar') : null
     const sidebarBg = sidebar ? getComputedStyle(sidebar).backgroundColor : ''
 
@@ -235,6 +236,9 @@ export function applyThemeColor(): void {
     const base = baseColor()
     const overlay = topOverlayColor()
     const next = toHex(overlay ? blend(overlay, base) : base)
+
+    // Mobile CSS uses !important for the document canvas; share its color via a token.
+    document.documentElement.style.setProperty('--app-browser-bg', next)
 
     // 1. Perbarui semua meta theme-color di <head> jika ada perubahan
     const metas = getThemeColorMetas()

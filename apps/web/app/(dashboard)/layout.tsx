@@ -8,7 +8,7 @@
  *   /<pageId>             → app/(dashboard)/[...pageId]/page.tsx (registry)
  */
 
-import { useEffect, useState, useCallback, useMemo, useRef } from 'react'
+import { useEffect, useLayoutEffect, useState, useCallback, useMemo, useRef } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { getCurrentUser } from '@/lib/auth-client'
 import { useModalBlur } from '@/components/ModalBlurProvider'
@@ -48,12 +48,32 @@ export default function DashboardShellLayout({ children }: { children: React.Rea
   // pula tempat yang benar untuk memicunya — tanpa perlu membuat
   // topOverlayColor() menyapu lebih dalam ke dalam pohon DOM.
   const scrollPosRef = useRef(0)
+  const openSidebar = () => {
+    scrollPosRef.current = window.scrollY
+    setSidebarOpen(true)
+  }
+  const toggleSidebar = () => sidebarOpen ? setSidebarOpen(false) : openSidebar()
   useEffect(() => {
+    const mobile = window.matchMedia('(max-width: 1023.98px)')
+    const closeOnDesktop = () => { if (!mobile.matches) setSidebarOpen(false) }
+    mobile.addEventListener('change', closeOnDesktop)
+    return () => mobile.removeEventListener('change', closeOnDesktop)
+  }, [])
+  useLayoutEffect(() => {
     applyThemeColor()
-    if (sidebarOpen) {
-      scrollPosRef.current = window.scrollY || window.pageYOffset || 0
-    } else if (scrollPosRef.current > 0) {
+    if (!sidebarOpen || !window.matchMedia('(max-width: 1023.98px)').matches) return
+
+    const root = document.documentElement
+    root.style.setProperty('--sidebar-scroll-y', `${scrollPosRef.current}px`)
+    root.classList.add('app-sidebar-open')
+
+    return () => {
+      root.classList.remove('app-sidebar-open')
+      root.style.removeProperty('--sidebar-scroll-y')
+      const previousBehavior = root.style.scrollBehavior
+      root.style.scrollBehavior = 'auto'
       window.scrollTo(0, scrollPosRef.current)
+      root.style.scrollBehavior = previousBehavior
     }
   }, [sidebarOpen])
   const [headerHidden, setHeaderHidden] = useState(false)
@@ -114,7 +134,7 @@ export default function DashboardShellLayout({ children }: { children: React.Rea
   const prefetchedPagesRef = useRef<Set<string>>(new Set())
 
   const handlePrefetch = useCallback((page: string) => {
-    if (typeof window !== 'undefined' && (navigator as any).connection?.saveData) {
+    if (typeof window !== 'undefined' && (navigator as Navigator & { connection?: { saveData?: boolean } }).connection?.saveData) {
       return
     }
     const path = resolvePath(page)
@@ -169,14 +189,15 @@ export default function DashboardShellLayout({ children }: { children: React.Rea
     const handleRefresh = () => checkAuth()
     window.addEventListener('refresh-user', handleRefresh)
 
-    const handleCustomNavigate = (e: any) => {
-      if (e.detail) handleNavigate(e.detail)
+    const handleCustomNavigate = (e: Event) => {
+      const page = (e as CustomEvent<unknown>).detail
+      if (typeof page === 'string' && page) handleNavigate(page)
     }
-    window.addEventListener('navigate-to-page' as any, handleCustomNavigate)
+    window.addEventListener('navigate-to-page', handleCustomNavigate)
 
     return () => {
       window.removeEventListener('refresh-user', handleRefresh)
-      window.removeEventListener('navigate-to-page' as any, handleCustomNavigate)
+      window.removeEventListener('navigate-to-page', handleCustomNavigate)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -252,13 +273,14 @@ export default function DashboardShellLayout({ children }: { children: React.Rea
     <DashboardUserContext.Provider value={userContextValue}>
       <UserHeartbeat />
       <div className={`dashboard-layout ${sidebarOpen ? 'sidebar-mobile-open' : ''}`}>
+        <div className="mobile-browser-edge" aria-hidden="true" />
         <Sidebar
           user={user}
           currentPage={currentPage}
           onNavigate={handleNavigate}
           onPrefetch={handlePrefetch}
           isOpen={sidebarOpen}
-          onToggle={() => setSidebarOpen(!sidebarOpen)}
+          onToggle={toggleSidebar}
           isCollapsed={sidebarCollapsed}
           onCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
           appMode={appMode}
@@ -269,7 +291,7 @@ export default function DashboardShellLayout({ children }: { children: React.Rea
         <div className="dashboard-content-wrapper">
           <Header
             user={user}
-            onMenuToggle={() => setSidebarOpen(!sidebarOpen)}
+            onMenuToggle={toggleSidebar}
             onNavigate={handleNavigate}
             isCollapsed={sidebarCollapsed}
             onCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
@@ -300,7 +322,7 @@ export default function DashboardShellLayout({ children }: { children: React.Rea
             currentPage={currentPage}
             pageTitle={pageTitle}
             onNavigate={handleNavigate}
-            onOpenMenu={() => setSidebarOpen(true)}
+            onOpenMenu={openSidebar}
             badges={badgeCounts}
           />
 
@@ -399,15 +421,24 @@ export default function DashboardShellLayout({ children }: { children: React.Rea
            MOBILE (< 992px): Natural Document Scroll (Edge-to-Edge)
            ========================================= */
         @media (max-width: 1023.98px) {
+          .mobile-browser-edge {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: max(1px, env(safe-area-inset-bottom));
+            background: var(--app-browser-bg, #ffffff);
+            pointer-events: none;
+            z-index: 399;
+          }
+
           .dashboard-layout,
           :global(.dashboard-layout) {
             position: relative !important;
             inset: auto !important;
             width: 100% !important;
-            /* 100vh (large viewport, konstan) — mencegah sticky bottom-nav
-               bergetar saat bilah alamat Safari iOS beranimasi. Lihat catatan
-               lengkap di app/globals.css. */
             min-height: 100vh !important;
+            min-height: 100svh !important;
             height: auto !important;
             overflow: visible !important;
             overflow-x: clip !important;
@@ -445,25 +476,21 @@ export default function DashboardShellLayout({ children }: { children: React.Rea
           .dashboard-content-wrapper {
             position: relative;
             width: 100%;
-            /* 100vh, bukan 100dvh — lihat catatan di .dashboard-layout. */
             min-height: 100vh;
+            min-height: 100svh;
             background: var(--n-bg, #EBECF1);
             transform: none !important;
             border-radius: 0;
             overflow: visible;
             z-index: 100;
-            transition: transform .35s cubic-bezier(0.32, 0.72, 0, 1),
-                        border-radius .35s cubic-bezier(0.32, 0.72, 0, 1),
-                        box-shadow .35s cubic-bezier(0.32, 0.72, 0, 1);
+
           }
 
           :global(.dark) .dashboard-content-wrapper {
             background: #020718;
           }
 
-          /* Push effect: seluruh halaman (Header + Konten + BottomNav) bergeser ke kanan
-             seperti drawer pada aplikasi X (Twitter), menampilkan sudut lengkung presisi (border-radius 28px)
-             di sisi kiri yang menyentuh langsung bilah status (top: 0), dibingkai kanvas sidebar serta bayangan lembut. */
+          /* One clipped frame moves the header, page, and bottom navigation together. */
           .dashboard-layout.sidebar-mobile-open {
             position: fixed !important;
             inset: 0 !important;
@@ -476,7 +503,7 @@ export default function DashboardShellLayout({ children }: { children: React.Rea
             height: 100dvh !important;
             overflow: hidden !important;
             background: #ffffff !important;
-            touch-action: none;
+            touch-action: pan-y;
             z-index: 1000 !important;
           }
 
@@ -494,34 +521,26 @@ export default function DashboardShellLayout({ children }: { children: React.Rea
             width: 100% !important;
             height: 100% !important;
             height: 100dvh !important;
-            transform: translate3d(var(--app-sidebar-mobile-w, min(calc(100vw - 64px), 320px)), 0, 0) !important;
-            border-top-left-radius: 28px !important;
-            border-bottom-left-radius: 28px !important;
-            border: 1px solid rgba(0, 0, 0, 0.08) !important;
-            border-right: none !important;
-            box-shadow: -10px 0 28px rgba(0, 0, 0, 0.16), -1px 0 0 rgba(0, 0, 0, 0.06) !important;
+            transform: translate3d(var(--app-sidebar-mobile-w), 0, 0) !important;
+            border-radius: 24px 0 0 24px !important;
+            clip-path: inset(0 round 24px 0 0 24px);
+            -webkit-clip-path: inset(0 round 24px 0 0 24px);
+            border: none !important;
+            box-shadow: none !important;
             overflow: hidden !important;
             pointer-events: none;
             isolation: isolate;
           }
 
-          :global(.dark) .dashboard-layout.sidebar-mobile-open .dashboard-content-wrapper {
-            background: var(--n-bg, #020718) !important;
-            border: 1px solid rgba(255, 255, 255, 0.12) !important;
-            border-right: none !important;
-            box-shadow: -12px 0 32px rgba(0, 0, 0, 0.45), -1px 0 0 rgba(255, 255, 255, 0.08) !important;
-          }
-
-          /* Area klik untuk menutup sidebar saat halaman tergeser sekaligus memberi efek pudar lembut (soft dim) */
+          /* The backdrop shares the frame's curve instead of adding another edge. */
           .sidebar-mobile-backdrop {
             position: fixed;
             inset: 0;
-            background: rgba(15, 23, 42, 0.18);
+            background: rgba(15, 23, 42, 0.24);
             z-index: 1200;
             cursor: pointer;
             pointer-events: auto !important;
-            border-top-left-radius: 28px;
-            border-bottom-left-radius: 28px;
+            border-radius: inherit;
             opacity: 0;
             animation: fadeInBackdrop 0.25s forwards;
             -webkit-tap-highlight-color: transparent;
@@ -571,17 +590,11 @@ export default function DashboardShellLayout({ children }: { children: React.Rea
                margin-top -6px pada sapaan di DashboardContent.
                (Tanpa backtick: blok ini template literal styled-jsx.) */
             padding-top: calc(var(--app-header-h, 56px) + env(safe-area-inset-top) + 12px) !important;
-            /* Cuma 12px: bilah nav kini position:sticky sehingga memesan
-               ruangnya sendiri di ujung dokumen — baris terakhir pasti berhenti
-               di atasnya. Menyisakan tinggi nav di sini menumpuk ruang kosong
-               dua kali. Sinkron dengan .content-area di app/globals.css. */
-            padding-bottom: 12px !important;
+            /* Reserve space for the fixed navigation, including the home indicator. */
+            padding-bottom: calc(var(--app-bottomnav-h, 62px) + env(safe-area-inset-bottom) + 12px) !important;
             padding-left: calc(8px + env(safe-area-inset-left)) !important;
             padding-right: calc(8px + env(safe-area-inset-right)) !important;
-            /* 100vh (large viewport, konstan) — lihat catatan di globals.css.
-               Mencegah sticky bottom-nav bergetar saat bilah alamat Safari
-               beranimasi. */
-            min-height: calc(100vh - var(--app-bottomnav-h, 62px) - env(safe-area-inset-bottom)) !important;
+            min-height: 100svh !important;
             box-sizing: border-box !important;
           }
 
@@ -604,6 +617,10 @@ export default function DashboardShellLayout({ children }: { children: React.Rea
           .content-container {
             padding: 0;
             max-width: 100%;
+          }
+
+          .dashboard-layout.sidebar-mobile-open .main-content {
+            transform: translateY(calc(-1 * var(--sidebar-scroll-y, 0px))) !important;
           }
         }
       `}</style>

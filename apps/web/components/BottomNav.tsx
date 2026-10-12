@@ -347,13 +347,6 @@ export default function BottomNav({
         }
     }, [])
 
-    // Dulu di sini ada efek yang mengangkat bilah nav sebesar selisih layout
-    // viewport vs visualViewport, penambal `position: fixed` di Safari iOS.
-    // Sudah dihapus: bilahnya kini `position: sticky` (components/bottom-nav.css),
-    // yang dijaga browser sendiri terhadap scrollport — tanpa JS dan tanpa jeda
-    // menyusulnya event visualViewport yang membuat bilah terpotong saat digulir.
-
-
     // Reset sheet saat pindah halaman.
     useEffect(() => {
         setIsPinnedOpen(false)
@@ -361,7 +354,7 @@ export default function BottomNav({
 
     /* Gulir ke puncak. Di mobile yang menggulir adalah dokumen — `.main-content`
        dipaksa `overflow: visible` di bawah 992px (lihat app/(dashboard)/layout.tsx),
-       syarat agar `position: sticky` bilah ini bekerja. Tapi beberapa halaman
+       Tetapi beberapa halaman
        memasang scroller sendiri, jadi selain window kita juga menurunkan
        scrollTop setiap leluhur yang memang sedang tergulir. */
     const scrollToTop = useCallback(() => {

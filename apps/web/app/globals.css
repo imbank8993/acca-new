@@ -118,6 +118,17 @@ body, .header, .sidebar, .main-content, .card, .p-card, .modal-box {
 }
 
 @media (max-width: 1023.98px) {
+  html.app-sidebar-open,
+  html.app-sidebar-open body {
+    overflow: hidden !important;
+  }
+
+  html.app-sidebar-open body {
+    position: fixed;
+    top: calc(-1 * var(--sidebar-scroll-y, 0px));
+    width: 100%;
+  }
+
   :root {
     --app-header-h: 56px;
     --app-bottomnav-h: 62px;
@@ -125,29 +136,12 @@ body, .header, .sidebar, .main-content, .card, .p-card, .modal-box {
 
   .content-area {
     padding-top: calc(var(--app-header-h, 56px) + env(safe-area-inset-top) + 12px) !important;
-    /* Sinkron dengan blok mobile di app/(dashboard)/layout.tsx — keduanya
-       mendeklarasikan .content-area untuk breakpoint yang sama.
-
-       Cuma 12px, bukan setinggi bilah nav: sejak bilah itu `position: sticky`
-       ia MEMESAN ruangnya sendiri di ujung dokumen, jadi baris terakhir sudah
-       pasti berhenti di atasnya. Menyisakan tinggi nav di sini akan menumpuk
-       ruang kosong dua kali. 12px adalah jarak napas ke garis batas bilah. */
-    padding-bottom: 12px !important;
+    /* Reserve room for fixed navigation and the home indicator. */
+    padding-bottom: calc(var(--app-bottomnav-h, 62px) + env(safe-area-inset-bottom) + 12px) !important;
     padding-left: calc(8px + env(safe-area-inset-left)) !important;
     padding-right: calc(8px + env(safe-area-inset-right)) !important;
-    /* Dikurangi tinggi bilah nav, karena bilahnya kini ikut menambah tinggi
-       dokumen. Tanpa pengurangan ini halaman pendek jadi bisa digulir ~62px
-       tanpa ada isinya.
-
-       `100vh`, BUKAN `100dvh`.
-       Di Safari iOS `100vh` setara large viewport height: KONSTAN, tidak
-       terpengaruh animasi bilah alamat. `100dvh` berubah saat bilah alamat
-       bergerak — dan perubahan itu menghitung ulang tinggi dokumen MID-SCROLL,
-       menggeser slot aliran sticky bottom-nav sehingga terlihat bergetar.
-       Konsekuensi: pada halaman pendek, dokumen ~50px lebih tinggi dari area
-       terlihat saat bilah alamat muncul — ruang itu di balik bilah alamat,
-       tidak terlihat, dan tidak memengaruhi UX. */
-    min-height: calc(100vh - var(--app-bottomnav-h, 62px) - env(safe-area-inset-bottom)) !important;
+    min-height: 100vh !important;
+    min-height: 100svh !important;
     box-sizing: border-box !important;
   }
 
@@ -1539,22 +1533,9 @@ html.dark .acca-ambient-bg,
   html,
   body {
     min-height: 100% !important;
-    /* `100vh` (large viewport), bukan `100dvh`.
-
-       Riwayat: `-webkit-fill-available` dulu di sini, tapi membeku pada tinggi
-       saat bilah alamat terkembang dan membuat bilah nav sekejap terangkat.
-       `100dvh` menggantikannya dan memang ikut berubah saat bilah alamat
-       beranimasi (dukungan penuh sejak iOS 16), tapi perubahan itu menghitung
-       ulang tinggi dokumen MID-SCROLL sehingga sticky bottom-nav masih
-       bergetar — kini berpindah dari tersentak SEKALI ke gemetar KONTINU.
-
-       `100vh` di Safari iOS setara large viewport height: KONSTAN, tidak
-       pernah berubah selama bilah alamat bergerak. Konsekuensinya dokumen
-       ~50px lebih tinggi dari area terlihat saat bilah alamat terkembang —
-       ruang itu di balik bilah alamat dan tidak terlihat. */
+    /* Keep short pages within the smallest browser viewport. */
     min-height: 100vh !important;
-  /* `clip`, bukan `hidden` — lihat catatan di aturan html,body di atas.
-     Justru di breakpoint inilah bilah nav bawah yang sticky hidup. */
+    min-height: 100svh !important;
     overflow-x: clip !important;
     -webkit-overflow-scrolling: touch !important;
   }
@@ -1577,7 +1558,7 @@ html.dark .acca-ambient-bg,
        Sejalan dengan `--bnav-face` di components/bottom-nav.css dan dengan
        cadangan terakhir di lib/theme-color.ts; tiga tempat ini harus diubah
        bersama. */
-    background-color: #ffffff !important;
+    background-color: var(--app-browser-bg, #ffffff) !important;
     background-image: none !important;
     color-scheme: light;
   }
@@ -1601,7 +1582,7 @@ html.dark .acca-ambient-bg,
        `.acca-ambient-bg` (fixed, inset 0). Yang di html/body cuma salinan yang
        selalu tertutup olehnya. Di desktop blok ini tidak berlaku, jadi gradien
        body di sana tetap utuh. */
-    background-color: #0b1329 !important;
+    background-color: var(--app-browser-bg, #0b1329) !important;
     background-image: none !important;
     color-scheme: dark;
   }

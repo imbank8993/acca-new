@@ -917,12 +917,10 @@ html.dark .header-collapse-toggle:hover {
     box-shadow: 0 8px 28px rgba(0, 0, 0, 0.5) !important;
   }
 
-  /* Saat sidebar mobile terbuka (push drawer), header berada di dalam kartu yang terdorong.
-     Header melengkung di sudut kiri atas (border-top-left-radius: 28px) tepat menyentuh bilah status (y = 0),
-     selaras dengan sudut lengkung .dashboard-content-wrapper seperti aplikasi X (Twitter). */
+  /* The outer page frame supplies the curve; the header adds no separate corners. */
   .sidebar-mobile-open .header,
   .sidebar-mobile-open .header.collapsed {
-    border-top-left-radius: 28px !important;
+    border-top-left-radius: 0 !important;
     border-top-right-radius: 0 !important;
     border-bottom-left-radius: 0 !important;
     border-bottom-right-radius: 0 !important;
@@ -932,7 +930,7 @@ html.dark .header-collapse-toggle:hover {
 
   .dark .sidebar-mobile-open .header,
   .dark .sidebar-mobile-open .header.collapsed {
-    border-top-left-radius: 28px !important;
+    border-top-left-radius: 0 !important;
     border-top-right-radius: 0 !important;
     border-bottom-left-radius: 0 !important;
     border-bottom-right-radius: 0 !important;
