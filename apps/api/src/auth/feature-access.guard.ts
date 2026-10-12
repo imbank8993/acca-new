@@ -92,6 +92,9 @@ export const PENGUMUMAN_KELOLA_KEY = 'pengumuman_access_config';
  */
 export const AGENDA_KELOLA_KEY = 'agenda_access_config';
 
+/** Kunci site_settings untuk hak kelola Notulensi Rapat. */
+export const NOTULENSI_KELOLA_KEY = 'notulensi_access_config';
+
 /** Kunci site_settings untuk hak kelola Data Hari Libur Madrasah. */
 export const LIBUR_ACCESS_KEY = 'libur_access_config';
 

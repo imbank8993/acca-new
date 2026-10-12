@@ -11,7 +11,7 @@ export async function GET(
     const { id } = await params;
     const token = extractRequestToken(request);
 
-    const { status, body } = await nestFetchAsUser(`/forms/${id}`, token || '');
+    const { status, body } = await nestFetchAsUser(`/forms/${encodeURIComponent(id)}`, token || '');
     return NextResponse.json(body, { status });
 }
 
@@ -26,8 +26,9 @@ export async function PUT(
     }
 
     try {
-        const json = await request.json();
-        const { status, body } = await nestFetchAsUser(`/forms/${id}`, token, {
+        let json;
+        try { json = await request.json(); } catch { return NextResponse.json({ error: 'JSON tidak valid' }, { status: 400 }); }
+        const { status, body } = await nestFetchAsUser(`/forms/${encodeURIComponent(id)}`, token, {
             method: 'PUT',
             body: JSON.stringify(json),
         });
@@ -47,7 +48,7 @@ export async function DELETE(
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { status, body } = await nestFetchAsUser(`/forms/${id}`, token, {
+    const { status, body } = await nestFetchAsUser(`/forms/${encodeURIComponent(id)}`, token, {
         method: 'DELETE',
     });
     return NextResponse.json(body, { status });

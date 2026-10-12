@@ -38,7 +38,8 @@ async function bootstrap() {
   );
 
   const configService = app.get(ConfigService);
-  const port = configService.get<number>('PORT') || 3007;
+  const rawPort = configService.get<number>('API_PORT') || configService.get<number>('PORT') || 3007;
+  const port = Number(rawPort) === 3006 ? 3007 : Number(rawPort);
   const rawOrigins = configService.get<string>('CORS_ORIGIN') || '*';
   const origins = rawOrigins === '*' ? '*' : rawOrigins.split(',').map((o) => o.trim());
 

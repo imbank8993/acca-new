@@ -14,7 +14,8 @@ import {
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { OptionalJwtAuthGuard } from '../auth/optional-jwt-auth.guard';
+import { FormsOptionalAuthGuard } from './forms-optional-auth.guard';
+import { PageAccessGuard, RequiresPage } from '../auth/page-access.guard';
 import {
   FeatureAccess,
   FeatureAccessGuard,
@@ -76,28 +77,32 @@ export class FormsController {
   }
 
   @Get('dynamic-options')
+  @UseGuards(JwtAuthGuard, PageAccessGuard)
+  @RequiresPage('form')
   @ApiOperation({ summary: 'Ambil opsi dinamis untuk form' })
-  async getDynamicOptions(@Query('source') source: string) {
-    return this.formsService.getDynamicOptions(source || 'guru');
+  async getDynamicOptions(@Query('source') source: string, @Req() req: any) {
+    return this.formsService.getDynamicOptions(source || 'guru', req.user);
   }
 
   @Post('submit')
-  @UseGuards(OptionalJwtAuthGuard)
+  @UseGuards(FormsOptionalAuthGuard)
   @ApiOperation({ summary: 'Kirim respon form (publik/privat)' })
   async submitResponse(@Body() body: any, @Req() req: any) {
     return this.formsService.submitResponse(body, req.user);
   }
 
   @Get()
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, PageAccessGuard)
+  @RequiresPage('form')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Ambil semua form untuk dashboard' })
-  async getForms(@Req() req: any) {
-    return this.formsService.getForms(req.user);
+  async getForms(@Req() req: any, @Query() query: any) {
+    return this.formsService.getForms(req.user, query);
   }
 
   @Post()
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, PageAccessGuard)
+  @RequiresPage('form')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Buat formulir baru' })
   async createForm(@Body() body: any, @Req() req: any) {
@@ -105,14 +110,28 @@ export class FormsController {
   }
 
   @Get(':id')
-  @UseGuards(OptionalJwtAuthGuard)
+  @UseGuards(FormsOptionalAuthGuard)
   @ApiOperation({ summary: 'Ambil detail formulir berdasarkan ID atau slug' })
   async getFormById(@Param('id') id: string, @Req() req: any) {
     return this.formsService.getFormById(id, req.user);
   }
 
+  @Get(':id/manage')
+  @UseGuards(JwtAuthGuard, PageAccessGuard)
+  @RequiresPage('form')
+  async getManagementForm(@Param('id') id: string, @Req() req: any) {
+    return this.formsService.getManagementFormById(id, req.user);
+  }
+
+  @Get(':id/upload')
+  @UseGuards(FormsOptionalAuthGuard)
+  async uploadAccess(@Param('id') id: string, @Query('field') field: string, @Req() req: any) {
+    return this.formsService.uploadAccess(id, field, req.user);
+  }
+
   @Put(':id')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, PageAccessGuard)
+  @RequiresPage('form')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Ubah formulir' })
   async updateForm(
@@ -124,7 +143,8 @@ export class FormsController {
   }
 
   @Delete(':id')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, PageAccessGuard)
+  @RequiresPage('form')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Hapus formulir' })
   async deleteForm(@Param('id') id: string, @Req() req: any) {
@@ -132,7 +152,8 @@ export class FormsController {
   }
 
   @Get(':id/responses')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, PageAccessGuard)
+  @RequiresPage('form')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Ambil daftar respon formulir' })
   async getResponses(
@@ -144,7 +165,8 @@ export class FormsController {
   }
 
   @Delete(':id/responses')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, PageAccessGuard)
+  @RequiresPage('form')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Hapus respon formulir (satu atau banyak)' })
   async deleteResponses(
@@ -163,7 +185,8 @@ export class FormsController {
   }
 
   @Delete(':id/responses/:responseId')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, PageAccessGuard)
+  @RequiresPage('form')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Hapus respon formulir by ID' })
   async deleteResponse(
@@ -175,7 +198,8 @@ export class FormsController {
   }
 
   @Post(':id/allocate')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, PageAccessGuard)
+  @RequiresPage('form')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Jalankan seleksi kuota respon formulir' })
   async allocate(
@@ -187,7 +211,8 @@ export class FormsController {
   }
 
   @Patch(':id/allocate')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, PageAccessGuard)
+  @RequiresPage('form')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Hitung ulang skor tanggapan formulir' })
   async recalculateScores(@Param('id') id: string, @Req() req: any) {

@@ -6,6 +6,8 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Swal from 'sweetalert2';
 import SeleksiTab from './tabs/SeleksiTab';
+import { escapeFormHtml, formDisplayValue } from '@acca/shared';
+import { useRef } from 'react';
 import { useDashboardUser } from '@/components/UserContext';
 
 function ResponsesContent() {
@@ -14,8 +16,9 @@ function ResponsesContent() {
     const formId = searchParams.get('id');
     const { user } = useDashboardUser();
     // Sama dengan gate di /form dan API: Admin & OP_Form boleh mengelola tanggapan
-    const canManage = user?.roles?.some((r: string) => ['ADMIN', 'ADMINISTRATOR', 'OP_FORM'].includes(r.toUpperCase())) || false;
+    const canManage = user?.roles?.some((r: string) => ['ADMIN', 'ADMINISTRATOR', 'OP_FORM', 'PENGURUS_KELAS'].includes(r.toUpperCase())) || false;
 
+    const fetchVersion = useRef(0);
     const [mounted, setMounted] = useState(false);
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState<'charts' | 'table' | 'seleksi'>('charts');
@@ -41,17 +44,29 @@ function ResponsesContent() {
     }, [formId, mounted]);
 
     const fetchResponses = async () => {
+        const version = ++fetchVersion.current;
         try {
-            const res = await fetch(`/api/forms/${formId}/responses`);
-            const data = await res.json();
+            const gathered: any[] = [];
+            let data: any;
+            for (let page = 1; ; page++) {
+                const res = await fetch(`/api/forms/${encodeURIComponent(formId!)}/responses?page=${page}&limit=500`);
+                data = await res.json();
+                if (version !== fetchVersion.current) return;
+                if (!res.ok) throw new Error(data.error || 'Gagal memuat tanggapan');
+                gathered.push(...(data.responses || []));
+                if (!data.has_more) break;
+                if (gathered.length >= 10000) throw new Error('Tanggapan melebihi 10.000 baris. Gunakan API berhalaman untuk ekspor atau pecah form berdasarkan periode.');
+            }
+            data.responses = gathered;
+            const res = { ok: true };
             if (res.ok && data.form) {
-                if (!canManage && data.form.created_by !== user?.id) {
+                if (!data.form.can_manage) {
                     Swal.fire('Ditolak', 'Anda tidak memiliki akses ke tanggapan formulir ini.', 'error');
                     router.push('/form');
                     return;
                 }
                 setFormTitle(data.form.title);
-                setFormSchema(data.form.schema || {});
+                setFormSchema({ ...(data.form.schema || {}), __formVersion: data.form.updated_at ?? null });
                 setResponses(data.responses || []);
             } else {
                 Swal.fire('Gagal Memuat', data.error || 'Gagal memuat hasil tanggapan form', 'error');
@@ -60,7 +75,7 @@ function ResponsesContent() {
             console.error('Error fetching responses:', error);
             Swal.fire('Error', 'Terjadi kesalahan server saat mengambil data', 'error');
         } finally {
-            setLoading(false);
+            if (version === fetchVersion.current) setLoading(false);
         }
     };
 
@@ -73,7 +88,7 @@ function ResponsesContent() {
         const confirm = await Swal.fire({
             title: 'Hapus Tanggapan?',
             html: `<div style="text-align:left;font-size:13px">
-                <p style="margin:0 0 8px"><b>${preview ? String(Array.isArray(preview) ? preview.join(', ') : preview) : 'Tanggapan ini'}</b></p>
+                <p style="margin:0 0 8px"><b>${preview ? escapeFormHtml(formDisplayValue(preview)) : 'Tanggapan ini'}</b></p>
                 <p style="margin:0;color:#64748b">Waktu submit: ${dateStr}</p>
                 <p style="margin:8px 0 0;color:#dc2626">Data tanggapan ini dihapus permanen dan tidak bisa dikembalikan.</p>
             </div>`,
@@ -105,96 +120,19 @@ function ResponsesContent() {
         }
     };
 
-    const handleExportExcel = () => {
-        if (responses.length === 0) {
-            Swal.fire('Informasi', 'Belum ada data tanggapan untuk diekspor', 'info');
-            return;
-        }
-
-        const fields = (formSchema.fields || []).filter(
-            (f: any) => !['heading', 'paragraph', 'divider', 'page_break'].includes(f.type)
-        );
-        const hasScoring = (formSchema.fields || []).some((f: any) => f.enableScoring);
-
-        const categoryScoreKeys = hasScoring ? Array.from(new Set(responses.flatMap((r: any) => Object.keys(r.category_scores || {})))) : [];
-
-        let tableHtml = `<html xmlns:x="urn:schemas-microsoft-com:office:excel">
-<head>
-    <meta charset="utf-8">
-    <style>
-        table { border-collapse: collapse; width: 100%; font-family: sans-serif; }
-        th { background-color: #3083FF; color: white; font-weight: bold; padding: 12px; border: 1px solid #cbd5e1; text-transform: uppercase; font-size: 13px; text-align: left; }
-        td { padding: 10px; border: 1px solid #e2e8f0; font-size: 13px; vertical-align: top; color: #334155; }
-        .text-center { text-align: center; }
-        .font-bold { font-weight: bold; }
-    </style>
-</head>
-<body>
-    <table>
-        <thead>
-            <tr>
-                <th width="50" class="text-center">NO</th>
-                <th width="150">WAKTU SUBMIT</th>
-                ${hasScoring ? '<th width="100" class="text-center">TOTAL SKOR</th>' : ''}`;
-        
-        categoryScoreKeys.forEach(k => {
-            tableHtml += `<th>${k.toUpperCase()}</th>`;
-        });
-
-        fields.forEach((f: any) => {
-            tableHtml += `<th>${f.label}</th>`;
-        });
-
-        tableHtml += `
-            </tr>
-        </thead>
-        <tbody>`;
-
-        responses.forEach((resp, idx) => {
-            const dateVal = resp.created_at || resp.submitted_at;
-            const dateStr = dateVal ? new Date(dateVal).toLocaleString('id-ID', {
-                day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
-            }) : '-';
-            
-            tableHtml += `<tr>
-                <td class="text-center font-bold">${idx + 1}</td>
-                <td>${dateStr}</td>
-                ${hasScoring ? `<td class="text-center font-bold">${resp.total_score ?? '-'}</td>` : ''}`;
-                
-            categoryScoreKeys.forEach(k => {
-                tableHtml += `<td class="text-center font-bold" style="color:#3083FF">${resp.category_scores?.[k] ?? '-'}</td>`;
-            });
-
-            fields.forEach((f: any) => {
-                const val = resp.data?.[f.label];
-                let displayVal = '-';
-                if (val !== undefined && val !== null && val !== '') {
-                    if (Array.isArray(val)) displayVal = val.join(', ');
-                    else displayVal = String(val);
-                }
-                // Escape HTML
-                displayVal = displayVal.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-                tableHtml += `<td>${displayVal}</td>`;
-            });
-            
-            tableHtml += `</tr>`;
-        });
-
-        tableHtml += `
-        </tbody>
-    </table>
-</body>
-</html>`;
-
-        const blob = new Blob([tableHtml], { type: 'application/vnd.ms-excel' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `Hasil_Tanggapan_${formTitle.replace(/\s+/g, '_')}.xls`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
+    const handleExportExcel = async () => {
+        if (!responses.length) return Swal.fire('Informasi', 'Belum ada tanggapan untuk diekspor', 'info');
+        try {
+            const XLSX = await import('xlsx');
+            const fields = (formSchema.fields || []).filter((f: any) => !['heading','paragraph','divider','page_break'].includes(f.type));
+            const scoring = fields.some((f: any) => f.enableScoring);
+            const categories = scoring ? Array.from(new Set<string>(responses.flatMap((r: any) => Object.keys(r.category_scores || {})))) : [];
+            const headers = ['NO','WAKTU SUBMIT', ...(scoring ? ['TOTAL SKOR', ...categories] : []), ...fields.map((f: any) => f.label)];
+            const rows = responses.map((r: any, index: number) => [index + 1, r.created_at || r.submitted_at || '', ...(scoring ? [r.total_score ?? 0, ...categories.map(k => r.category_scores?.[k] ?? 0)] : []), ...fields.map((f: any) => formDisplayValue(r.data?.[f.label]))]);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet([headers, ...rows]), 'Tanggapan');
+            XLSX.writeFile(workbook, 'Tanggapan_' + formTitle.replace(/[^a-zA-Z0-9_-]/g, '_').slice(0,100) + '.xlsx');
+        } catch { Swal.fire('Gagal', 'Ekspor tanggapan tidak berhasil', 'error'); }
     };
 
     const handlePrintSummary = () => {
@@ -909,8 +847,7 @@ function ResponsesContent() {
                                                         const val = item.data?.[f.label];
                                                         let displayVal = '-';
                                                         if (val !== undefined && val !== null && val !== '') {
-                                                            if (Array.isArray(val)) displayVal = val.join(', ');
-                                                            else displayVal = String(val);
+                                                            displayVal = formDisplayValue(val);
                                                         }
                                                         return (
                                                             <td key={f.id || fIdx} style={{ padding: '12px 16px', color: 'var(--n-text)', fontWeight: 500 }} className="max-w-xs truncate">
@@ -1025,8 +962,7 @@ function ResponsesContent() {
                                 const val = selectedResponse.data?.[f.label];
                                 let displayVal = 'Tidak Diisi';
                                 if (val !== undefined && val !== null && val !== '') {
-                                    if (Array.isArray(val)) displayVal = val.join(', ');
-                                    else displayVal = String(val);
+                                    displayVal = formDisplayValue(val);
                                 }
                                 return (
                                     <div key={f.id || idx} style={{ marginBottom: '16px' }} className="last:mb-0">

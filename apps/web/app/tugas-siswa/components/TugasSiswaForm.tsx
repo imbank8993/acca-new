@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Swal from 'sweetalert2';
 import SearchableSelect from '@/components/ui/SearchableSelect';
 import InlineSelect from '@/components/ui/InlineSelect';
@@ -74,6 +74,8 @@ export default function TugasSiswaForm({
 }: TugasSiswaFormProps) {
     const [loading, setLoading] = useState(false);
     const [uploading, setUploading] = useState(false);
+    const busyRef = useRef(false);
+    const uploadRef = useRef(false);
 
     // Viewer file in-app (sama seperti halaman Informasi).
     const { openFile, viewer } = useFileViewer();
@@ -302,6 +304,8 @@ export default function TugasSiswaForm({
     const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
+        if (busyRef.current || uploadRef.current) return;
+        uploadRef.current = true;
 
         setUploading(true);
         try {
@@ -334,6 +338,7 @@ export default function TugasSiswaForm({
             console.error('Upload error:', err);
             Swal.fire('Gagal', 'Gagal upload file', 'error');
         } finally {
+            uploadRef.current = false;
             setUploading(false);
         }
     };
@@ -343,6 +348,7 @@ export default function TugasSiswaForm({
     };
 
     const handleSubmit = async () => {
+        if (busyRef.current || uploadRef.current) return;
         const missingFields: string[] = [];
         if (!formData.nama_guru) missingFields.push('Guru');
         if (!formData.nama_mapel) missingFields.push('Mata Pelajaran');
@@ -370,6 +376,7 @@ export default function TugasSiswaForm({
             return;
         }
 
+        busyRef.current = true;
         setLoading(true);
         try {
             // Tahun ajaran & semester diturunkan dari tanggal tugas (batas Juli),
@@ -384,6 +391,7 @@ export default function TugasSiswaForm({
         } catch (err: any) {
             Swal.fire('Gagal', err.message || 'Gagal menyimpan tugas', 'error');
         } finally {
+            busyRef.current = false;
             setLoading(false);
         }
     };
@@ -400,11 +408,11 @@ export default function TugasSiswaForm({
 
     return (
         <>
-        <Modal onClose={onClose} size="lg" variant={editData ? 'edit' : 'add'}>
+        <Modal onClose={() => !busyRef.current && !uploadRef.current && onClose()} size="lg" variant={editData ? 'edit' : 'add'}>
             <ModalHeader
                 title={modalTitle}
                 icon={modalIcon}
-                onClose={onClose}
+                onClose={() => !busyRef.current && !uploadRef.current && onClose()}
             />
             <ModalBody className="tcf__body">
                     {/* Jenis Select — InlineSelect shared component */}
@@ -650,7 +658,7 @@ export default function TugasSiswaForm({
                     )}
                 </ModalBody>
                 <ModalFooter>
-                    <Button type="button" variant="cancel" onClick={onClose} leftIcon={<i className="bi bi-x-lg" />}>
+                    <Button type="button" variant="cancel" disabled={loading || uploading} onClick={onClose} leftIcon={<i className="bi bi-x-lg" />}>
                         Batal
                     </Button>
                     <Button
@@ -658,6 +666,7 @@ export default function TugasSiswaForm({
                         variant="primary"
                         onClick={handleSubmit}
                         isLoading={loading}
+                        disabled={uploading}
                         leftIcon={<i className="bi bi-check-lg" />}
                     >
                         {editData

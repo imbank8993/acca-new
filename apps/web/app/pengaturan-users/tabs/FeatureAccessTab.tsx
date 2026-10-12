@@ -412,6 +412,14 @@ const MODUL: ModulItem[] = [
         peranBawaan: ['OP_JURNAL'],
         grup: 'Agenda Madrasah',
     },
+    // ─── NOTULENSI RAPAT ────────────────────────────────────────────────
+    {
+        settingKey: 'notulensi_access_config',
+        judul: 'Pengelola Notulensi Rapat',
+        ikon: 'bi-journal-check',
+        keterangan: 'Role dan pengguna yang berwenang menambah, mengubah, dan menghapus catatan serta poin-poin hasil rapat.',
+        grup: 'Notulensi Rapat',
+    },
     // ─── BANK DATA ──────────────────────────────────────────────────────
     {
         settingKey: 'bank_data.kelola',
@@ -437,6 +445,7 @@ const GRUP_IKON: Record<string, string> = {
     'Pengaturan Tugas': 'bi-calendar-plus-fill',
     'Informasi': 'bi-megaphone-fill',
     'Agenda Madrasah': 'bi-calendar-event-fill',
+    'Notulensi Rapat': 'bi-journal-check',
     'Bank Data': 'bi-database-fill-gear',
     'Lainnya': 'bi-grid-fill',
 };
@@ -455,6 +464,7 @@ const GRUP_ORDER = [
     'Pengaturan Tugas',
     'Informasi',
     'Agenda Madrasah',
+    'Notulensi Rapat',
     'Bank Data',
     'Lainnya',
 ];

@@ -44,6 +44,7 @@ const InformasiKelolaPage = lazy(() => import('@/app/informasi/kelola/view'))
 const MonitoringPage = lazy(() => import('@/app/monitoring/view'))
 const KinerjaGuruPage = lazy(() => import('@/app/kinerja-guru/view'))
 const AgendaAkademikPage = lazy(() => import('@/app/agenda-madrasah/view'))
+const NotulensiRapatPage = lazy(() => import('@/app/notulensi-rapat/view'))
 const TampilanAgendaPage = lazy(() => import('@/app/tampilan-agenda/page'))
 const PusatDokumenPage = lazy(() => import('@/app/dokumen/view'))
 const UMKelulusanPage = lazy(() => import('@/app/um-kelulusan/view'))
@@ -157,6 +158,9 @@ export const PAGE_COMPONENTS: Record<string, (user: User, onRefreshUser: () => P
     'monitoring': () => <MonitoringPage />,
     'kinerja-guru': () => <KinerjaGuruPage />,
     'agenda-madrasah': (user) => <AgendaAkademikPage user={user} />,
+    'notulensi-rapat': (user) => <NotulensiRapatPage user={user} />,
+    'Notulensi Rapat': (user) => <NotulensiRapatPage user={user} />,
+    'notulensi': (user) => <NotulensiRapatPage user={user} />,
     'tampilan-agenda': () => <TampilanAgendaPage />,
     'personal-documents': (user) => <PusatDokumenPage user={user} />,
     'unggah-dokumen': (user) => <PusatDokumenPage user={user} />,

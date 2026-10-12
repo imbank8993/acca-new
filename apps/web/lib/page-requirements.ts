@@ -181,7 +181,8 @@ export const PAGE_ROLE_REQUIREMENTS: Record<string, PageRequirement> = {
         roleActions: { 'ADMIN': 'manage', 'WKM_KESISWAAN': 'manage', 'PEMBINA_EKSKUL': 'edit', 'SISWA': 'edit' },
         description: 'Ekstrakurikuler'
     },
-    'agenda-madrasah': { allowedRoles: ['ADMIN', 'GURU'], defaultAction: 'view', roleActions: { 'ADMIN': 'manage' }, description: 'Agenda Akademik' },
+    'agenda-madrasah': { allowedRoles: ['ADMIN', 'GURU'], defaultAction: 'view', roleActions: { 'ADMIN': 'manage' }, description: 'Agenda Madrasah' },
+    'notulensi-rapat': { allowedRoles: ['ADMIN', 'GURU', 'WALI_KELAS', 'KAMAD', 'KTU', 'WKM_AKADEMIK', 'WKM_KESISWAAN', 'WKM_HUMAS', 'WKM_SARPRAS'], defaultAction: 'view', roleActions: { 'ADMIN': 'manage', 'KAMAD': 'manage' }, description: 'Notulensi Rapat' },
     'dokumen': { allowedRoles: ['ADMIN', 'GURU', 'WALI_KELAS', 'SISWA'], defaultAction: 'edit', roleActions: { 'ADMIN': 'manage' }, description: 'Pusat Dokumen' },
     'catatan-keuangan': { allowedRoles: ['ADMIN', 'BENDAHARA_KOMITE', 'GURU'], defaultAction: 'view', roleActions: { 'ADMIN': 'manage', 'BENDAHARA_KOMITE': 'manage', 'GURU': 'edit' }, description: 'Catatan Keuangan' },
     'klinik': {

@@ -57,6 +57,7 @@ const ROLE_FUNCTION_DESCRIPTIONS: Record<string, Record<string, { action?: Actio
     'piket': { action: 'view', desc: 'Melihat jadwal piket & mengisi laporan rekap ketertiban/kejadian harian piket.' },
     'jadwal': { action: 'view', desc: 'Melihat jadwal PBM mingguan & plotting ruangan kelas.' },
     'agenda-madrasah': { action: 'view', desc: 'Melihat kalender akademik madrasah dan agenda kegiatan bersama.' },
+    'notulensi-rapat': { action: 'view', desc: 'Melihat notulensi rapat dan memantau tindak lanjut hasil rapat dewan guru/staf.' },
     'izin-guru': { action: 'edit', desc: 'Mengajukan surat permohonan izin cuti / dinas luar / ketidakhadiran kerja.' },
     'lckh': { action: 'edit', desc: 'Pengisian Laporan Capaian Kinerja Harian (LCKH) dan cetak lampiran kegiatan.' },
     'sanggar-kurikulum': { action: 'view', desc: 'Melihat & berpartisipasi dalam agenda sanggar pengembangan kurikulum.' },
@@ -93,6 +94,7 @@ const ROLE_FUNCTION_DESCRIPTIONS: Record<string, Record<string, { action?: Actio
     'lckh-approval': { action: 'manage', desc: 'Verifikasi & menyetujui (approval) laporan capaian kinerja harian guru/pegawai.' },
     'monitoring': { action: 'view', desc: 'Memantau metrik keterisian jurnal, kehadiran guru/siswa, dan rekapitulasi madrasah.' },
     'kinerja-guru': { action: 'view', desc: 'Melihat evaluasi komprehensif performa dan kedisiplinan guru.' },
+    'notulensi-rapat': { action: 'manage', desc: 'Melihat dan memantau notulensi serta status tindak lanjut hasil rapat.' },
   },
   SUPERVISOR: {
     'e-supervisi': { action: 'edit', desc: 'Melakukan penilaian observasi pembelajaran guru di kelas sesuai instrumen supervisi.' },
@@ -104,6 +106,7 @@ const ROLE_FUNCTION_DESCRIPTIONS: Record<string, Record<string, { action?: Actio
   WKM_AKADEMIK: {
     'lckh-approval': { action: 'manage', desc: 'Review dan verifikasi laporan LCKH guru rumpun akademik/kurikulum.' },
     'agenda-madrasah': { action: 'manage', desc: 'Mengatur jadwal kalender akademik dan agenda kegiatan pembelajaran madrasah.' },
+    'notulensi-rapat': { action: 'manage', desc: 'Mengelola dan memantau tindak lanjut hasil rapat koordinasi akademik.' },
     'sanggar-kurikulum': { action: 'manage', desc: 'Mengelola materi kurikulum, silabus gabungan, dan agenda sanggar mapel.' },
     'master': { action: 'view', desc: 'Memantau master struktur kurikulum, alokasi kelas, dan mata pelajaran.' },
   },

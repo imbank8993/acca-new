@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import Swal from 'sweetalert2';
 import { FilterToolbar, FilterSearch, FilterSelect } from '@/components/ui/FilterToolbar';
 import { Button } from '@/components/ui/Button';
@@ -12,6 +12,7 @@ import { useModalBlur } from '@/components/ModalBlurProvider';
 import { useFileViewer } from '@/components/useFileViewer';
 import { MobileList, MobileListItem, MobileAvatar } from '@/components/mobile/MobileList';
 import { getProxiedImageUrl } from '@/lib/image-utils';
+import { validatePrestasiUpload } from '@/lib/prestasi-upload';
 
 type User = any;
 
@@ -34,6 +35,7 @@ interface Prestasi {
     validated_by: string | null;
     validated_at: string | null;
     created_at: string;
+    updated_at: string | null;
 }
 
 const KATEGORI_OPTIONS = [
@@ -55,14 +57,15 @@ const STATUS_OPTIONS = [
 export default function PrestasiPage({ user }: { user: User }) {
     const [loading, setLoading] = useState(true);
     const [data, setData] = useState<Prestasi[]>([]);
+    const fetchVersion = useRef(0);
 
     // Role checks
     const isValidator = useMemo(() => {
         if (!user) return false;
         const roles = user.roles || [];
         const userRole = user.role?.toUpperCase() || '';
-        return roles.some((r: string) => ['ADMIN', 'OP_LOMBA', 'WKM KESISWAAN', 'WKM_KESISWAAN'].includes(r.toUpperCase())) ||
-            ['ADMIN', 'OP_LOMBA', 'WKM KESISWAAN', 'WKM_KESISWAAN'].includes(userRole);
+        return roles.some((r: string) => ['ADMIN', 'ADMINISTRATOR', 'OP_LOMBA', 'WKM KESISWAAN', 'WKM_KESISWAAN'].includes(r.toUpperCase())) ||
+            ['ADMIN', 'ADMINISTRATOR', 'OP_LOMBA', 'WKM KESISWAAN', 'WKM_KESISWAAN'].includes(userRole);
     }, [user]);
 
     const isSiswa = useMemo(() => {
@@ -90,6 +93,8 @@ export default function PrestasiPage({ user }: { user: User }) {
     }, [isSiswa]);
 
     const fetchData = async () => {
+        const version = ++fetchVersion.current;
+        if (!isValidator && !isSiswa) { setData([]); setLoading(false); return; }
         setLoading(true);
         try {
             let endpoint = '/api/prestasi';
@@ -97,16 +102,20 @@ export default function PrestasiPage({ user }: { user: User }) {
                 endpoint += `?nisn=${encodeURIComponent(nisn)}`;
             }
 
-            const res = await fetch(endpoint);
-            const json = await res.json();
-            if (!json.ok) throw new Error(json.error || 'Gagal mengambil data prestasi');
-
-            let rows = (json.data || []) as Prestasi[];
+            let rows: Prestasi[] = [];
+            for (let page = 1; ; page++) {
+                const res = await fetch(`${endpoint}${endpoint.includes('?') ? '&' : '?'}page=${page}&limit=500`);
+                const json = await res.json();
+                if (version !== fetchVersion.current) return;
+                if (!res.ok || !json.ok) throw new Error(json.error || 'Gagal mengambil data prestasi');
+                rows.push(...(json.data || []));
+                if (!json.has_more) break;
+            }
 
             // Build student name & regular class lookup via siswa_kelas & master_siswa & users
             try {
-                const resSk = await fetch('/api/settings/siswa-kelas?aktif=true');
-                const jsonSk = resSk.ok ? await resSk.json().catch(() => null) : null;
+                const resSk = !isSiswa || isValidator ? await fetch('/api/settings/siswa-kelas?aktif=true') : null;
+                const jsonSk = resSk?.ok ? await resSk.json().catch(() => null) : null;
                 const siswaKelasData = jsonSk?.data || jsonSk || [];
 
                 /**
@@ -198,7 +207,7 @@ export default function PrestasiPage({ user }: { user: User }) {
                     const kegiatanPhoto = r.foto_kegiatan ? getProxiedImageUrl(r.foto_kegiatan) : null;
                     return {
                         ...r,
-                        nama_siswa: s?.nama || r.nama_siswa || '',
+                        nama_siswa: s?.nama || r.nama_siswa || (isSiswa ? user?.nama || '' : ''),
                         kelas: s?.kelas || r.kelas || '',
                         foto_siswa: studentPhoto || kegiatanPhoto
                     };
@@ -206,12 +215,12 @@ export default function PrestasiPage({ user }: { user: User }) {
             } catch (e) {
                 console.error('Lookup error:', e);
             }
-            setData(rows);
+            if (version === fetchVersion.current) setData(rows);
         } catch (error: any) {
             console.error('Fetch error:', error);
-            Swal.fire('Error', 'Gagal memuat data prestasi', 'error');
+            if (version === fetchVersion.current) Swal.fire('Error', 'Gagal memuat data prestasi', 'error');
         } finally {
-            setLoading(false);
+            if (version === fetchVersion.current) setLoading(false);
         }
     };
 
@@ -695,6 +704,7 @@ function getStatusIconBadge(status: string) {
 // SISWA VIEW
 // -----------------------------------------------------------------------------
 function SiswaView({ data, refresh, nisn, user }: { data: Prestasi[], refresh: () => void, nisn: string, user: User }) {
+    const { openFile, viewer } = useFileViewer();
     const [statusFilter, setStatusFilter] = useState('Semua');
     const [kategoriFilter, setKategoriFilter] = useState('');
     const [search, setSearch] = useState('');
@@ -748,13 +758,14 @@ function SiswaView({ data, refresh, nisn, user }: { data: Prestasi[], refresh: (
         });
 
         if (isConfirmed) {
-            const res = await fetch(`/api/prestasi/${id}`, { method: 'DELETE' });
-            const json = await res.json();
-            if (!json.ok) {
-                Swal.fire('Gagal', json.error || 'Gagal menghapus data', 'error');
-            } else {
+            try {
+                const res = await fetch(`/api/prestasi/${id}`, { method: 'DELETE' });
+                const json = await res.json();
+                if (!res.ok || !json.ok) throw new Error(json.error || 'Gagal menghapus data');
                 Swal.fire('Berhasil', 'Data terhapus', 'success');
                 refresh();
+            } catch (error: any) {
+                Swal.fire('Gagal', error.message || 'Gagal menghapus data. Silakan coba kembali.', 'error');
             }
         }
     };
@@ -816,7 +827,7 @@ function SiswaView({ data, refresh, nisn, user }: { data: Prestasi[], refresh: (
                                 : `${item.prestasi_diraih} · ${item.tingkat}`;
 
                             return (
-                                <div key={item.id} className="prs-separated-item" onClick={() => handleDelete(item.id, item.nama_lomba)}>
+                                <div key={item.id} className="prs-separated-item" onClick={() => openFile(item.bukti_sertifikat, item.nama_lomba)}>
                                     <MobileAvatar
                                         name={item.nama_siswa || item.nama_lomba}
                                         seed={item.nisn}
@@ -829,6 +840,7 @@ function SiswaView({ data, refresh, nisn, user }: { data: Prestasi[], refresh: (
                                     <div className="prs-separated-badge">
                                         {getStatusIconBadge(item.status_validasi)}
                                     </div>
+                                    {(item.status_validasi === 'Menunggu' || item.status_validasi === 'Ditolak') && <span onClick={e => e.stopPropagation()}><ActionButton action="delete" size="sm" onClick={() => handleDelete(item.id, item.nama_lomba)} title="Hapus prestasi" /></span>}
                                 </div>
                             );
                         })}
@@ -837,6 +849,7 @@ function SiswaView({ data, refresh, nisn, user }: { data: Prestasi[], refresh: (
             )}
 
             {isModalOpen && <FormModal onClose={() => setIsModalOpen(false)} refresh={refresh} nisn={nisn} />}
+            {viewer}
         </>
     );
 }
@@ -942,7 +955,7 @@ function ValidatorView({ data, refresh, user }: { data: Prestasi[], refresh: () 
     const isLocked = selectedItem?.status_validasi === 'Disetujui';
 
     const handleValidate = async (status: 'Disetujui' | 'Ditolak') => {
-        if (!selectedItem || isLocked) return;
+        if (!selectedItem || isLocked || isSubmitting) return;
         if (status === 'Ditolak' && !catatan.trim()) {
             return Swal.fire('Perhatian', 'Catatan alasan penolakan wajib diisi', 'warning');
         }
@@ -951,8 +964,8 @@ function ValidatorView({ data, refresh, user }: { data: Prestasi[], refresh: () 
         try {
             const updatePayload: any = {
                 status_validasi: status,
-                validated_at: new Date().toISOString(),
-                validated_by: user?.nama || user?.nip || user?.username || null,
+                expected_updated_at: selectedItem.updated_at,
+                catatan_validator: catatan.trim() || null,
             };
             if (catatan.trim()) updatePayload.catatan_validator = catatan.trim();
 
@@ -968,7 +981,7 @@ function ValidatorView({ data, refresh, user }: { data: Prestasi[], refresh: () 
                     refresh();
                     return Swal.fire(
                         'Sudah Divalidasi',
-                        'Prestasi ini sudah disetujui oleh validator lain, sehingga keputusannya tidak dapat diubah lagi.',
+                        'Prestasi telah berubah. Buka kembali untuk memeriksa data terbaru.',
                         'info'
                     );
                 }
@@ -1284,6 +1297,7 @@ function PrestasiCard({ item, onDelete, onValidate }: { item: Prestasi, onDelete
 // -----------------------------------------------------------------------------
 function FormModal({ onClose, refresh, nisn }: { onClose: () => void, refresh: () => void, nisn: string }) {
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const submittingRef = useRef(false);
     const [fileSertifikat, setFileSertifikat] = useState<File | null>(null);
     const [form, setForm] = useState({
         nama_lomba: '',
@@ -1294,11 +1308,12 @@ function FormModal({ onClose, refresh, nisn }: { onClose: () => void, refresh: (
         prestasi_diraih: ''
     });
 
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
             const file = e.target.files[0];
-            if (file.size > 10 * 1024 * 1024) {
-                Swal.fire('Error', 'Ukuran file maksimal 10MB', 'error');
+            if (!await validatePrestasiUpload(file)) {
+                setFileSertifikat(null);
+                Swal.fire('Error', 'Gunakan PDF, JPG, atau PNG yang valid, maksimal 10MB', 'error');
                 e.target.value = '';
                 return;
             }
@@ -1328,6 +1343,7 @@ function FormModal({ onClose, refresh, nisn }: { onClose: () => void, refresh: (
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (submittingRef.current) return;
         if (!fileSertifikat) {
             return Swal.fire('Perhatian', 'Sertifikat wajib diunggah!', 'warning');
         }
@@ -1335,6 +1351,7 @@ function FormModal({ onClose, refresh, nisn }: { onClose: () => void, refresh: (
             return Swal.fire('Perhatian', 'Tanggal Pelaksanaan wajib diisi!', 'warning');
         }
 
+        submittingRef.current = true;
         setIsSubmitting(true);
         try {
             const fileUrl = await uploadSertifikat();
@@ -1364,16 +1381,17 @@ function FormModal({ onClose, refresh, nisn }: { onClose: () => void, refresh: (
         } catch (error: any) {
             Swal.fire('Gagal', error.message || 'Terjadi kesalahan sistem', 'error');
         } finally {
+            submittingRef.current = false;
             setIsSubmitting(false);
         }
     };
 
     return (
-        <Modal onClose={onClose} size="lg">
+        <Modal onClose={() => !submittingRef.current && onClose()} size="lg">
             <ModalHeader
                 title="Input Prestasi Baru"
                 icon="award-fill"
-                onClose={onClose}
+                onClose={() => !submittingRef.current && onClose()}
             />
             <form onSubmit={handleSubmit}>
                 <ModalBody>
@@ -1423,7 +1441,7 @@ function FormModal({ onClose, refresh, nisn }: { onClose: () => void, refresh: (
                         <div className="form-group full">
                             <label>Bukti Sertifikat / Piagam (PDF/JPG/PNG)</label>
                             <div className="file-dropzone" onClick={() => document.getElementById('file-sertifikat')?.click()}>
-                                <input id="file-sertifikat" required type="file" accept=".pdf,image/*" onChange={handleFileChange} style={{ display: 'none' }} />
+                                <input id="file-sertifikat" required type="file" accept=".pdf,.jpg,.jpeg,.png" disabled={isSubmitting} onChange={handleFileChange} style={{ display: 'none' }} />
                                 {fileSertifikat ? (
                                     <>
                                         <i className="bi bi-file-earmark-check-fill" style={{ color: '#10b981' }}></i>

@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation';
 import Swal from 'sweetalert2';
 import { Spinner } from '@/components/ui/Spinner';
 import { FormSchema, FormField, FieldCondition } from '@/app/form/types';
+import { validateFormAnswers, safeFormPattern, formDisplayValue } from '@acca/shared';
 
 /** Evaluates whether a field should be shown based on conditional logic */
 function checkFieldVisibility(field: FormField, formData: Record<string, any>): boolean {
@@ -73,6 +74,9 @@ export default function FormViewerPage() {
     const [submitting, setSubmitting] = useState(false);
     const [submitted, setSubmitted] = useState(false);
     const [currentStep, setCurrentStep] = useState(0);
+    const fetchVersion = useRef(0);
+    const pendingUploads = useRef(0);
+    const [uploadCount, setUploadCount] = useState(0);
 
     const [isAccessDenied, setIsAccessDenied] = useState(false);
     const [isClosed, setIsClosed] = useState(false);
@@ -184,10 +188,17 @@ export default function FormViewerPage() {
     };
 
     const fetchForm = async (targetId: string) => {
+        const version = ++fetchVersion.current;
+        setLoading(true);
+        setIsAccessDenied(false);
+        setIsClosed(false);
+        setSubmitted(false);
+        setCurrentStep(0);
         try {
-            const res = await fetch(`/api/forms/${targetId}`);
+            const res = await fetch(`/api/forms/${encodeURIComponent(targetId)}`);
             if (res.ok) {
                 const data = await res.json();
+                if (version !== fetchVersion.current) return;
                 const config = data.form;
                 setFormConfig(config);
 
@@ -199,17 +210,11 @@ export default function FormViewerPage() {
                         const meJson = await meRes.json();
                         if (meJson.ok) loggedInUser = meJson.user;
                     }
-                    if (!loggedInUser) {
-                        const localUserStr = localStorage.getItem('acca_user') || localStorage.getItem('user');
-                        if (localUserStr) {
-                            loggedInUser = JSON.parse(localUserStr);
-                        }
-                    }
                 } catch { /* ignored */ }
 
                 // ── Strict Access Control: Jika Form Privat, Pengguna Harus Logged-In ACCA ──
                 const isPublic = config?.is_public === true || config?.schema?.is_public === true || config?.schema?.is_link_public === true;
-                if (!isPublic && !loggedInUser) {
+                if ((!isPublic || config?.schema?.allow_multiple_responses === false) && !loggedInUser) {
                     setIsAccessDenied(true);
                     setLoading(false);
                     return;
@@ -226,14 +231,17 @@ export default function FormViewerPage() {
                 const initialData: Record<string, any> = {};
 
                 fields.forEach((f) => {
+                    if (f.defaultValue !== undefined && !['file','heading','paragraph','divider','page_break'].includes(f.type)) {
+                        initialData[f.id] = ['number','slider','rating'].includes(f.type) ? Number(f.defaultValue) : f.type === 'checkbox' ? String(f.defaultValue).split(',').map(v => v.trim()).filter(Boolean) : f.defaultValue;
+                    }
                     if (loggedInUser && !['heading', 'paragraph', 'divider', 'page_break'].includes(f.type)) {
                         const targetType = f.autoFillUser;
-                        const labelLower = (f.label || '').toLowerCase();
+
 
                         // 1. Deteksi melalui Pengaturan Eksplisit Pembuat Form ATAU Deteksi Kata Kunci Label Cerdas
-                        const isNameField = targetType === 'name' || (targetType !== 'none' && (labelLower.includes('nama') || labelLower.includes('pemohon')));
-                        const isEmailField = targetType === 'email' || (targetType !== 'none' && (labelLower.includes('email') || labelLower.includes('surel')));
-                        const isNipNisField = targetType === 'nip_nis' || (targetType !== 'none' && (labelLower.includes('nip') || labelLower.includes('nisn') || labelLower.includes('nik')));
+                        const isNameField = targetType === 'name';
+                        const isEmailField = targetType === 'email';
+                        const isNipNisField = targetType === 'nip_nis';
 
                         const userValName = loggedInUser.nama || loggedInUser.name || loggedInUser.fullName || loggedInUser.username;
                         const userValEmail = loggedInUser.email;
@@ -248,17 +256,17 @@ export default function FormViewerPage() {
                         }
                     }
                 });
-                if (Object.keys(initialData).length > 0) {
-                    setFormData(prev => ({ ...initialData, ...prev }));
-                }
+                if (version !== fetchVersion.current) return;
+                setFormData(initialData);
             } else {
+                if (res.status === 401 || res.status === 403) setIsAccessDenied(true);
                 setFormConfig(null);
             }
         } catch (error) {
             console.error('Error fetching form:', error);
             setFormConfig(null);
         } finally {
-            setLoading(false);
+            if (version === fetchVersion.current) setLoading(false);
         }
     };
 
@@ -328,6 +336,8 @@ export default function FormViewerPage() {
 
     // Validasi field per halaman
     const validateFields = (fieldsToValidate: FormField[]): boolean => {
+        const answerCheck = validateFormAnswers(fieldsToValidate, Object.fromEntries(fieldsToValidate.map(f => [f.id, formData[f.id]])), formData);
+        if (answerCheck.errors.length) { showValidationError(answerCheck.errors[0]); return false; }
         for (const field of fieldsToValidate) {
             if (['heading', 'paragraph', 'divider', 'page_break'].includes(field.type)) continue;
 
@@ -353,7 +363,7 @@ export default function FormViewerPage() {
                         showValidationError(`"${field.label}" maksimal ${field.maxLength} karakter`);
                         return false;
                     }
-                    if (field.pattern) {
+                    if (field.pattern && safeFormPattern(field.pattern)) {
                         try {
                             const regex = new RegExp(field.pattern);
                             if (!regex.test(val)) {
@@ -373,7 +383,7 @@ export default function FormViewerPage() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        if (submitting || isSubmittingRef.current) return;
+        if (submitting || isSubmittingRef.current || pendingUploads.current) return;
 
         if (!formConfig) return;
         const allFields: FormField[] = formConfig.schema.fields || [];
@@ -381,25 +391,12 @@ export default function FormViewerPage() {
         // Validasi semua field sebelum submit
         if (!validateFields(allFields)) return;
 
+        const submitVersion = fetchVersion.current;
         isSubmittingRef.current = true;
         setSubmitting(true);
 
         try {
-            const cleanSubmissionData: Record<string, any> = {};
-            for (const field of allFields) {
-                if (['heading', 'paragraph', 'divider', 'page_break'].includes(field.type)) continue;
-                if (checkFieldVisibility(field, formData)) {
-                    let key = field.label || 'Tanggapan';
-                    if (cleanSubmissionData[key] !== undefined) {
-                        let count = 2;
-                        while (cleanSubmissionData[`${key} (${count})`] !== undefined) {
-                            count++;
-                        }
-                        key = `${key} (${count})`;
-                    }
-                    cleanSubmissionData[key] = formData[field.id];
-                }
-            }
+            const cleanSubmissionData = validateFormAnswers(allFields, formData).data;
 
             const res = await fetch('/api/forms/submit', {
                 method: 'POST',
@@ -410,6 +407,7 @@ export default function FormViewerPage() {
                 })
             });
 
+            if (submitVersion !== fetchVersion.current) return;
             if (res.ok) {
                 setSubmitted(true);
                 if (embedded) scrollToTop();
@@ -559,8 +557,8 @@ export default function FormViewerPage() {
                         }}
                         className="text-center"
                     >
-                        <div 
-                            style={{ 
+                        <div
+                            style={{
                                 width: '64px',
                                 height: '64px',
                                 borderRadius: '50%',
@@ -683,6 +681,7 @@ export default function FormViewerPage() {
     const activePage = pages[currentStep] || pages[0] || { title: 'Bagian 1', fields: rawFields };
 
     const handleNextStep = () => {
+        if (pendingUploads.current || isSubmittingRef.current) return;
         if (validateFields(activePage.fields)) {
             setCurrentStep(prev => Math.min(prev + 1, pages.length - 1));
             scrollToTop();
@@ -690,6 +689,7 @@ export default function FormViewerPage() {
     };
 
     const handlePrevStep = () => {
+        if (pendingUploads.current || isSubmittingRef.current) return;
         setCurrentStep(prev => Math.max(prev - 1, 0));
         scrollToTop();
     };
@@ -697,6 +697,7 @@ export default function FormViewerPage() {
     return (
         <div className={shellClass}>
             <div className="max-w-3xl w-full mx-auto" style={{ marginTop: '8px' }}>
+                <style jsx global>{`.form-responsive-card { overflow-wrap: anywhere; } @media (max-width: 639px) { .form-responsive-card { padding: 22px 16px !important; } .form-responsive-card input, .form-responsive-card select, .form-responsive-card textarea { font-size: 16px !important; } }`}</style>
                 {/* ══ Header Banner Card ══ */}
                 <div
                     style={{
@@ -705,20 +706,20 @@ export default function FormViewerPage() {
                         marginBottom: '16px',
                         boxShadow: '0 4px 20px rgba(0,0,0,0.12)',
                     }}
-                    className="form-header-card relative overflow-hidden text-center"
+                    className="form-responsive-card form-header-card relative overflow-hidden text-center"
                 >
                     <div className="relative z-10 flex flex-col items-center text-center">
                         <h2 className="form-header-title" style={{ fontSize: '24px', fontWeight: 800, letterSpacing: '-0.02em', margin: '0 0 6px 0' }}>
                             {formConfig.title}
                         </h2>
                         {formConfig.schema.description ? (
-                            <p 
-                                style={{ 
-                                    fontSize: '13px', 
+                            <p
+                                style={{
+                                    fontSize: '13px',
                                     marginTop: '6px',
                                     fontWeight: 500,
                                     lineHeight: '1.5',
-                                }} 
+                                }}
                                 className="form-header-desc max-w-xl text-center"
                             >
                                 {formConfig.schema.description}
@@ -734,8 +735,8 @@ export default function FormViewerPage() {
                 </div>
 
                 {/* ══ Form Fields Container Card ══ */}
-                <form 
-                    onSubmit={handleSubmit} 
+                <form
+                    onSubmit={handleSubmit} className="form-responsive-card"
                     style={{
                         borderRadius: '8px',
                         backgroundColor: theme.surface,
@@ -754,7 +755,7 @@ export default function FormViewerPage() {
                                     return (
                                         <div key={idx} className="flex-1 flex items-center min-w-0">
                                             <div className="flex items-center gap-2.5 min-w-0">
-                                                <div 
+                                                <div
                                                     style={{
                                                         backgroundColor: isCurrent ? '#3083FF' : isCompleted ? '#059669' : '#e2e8f0',
                                                         color: isCurrent || isCompleted ? '#ffffff' : '#64748b',
@@ -802,6 +803,25 @@ export default function FormViewerPage() {
                                     onChange={(val) => handleInputChange(field.id, val)}
                                     onCheckboxChange={(optVal, checked) => handleCheckboxChange(field.id, optVal, checked)}
                                     theme={theme}
+                                    onUpload={async files => {
+                                        if (isSubmittingRef.current) return;
+                                        pendingUploads.current++;
+                                        setUploadCount(pendingUploads.current);
+                                        try {
+                                            if (files.length > (field.multiple ? 10 : 1)) throw new Error('Jumlah berkas melebihi batas');
+                                            const uploaded = [];
+                                            for (const file of files) {
+                                                if (!file.size || file.size > Math.min(field.maxSize || 5, 10) * 1048576) throw new Error(`Ukuran maksimal ${Math.min(field.maxSize || 5, 10)} MB`);
+                                                const body = new FormData(); body.set('field_id', field.id); body.set('file', file);
+                                                const res = await fetch(`/api/forms/${encodeURIComponent(id!)}/upload?field=${encodeURIComponent(field.id)}`, { method: 'POST', body });
+                                                const result = await res.json();
+                                                if (!res.ok || !result.ok) throw new Error(result.error || 'Unggahan gagal');
+                                                uploaded.push(result.file);
+                                            }
+                                            handleInputChange(field.id, uploaded);
+                                        } catch (error: any) { handleInputChange(field.id, []); Swal.fire('Unggahan gagal', error.message, 'error'); }
+                                        finally { pendingUploads.current--; setUploadCount(pendingUploads.current); }
+                                    }}
                                 />
                             );
                         })}
@@ -855,7 +875,7 @@ export default function FormViewerPage() {
                         ) : (
                             <button
                                 type="submit"
-                                disabled={submitting}
+                                disabled={submitting || uploadCount > 0}
                                 style={{
                                     background: isDark ? 'linear-gradient(135deg, #1d6bf3 0%, #2563eb 100%)' : 'linear-gradient(135deg, #3083FF 0%, #c2185b 100%)',
                                     borderRadius: '4px',
@@ -902,7 +922,8 @@ function RenderField({
     value,
     onChange,
     onCheckboxChange,
-    theme
+    theme,
+    onUpload
 }: {
     field: FormField;
     /** Opsi setelah disaring excludeChosenFrom; default ke field.options */
@@ -911,9 +932,11 @@ function RenderField({
     onChange: (val: any) => void;
     onCheckboxChange: (optVal: string, checked: boolean) => void;
     theme: FieldTheme;
+    onUpload?: (files: File[]) => Promise<void>;
 }) {
+    const [uploading, setUploading] = useState(false);
     const fieldOptions = options ?? field.options ?? [];
-    const widthClass = 
+    const widthClass =
         field.width === 'half' ? 'w-full sm:w-[calc(50%-12px)]' :
         field.width === 'third' ? 'w-full sm:w-[calc(33.333%-16px)]' :
         'w-full';
@@ -932,14 +955,14 @@ function RenderField({
         return (
             <div className="w-full">
                 {field.label && <p className="text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2 leading-relaxed">{field.label}</p>}
-                <p 
-                    style={{ 
-                        borderRadius: '4px', 
-                        padding: '16px 24px', 
-                        backgroundColor: theme.surface, 
+                <p
+                    style={{
+                        borderRadius: '4px',
+                        padding: '16px 24px',
+                        backgroundColor: theme.surface,
                         border: `1.5px solid ${theme.border}`,
-                        color: theme.text 
-                    }} 
+                        color: theme.text
+                    }}
                     className="text-xs sm:text-sm leading-relaxed"
                 >
                     {field.content || field.description}
@@ -958,9 +981,9 @@ function RenderField({
     }
 
     return (
-        <div className={widthClass}>
+        <div className={`${widthClass} min-w-0`}>
             {/* Label dengan Jarak mb-1.5 & Indent 2px */}
-            <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, color: theme.textStrong, marginBottom: '4px', paddingLeft: '2px', lineHeight: 1.3 }}>
+            <label id={`form-label-${field.id}`} htmlFor={`form-field-${field.id}`} style={{ display: 'block', fontSize: '13px', fontWeight: 700, color: theme.textStrong, marginBottom: '4px', paddingLeft: '2px', lineHeight: 1.3 }}>
                 {field.label}
                 {field.required && <span style={{ color: '#e11d48', marginLeft: '4px', fontWeight: 800 }}>*</span>}
             </label>
@@ -968,7 +991,7 @@ function RenderField({
 
             {field.type === 'textarea' && (
                 <textarea
-                    value={value || ''}
+                    value={value ?? ''}
                     onChange={(e) => onChange(e.target.value)}
                     placeholder={field.placeholder}
                     rows={field.rows || 4}
@@ -1067,7 +1090,7 @@ function RenderField({
             )}
 
             {field.type === 'rating' && (
-                <div className="flex items-center gap-3.5 py-1 pl-0.5">
+                <div className="flex flex-wrap items-center gap-3.5 py-1 pl-0.5">
                     {field.photoUrl && (
                         <img
                             src={field.photoUrl}
@@ -1084,7 +1107,7 @@ function RenderField({
                             onError={(e) => (e.currentTarget.style.display = 'none')}
                         />
                     )}
-                    <div className="flex items-center gap-2 text-2xl text-amber-400">
+                    <div className="flex flex-wrap items-center gap-2 text-2xl text-amber-400 max-w-full" role="group" aria-labelledby={`form-label-${field.id}`}>
                         {Array.from({ length: field.maxRating || 5 }).map((_, i) => {
                             const val = i + 1;
                             const isFilled = (value || 0) >= val;
@@ -1092,7 +1115,7 @@ function RenderField({
                                 <button
                                     key={i}
                                     type="button"
-                                    onClick={() => onChange(val)}
+                                    onClick={() => onChange(val)} aria-label={`${val} dari ${field.maxRating || 5} bintang`} aria-pressed={isFilled}
                                     className="focus:outline-none transition-transform hover:scale-110 cursor-pointer"
                                 >
                                     <i className={`bi ${isFilled ? 'bi-star-fill text-amber-400' : 'bi-star text-slate-300 dark:text-slate-600'}`} />
@@ -1107,7 +1130,7 @@ function RenderField({
             {field.type === 'slider' && (
                 <div className="space-y-2 py-1 pl-0.5">
                     <input
-                        type="range"
+                        id={`form-field-${field.id}`} type="range"
                         min={Number(field.min ?? 1)}
                         max={Number(field.max ?? 10)}
                         step={Number(field.step ?? 1)}
@@ -1126,13 +1149,14 @@ function RenderField({
             {field.type === 'file' && (
                 <div>
                     <input
-                        type="file"
+                        id={`form-field-${field.id}`} type="file" disabled={uploading}
                         accept={field.accept}
                         multiple={field.multiple}
                         onChange={(e) => {
                             const files = e.target.files;
                             if (files) {
-                                onChange(Array.from(files).map(f => f.name));
+                                const input = e.currentTarget;
+                                setUploading(true); void onUpload?.(Array.from(files)).finally(() => { input.value = ''; setUploading(false); });
                             }
                         }}
                         style={{
@@ -1150,7 +1174,9 @@ function RenderField({
                         }}
                         className="focus:ring-2 focus:ring-[#3083FF]/20 focus:border-[#3083FF] transition-all"
                     />
-                    <p style={{ fontSize: '11px', color: theme.light, marginTop: '6px', paddingLeft: '2px' }}>Maksimum {field.maxSize || 5} MB</p>
+                    <p style={{ fontSize: '11px', color: theme.light, marginTop: '6px', paddingLeft: '2px' }}>Maksimum {Math.min(field.maxSize || 5, 10)} MB</p>
+                    {uploading && <p role="status">Mengunggah berkas…</p>}
+                    {Array.isArray(value) && value.length > 0 && <p className="text-sm break-all">{formDisplayValue(value)}</p>}
                 </div>
             )}
 

@@ -17,7 +17,7 @@ export async function POST(
     try {
         const body = await request.json().catch(() => ({}));
         const { status, body: result } = await nestFetchAsUser(
-            `/forms/${id}/allocate`,
+            `/forms/${encodeURIComponent(id)}/allocate`,
             token,
             {
                 method: 'POST',
@@ -42,7 +42,7 @@ export async function PATCH(
 
     try {
         const { status, body: result } = await nestFetchAsUser(
-            `/forms/${id}/allocate`,
+            `/forms/${encodeURIComponent(id)}/allocate`,
             token,
             {
                 method: 'PATCH',

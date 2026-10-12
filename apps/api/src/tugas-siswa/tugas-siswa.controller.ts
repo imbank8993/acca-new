@@ -10,12 +10,15 @@ import {
   Req,
   UseGuards,
   ParseIntPipe,
+  BadRequestException,
 } from '@nestjs/common';
 import { TugasSiswaService } from './tugas-siswa.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { PageAccessGuard, RequiresPage } from '../auth/page-access.guard';
 
 @Controller('tugas-siswa')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, PageAccessGuard)
+@RequiresPage('tugas-siswa')
 export class TugasSiswaController {
   constructor(private readonly tugasSiswaService: TugasSiswaService) {}
 
@@ -25,7 +28,7 @@ export class TugasSiswaController {
       : []);
     const isAdmin = roles.includes('ADMIN') || roles.includes('ADMINISTRATOR');
     const nip = reqUser?.nip || '';
-    const authId = reqUser?.auth_id;
+    const authId = reqUser?.authId || reqUser?.auth_id || String(reqUser?.id || '');
     const nama_lengkap = reqUser?.nama_lengkap || reqUser?.nama || '';
     const nama = reqUser?.nama || '';
 
@@ -33,8 +36,13 @@ export class TugasSiswaController {
   }
 
   @Get('master')
-  async getMaster(@Query('tahunAjaran') tahunAjaran?: string) {
-    return this.tugasSiswaService.getMasterData(tahunAjaran);
+  async getMaster(@Req() req: any, @Query('tahunAjaran') tahunAjaran?: string) {
+    return this.tugasSiswaService.getMasterData(tahunAjaran, this.getApiUser(req.user));
+  }
+
+  @Get('upload-access')
+  async uploadAccess(@Req() req: any) {
+    return this.tugasSiswaService.uploadAccess(this.getApiUser(req.user));
   }
 
   @Get('action')
@@ -46,11 +54,13 @@ export class TugasSiswaController {
   @Post('action')
   async setChecklist(@Req() req: any, @Body() body: any) {
     const apiUser = this.getApiUser(req.user);
+    if (!body || typeof body !== 'object' || Array.isArray(body)) throw new BadRequestException('Data checklist tidak valid');
     const { tugas_id, siswa_id, is_done } = body;
+    if (typeof is_done !== 'boolean' || !/^\d+$/.test(String(tugas_id)) || !/^\d+$/.test(String(siswa_id))) throw new BadRequestException('ID dan status checklist tidak valid');
     return this.tugasSiswaService.toggleChecklist(
-      parseInt(tugas_id),
-      parseInt(siswa_id),
-      !!is_done,
+      Number(tugas_id),
+      Number(siswa_id),
+      is_done,
       apiUser,
     );
   }

@@ -48,21 +48,29 @@ export class KeuanganController {
   }
 
   @Get('utama')
+  @UseGuards(PageAccessGuard)
+  @RequiresPage('keuangan')
   async getKeuangan(@Req() req: Request, @Res() res: Response) {
     return this.keuanganService.getKeuangan(req, res);
   }
 
   @Post('utama')
+  @UseGuards(PageAccessGuard)
+  @RequiresPage('keuangan')
   async postKeuangan(@Req() req: Request, @Res() res: Response) {
     return this.keuanganService.postKeuangan(req, res);
   }
 
   @Get()
+  @UseGuards(PageAccessGuard)
+  @RequiresPage('keuangan')
   async getKeuanganRoot(@Req() req: Request, @Res() res: Response) {
     return this.keuanganService.getKeuangan(req, res);
   }
 
   @Post()
+  @UseGuards(PageAccessGuard)
+  @RequiresPage('keuangan')
   async postKeuanganRoot(@Req() req: Request, @Res() res: Response) {
     return this.keuanganService.postKeuangan(req, res);
   }

@@ -38,6 +38,26 @@ class MockNextRequest {
 let globalDb: any;
 let globalPrisma: PrismaService;
 import { randomUUID } from "crypto";
+import { AsyncLocalStorage } from 'node:async_hooks';
+
+// The transaction adapter belongs to this request, never to another concurrent user.
+const financialContext = new AsyncLocalStorage<{ db: any; prisma: any }>();
+function strictAdapter(adapter: any) {
+    return { from(table: string) {
+        const query = adapter.from(table);
+        let proxy: any;
+        proxy = new Proxy(query, { get(target, property) {
+            if (property === 'then') return (resolve: any, reject: any) => Promise.resolve(target).then((result: any) => {
+                if (result?.error) throw new Error(result.error.message || 'Operasi database gagal');
+                return result;
+            }).then(resolve, reject);
+            const value = target[property];
+            if (typeof value !== 'function') return value;
+            return (...args: any[]) => { const result = value.apply(target, args); return result === target ? proxy : result; };
+        }});
+        return proxy;
+    }};
+}
 
 /**
  * Akses database bergaya `.from(tabel).select(...)`.
@@ -51,8 +71,9 @@ import { randomUUID } from "crypto";
  */
 const db: any = new Proxy({}, {
     get: (target, prop) => {
-        if (!globalDb) throw new Error("Adapter database belum disiapkan");
-        return globalDb[prop];
+        const adapter = financialContext.getStore()?.db || globalDb;
+        if (!adapter) throw new Error("Adapter database belum disiapkan");
+        return adapter[prop];
     }
 });
 
@@ -465,6 +486,7 @@ namespace KG {
 // ---------------------------------------------------------------------------
 interface Actor {
     id: number;                 // users.id (BIGINT)
+    authId?: string;
     roles: string[];            // identity roles (UPPERCASE)
     isAdmin: boolean;
     officerRoles: string[];     // ['Kepala Divisi','KTU','PPK','Bendahara']
@@ -478,11 +500,11 @@ async function getActor(request: any): Promise<Actor | null> {
 
     let urow: any = null;
     if (apiUser.authId) {
-        const { data } = await supabase.from('users').select('id').eq('auth_id', apiUser.authId).maybeSingle();
+        const { data } = await supabase.from('users').select('id, auth_id').eq('auth_id', apiUser.authId).maybeSingle();
         urow = data;
     }
     if (!urow && apiUser.id) {
-        const { data } = await supabase.from('users').select('id').eq('id', apiUser.id).maybeSingle();
+        const { data } = await supabase.from('users').select('id, auth_id').eq('id', apiUser.id).maybeSingle();
         urow = data;
     }
     if (!urow) return null;
@@ -499,6 +521,7 @@ async function getActor(request: any): Promise<Actor | null> {
 
     return {
         id: urow.id,
+        authId: apiUser.authId || urow.auth_id || String(urow.id),
         roles: apiUser.roles,
         isAdmin: apiUser.isAdmin,
         officerRoles,
@@ -560,7 +583,7 @@ function maskRequest(a: Actor, row: any): any {
         : { ...row, budget_request_registers: [], registers_masked: true };
 
     if (canSeeNominal(a, row)) return { ...base, nominal_masked: false };
-    const items = (row.budget_request_items || []).map((it: any) => ({ ...it, unit_price: null }));
+    const items = (row.budget_request_items || []).map((it: any) => ({ ...it, unit_price: null, total_price: null, actual_price: null }));
     
     // BUG-07: Mask nominal in notes instead of clearing logs
     const maskedLogs = (row.approval_logs || []).map((log: any) => ({
@@ -571,7 +594,11 @@ function maskRequest(a: Actor, row: any): any {
     return {
         ...base,
         total_amount: null,
+        total_approved: null,
         total_disbursed: null,
+        proof_file_url: null,
+        report_file_url: null,
+        receipt_file_url: null,
         budget_request_items: items,
         approval_logs: maskedLogs,      // Masked nominals
         disbursements: [],      // pencairan memuat nominal → ikut disembunyikan
@@ -582,6 +609,45 @@ function maskRequest(a: Actor, row: any): any {
 
 class HttpError extends Error {
     constructor(public status: number, msg: string) { super(msg); }
+}
+
+const UNCOMMITTED = ['Draft', 'Menunggu Divisi', 'Menunggu KTU', 'Ditolak', 'Revisi PJ'];
+const FINISHED = ['Dicairkan Sepenuhnya', 'Arsip Selesai', 'Lunas/Selesai'];
+function fiscalYear(createdAt: any): string {
+    return new Intl.DateTimeFormat('en', { year: 'numeric', timeZone: 'Asia/Makassar' }).format(new Date(createdAt));
+}
+function reservedByCategory(request: any): Record<string, number> {
+    if (UNCOMMITTED.includes(request.status)) return {};
+    const amounts: Record<string, number> = {};
+    for (const item of request.budget_request_items || []) {
+        const amount = FINISHED.includes(request.status) && item.actual_price != null ? Number(item.actual_price) : Number(item.total_price ?? Number(item.quantity) * Number(item.unit_price));
+        amounts[item.category] = (amounts[item.category] || 0) + amount;
+    }
+    return amounts;
+}
+async function committedBudget(divisionId: string, period: string, category: string, excludeId?: string): Promise<number> {
+    const { data } = await supabase.from('budget_requests').select('id, status, created_at, budget_request_items(category, quantity, unit_price, total_price, actual_price)').eq('division_id', divisionId);
+    return (data || []).filter((r: any) => r.id !== excludeId && fiscalYear(r.created_at) === period)
+        .reduce((sum: number, r: any) => sum + (reservedByCategory(r)[category] || 0), 0);
+}
+async function ensureBudgetAvailable(request: any): Promise<void> {
+    const period = fiscalYear(request.created_at || new Date());
+    const proposed = reservedByCategory({ ...request, status: 'Antrean Pencairan' });
+    for (const [category, amount] of Object.entries(proposed)) {
+        if (amount <= 0) continue;
+        const { data: budget } = await supabase.from('division_budgets').select('*').eq('division_id', request.division_id).eq('period', period).eq('category', category).maybeSingle();
+        if (!budget) throw new HttpError(409, `Pagu ${category} tahun ${period} belum ditetapkan`);
+        const available = Number(budget.initial_budget ?? budget.total_budget ?? 0) - await committedBudget(request.division_id, period, category, request.id);
+        if (amount > available + 0.001) throw new HttpError(409, `Sisa pagu ${category} tidak mencukupi`);
+    }
+}
+async function validateAttachment(actor: Actor, value: any, folder: string, pdf = false): Promise<string> {
+    const url = cleanUrl(value);
+    if (!url) throw new HttpError(400, 'URL berkas wajib diisi');
+    const { data: entry } = await supabase.from('file_uploads').select('file_name, folder').eq('file_url', url).maybeSingle();
+    if (!actor.authId || !entry || entry.folder !== `owner:${actor.authId}:${folder}`) throw new HttpError(403, 'Berkas harus diunggah oleh pemanggil untuk pengajuan keuangan');
+    if (pdf && (!/\.pdf$/i.test(entry.file_name || '') || url.length > 500)) throw new HttpError(400, 'Laporan harus berupa PDF dengan URL yang valid');
+    return url;
 }
 
 // ---------------------------------------------------------------------------
@@ -652,7 +718,7 @@ export async function _GET(req: any) {
             // BULK CALCULATE USED AMOUNT
             const { data: activeRequests } = await supabase
                 .from('budget_requests')
-                .select('division_id, created_at, status, budget_request_items(category, total_price)');
+                .select('division_id, created_at, status, budget_request_items(category, total_price, actual_price)');
 
             const usedMap: Record<string, number> = {};
             (activeRequests || []).forEach(req => {
@@ -660,7 +726,7 @@ export async function _GET(req: any) {
                 // Atau jika sudah Ditolak / Revisi.
                 if (['Menunggu Divisi', 'Menunggu KTU', 'Ditolak', 'Revisi PJ'].includes(req.status)) return;
                 
-                const reqYear = new Date(req.created_at).getFullYear().toString();
+                const reqYear = fiscalYear(req.created_at);
                 const divId = req.division_id;
                 
                 // Jika pencairan sudah selesai, gunakan actual_price (bila ada), jika belum gunakan total_price (pencadangan/encumbrance)
@@ -684,7 +750,7 @@ export async function _GET(req: any) {
                 // If the backend has been modifying total_budget (by deducting disbursements),
                 // then total_budget is already reduced. 
                 // To display it nicely on the frontend: limit = initial_budget, remain = limit - ALL used.
-                const limit = Number(b.initial_budget || b.total_budget);
+                const limit = Number(b.initial_budget ?? b.total_budget ?? 0);
                 return {
                     ...b,
                     total_budget: limit, // Restore total_budget as limit for frontend
@@ -757,6 +823,9 @@ export async function _GET(req: any) {
             if (!actor.isAdmin && actor.officerRoles.length === 0) return forbiddenResponse();
             const reqId = searchParams.get('request_id');
             if (!reqId) return NextResponse.json({ ok: false, error: 'request_id is required' }, { status: 400 });
+            const { data: parent } = await supabase.from('budget_requests').select('pj_user_id, division_id').eq('id', reqId).single();
+            if (!parent) throw new HttpError(404, 'Pengajuan tidak ditemukan');
+            if (!canSeeNominal(actor, parent)) return forbiddenResponse('Anda tidak boleh melihat nominal pengajuan ini');
             const { data, error } = await supabase.from('disbursements').select('*').eq('budget_request_id', reqId).order('disbursed_at', { ascending: true });
             if (error) throw error;
             return NextResponse.json({ ok: true, data });
@@ -798,6 +867,7 @@ export async function _POST(req: any) {
             if (!actor.isAdmin) return forbiddenResponse();
             const { user_id, role_type, division_id } = body;
             if (!user_id || !role_type) throw new HttpError(400, 'user_id dan role_type wajib diisi');
+            if (!['Kepala Divisi', 'KTU', 'PPK', 'Bendahara'].includes(role_type)) throw new HttpError(400, 'Jabatan keuangan tidak valid');
             const payload: any = { user_id, role_type };
             if (role_type === 'Kepala Divisi') {
                 if (!division_id) throw new HttpError(400, 'Divisi wajib dipilih untuk Kepala Divisi');
@@ -850,12 +920,12 @@ export async function _POST(req: any) {
                 .eq('division_id', division_id).eq('period', period).eq('category', category).maybeSingle();
             if (!budget) throw new HttpError(404, 'Pagu divisi untuk tahun tsb belum ada. Tetapkan pagu awal dulu.');
 
-            const newTotal = parseFloat(budget.total_budget) + delta;
-            if (newTotal < -0.001) throw new HttpError(400, 'Penyesuaian ditolak: sisa anggaran divisi tidak boleh menjadi minus.');
             const newInitial = parseFloat(budget.initial_budget ?? budget.total_budget) + delta;
+            const committed = await committedBudget(division_id, period, category);
+            if (newInitial < committed - 0.001 || newInitial < 0) throw new HttpError(409, 'Penyesuaian ditolak: pagu sudah dicadangkan untuk pengajuan aktif');
 
             const { error: updErr } = await supabase.from('division_budgets')
-                .update({ initial_budget: newInitial, total_budget: newTotal }).eq('id', budget.id);
+                .update({ initial_budget: newInitial, total_budget: newInitial }).eq('id', budget.id);
             if (updErr) throw updErr;
 
             const { error: mutErr } = await supabase.from('budget_mutations').insert({
@@ -878,7 +948,9 @@ export async function _POST(req: any) {
             const { data: fromB } = await supabase.from('division_budgets').select('*')
                 .eq('division_id', from_division_id).eq('period', period).eq('category', category).maybeSingle();
             if (!fromB) throw new HttpError(404, 'Pagu divisi asal untuk tahun dan kategori tsb belum ada.');
-            if (parseFloat(fromB.total_budget) < amount - 0.001) {
+            const sourceLimit = Number(fromB.initial_budget ?? fromB.total_budget ?? 0);
+            const committed = await committedBudget(from_division_id, period, category);
+            if (sourceLimit - committed < amount - 0.001) {
                 throw new HttpError(400, 'Transfer ditolak: sisa anggaran divisi asal tidak mencukupi (tidak boleh minus).');
             }
 
@@ -888,7 +960,7 @@ export async function _POST(req: any) {
             // Kurangi divisi asal.
             const { error: fromErr } = await supabase.from('division_budgets').update({
                 initial_budget: parseFloat(fromB.initial_budget ?? fromB.total_budget) - amount,
-                total_budget: parseFloat(fromB.total_budget) - amount,
+                total_budget: sourceLimit - amount,
             }).eq('id', fromB.id);
             if (fromErr) throw fromErr;
 
@@ -896,7 +968,7 @@ export async function _POST(req: any) {
             if (toB) {
                 const { error: toErr } = await supabase.from('division_budgets').update({
                     initial_budget: parseFloat(toB.initial_budget ?? toB.total_budget) + amount,
-                    total_budget: parseFloat(toB.total_budget) + amount,
+                    total_budget: parseFloat(toB.initial_budget ?? toB.total_budget) + amount,
                 }).eq('id', toB.id);
                 if (toErr) throw toErr;
             } else {
@@ -927,6 +999,9 @@ export async function _POST(req: any) {
             const isTu = isTuName(await getDivisionName(division_id));
             const { status: initialStatus, bypass } = initialFlowStatus(isTu, route);
 
+            if (bypass) await ensureBudgetAvailable({ division_id, budget_request_items: processedItems });
+            const proof = proof_url ? await validateAttachment(actor, proof_url, 'bukti_keuangan') : null;
+
             const request_number = await generateRequestNumber();
 
             const { data: reqData, error: reqError } = await supabase.from('budget_requests').insert({
@@ -937,7 +1012,7 @@ export async function _POST(req: any) {
                 total_amount: total,
                 status: initialStatus,
                 request_number,
-                proof_file_url: cleanUrl(proof_url),   // bukti pendukung (opsional)
+                proof_file_url: proof,
             }).select('id').single();
             if (reqError) throw reqError;
 
@@ -962,21 +1037,23 @@ export async function _POST(req: any) {
         if (action === 'update_request') {
             const { request_id, activity_name, description, items, route, proof_url } = body;
             const { data: reqRow } = await supabase.from('budget_requests')
-                .select('pj_user_id, status, division_id').eq('id', request_id).single();
+                .select('*, disbursements(*)').eq('id', request_id).single();
             if (!reqRow) throw new HttpError(404, 'Pengajuan tidak ditemukan');
             if (reqRow.pj_user_id !== actor.id && !actor.isAdmin) return forbiddenResponse();
             if (reqRow.status !== 'Revisi PJ') throw new HttpError(409, 'Pengajuan hanya bisa diperbaiki saat berstatus Revisi PJ');
+            if (reqRow.disbursements?.length) throw new HttpError(409, 'Pengajuan yang telah memiliki pencairan tidak dapat direvisi');
 
             const { processedItems, total } = normalizeItems(items);
 
             // Recompute alur (TU boleh jalur cepat; non-TU wajib lewat Kepala Divisi).
             const isTu = isTuName(await getDivisionName(reqRow.division_id));
             const { status: newStatus, bypass } = initialFlowStatus(isTu, route);
+            if (bypass) await ensureBudgetAvailable({ ...reqRow, budget_request_items: processedItems });
 
             // proof_url hanya disentuh bila dikirim — biar revisi tanpa unggah
             // ulang tidak menghapus bukti yang sudah ada.
             const updatePayload: any = { activity_name, description, total_amount: total, status: newStatus };
-            if (proof_url !== undefined) updatePayload.proof_file_url = cleanUrl(proof_url);
+            if (proof_url !== undefined) updatePayload.proof_file_url = !proof_url ? null : proof_url === reqRow.proof_file_url ? reqRow.proof_file_url : await validateAttachment(actor, proof_url, 'bukti_keuangan');
 
             const { error: reqError } = await supabase.from('budget_requests').update(updatePayload).eq('id', request_id);
             if (reqError) throw reqError;
@@ -1018,11 +1095,13 @@ export async function _POST(req: any) {
         if (action === 'approve_request') {
             const { request_id, status_action, notes } = body;
             const { data: reqRow } = await supabase.from('budget_requests')
-                .select('status, division_id').eq('id', request_id).single();
+                .select('*, budget_request_items(*), disbursements(*)').eq('id', request_id).single();
             if (!reqRow) throw new HttpError(404, 'Pengajuan tidak ditemukan');
 
             const cur = reqRow.status;
             const isReject = status_action === 'Rejected';
+            if (!['Approved', 'Rejected'].includes(status_action)) throw new HttpError(400, 'Aksi persetujuan tidak valid');
+            if (isReject && reqRow.disbursements?.length) throw new HttpError(409, 'Pengajuan dengan pencairan tidak boleh dikembalikan untuk revisi');
             let nextStatus = '';
             let roleLabel = '';
 
@@ -1053,6 +1132,7 @@ export async function _POST(req: any) {
                 throw new HttpError(409, `Aksi tidak valid untuk status "${cur}"`);
             }
 
+            if (['Menunggu PPK', 'Antrean Pencairan'].includes(nextStatus)) await ensureBudgetAvailable(reqRow);
             const { error: logError } = await supabase.from('approval_logs').insert({
                 budget_request_id: request_id, user_id: actor.id, role: roleLabel,
                 action: isReject ? 'Rejected' : 'Approved', notes,
@@ -1090,18 +1170,22 @@ export async function _POST(req: any) {
             if (targetAmount > maxAllowed + 0.001) {
                 throw new HttpError(400, `Maksimal pencairan saat ini adalah Rp ${maxAllowed.toLocaleString('id-ID')}`);
             }
+            await ensureBudgetAvailable(reqData);
             
-            // Simpan actual_price tiap item jika ada
-            if (Array.isArray(items) && items.length > 0) {
-                for (const item of items) {
-                    if (item.id && typeof item.actual_price === 'number') {
-                        await supabase.from('budget_request_items')
-                            .update({ actual_price: item.actual_price })
-                            .eq('id', item.id)
-                            .eq('budget_request_id', request_id);
-                    }
-                }
+            if (!Array.isArray(items) || !items.length) throw new HttpError(400, 'Rincian pencairan wajib diisi');
+            const seen = new Set<string>();
+            let itemSum = 0;
+            for (const item of items) {
+                const current = reqData.budget_request_items.find((row: any) => row.id === item.id);
+                const amount = Number(item.actual_price);
+                if (!current || seen.has(item.id) || !Number.isFinite(amount) || amount < 0) throw new HttpError(400, 'Rincian pencairan tidak valid');
+                seen.add(item.id);
+                const cumulative = Number(current.actual_price || 0) + amount;
+                if (cumulative > Number(current.total_price) + 0.001) throw new HttpError(400, 'Realisasi item melebihi pengajuan');
+                itemSum += amount;
+                await supabase.from('budget_request_items').update({ actual_price: cumulative }).eq('id', item.id).eq('budget_request_id', request_id);
             }
+            if (Math.abs(itemSum - targetAmount) > 0.001) throw new HttpError(400, 'Nominal pencairan harus sama dengan jumlah rincian item');
 
             const { error: insErr } = await supabase.from('disbursements').insert({
                 budget_request_id: request_id, amount: targetAmount,
@@ -1120,6 +1204,8 @@ export async function _POST(req: any) {
         if (action === 'set_pending_request') {
             if (!hasOfficer(actor, 'Bendahara')) return forbiddenResponse();
             const { request_id } = body;
+            const { data: pendingRequest } = await supabase.from('budget_requests').select('status').eq('id', request_id).single();
+            if (!pendingRequest || !['Antrean Pencairan', 'Dicairkan Sebagian', 'Pending Pencairan'].includes(pendingRequest.status)) throw new HttpError(409, 'Pengajuan tidak berada pada tahap pencairan');
             await supabase.from('budget_requests').update({ status: 'Pending Pencairan' }).eq('id', request_id);
             await supabase.from('approval_logs').insert({
                 budget_request_id: request_id, user_id: actor.id, role: 'Bendahara', action: 'Pending', notes: 'Pencairan ditunda',
@@ -1140,6 +1226,7 @@ export async function _POST(req: any) {
                 .select('*, budget_request_items(*)').eq('id', request_id).single();
             if (reqError || !reqData) throw new HttpError(404, 'Pengajuan tidak ditemukan');
             if (reqData.pj_user_id !== actor.id && !actor.isAdmin) return forbiddenResponse('Hanya pemohon yang boleh konfirmasi penerimaan dana');
+            if (reqData.status !== 'Menunggu Konfirmasi PJ') throw new HttpError(409, 'Pengajuan tidak menunggu konfirmasi dana');
 
             const totalAmount = parseFloat(reqData.total_amount);
             if (!(totalAmount > 0)) throw new HttpError(400, 'Total pengajuan tidak valid');
@@ -1205,12 +1292,11 @@ export async function _POST(req: any) {
             if (!isOwner && !hasOfficer(actor, 'Bendahara')) {
                 return forbiddenResponse('Hanya PJ pemohon atau Bendahara yang boleh mengunggah laporan');
             }
-            const payload: any = { report_file_url: report_url };
-            // Mulai alur verifikasi laporan bila belum berjalan (KTU lebih dulu).
-            if (!reqRow.report_status) {
-                payload.report_status = 'Menunggu KTU';
-                payload.status = 'Proses Laporan';
-            }
+            if (!['Menunggu Laporan PJ', 'Menunggu Laporan', 'Proses Laporan'].includes(reqRow.status)) throw new HttpError(409, 'Laporan hanya dapat diunggah setelah seluruh dana diterima');
+            if (reqRow.report_status === 'Selesai') throw new HttpError(409, 'Laporan sudah diverifikasi final');
+            const pdfUrl = await validateAttachment(actor, report_url, 'laporan_keuangan', true);
+            // Every replacement invalidates the previous review and receipt confirmation.
+            const payload: any = { report_file_url: pdfUrl, report_status: 'Menunggu KTU', status: 'Proses Laporan', report_received_by_bendahara: false };
             await supabase.from('budget_requests').update(payload).eq('id', request_id);
             await supabase.from('approval_logs').insert({
                 budget_request_id: request_id, user_id: actor.id,
@@ -1224,6 +1310,8 @@ export async function _POST(req: any) {
         if (action === 'add_receipt') {
             if (!hasOfficer(actor, 'Bendahara')) return forbiddenResponse();
             const { request_id, description } = body;
+            const { data: receiptRequest } = await supabase.from('budget_requests').select('status').eq('id', request_id).single();
+            if (!receiptRequest || receiptRequest.status === 'Arsip Selesai') throw new HttpError(409, 'Nota pengajuan arsip tidak dapat diubah');
             const amount = Number(body.amount);
             if (!Number.isFinite(amount) || amount <= 0) throw new HttpError(400, 'Nominal nota tidak valid');
             const { error: insErr } = await supabase.from('receipt_submissions')
@@ -1247,6 +1335,8 @@ export async function _POST(req: any) {
             if (!receipt || receipt.budget_request_id !== request_id) {
                 return forbiddenResponse('Receipt tidak ditemukan atau tidak milik pengajuan ini');
             }
+            const { data: receiptRequest } = await supabase.from('budget_requests').select('status').eq('id', request_id).single();
+            if (!receiptRequest || receiptRequest.status === 'Arsip Selesai') throw new HttpError(409, 'Nota pengajuan arsip tidak dapat diubah');
 
             await supabase.from('receipt_submissions').delete().eq('id', receipt_id);
             if (request_id) await recomputeReceiptStatus(request_id);
@@ -1258,6 +1348,10 @@ export async function _POST(req: any) {
             // Centang "nota sudah disetor lengkap" oleh Bendahara.
             if (!hasOfficer(actor, 'Bendahara')) return forbiddenResponse();
             const { request_id } = body;
+            const { data: receiptRequest } = await supabase.from('budget_requests').select('status, total_amount').eq('id', request_id).single();
+            const { data: receipts } = await supabase.from('receipt_submissions').select('amount').eq('budget_request_id', request_id);
+            if (!receiptRequest || !['Menunggu Laporan PJ', 'Menunggu Laporan', 'Proses Laporan'].includes(receiptRequest.status)) throw new HttpError(409, 'Pengajuan belum berada pada tahap pelaporan');
+            if ((receipts || []).reduce((sum: number, r: any) => sum + Number(r.amount), 0) < Number(receiptRequest.total_amount) - 0.001) throw new HttpError(409, 'Jumlah nota belum memenuhi nilai pengajuan');
             await supabase.from('budget_requests').update({ receipt_status: 'Disetujui Bendahara' }).eq('id', request_id);
             return NextResponse.json({ ok: true });
         }
@@ -1266,6 +1360,8 @@ export async function _POST(req: any) {
             // Centang "laporan (fisik + digital) sudah diterima" oleh Bendahara.
             if (!hasOfficer(actor, 'Bendahara')) return forbiddenResponse();
             const { request_id } = body;
+            const { data: reportRequest } = await supabase.from('budget_requests').select('status, report_file_url').eq('id', request_id).single();
+            if (!reportRequest || reportRequest.status !== 'Proses Laporan' || !reportRequest.report_file_url) throw new HttpError(409, 'PDF laporan belum diunggah');
             await supabase.from('budget_requests').update({ report_received_by_bendahara: true }).eq('id', request_id);
             return NextResponse.json({ ok: true });
         }
@@ -1273,8 +1369,9 @@ export async function _POST(req: any) {
         if (action === 'verify_report') {
             const { request_id } = body;
             const { data: reqRow } = await supabase.from('budget_requests')
-                .select('report_status, division_id').eq('id', request_id).single();
+                .select('*').eq('id', request_id).single();
             if (!reqRow) throw new HttpError(404, 'Pengajuan tidak ditemukan');
+            if (reqRow.status !== 'Proses Laporan' || !reqRow.report_file_url) throw new HttpError(409, 'Pengajuan belum siap diverifikasi sebagai laporan');
 
             const cur = reqRow.report_status;
             let nextStatus = '';
@@ -1287,6 +1384,7 @@ export async function _POST(req: any) {
                 nextStatus = 'Menunggu PPK';
             } else if (cur === 'Menunggu PPK') {
                 if (!hasOfficer(actor, 'PPK')) return forbiddenResponse('Hanya PPK yang boleh memverifikasi tahap ini');
+                if (!reqRow.report_received_by_bendahara || reqRow.receipt_status !== 'Disetujui Bendahara' || Number(reqRow.total_disbursed) < Number(reqRow.total_amount) - 0.001) throw new HttpError(409, 'Dana, nota, dan penerimaan laporan belum lengkap');
                 nextStatus = 'Selesai';
             } else {
                 throw new HttpError(409, `Laporan tidak dapat diverifikasi pada status "${cur}"`);
@@ -1340,8 +1438,7 @@ async function recomputeReceiptStatus(requestId: string): Promise<void> {
     const { data: req } = await supabase.from('budget_requests').select('total_amount, receipt_status').eq('id', requestId).single();
     if (!req) return;
     const total = parseFloat(req.total_amount || 0);
-    // Jangan turunkan status bila Bendahara sudah men-centang final ("Disetujui Bendahara").
-    if (req.receipt_status === 'Disetujui Bendahara') return;
+    // Changing the receipts invalidates the previous completeness verification.
     let status = 'Belum Ada';
     if (sum > 0.001) status = (sum >= total - 0.001) ? 'Lunas' : 'Sebagian';
     await supabase.from('budget_requests').update({ receipt_status: status }).eq('id', requestId);
@@ -1351,7 +1448,11 @@ async function recomputeReceiptStatus(requestId: string): Promise<void> {
 function cleanUrl(url: any): string | null {
     if (typeof url !== 'string') return null;
     const trimmed = url.trim();
-    return trimmed.length > 0 ? trimmed : null;
+    if (!trimmed) return null;
+    let parsed: URL;
+    try { parsed = new URL(trimmed); } catch { throw new HttpError(400, 'URL lampiran tidak valid'); }
+    if (!['https:', 'http:'].includes(parsed.protocol) || parsed.username || parsed.password) throw new HttpError(400, 'URL lampiran tidak aman');
+    return parsed.href;
 }
 
 /** Bersihkan daftar nomor register: trim, buang kosong, buang duplikat (case-insensitive). */
@@ -1372,25 +1473,32 @@ function cleanRegisters(registers: any): string[] {
 /** Ganti (replace-all) daftar nomor register milik sebuah pengajuan. */
 async function replaceRegisters(requestId: string, registers: any): Promise<void> {
     const cleaned = cleanRegisters(registers);
-    await globalPrisma.$transaction(async tx => {
+    const replace = async (tx: any) => {
         await tx.budget_request_registers.deleteMany({ where: { budget_request_id: requestId } });
         if (cleaned.length) await tx.budget_request_registers.createMany({ data: cleaned.map(register_number => ({ budget_request_id: requestId, register_number })) });
-    });
+    };
+    const transaction = financialContext.getStore()?.prisma;
+    if (transaction) await replace(transaction);
+    else await globalPrisma.$transaction(replace);
 }
 
 function normalizeItems(items: any[]): { processedItems: any[]; total: number } {
-    if (!Array.isArray(items) || items.length === 0) {
+    if (!Array.isArray(items) || items.length === 0 || items.length > 200) {
         throw new HttpError(400, 'Minimal 1 item rincian');
     }
     let total = 0;
     const processedItems = items.map((i: any) => {
         const qty = Number(i.quantity);
         const price = Number(i.unit_price);
-        const q = Number.isFinite(qty) && qty > 0 ? qty : 0;
-        const p = Number.isFinite(price) && price >= 0 ? price : 0;
-        if (!i.item_name || String(i.item_name).trim() === '') throw new HttpError(400, 'Nama barang wajib diisi pada setiap item');
+        if (!Number.isSafeInteger(qty) || qty <= 0 || qty > 2147483647 || !Number.isFinite(price) || price < 0 || price > 1e12) throw new HttpError(400, 'Jumlah dan harga item tidak valid');
+        if (!['Bahan', 'Transport', 'Honor'].includes(i.category)) throw new HttpError(400, 'Kategori item tidak valid');
+        const q = qty;
+        const p = price;
+        if (typeof i.item_name !== 'string' || !i.item_name.trim() || i.item_name.length > 255) throw new HttpError(400, 'Nama barang wajib diisi, maksimal 255 karakter');
+        if (i.unit != null && (typeof i.unit !== 'string' || i.unit.length > 50)) throw new HttpError(400, 'Satuan item tidak valid');
         const itemTotal = q * p;
         total += itemTotal;
+        if (!Number.isFinite(total) || total > 1e12) throw new HttpError(400, 'Total pengajuan terlalu besar');
         return { item_name: i.item_name, category: i.category, quantity: q, unit: i.unit || 'Pcs', unit_price: p };
     });
     return { processedItems, total };
@@ -1420,7 +1528,22 @@ async function generateRequestNumber(): Promise<string> {
 
     
     export async function GET(req: any) { return _GET(req); }
-    export async function POST(req: any) { return _POST(req); }
+    export async function POST(req: any) {
+        try {
+            return await globalPrisma.$transaction(async (tx: any) => {
+                // All finance mutations share a database lock, across processes and replicas.
+                await tx.$executeRaw`SELECT pg_advisory_xact_lock(742611, 1)`;
+                return financialContext.run({ db: strictAdapter(createPrismaDbAdapter(tx)), prisma: tx }, async () => {
+                    const result = await _POST(req);
+                    if (result?.status >= 400) throw { financialResponse: result };
+                    return result;
+                });
+            }, { maxWait: 10000, timeout: 30000 });
+        } catch (error: any) {
+            if (error?.financialResponse) return error.financialResponse;
+            return NextResponse.json({ ok: false, error: 'Operasi keuangan gagal. Perubahan dibatalkan.' }, { status: 500 });
+        }
+    }
 }
 
 @Injectable()

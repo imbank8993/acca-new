@@ -30,7 +30,8 @@ export interface DeleteResult {
 export async function uploadFile(
     file: Buffer | Blob,
     fileName: string,
-    folder?: string
+    folder?: string,
+    registry?: { owner_auth_id: string; required?: boolean }
 ): Promise<UploadResult> {
     const storageType = await getStorageType();
 
@@ -90,12 +91,13 @@ export async function uploadFile(
     // Catat ke registry untuk kalkulasi kapasitas penyimpanan
     if (result.ok && result.file_url) {
         await registerUpload({
+            owner_auth_id: registry?.owner_auth_id,
             file_url: result.file_url,
             file_name: result.file_name || fileName,
             folder: folder || 'general',
             size_bytes: Buffer.isBuffer(file) ? file.length : file.size,
             storage_type: storageType,
-        });
+        }, registry?.required === true);
     }
 
     return result;

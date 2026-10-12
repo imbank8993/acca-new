@@ -22,6 +22,7 @@ import { TugasTambahanModule } from './tugas-tambahan/tugas-tambahan.module';
 import { InformasiModule } from './informasi/informasi.module';
 import { PengumumanModule } from './pengumuman/pengumuman.module';
 import { AgendaModule } from './agenda/agenda.module';
+import { NotulensiModule } from './notulensi/notulensi.module';
 import { JadwalModule } from './jadwal/jadwal.module';
 import { LiburModule } from './libur/libur.module';
 import { GuruAsuhModule } from './guru-asuh/guru-asuh.module';
@@ -58,7 +59,7 @@ import { AuditModule } from './audit/audit.module';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: '.env',
+      envFilePath: ['apps/api/.env', '.env'],
     }),
     PrismaModule,
     HealthModule,
@@ -78,6 +79,7 @@ import { AuditModule } from './audit/audit.module';
     InformasiModule,
     PengumumanModule,
     AgendaModule,
+    NotulensiModule,
     JadwalModule,
     LiburModule,
     PersonalDocsModule,

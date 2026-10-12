@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
     const body = await request.json();
-    return proxy(request, '/ketidakhadiran/rekam-medis-siswa', {
+    return proxy(request, `/ketidakhadiran/rekam-medis-siswa${request.nextUrl.search}`, {
         method: 'POST',
         body: JSON.stringify(body),
     });

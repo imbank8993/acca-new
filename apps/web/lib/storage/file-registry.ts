@@ -9,14 +9,21 @@ export interface FileRegistryEntry {
     storage_type?: string | null;
 }
 
-export async function registerUpload(entry: FileRegistryEntry): Promise<void> {
-    if (!entry.file_url) return;
+export async function registerUpload(entry: FileRegistryEntry, required = false): Promise<void> {
+    if (!entry.file_url) {
+        if (required) throw new Error('URL unggahan tidak tersedia');
+        return;
+    }
     try {
-        await nestFetch('/site-settings/file-registry/register', {
+        const result = await nestFetch('/site-settings/file-registry/register', {
             method: 'POST',
             body: JSON.stringify(entry),
         });
+        if (required && (result.status < 200 || result.status >= 300 || result.body?.ok !== true)) {
+            throw new Error('Pencatatan kepemilikan berkas gagal');
+        }
     } catch (err) {
+        if (required) throw err;
         console.error('[file-registry] Gagal mencatat upload via NestJS:', err);
     }
 }

@@ -204,7 +204,7 @@ export default function SeleksiTab({
             const res = await fetch(`/api/forms/${formId}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ schema: { allocation: buildConfig() } }),
+                body: JSON.stringify({ schema: { allocation: buildConfig() }, expected_updated_at: formSchema.__formVersion ?? null }),
             });
             const json = await res.json();
             if (!res.ok) {
@@ -212,6 +212,7 @@ export default function SeleksiTab({
                 return;
             }
             Swal.fire('Tersimpan', 'Pengaturan kuota & seleksi disimpan pada formulir.', 'success');
+            onPersisted();
         } catch (e: any) {
             Swal.fire('Error', e.message, 'error');
         } finally {
@@ -231,56 +232,17 @@ export default function SeleksiTab({
         setRankBy(prev => prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]);
     };
 
-    const exportSeleksi = () => {
+    const exportSeleksi = async () => {
         if (!outcome) return;
-        const rows = [...outcome.results].sort((a, b) => {
-            const oa = a.option || 'zzz', ob = b.option || 'zzz';
-            if (oa !== ob) return oa.localeCompare(ob);
-            const sa = ['pilihan_1', 'pilihan_2', 'cadangan', 'tidak_diterima'].indexOf(a.stage);
-            const sb = ['pilihan_1', 'pilihan_2', 'cadangan', 'tidak_diterima'].indexOf(b.stage);
-            if (sa !== sb) return sa - sb;
-            return (a.rank || 0) - (b.rank || 0);
-        });
-
-        const esc = (s: any) => String(s ?? '-').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-        let html = `<html xmlns:x="urn:schemas-microsoft-com:office:excel"><head><meta charset="utf-8"><style>
-            table{border-collapse:collapse;font-family:sans-serif}
-            th{background:#3083FF;color:#fff;padding:10px;border:1px solid #cbd5e1;font-size:12px;text-align:left}
-            td{padding:8px;border:1px solid #e2e8f0;font-size:12px}
-        </style></head><body><table><thead><tr>
-            <th>PROGRAM</th><th>PERINGKAT</th><th>STATUS</th>
-            <th>${esc(nameField?.label || 'NAMA')}</th>
-            ${secondaryField ? `<th>${esc(secondaryField.label)}</th>` : ''}
-            <th>PILIHAN 1</th><th>PILIHAN 2</th>
-            ${rankBy.map(k => `<th>${esc(k === TOTAL_SCORE_KEY ? 'TOTAL SKOR' : k)}</th>`).join('')}
-            <th>TOTAL SKOR</th></tr></thead><tbody>`;
-
-        rows.forEach(r => {
-            const resp = responseById[r.id];
-            const opt = outcome.summary.find(s => s.option === r.option);
-            html += `<tr>
-                <td>${esc(opt?.label || r.option || '-')}</td>
-                <td>${esc(r.rank ?? '-')}</td>
-                <td>${esc(STAGE_META[r.stage].label)}</td>
-                <td>${esc(resp?.data?.[nameField?.label])}</td>
-                ${secondaryField ? `<td>${esc(resp?.data?.[secondaryField.label])}</td>` : ''}
-                <td>${esc(r.choices[0])}</td>
-                <td>${esc(r.choices[1])}</td>
-                ${rankBy.map(k => `<td>${esc(k === TOTAL_SCORE_KEY ? r.scores.total : (r.scores.categories[k] ?? 0))}</td>`).join('')}
-                <td>${esc(r.scores.total)}</td>
-            </tr>`;
-        });
-
-        html += '</tbody></table></body></html>';
-        const blob = new Blob([html], { type: 'application/vnd.ms-excel' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `Hasil_Seleksi_${formTitle.replace(/\s+/g, '_')}.xls`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
+        try {
+            const XLSX = await import('xlsx');
+            const rows = [...outcome.results].sort((a,b) => (a.option || '').localeCompare(b.option || '') || (a.rank || 0) - (b.rank || 0));
+            const headers = ['PROGRAM','PERINGKAT','STATUS',nameField?.label || 'NAMA', ...(secondaryField ? [secondaryField.label] : []), 'PILIHAN 1','PILIHAN 2', ...rankBy.map(k => k === TOTAL_SCORE_KEY ? 'TOTAL SKOR' : k), 'TOTAL SKOR'];
+            const data = rows.map(r => { const resp=responseById[r.id]; const opt=outcome.summary.find(s => s.option===r.option); return [opt?.label || r.option || '-',r.rank ?? '-',STAGE_META[r.stage].label,resp?.data?.[nameField?.label] || '', ...(secondaryField ? [resp?.data?.[secondaryField.label] || ''] : []),r.choices[0] || '',r.choices[1] || '',...rankBy.map(k=>k===TOTAL_SCORE_KEY?r.scores.total:r.scores.categories[k]??0),r.scores.total]; });
+            const workbook=XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook,XLSX.utils.aoa_to_sheet([headers,...data]),'Seleksi');
+            XLSX.writeFile(workbook,'Seleksi_'+formTitle.replace(/[^a-zA-Z0-9_-]/g,'_').slice(0,100)+'.xlsx');
+        } catch { Swal.fire('Gagal','Ekspor seleksi tidak berhasil','error'); }
     };
 
     if (choiceFields.length === 0) {

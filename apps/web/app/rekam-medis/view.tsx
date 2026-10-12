@@ -1,4 +1,6 @@
 'use client';
+import { escapeHtml } from '@/lib/print/print-utils';
+const safeText = (value: unknown) => escapeHtml(String(value ?? ''));
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import Swal from 'sweetalert2';
@@ -122,7 +124,8 @@ export default function RekamMedisView() {
     // Form Sync & Duration States
     const [autoSyncKetidakhadiran, setAutoSyncKetidakhadiran] = useState(true);
     const [tglSelesaiSakit, setTglSelesaiSakit] = useState(getCurrentDate());
-    const [waktuSelesaiUks, setWaktuSelesaiUks] = useState('12:00');
+    const [waktuSelesaiUks, setWaktuSelesaiUks] = useState('');
+    const medicalRequest = useRef<{ fingerprint: string; key: string } | null>(null);
     const [syncingId, setSyncingId] = useState<string | null>(null);
 
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -256,13 +259,16 @@ export default function RekamMedisView() {
         };
         try {
             localStorage.setItem('acca_rm_presets', JSON.stringify(fullPresets));
-            await fetch('/api/ketidakhadiran/rekam-medis-siswa?action=save_presets', {
+            const response = await fetch('/api/ketidakhadiran/rekam-medis-siswa?action=save_presets', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ presets: fullPresets })
             });
+            const result = await response.json();
+            if (!response.ok || !result.ok) throw new Error(result.error || 'Preset gagal disimpan');
         } catch (e) {
             console.error('Save presets error:', e);
+            Swal.fire({ icon: 'error', title: 'Preset belum tersimpan di server', text: e instanceof Error ? e.message : 'Coba kembali' });
         }
     };
 
@@ -362,32 +368,32 @@ export default function RekamMedisView() {
                 const riwayatAlergi = ensureArray(r.riwayat_alergi_obat).join(', ') || '-';
                 const tindakanArr = ensureArray(r.tindakan);
                 const tindakanHtml = tindakanArr.length > 0
-                    ? tindakanArr.map(t => `<div>${t}</div>`).join('')
+                    ? tindakanArr.map(t => `<div>${safeText(t)}</div>`).join('')
                     : '-';
 
                 return `
                 <table class="rm-table" style="margin-bottom:20px;">
                     <tr>
                         <td class="rm-label" style="width:170px;background:#eaf1fb;"><b>No. Rekam Medis</b></td>
-                        <td class="rm-value" style="background:#eaf1fb;">${noRM}</td>
+                        <td class="rm-value" style="background:#eaf1fb;">${safeText(noRM)}</td>
                     </tr>
                     <tr>
                         <td class="rm-label"><b>Hari/ tanggal</b></td>
-                        <td class="rm-value">${hari} / ${tgl}</td>
+                        <td class="rm-value">${safeText(hari)} / ${safeText(tgl)}</td>
                     </tr>
                     <tr>
                         <td class="rm-label"><b>Waktu</b></td>
-                        <td class="rm-value">${waktuLabel}</td>
+                        <td class="rm-value">${safeText(waktuLabel)}</td>
                     </tr>
                     <tr>
                         <td colspan="2" style="padding:0;border:1px solid #333;">
                             <table style="width:100%;border-collapse:collapse;">
                                 <tr>
                                     <td style="width:50%;vertical-align:top;padding:6px 10px;border:none;">
-                                        <b>Riwayat Penyakit</b><br/>${riwayatPenyakit}
+                                        <b>Riwayat Penyakit</b><br/>${safeText(riwayatPenyakit)}
                                     </td>
                                     <td style="width:50%;vertical-align:top;border:none;border-left:1px solid #333;padding:6px 10px;">
-                                        <b>Riwayat Alergi Obat</b><br/>${riwayatAlergi === 'Tidak Ada Alergi Obat' ? '-' : riwayatAlergi}
+                                        <b>Riwayat Alergi Obat</b><br/>${safeText(riwayatAlergi === 'Tidak Ada Alergi Obat' ? '-' : riwayatAlergi)}
                                     </td>
                                 </tr>
                             </table>
@@ -395,10 +401,10 @@ export default function RekamMedisView() {
                     </tr>
                     <tr>
                         <td class="rm-label"><b>Keluhan</b></td>
-                        <td class="rm-value">${r.keluhan || '-'}</td>
+                        <td class="rm-value">${safeText(r.keluhan || '-')}</td>
                     </tr>
                     <tr>
-                        <td colspan="2" class="rm-value" style="text-align:center;">${r.tata_laksana || ''}</td>
+                        <td colspan="2" class="rm-value" style="text-align:center;">${safeText(r.tata_laksana || '')}</td>
                     </tr>
                     <tr>
                         <td class="rm-label"><b>Tindakan</b></td>
@@ -406,11 +412,11 @@ export default function RekamMedisView() {
                     </tr>
                     <tr>
                         <td class="rm-label"><b>Tindak lanjut</b></td>
-                        <td class="rm-value">${r.tindak_lanjut || '-'}</td>
+                        <td class="rm-value">${safeText(r.tindak_lanjut || '-')}</td>
                     </tr>
                     <tr>
                         <td class="rm-label"><b>Petugas</b></td>
-                        <td class="rm-value">${r.petugas_nama || '-'}${r.petugas_nip ? ` (NIP. ${r.petugas_nip})` : ''}</td>
+                        <td class="rm-value">${safeText(r.petugas_nama || '-')}${r.petugas_nip ? ` (NIP. ${safeText(r.petugas_nip)})` : ''}</td>
                     </tr>
                 </table>`;
             }).join('');
@@ -419,7 +425,7 @@ export default function RekamMedisView() {
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <title>Rekam Medis Rawat Jalan - ${student.nama_siswa}</title>
+    <title>Rekam Medis Rawat Jalan - ${safeText(student.nama_siswa)}</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Times New Roman', Times, serif; font-size: 12px; color: #000; background: #fff; }
@@ -448,13 +454,13 @@ export default function RekamMedisView() {
     <div class="judul">REKAM MEDIS RAWAT JALAN</div>
     <div class="section-title">A.&nbsp;&nbsp;Biodata Diri</div>
     <table class="biodata-table">
-        <tr><td class="bio-label">Nama</td><td class="bio-colon">:</td><td>${student.nama_siswa}</td></tr>
-        <tr><td class="bio-label">Tempat lahir</td><td class="bio-colon">:</td><td>${student.tempat_lahir && student.tempat_lahir !== '-' ? student.tempat_lahir : ''}</td></tr>
-        <tr><td class="bio-label">Tanggal lahir</td><td class="bio-colon">:</td><td>${formatTanggalLahirIndo(student.tanggal_lahir)}</td></tr>
-        <tr><td class="bio-label">Jenis kelamin</td><td class="bio-colon">:</td><td>${genderLabel(student.gender)}</td></tr>
-        <tr><td class="bio-label">Alamat</td><td class="bio-colon">:</td><td>${student.alamat && student.alamat !== '-' ? student.alamat : ''}</td></tr>
+        <tr><td class="bio-label">Nama</td><td class="bio-colon">:</td><td>${safeText(student.nama_siswa)}</td></tr>
+        <tr><td class="bio-label">Tempat lahir</td><td class="bio-colon">:</td><td>${safeText(student.tempat_lahir && student.tempat_lahir !== '-' ? student.tempat_lahir : '')}</td></tr>
+        <tr><td class="bio-label">Tanggal lahir</td><td class="bio-colon">:</td><td>${safeText(formatTanggalLahirIndo(student.tanggal_lahir))}</td></tr>
+        <tr><td class="bio-label">Jenis kelamin</td><td class="bio-colon">:</td><td>${safeText(genderLabel(student.gender))}</td></tr>
+        <tr><td class="bio-label">Alamat</td><td class="bio-colon">:</td><td>${safeText(student.alamat && student.alamat !== '-' ? student.alamat : '')}</td></tr>
         <tr><td class="bio-label">No. Telepon</td><td class="bio-colon">:</td><td></td></tr>
-        <tr><td class="bio-label">Guru asuh</td><td class="bio-colon">:</td><td>${student.guru_asuh && student.guru_asuh !== '-' ? student.guru_asuh : ''}</td></tr>
+        <tr><td class="bio-label">Guru asuh</td><td class="bio-colon">:</td><td>${safeText(student.guru_asuh && student.guru_asuh !== '-' ? student.guru_asuh : '')}</td></tr>
     </table>
     <div class="section-title" style="margin-bottom:14px;">B.&nbsp;&nbsp;Riwayat Rekam Medis</div>
     ${recordsHtml}
@@ -657,10 +663,12 @@ export default function RekamMedisView() {
                 mappedStatus: currentMappedStatus
             };
 
+            const fingerprint = JSON.stringify(payload);
+            if (!medicalRequest.current || medicalRequest.current.fingerprint !== fingerprint) medicalRequest.current = { fingerprint, key: crypto.randomUUID() };
             const res = await fetch('/api/ketidakhadiran/rekam-medis-siswa', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
+                body: JSON.stringify({ ...payload, idempotencyKey: medicalRequest.current.key })
             });
 
             const json = await res.json();
@@ -673,7 +681,7 @@ export default function RekamMedisView() {
                 await Swal.fire({
                     icon: 'success',
                     title: 'Rekam Medis Tersimpan!',
-                    html: `<b>No. RM:</b> ${json.data.no_rekam_medis}<br/><b>Siswa:</b> ${json.data.nama_siswa}${syncMsg}`,
+                    html: `<b>No. RM:</b> ${safeText(json.data.no_rekam_medis)}<br/><b>Siswa:</b> ${safeText(json.data.nama_siswa)}${syncMsg}`,
                     confirmButtonColor: '#3083FF'
                 });
 
@@ -693,7 +701,7 @@ export default function RekamMedisView() {
     const handleManualSync = async (row: RekamMedisRow) => {
         setSyncingId(row.id);
         try {
-            const mappedStatus = row.synced_status || tindakLanjutMapping.find(m => m.name.toLowerCase() === row.tindak_lanjut?.toLowerCase())?.status;
+            const mappedStatus = tindakLanjutMapping.find(m => m.name.toLowerCase() === row.tindak_lanjut?.toLowerCase())?.status;
             const res = await fetch('/api/ketidakhadiran/rekam-medis-siswa?action=sync_ketidakhadiran', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -701,11 +709,14 @@ export default function RekamMedisView() {
             });
 
             const json = await res.json();
-            if (json.ok && json.result && json.result.ok) {
+            if (json.result?.skipped) {
+                Swal.fire({ icon: 'info', title: 'Tidak Di-sinkron', text: json.result.reason, confirmButtonColor: '#3083FF' });
+                loadRekamMedisList();
+            } else if (json.ok && json.result && json.result.ok) {
                 Swal.fire({
                     icon: 'success',
                     title: 'Berhasil Disinkronkan!',
-                    html: `Data rekam medis <b>${row.no_rekam_medis}</b> tersambung ke Absensi Sakit (<b>${json.result.mappedStatus}</b>).`,
+                    html: `Data rekam medis <b>${safeText(row.no_rekam_medis)}</b> tersambung ke Absensi Sakit (<b>${json.result.mappedStatus}</b>).`,
                     timer: 2000,
                     showConfirmButton: false
                 });
@@ -723,6 +734,7 @@ export default function RekamMedisView() {
     };
 
     const resetForm = () => {
+        medicalRequest.current = null;
         setSelectedStudent(null);
         setStudentQuery('');
         setNoRekamMedis('');
@@ -735,7 +747,7 @@ export default function RekamMedisView() {
         setStudentHistory([]);
         setAutoSyncKetidakhadiran(true);
         setTglSelesaiSakit(getCurrentDate());
-        setWaktuSelesaiUks('12:00');
+        setWaktuSelesaiUks('');
     };
 
     const handleDeleteRecord = (row: RekamMedisRow) => {
@@ -894,7 +906,7 @@ export default function RekamMedisView() {
                     <div style="text-align:left;display:flex;flex-direction:column;gap:12px;">
                         <div>
                             <label style="font-weight:700;font-size:0.85rem;">Nama Tindak Lanjut:</label>
-                            <input id="swal-tl-name" class="swal2-input" value="${oldItem}" style="margin:6px 0 0;width:100%;box-sizing:border-box;">
+                            <input id="swal-tl-name" class="swal2-input" value="${safeText(oldItem)}" style="margin:6px 0 0;width:100%;box-sizing:border-box;">
                         </div>
                         <div>
                             <label style="font-weight:700;font-size:0.85rem;">Pemetaan Status Sakit (Absensi):</label>

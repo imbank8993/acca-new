@@ -358,6 +358,7 @@ export class AccessService {
     if (upperRoles.includes('ADMIN') || upperRoles.includes('ADMINISTRATOR')) {
       pages.add('audit-log');
       pages.add('monitoring');
+      pages.add('notulensi-rapat');
     }
 
     const flatGroupKeys = new Set<string>();
@@ -469,6 +470,7 @@ export class AccessService {
       if (upperUserRoles.includes('ADMIN') || upperUserRoles.includes('ADMINISTRATOR')) {
         pages.add('audit-log');
         pages.add('monitoring');
+        pages.add('notulensi-rapat');
       }
 
       const flatGroupKeys = new Set<string>();

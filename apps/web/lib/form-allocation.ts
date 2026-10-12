@@ -1,3 +1,4 @@
+import { formAnswer, formLabelKey } from '@acca/shared';
 // ============================================================
 // Mesin skoring & seleksi kuota untuk Form Builder
 //
@@ -31,21 +32,22 @@ export function readAnswer(data: Record<string, any>, labels: string[]): any {
 /** Hitung total skor & skor per kategori dari jawaban + schema. */
 export function computeScores(fields: any[], data: Record<string, any>): ScoreResult {
     let total = 0;
-    const categories: Record<string, number> = {};
+    const categories: Record<string, number> = Object.create(null);
 
     if (!Array.isArray(fields) || !data) return { total, categories };
 
     for (const field of fields) {
         if (!field?.enableScoring || !Array.isArray(field.options)) continue;
 
-        const answer = data[field.label];
+        const answer = formAnswer(fields, field, data);
         if (answer === undefined || answer === null || answer === '') continue;
 
-        const answers = Array.isArray(answer) ? answer : [answer];
+        if (Array.isArray(answer) && field.type !== 'checkbox') continue;
+        const answers = [...new Set(Array.isArray(answer) ? answer : [answer])];
         let fieldScore = 0;
         for (const ans of answers) {
-            const opt = field.options.find((o: any) => o.value === ans || o.label === ans);
-            if (opt && typeof opt.score === 'number') fieldScore += opt.score;
+            const opt = field.options.find((o: any) => o.value === ans) || (!Object.prototype.hasOwnProperty.call(data, field.id) ? field.options.find((o: any) => o.label === ans) : undefined);
+            if (opt && typeof opt.score === 'number' && Number.isSafeInteger(opt.score) && Math.abs(opt.score) <= 10000) fieldScore += opt.score;
         }
 
         total += fieldScore;
@@ -149,7 +151,7 @@ export function allocate(
     // Label field pilihan: pakai label terkini dari schema, dengan label snapshot sebagai cadangan
     const choiceLabels: string[][] = (config.choiceFields || []).map(cf => {
         const current = (fields || []).find((f: any) => f.id === cf.id);
-        const labels = [current?.label, cf.label].filter(Boolean) as string[];
+        const labels = [cf.id, current ? formLabelKey(fields, current) : null, cf.label].filter(Boolean) as string[];
         return [...new Set(labels)];
     });
 

@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { status, body } = await nestFetchAsUser('/forms', token);
+    const { status, body } = await nestFetchAsUser(`/forms${request.nextUrl.search}`, token);
     return NextResponse.json(body, { status });
 }
 
@@ -21,7 +21,8 @@ export async function POST(request: NextRequest) {
     }
 
     try {
-        const json = await request.json();
+        let json;
+        try { json = await request.json(); } catch { return NextResponse.json({ error: 'JSON tidak valid' }, { status: 400 }); }
         const { status, body } = await nestFetchAsUser('/forms', token, {
             method: 'POST',
             body: JSON.stringify(json),

@@ -1016,7 +1016,7 @@ export function InputDataTab() {
         setIsPrintModalOpen(true);
     };
 
-    const printSingle = async (row: KetidakhadiranRow, type: 'SAKIT' | 'TUGAS' | 'IZIN' | 'MENINGGALKAN_ASRAMA' | 'REKAM_MEDIK', penandatangan?: { nama: string; jabatan: string }) => {
+    const printSingle = async (row: KetidakhadiranRow, type: 'SAKIT' | 'TUGAS' | 'IZIN' | 'MENINGGALKAN_ASRAMA' | 'REKAM_MEDIK', penandatangan?: { nama: string; jabatan: string }, reprintId?: string): Promise<void> => {
         // ── REKAM_MEDIK: Surat Rekam Medis via generate-letter API ──────────
         if (type === 'REKAM_MEDIK') {
             Swal.fire({ title: 'Memproses...', html: 'Menghasilkan surat rekam medis...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
@@ -1025,6 +1025,7 @@ export function InputDataTab() {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
+                    forceReprint: !!reprintId, oldLetterId: reprintId,
                         letterType: 'REKAM_MEDIK',
                         row,
                         petugasNama: userName || 'Petugas UKS',
@@ -1061,13 +1062,7 @@ export function InputDataTab() {
 
                         if (adminResult.dismiss === 'cancel') {
                             try {
-                                const delRes = await fetch(`/api/ketidakhadiran/acca-letter/${existing.id}`, { method: 'DELETE' });
-                                const delJson = await delRes.json();
-                                if (!delJson.ok) throw new Error(delJson.error);
-
-                                await Swal.fire({ title: 'Dihapus', text: 'Surat berhasil dihapus. Mencetak ulang...', icon: 'success', confirmButtonColor: '#3083FF', timer: 1500 });
-
-                                await printSingle(row, 'REKAM_MEDIK');
+                                await printSingle(row, 'REKAM_MEDIK', undefined, existing.id);
                             } catch (e: any) {
                                 await Swal.fire({ title: 'Gagal', text: e.message, icon: 'error', confirmButtonColor: '#dc2626' });
                             }
@@ -1115,6 +1110,7 @@ export function InputDataTab() {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
+                    forceReprint: !!reprintId, oldLetterId: reprintId,
                         letterType: 'REKOMENDASI_KONTROL',
                         row,
                         petugasNama: userName || 'Petugas UKS',
@@ -1153,13 +1149,7 @@ export function InputDataTab() {
                         if (adminResult.dismiss === 'cancel') {
                             // Delete and retry
                             try {
-                                const delRes = await fetch(`/api/ketidakhadiran/acca-letter/${existing.id}`, { method: 'DELETE' });
-                                const delJson = await delRes.json();
-                                if (!delJson.ok) throw new Error(delJson.error);
-
-                                await Swal.fire({ title: 'Dihapus', text: 'Surat berhasil dihapus. Mencetak ulang...', icon: 'success', confirmButtonColor: '#3083FF', timer: 1500 });
-
-                                await printSingle(row, 'SAKIT');
+                                await printSingle(row, 'SAKIT', undefined, existing.id);
                             } catch (e: any) {
                                 await Swal.fire({ title: 'Gagal', text: e.message, icon: 'error', confirmButtonColor: '#dc2626' });
                             }
@@ -1208,6 +1198,7 @@ export function InputDataTab() {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
+                    forceReprint: !!reprintId, oldLetterId: reprintId,
                         letterType: 'MENINGGALKAN_ASRAMA',
                         row,
                         petugasNama: userName || 'Petugas UKS',
@@ -1240,11 +1231,7 @@ export function InputDataTab() {
                         }
                         if (adminResult.dismiss === 'cancel') {
                             try {
-                                const delRes = await fetch(`/api/ketidakhadiran/acca-letter/${existing.id}`, { method: 'DELETE' });
-                                const delJson = await delRes.json();
-                                if (!delJson.ok) throw new Error(delJson.error);
-                                await Swal.fire({ title: 'Dihapus', text: 'Surat berhasil dihapus. Mencetak ulang...', icon: 'success', confirmButtonColor: '#3083FF', timer: 1500 });
-                                await printSingle(row, 'MENINGGALKAN_ASRAMA', penandatangan);
+                                await printSingle(row, 'MENINGGALKAN_ASRAMA', penandatangan, existing.id);
                             } catch (e: any) {
                                 await Swal.fire({ title: 'Gagal', text: e.message, icon: 'error', confirmButtonColor: '#dc2626' });
                             }
@@ -1333,6 +1320,7 @@ export function InputDataTab() {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
+                    forceReprint: !!reprintId, oldLetterId: reprintId,
                     row: {
                         ...row,
                         petugas_nama: petugasNama
@@ -1376,14 +1364,7 @@ export function InputDataTab() {
 
                 if (adminResult.dismiss === 'cancel') {
                     try {
-                        Swal.fire({ title: 'Menghapus...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
-                        const delRes = await fetch(`/api/ketidakhadiran/acca-letter/${existing.id}`, { method: 'DELETE' });
-                        const delJson = await delRes.json();
-                        Swal.close();
-                        if (!delJson.ok) throw new Error(delJson.error);
-
-                        await Swal.fire({ title: 'Dihapus', text: 'Surat berhasil dihapus. Mencetak ulang...', icon: 'success', confirmButtonColor: '#3083FF', timer: 1500 });
-                        await printSingle(row, type, penandatangan);
+                        await printSingle(row, type, penandatangan, existing.id);
                     } catch (e: any) {
                         await Swal.fire({ title: 'Gagal', text: e.message, icon: 'error', confirmButtonColor: '#dc2626' });
                     }
@@ -1416,7 +1397,7 @@ export function InputDataTab() {
         }
     };
 
-    const printGroupLetter = async (groupRows: KetidakhadiranRow[], representative: KetidakhadiranRow, type: 'TUGAS' | 'IZIN') => {
+    const printGroupLetter = async (groupRows: KetidakhadiranRow[], representative: KetidakhadiranRow, type: 'TUGAS' | 'IZIN', reprintId?: string): Promise<void> => {
         const templateType = type === 'TUGAS' ? 'TUGAS_GROUP' : 'IZIN_GROUP';
         const labelMap: Record<string, string> = { TUGAS: 'Surat Tugas Kolektif', IZIN: 'Surat Izin Kolektif' };
         const resolved = await resolveTemplate(templateType);
@@ -1446,6 +1427,7 @@ export function InputDataTab() {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
+                    forceReprint: !!reprintId, oldLetterId: reprintId,
                     row: {
                         ...representative,
                         nama: `${representative.nama} (Kolektif)`,
@@ -1490,14 +1472,7 @@ export function InputDataTab() {
 
                 if (adminResult.dismiss === 'cancel') {
                     try {
-                        Swal.fire({ title: 'Menghapus...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
-                        const delRes = await fetch(`/api/ketidakhadiran/acca-letter/${existing.id}`, { method: 'DELETE' });
-                        const delJson = await delRes.json();
-                        Swal.close();
-                        if (!delJson.ok) throw new Error(delJson.error);
-
-                        await Swal.fire({ title: 'Dihapus', text: 'Surat kolektif berhasil dihapus. Mencetak ulang...', icon: 'success', confirmButtonColor: '#3083FF', timer: 1500 });
-                        await printGroupLetter(groupRows, representative, type);
+                        await printGroupLetter(groupRows, representative, type, existing.id);
                     } catch (e: any) {
                         await Swal.fire({ title: 'Gagal', text: e.message, icon: 'error', confirmButtonColor: '#dc2626' });
                     }
@@ -1533,7 +1508,7 @@ export function InputDataTab() {
 
     // Surat Izin Meninggalkan Asrama ΓÇö KOLEKTIF: 1 surat untuk >1 siswa dengan
     // rentang tanggal & keperluan yang sama (groupRows didapat dari filter siblings di PrintModal)
-    const printAkhirPekanGroup = async (groupRows: KetidakhadiranRow[], representative: KetidakhadiranRow, penandatangan?: { nama: string; jabatan: string }) => {
+    const printAkhirPekanGroup = async (groupRows: KetidakhadiranRow[], representative: KetidakhadiranRow, penandatangan?: { nama: string; jabatan: string }, reprintId?: string): Promise<void> => {
         Swal.fire({
             title: 'Memproses...',
             html: `Menghasilkan surat izin meninggalkan asrama kolektif (${groupRows.length} siswa)...`,
@@ -1545,6 +1520,7 @@ export function InputDataTab() {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
+                    forceReprint: !!reprintId, oldLetterId: reprintId,
                     letterType: 'MENINGGALKAN_ASRAMA',
                     rows: groupRows,
                     petugasNama: userName || 'Petugas UKS',
@@ -1577,11 +1553,7 @@ export function InputDataTab() {
                     }
                     if (adminResult.dismiss === 'cancel') {
                         try {
-                            const delRes = await fetch(`/api/ketidakhadiran/acca-letter/${existing.id}`, { method: 'DELETE' });
-                            const delJson = await delRes.json();
-                            if (!delJson.ok) throw new Error(delJson.error);
-                            await Swal.fire({ title: 'Dihapus', text: 'Surat berhasil dihapus. Mencetak ulang...', icon: 'success', confirmButtonColor: '#3083FF', timer: 1500 });
-                            await printAkhirPekanGroup(groupRows, representative, penandatangan);
+                            await printAkhirPekanGroup(groupRows, representative, penandatangan, existing.id);
                         } catch (e: any) {
                             await Swal.fire({ title: 'Gagal', text: e.message, icon: 'error', confirmButtonColor: '#dc2626' });
                         }

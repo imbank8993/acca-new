@@ -1,0 +1,30 @@
+{
+  "320": {
+    "viewport": 320,
+    "document": 320,
+    "formWidth": 320,
+    "formPadding": "22px 16px",
+    "overflow": []
+  },
+  "390": {
+    "viewport": 390,
+    "document": 390,
+    "formWidth": 390,
+    "formPadding": "22px 16px",
+    "overflow": []
+  },
+  "768": {
+    "viewport": 768,
+    "document": 768,
+    "formWidth": 768,
+    "formPadding": "32px 36px",
+    "overflow": []
+  },
+  "1280": {
+    "viewport": 1280,
+    "document": 1280,
+    "formWidth": 768,
+    "formPadding": "32px 36px",
+    "overflow": []
+  }
+}

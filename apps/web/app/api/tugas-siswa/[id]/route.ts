@@ -9,13 +9,14 @@ interface RouteParams {
 
 export async function GET(request: NextRequest, props: RouteParams) {
     const { id } = await props.params;
-    return proxy(request, `/tugas-siswa/${id}`);
+    return proxy(request, `/tugas-siswa/${encodeURIComponent(id)}`);
 }
 
 export async function PUT(request: NextRequest, props: RouteParams) {
     const { id } = await props.params;
-    const body = await request.json();
-    return proxy(request, `/tugas-siswa/${id}`, {
+    let body;
+    try { body = await request.json(); } catch { return NextResponse.json({ ok: false, error: 'JSON tidak valid' }, { status: 400 }); }
+    return proxy(request, `/tugas-siswa/${encodeURIComponent(id)}`, {
         method: 'PUT',
         body: JSON.stringify(body),
     });
@@ -23,7 +24,7 @@ export async function PUT(request: NextRequest, props: RouteParams) {
 
 export async function DELETE(request: NextRequest, props: RouteParams) {
     const { id } = await props.params;
-    return proxy(request, `/tugas-siswa/${id}`, {
+    return proxy(request, `/tugas-siswa/${encodeURIComponent(id)}`, {
         method: 'DELETE',
     });
 }

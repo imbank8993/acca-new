@@ -9,7 +9,8 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-    const body = await request.json();
+    let body;
+    try { body = await request.json(); } catch { return NextResponse.json({ ok: false, error: 'JSON tidak valid' }, { status: 400 }); }
     return proxy(request, '/tugas-siswa/action', {
         method: 'POST',
         body: JSON.stringify(body),

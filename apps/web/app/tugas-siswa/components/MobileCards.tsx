@@ -108,7 +108,7 @@ export default function MobileCards({
                             <h3 className="mc__listTitle">
                                 {tugas.judul_tugas}
                             </h3>
-                            <div className="mc__listAction" onClick={(e) => e.stopPropagation()}>
+                            {(isSiswa || isPengurusKelas) && <div className="mc__listAction" onClick={(e) => e.stopPropagation()}>
                                 <button
                                     className={`mc__btnCheck ${sudahDicentang ? 'is-done' : ''}`}
                                     onClick={() => onToggleChecklist && onToggleChecklist(tugas.id, sudahDicentang)}
@@ -116,7 +116,7 @@ export default function MobileCards({
                                     <i className={`bi ${sudahDicentang ? 'bi-check-circle-fill' : 'bi-circle'}`}></i>
                                     <span>{sudahDicentang ? 'Selesai' : 'Tandai'}</span>
                                 </button>
-                            </div>
+                            </div>}
                         </div>
 
                         {/* Baris Bawah: Mapel di Kiri (teks kecil) & Tanggal di Kanan (teks kecil) */}

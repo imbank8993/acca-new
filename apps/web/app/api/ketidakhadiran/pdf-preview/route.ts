@@ -1,3 +1,4 @@
+import { fetchLetterArchive, letterActor, mayManageLetter } from '@/lib/ketidakhadiran-security';
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import QRCode from 'qrcode';
@@ -34,6 +35,13 @@ export async function GET(request: NextRequest) {
       return new NextResponse('Dokumen tidak ditemukan', { status: 404 });
     }
 
+    // QR verification remains public; sensitive document contents require a live staff session.
+    const medical = ['REKAPAN_SAKIT', 'REKAM_MEDIK', 'REKOMENDASI_KONTROL', 'UKS', 'SAKIT'].includes(letter.jenis_izin) || letter.nomor_surat.includes('/UKS/');
+    if (medical || letter.jenis_izin.startsWith('REKAPAN_')) {
+      const actor = await letterActor(request);
+      if (!actor) return new NextResponse('Login diperlukan untuk membuka isi surat', { status: 401 });
+      if (!mayManageLetter(actor, letter.jenis_izin, letter.nomor_surat)) return new NextResponse('Akses ditolak', { status: 403 });
+    }
     const safeNomor = (letter.nomor_surat || 'surat-izin')
       .replace(/[\\/:*?"<>|]+/g, '-')
       .replace(/\s+/g, ' ')
@@ -42,30 +50,12 @@ export async function GET(request: NextRequest) {
     // 1. Jika ada file fisik (arsip lawas / storage eksternal), proxy file tersebut
     if (letter.file_url) {
       try {
-        const response = await fetch(letter.file_url);
-        if (response.ok) {
-          const buffer = await response.arrayBuffer();
-          let contentType = 'application/pdf';
-          const lower = letter.file_url.toLowerCase();
-          if (lower.endsWith('.html') || lower.endsWith('.htm')) {
-            contentType = 'text/html';
-          }
-          if (contentType === 'application/pdf' && isPdfRequested) {
-            return new NextResponse(buffer, {
-              headers: {
-                'Content-Type': 'application/pdf',
-                'Content-Disposition': `attachment; filename="${safeNomor}.pdf"`,
-                'Cache-Control': 'no-cache, no-store, must-revalidate',
-              },
-            });
-          }
-          return new NextResponse(buffer, {
-            headers: {
-              'Content-Type': contentType,
-              'Content-Disposition': 'inline',
-            },
-          });
-        }
+        const buffer = await fetchLetterArchive(letter.file_url);
+        if (buffer) return new NextResponse(Buffer.from(buffer), { headers: {
+          'Content-Type': 'application/pdf',
+          'Content-Disposition': isPdfRequested ? `attachment; filename="${safeNomor}.pdf"` : 'inline',
+          'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff',
+        } });
       } catch (err) {
         console.warn('[pdf-preview] Gagal fetch file_url, beralih ke dynamic render:', err);
       }
@@ -91,7 +81,10 @@ export async function GET(request: NextRequest) {
       console.error('[pdf-preview] QR Code generation error:', qrErr);
     }
 
-    let html = '';
+    const snapshot = await prisma.system_config.findUnique({ where: { key: `acca-snapshot-${letter.id}` } });
+    let html = snapshot?.value || '';
+    if (html && (!autoPrint || isPdfRequested)) html = html.replace(/<script>[\s\S]*?<\/script>/gi, '');
+    if (!html) {
     const isRekap = letter.jenis_izin === 'REKAPAN_IZIN' || letter.jenis_izin === 'REKAPAN_SAKIT';
     const isCollective = (letter.siswa_nama || '').toLowerCase().includes('kolektif');
 
@@ -159,20 +152,6 @@ export async function GET(request: NextRequest) {
         } catch {}
       }
 
-      if (rows.length === 0 && letter.tgl_mulai) {
-        const dateStr = String(letter.tgl_mulai).split('T')[0];
-        const related = await prisma.ketidakhadiran.findMany({
-          where: {
-            tgl_mulai: {
-              gte: new Date(`${dateStr}T00:00:00.000Z`),
-              lte: new Date(`${dateStr}T23:59:59.999Z`),
-            },
-            aktif: true,
-          },
-          select: { nama: true, nisn: true, kelas: true, keterangan: true },
-        });
-        if (related.length > 0) rows = related;
-      }
 
       if (rows.length === 0) {
         rows = [{
@@ -226,6 +205,7 @@ export async function GET(request: NextRequest) {
       });
     }
 
+    }
     if (isPdfRequested) {
       try {
         const browser = await launchPuppeteerBrowser();
@@ -258,6 +238,9 @@ export async function GET(request: NextRequest) {
         return new NextResponse(html, {
           headers: {
             'Content-Type': 'text/html; charset=utf-8',
+            'Cache-Control': 'no-store',
+            'Content-Security-Policy': "default-src 'none'; img-src https: data: 'self'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'self'",
+            'X-Content-Type-Options': 'nosniff',
             'Content-Disposition': 'inline',
           },
         });
@@ -267,8 +250,10 @@ export async function GET(request: NextRequest) {
     return new NextResponse(html, {
       headers: {
         'Content-Type': 'text/html; charset=utf-8',
+            'Cache-Control': 'no-store',
+            'Content-Security-Policy': "default-src 'none'; img-src https: data: 'self'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'self'",
+            'X-Content-Type-Options': 'nosniff',
         'Content-Disposition': 'inline',
-        'Cache-Control': 'public, max-age=60, s-maxage=300',
       },
     });
   } catch (e: any) {

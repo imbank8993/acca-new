@@ -30,7 +30,8 @@ export async function getRekapLetterData(
     where: {
       jenis,
       aktif: true,
-      tgl_mulai: { gte: startDate, lte: endDate },
+      tgl_mulai: { lte: endDate },
+      tgl_selesai: { gte: startDate },
     },
     select: {
       nisn: true,

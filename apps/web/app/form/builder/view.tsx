@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useCallback, Suspense } from 'react';
+import { createPortal } from 'react-dom';
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { useRouter, useSearchParams } from 'next/navigation';
 import Swal from 'sweetalert2';
@@ -86,7 +87,7 @@ function BuilderContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user } = useDashboardUser();
-  const canManage = user?.roles?.some((r: string) => ['ADMIN', 'ADMINISTRATOR', 'OP_FORM'].includes(r.toUpperCase())) || false;
+  const canManage = user?.roles?.some((r: string) => ['ADMIN', 'ADMINISTRATOR', 'OP_FORM', 'PENGURUS_KELAS'].includes(r.toUpperCase())) || false;
   const formId = searchParams.get('id');
 
   const [title, setTitle] = useState('');
@@ -97,8 +98,19 @@ function BuilderContent() {
 
   const [loading, setLoading] = useState(!!formId);
   const [saving, setSaving] = useState(false);
+  const savingRef = React.useRef(false);
+  const [version, setVersion] = useState<string | null>(null);
+  const loadVersion = React.useRef(0);
   const [previewMode, setPreviewMode] = useState(false);
   const [showMobilePalette, setShowMobilePalette] = useState(false);
+  React.useEffect(() => {
+    if (!showMobilePalette) return;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const close = (event: KeyboardEvent) => { if (event.key === 'Escape') setShowMobilePalette(false); };
+    window.addEventListener('keydown', close);
+    return () => { document.body.style.overflow = previous; window.removeEventListener('keydown', close); };
+  }, [showMobilePalette]);
 
   // Preview form state
   const [previewData, setPreviewData] = useState<Record<string, any>>({});
@@ -110,10 +122,15 @@ function BuilderContent() {
   // ── Load existing form ──
   React.useEffect(() => {
     if (!formId) return;
-    fetch(`/api/forms/${formId}`)
+    const request = ++loadVersion.current;
+    setLoading(true);
+    fetch(`/api/forms/${encodeURIComponent(formId)}/manage`)
       .then((r) => r.json())
       .then((data) => {
-        if (data.form && !canManage && data.form.created_by !== user?.id) {
+        if (request !== loadVersion.current) return;
+        if (!data.can_manage || !data.form) throw new Error('Akses ditolak');
+        setVersion(data.form.updated_at ?? null);
+        if (!data.can_manage) {
             Swal.fire('Ditolak', 'Anda tidak memiliki akses ke formulir ini.', 'error');
             router.push('/form');
             return;
@@ -128,7 +145,7 @@ function BuilderContent() {
         Swal.fire('Error', 'Form tidak ditemukan', 'error');
         router.push('/form');
       })
-      .finally(() => setLoading(false));
+      .finally(() => { if (request === loadVersion.current) setLoading(false); });
   }, [formId]);
 
   // ── Add field (Click-to-Add or Drag-Drop) ──
@@ -212,6 +229,7 @@ function BuilderContent() {
 
   // ── Save form ──
   const handleSave = async () => {
+    if (savingRef.current) return;
     if (!title.trim()) {
       Swal.fire('Peringatan', 'Judul form harus diisi', 'warning');
       return;
@@ -221,6 +239,7 @@ function BuilderContent() {
       return;
     }
 
+    savingRef.current = true;
     setSaving(true);
     const schema: FormSchema = { display: 'form', description, fields };
 
@@ -230,7 +249,7 @@ function BuilderContent() {
       const res = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title, is_public: isPublic, schema }),
+        body: JSON.stringify({ title, is_public: isPublic, schema, expected_updated_at: version }),
       });
 
       if (res.ok) {
@@ -249,6 +268,7 @@ function BuilderContent() {
     } catch {
       Swal.fire('Gagal', 'Terjadi kesalahan server', 'error');
     } finally {
+      savingRef.current = false;
       setSaving(false);
     }
   };
@@ -588,8 +608,8 @@ function BuilderContent() {
               </div>
 
               {/* Mobile Palette Overlay */}
-              {showMobilePalette && (
-                <div className="mobile-only-overlay fixed inset-0 z-[9999]" style={{ backgroundColor: 'rgba(15, 23, 42, 0.5)', backdropFilter: 'blur(2px)' }}>
+              {showMobilePalette && createPortal(
+                <div className="mobile-only-overlay fixed inset-0 z-[9999]" onClick={event => { if (event.target === event.currentTarget) setShowMobilePalette(false); }} style={{ backgroundColor: 'rgba(15, 23, 42, 0.5)', backdropFilter: 'blur(2px)', overscrollBehavior: 'contain' }}>
                   <div
                     className="mobile-palette-sheet"
                     style={{
@@ -631,12 +651,12 @@ function BuilderContent() {
                       </div>
                     </div>
                     {/* Palette Content */}
-                    <div style={{ overflowY: 'auto', flex: 1, padding: '0 12px 16px' }}>
+                    <div style={{ overflowY: 'auto', flex: 1, padding: '0 12px calc(16px + env(safe-area-inset-bottom, 0px))' }}>
                       <FieldPalette onAddField={(type) => { handleAddField(type); setShowMobilePalette(false); }} />
                     </div>
                   </div>
                 </div>
-              )}
+              , document.body)}
 
               {/* Center: Canvas */}
               <FormCanvas
@@ -728,6 +748,9 @@ function BuilderContent() {
         .desktop-only-block { display: block; }
         .mobile-only-block { display: none; }
         .mobile-only-overlay { display: none; }
+        @supports (height: 100dvh) {
+          .mobile-palette-sheet { max-height: 75dvh !important; }
+        }
         .desktop-flex-row { flex-direction: row; }
 
         @media (max-width: 639px) {

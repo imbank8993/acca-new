@@ -9,6 +9,7 @@ import { Spinner } from '@/components/ui/Spinner';
 import { Button } from '@/components/ui/Button';
 import { ActionButton, ActionGroup } from '@/components/ui/ActionButtons';
 import './form.css';
+import { useRef } from 'react';
 
 export default function FormDashboard() {
     const { user } = useDashboardUser();
@@ -19,6 +20,7 @@ export default function FormDashboard() {
     // canManage determines if they can use the builder and see management actions
     const canManage = isAdmin || isOpForm || isPengurusKelas;
 
+    const fetchVersion = useRef(0);
     const [forms, setForms] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
@@ -30,12 +32,19 @@ export default function FormDashboard() {
     }, []);
 
     const fetchForms = async () => {
+        const version = ++fetchVersion.current;
         try {
-            const res = await fetch('/api/forms');
-            const data = await res.json();
-            if (res.ok) {
-                setForms(data.forms || []);
+            const rows: any[] = [];
+            for (let page = 1; ; page++) {
+                const res = await fetch(`/api/forms?page=${page}&limit=500`);
+                const data = await res.json();
+                if (version !== fetchVersion.current) return;
+                if (!res.ok) throw new Error(data.error || 'Gagal memuat form');
+                rows.push(...(data.forms || []));
+                if (!data.has_more) break;
+                if (rows.length >= 10000) throw new Error('Daftar terlalu besar. Gunakan API berhalaman untuk pengelolaan lebih lanjut.');
             }
+            setForms(rows);
         } catch (error) {
             console.error('Error fetching forms:', error);
         } finally {
@@ -118,13 +127,15 @@ export default function FormDashboard() {
             const res = await fetch(`/api/forms/${id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
+                body: JSON.stringify({ ...payload, expected_updated_at: forms.find(f => f.id === id)?.updated_at ?? null })
             });
 
             if (!res.ok) {
                 const data = await res.json().catch(() => ({}));
                 throw new Error(data.error || 'Perubahan status gagal disimpan.');
             }
+            const saved = await res.json();
+            if (saved.form) setForms(prev => prev.map(f => f.id === id ? { ...f, ...saved.form } : f));
         } catch (err: any) {
             console.error('Error saving form status:', err);
             await fetchForms();
@@ -216,8 +227,8 @@ export default function FormDashboard() {
         const isAkademik = item.is_public === true || item.schema?.is_public === true;
         const isAccessible = isAkademik || item.schema?.is_link_public === true;
         const isActive = item.schema?.is_active !== false; // Default true if undefined
-        // Form publik tidak pernah bisa dibatasi sekali isi (tidak ada identitas pengisi).
-        const allowMultiple = isAccessible || item.schema?.allow_multiple_responses === true;
+        // Sekali isi memerlukan akun; form anonim menggunakan kebijakan banyak isian.
+        const allowMultiple = item.schema?.allow_multiple_responses ?? isAccessible;
         return { isAkademik, isAccessible, isActive, allowMultiple };
     };
 
@@ -366,9 +377,9 @@ export default function FormDashboard() {
                             on={allowMultiple}
                             onColor="#0ea5e9"
                             offColor="#64748b"
-                            disabled={!canManage || !!toggleLoading[item.id + '_multi'] || isAccessible}
+                            disabled={!canManage || !!toggleLoading[item.id + '_multi']}
                             loading={!!toggleLoading[item.id + '_multi']}
-                            disabledNote={isAccessible ? "Formulir publik tidak mewajibkan login, sehingga jumlah isian tidak bisa dibatasi per orang. Matikan 'Akses via Link' agar bisa dikunci sekali isi per akun." : undefined}
+                            disabledNote={undefined}
                             onClick={() => handleToggleMultiple(item, allowMultiple)}
                         />
                     </div>

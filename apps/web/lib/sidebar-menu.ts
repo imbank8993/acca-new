@@ -35,7 +35,7 @@ export const MENU_GROUPS: MenuGroupDef[] = [
     key: 'beranda',
     label: 'Beranda',
     icon: 'fa-house',
-    pages: ['dashboard', 'informasi', 'dokumen'],
+    pages: ['dashboard', 'jadwal', 'informasi', 'agenda-madrasah', 'notulensi-rapat', 'dokumen'],
   },
   {
     key: 'akademik',
@@ -45,7 +45,7 @@ export const MENU_GROUPS: MenuGroupDef[] = [
       'jurnal', 'jurnal-banding',
       'absensi', 'nilai',
       'piket', 'jadwal',
-      'agenda-madrasah', 'izin-guru', 'lckh', 'sanggar-kurikulum'
+      'agenda-madrasah', 'notulensi-rapat', 'izin-guru', 'lckh', 'sanggar-kurikulum'
     ],
   },
   {
@@ -116,6 +116,7 @@ export const PAGE_LABELS: Record<string, string> = {
   'piket': 'Laporan Piket',
   'jadwal': 'Jadwal',
   'agenda-madrasah': 'Agenda Madrasah',
+  'notulensi-rapat': 'Notulensi Rapat',
   'izin-guru': 'Izin Guru',
   'lckh': 'LCKH',
   'lckh-approval': 'LCKH Approval',

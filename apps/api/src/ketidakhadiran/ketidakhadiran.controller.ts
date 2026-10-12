@@ -10,6 +10,8 @@ import {
   Query,
   Req,
   UseGuards,
+  ParseUUIDPipe,
+  BadRequestException,
 } from '@nestjs/common';
 import { KetidakhadiranService } from './ketidakhadiran.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -61,6 +63,11 @@ export class KetidakhadiranController {
     return { nip, username, roles, isAdmin, authId, id: reqUser?.id, nama_lengkap, nama };
   }
 
+  private validId(id: unknown): string {
+    if (typeof id !== 'string' || !/^[a-f0-9]{8}-[a-f0-9]{4}-[1-8][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i.test(id)) throw new BadRequestException('ID data tidak valid');
+    return id;
+  }
+
   /**
    * NIP yang boleh dilihat pemanggil.
    *
@@ -74,7 +81,7 @@ export class KetidakhadiranController {
       apiUser.isAdmin ||
       apiUser.roles.includes('OP_IZIN') ||
       apiUser.roles.includes('OP_UKS');
-    return boleh && queryNip ? queryNip : (apiUser.nip || apiUser.username || queryNip || '');
+    return boleh && queryNip ? queryNip : (apiUser.nip || apiUser.username || '');
   }
 
   // --- LOG ROUTES ---
@@ -121,20 +128,20 @@ export class KetidakhadiranController {
   @Get('absensi')
   @UseGuards(PegawaiGuard)
   @RequiresPage(...PAGE_KELOLA, 'absensi')
-  async getAbsensi(@Query() query: any) {
+  async getAbsensi(@Req() req: any, @Query() query: any) {
     const { kelas, tanggal, jam_ke } = query;
     return this.ketidakhadiranService.getAbsensi(
       kelas,
       tanggal,
-      jam_ke ? parseInt(jam_ke) : undefined,
+      jam_ke ? Number(jam_ke) : undefined, this.getApiUser(req.user),
     );
   }
 
   @Get('rekap')
   @UseGuards(PegawaiGuard)
   @RequiresPage(...PAGE_KELOLA)
-  async getRekap(@Query() query: any) {
-    return this.ketidakhadiranService.getRekap(query);
+  async getRekap(@Req() req: any, @Query() query: any) {
+    return this.ketidakhadiranService.getRekap(query, this.getApiUser(req.user));
   }
 
   /* --- REKAM MEDIS SISWA (UKS) ---
@@ -144,8 +151,8 @@ export class KetidakhadiranController {
   @Get('rekam-medis-siswa')
   @UseGuards(PegawaiGuard)
   @RequiresPage('rekam-medis')
-  async getRekamMedisSiswa(@Query() query: any) {
-    return this.ketidakhadiranService.getRekamMedisSiswa(query);
+  async getRekamMedisSiswa(@Req() req: any, @Query() query: any) {
+    return this.ketidakhadiranService.getRekamMedisSiswa(query, this.getApiUser(req.user));
   }
 
   @Post('rekam-medis-siswa')
@@ -161,7 +168,7 @@ export class KetidakhadiranController {
       return this.ketidakhadiranService.savePresets(body.presets || body, apiUser);
     }
     if (action === 'sync_ketidakhadiran' || body?.action === 'sync_ketidakhadiran') {
-      return this.ketidakhadiranService.syncKetidakhadiran(body.id, body.mappedStatus, apiUser);
+      return this.ketidakhadiranService.syncKetidakhadiran(this.validId(body.id), body.mappedStatus, apiUser);
     }
     return this.ketidakhadiranService.createRekamMedisSiswa(body, apiUser);
   }
@@ -171,11 +178,11 @@ export class KetidakhadiranController {
   @RequiresPage('rekam-medis')
   async updateRekamMedisSiswa(
     @Req() req: any,
-    @Param('id') id: string,
+    @Param('id', new ParseUUIDPipe()) id: string,
     @Body() body: any,
   ) {
     const apiUser = this.getApiUser(req.user);
-    return this.ketidakhadiranService.updateRekamMedisSiswa(id, body, apiUser);
+    return this.ketidakhadiranService.updateRekamMedisSiswa(this.validId(id), body, apiUser);
   }
 
   @Put('rekam-medis-siswa')
@@ -188,15 +195,15 @@ export class KetidakhadiranController {
   ) {
     const apiUser = this.getApiUser(req.user);
     const id = body?.id || queryId;
-    return this.ketidakhadiranService.updateRekamMedisSiswa(id, body, apiUser);
+    return this.ketidakhadiranService.updateRekamMedisSiswa(this.validId(id), body, apiUser);
   }
 
   @Delete('rekam-medis-siswa/:id')
   @UseGuards(PegawaiGuard)
   @RequiresPage('rekam-medis')
-  async deleteRekamMedisSiswa(@Req() req: any, @Param('id') id: string) {
+  async deleteRekamMedisSiswa(@Req() req: any, @Param('id', new ParseUUIDPipe()) id: string) {
     const apiUser = this.getApiUser(req.user);
-    return this.ketidakhadiranService.deleteRekamMedisSiswa(id, apiUser);
+    return this.ketidakhadiranService.deleteRekamMedisSiswa(this.validId(id), apiUser);
   }
 
   @Delete('rekam-medis-siswa')
@@ -204,7 +211,7 @@ export class KetidakhadiranController {
   @RequiresPage('rekam-medis')
   async deleteRekamMedisSiswaByQuery(@Req() req: any, @Query('id') id: string) {
     const apiUser = this.getApiUser(req.user);
-    return this.ketidakhadiranService.deleteRekamMedisSiswa(id, apiUser);
+    return this.ketidakhadiranService.deleteRekamMedisSiswa(this.validId(id), apiUser);
   }
 
   // --- ACCA LETTER ROUTES (harus sebelum wildcard :id) ---
@@ -216,8 +223,8 @@ export class KetidakhadiranController {
   @Get('acca-letter')
   @UseGuards(PegawaiGuard)
   @RequiresPage(...PAGE_DAFTAR_SURAT)
-  async getAccaLetters(@Query() query: any) {
-    return this.ketidakhadiranService.getAccaLetters(query);
+  async getAccaLetters(@Req() req: any, @Query() query: any) {
+    return this.ketidakhadiranService.getAccaLetters(query, this.getApiUser(req.user));
   }
 
   @Post('acca-letter')
@@ -225,13 +232,13 @@ export class KetidakhadiranController {
   @RequiresPage(...PAGE_KELOLA)
   async createAccaLetter(@Req() req: any, @Body() body: any) {
     const origin = req.headers.origin || 'https://acca.icgowa.sch.id';
-    return this.ketidakhadiranService.createAccaLetter(body, origin);
+    return this.ketidakhadiranService.createAccaLetter(body, origin, this.getApiUser(req.user));
   }
 
   @Delete('acca-letter/:id')
   @UseGuards(PegawaiGuard)
   @RequiresPage(...PAGE_KELOLA)
-  async deleteAccaLetter(@Req() req: any, @Param('id') id: string) {
+  async deleteAccaLetter(@Req() req: any, @Param('id', new ParseUUIDPipe()) id: string) {
     const apiUser = this.getApiUser(req.user);
     return this.ketidakhadiranService.deleteAccaLetter(id, apiUser);
   }
@@ -239,8 +246,8 @@ export class KetidakhadiranController {
   @Post('save-letter')
   @UseGuards(PegawaiGuard)
   @RequiresPage(...PAGE_KELOLA)
-  async saveAccaLetter(@Body() body: any) {
-    return this.ketidakhadiranService.saveAccaLetter(body);
+  async saveAccaLetter(@Req() req: any, @Body() body: any) {
+    return this.ketidakhadiranService.saveAccaLetter({ ...body, id: this.validId(body.id) }, this.getApiUser(req.user));
   }
 
   // --- STANDARD CRUD ---
@@ -257,8 +264,8 @@ export class KetidakhadiranController {
       to: query.to,
       q: query.q,
       months: query.months,
-      page: query.page ? parseInt(query.page) : undefined,
-      limit: query.limit ? parseInt(query.limit) : undefined,
+      page: query.page ? Number(query.page) : undefined,
+      limit: query.limit ? Number(query.limit) : undefined,
       asramaQueue: query.asramaQueue === '1' || query.asramaQueue === 'true',
     };
     const result = await this.ketidakhadiranService.findAll(apiUser, filter);
@@ -276,15 +283,15 @@ export class KetidakhadiranController {
   @Get(':id')
   @UseGuards(PegawaiGuard)
   @RequiresPage(...PAGE_KELOLA)
-  async getOne(@Param('id') id: string) {
-    const data = await this.ketidakhadiranService.findById(id);
+  async getOne(@Req() req: any, @Param('id', new ParseUUIDPipe()) id: string) {
+    const data = await this.ketidakhadiranService.findById(id, this.getApiUser(req.user));
     return { ok: true, data };
   }
 
   @Patch(':id')
   @UseGuards(PegawaiGuard)
   @RequiresPage(...PAGE_KELOLA)
-  async update(@Req() req: any, @Param('id') id: string, @Body() body: any) {
+  async update(@Req() req: any, @Param('id', new ParseUUIDPipe()) id: string, @Body() body: any) {
     const apiUser = this.getApiUser(req.user);
     return this.ketidakhadiranService.update(id, body, apiUser);
   }
@@ -294,7 +301,7 @@ export class KetidakhadiranController {
   @RequiresPage(...PAGE_KELOLA)
   async remove(
     @Req() req: any,
-    @Param('id') id: string,
+    @Param('id', new ParseUUIDPipe()) id: string,
     @Query('scope') scope?: string,
   ) {
     const apiUser = this.getApiUser(req.user);

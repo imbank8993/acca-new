@@ -28,13 +28,13 @@ export class PrestasiController {
   constructor(private readonly prestasiService: PrestasiService) {}
 
   @Get()
-  async findAll(@Query() query: any) {
-    return this.prestasiService.findAll(query);
+  async findAll(@Query() query: any, @Req() req: any) {
+    return this.prestasiService.findAll(query, req?.user);
   }
 
   @Get(':id')
-  async findOne(@Param('id') id: string) {
-    return this.prestasiService.findOne(id);
+  async findOne(@Param('id') id: string, @Req() req: any) {
+    return this.prestasiService.findOne(id, req?.user);
   }
 
   @Post()
@@ -48,7 +48,7 @@ export class PrestasiController {
   }
 
   @Delete(':id')
-  async delete(@Param('id') id: string) {
-    return this.prestasiService.delete(id);
+  async delete(@Param('id') id: string, @Req() req: any) {
+    return this.prestasiService.delete(id, req?.user);
   }
 }

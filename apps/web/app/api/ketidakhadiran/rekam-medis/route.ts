@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
     const token = extractRequestToken(req);
     const bodyInput = await req.json().catch(() => ({}));
-    const { status, body } = await nestFetchAsUser('/ketidakhadiran/rekam-medis-siswa', token, {
+    const { status, body } = await nestFetchAsUser(`/ketidakhadiran/rekam-medis-siswa${req.nextUrl.search}`, token, {
         method: 'POST',
         body: JSON.stringify(bodyInput)
     });

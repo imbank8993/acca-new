@@ -4,6 +4,8 @@ import crypto from 'crypto';
 import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { Upload } from '@aws-sdk/lib-storage';
 import { registerUpload, unregisterUpload } from '@/lib/storage/file-registry';
+import { validatePrestasiUpload } from '@/lib/prestasi-upload';
+import { getMimeTypeFromFileName } from '@/lib/storage/mime';
 
 import { nestFetch } from '@/lib/nest-api';
 import { extractRequestToken } from '@/lib/app-jwt';
@@ -333,7 +335,7 @@ async function uploadToCloudflareR2(
                 Bucket: config.cloudflare_bucket_name,
                 Key: key,
                 Body: buffer,
-                ContentType: file.type || 'application/octet-stream',
+                ContentType: folder === 'tugas-siswa' ? getMimeTypeFromFileName(file.name) : file.type || 'application/octet-stream',
             },
             queueSize: 4,
             partSize: 5 * 1024 * 1024,
@@ -516,6 +518,25 @@ export async function POST(req: NextRequest) {
         const folder = rawFolder.replace(/\/+/g, '/').replace(/^\/|\/$/g, '') || 'general';
         formData.set('folder', folder);
 
+        if (folder === 'tugas-siswa') {
+            const permission = await nestFetchAsUser('/tugas-siswa/upload-access', token);
+            if (permission.status !== 200 || !permission.body?.ok) return NextResponse.json({ ok: false, error: 'Anda tidak memiliki izin mengunggah lampiran tugas' }, { status: permission.status === 401 ? 401 : 403 });
+            if (file.size > 10 * 1024 * 1024 || !new Set(['pdf','doc','docx','xls','xlsx','ppt','pptx','txt','csv','jpg','jpeg','png','webp','zip']).has(ext)) {
+                return NextResponse.json({ ok: false, error: 'Format lampiran tidak didukung atau ukuran melebihi 10 MB' }, { status: 400 });
+            }
+        }
+
+        if (folder === 'prestasi' && !await validatePrestasiUpload(file)) {
+            return NextResponse.json({ ok: false, error: 'Sertifikat harus berupa PDF, JPG, atau PNG yang valid, maksimal 10 MB' }, { status: 400 });
+        }
+
+        if (folder === 'laporan_keuangan') {
+            const signature = Buffer.from(await file.slice(0, 5).arrayBuffer()).toString('ascii');
+            if (ext !== 'pdf' || signature !== '%PDF-') {
+                return NextResponse.json({ ok: false, error: 'Laporan keuangan harus berupa berkas PDF yang valid' }, { status: 400 });
+            }
+        }
+
         // Get storage config
         const config = await getFileStorageConfig();
 
@@ -572,7 +593,8 @@ export async function POST(req: NextRequest) {
                 }, { status: 400 });
         }
 
-        // Catat upload sukses ke registry untuk kalkulasi kapasitas penyimpanan
+        const requiresRegistry = folder === 'laporan_keuangan' || folder === 'bukti_keuangan' || folder === 'prestasi' || folder === 'tugas-siswa';
+        // Unggahan yang memerlukan verifikasi pemilik wajib tercatat.
         try {
             const uploadedFile = formData.get('file');
             const json = await response.clone().json();
@@ -585,10 +607,15 @@ export async function POST(req: NextRequest) {
                     folder: (formData.get('folder') as string) || 'general',
                     size_bytes: json.fileSize || uploadedFile.size,
                     storage_type: config.storage_type,
-                });
+                }, requiresRegistry);
+            } else if (requiresRegistry && response.ok) {
+                throw new Error('Respons unggahan tidak memuat URL berkas');
             }
         } catch (regErr) {
             console.error('[Upload] Gagal mencatat ke registry:', regErr);
+            if (requiresRegistry) {
+                return NextResponse.json({ ok: false, error: 'Berkas belum dapat digunakan karena pencatatan kepemilikannya gagal. Silakan coba unggah kembali.' }, { status: 503 });
+            }
         }
 
         return response;

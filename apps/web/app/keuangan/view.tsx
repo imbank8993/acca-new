@@ -18,6 +18,7 @@ import KeuanganTabAntrean from './tabs/KeuanganTabAntrean';
 import KeuanganTabPencairan from './tabs/KeuanganTabPencairan';
 import KeuanganTabPagu from './tabs/KeuanganTabPagu';
 import KeuanganTabMonitoring from './tabs/KeuanganTabMonitoring';
+import { escapeFinanceHtml } from '@/lib/keuangan-security';
 
 export default function KeuanganPage({ user: propUser }: { user?: User }) {
     const [user, setUser] = useState<any>(propUser || null);
@@ -32,10 +33,10 @@ export default function KeuanganPage({ user: propUser }: { user?: User }) {
     const [myOfficerRoles, setMyOfficerRoles] = useState<string[]>([]);
     const [myDivisionIds, setMyDivisionIds] = useState<string[]>([]);
     const [uploading, setUploading] = useState(false);
-    const isAdmin = roles.includes('ADMIN');
+    const isAdmin = roles.some(role => ['ADMIN', 'ADMINISTRATOR'].includes(role));
     const isPureAdmin = isAdmin && myOfficerRoles.length === 0;
     const canSeeAllBudget = isPureAdmin || myOfficerRoles.includes('BENDAHARA') || myOfficerRoles.includes('KTU') || myOfficerRoles.includes('PPK');
-    const canManageBudget = isPureAdmin || myOfficerRoles.includes('BENDAHARA') || myOfficerRoles.includes('KTU');
+    const canManageBudget = myOfficerRoles.includes('BENDAHARA');
 
     // Format Rupiah
     const fmtRp = (v: any): string => {
@@ -195,7 +196,7 @@ export default function KeuanganPage({ user: propUser }: { user?: User }) {
                 setMyDivisionIds(json.data.divisionIds || []);
                 if (offRoles.includes('BENDAHARA')) setActiveTab('pencairan');
                 else if (offRoles.includes('KTU') || offRoles.includes('PPK') || offRoles.includes('KEPALA DIVISI')) setActiveTab('antrean');
-                else if (userRoles.includes('ADMIN')) setActiveTab('pengaturan');
+                else if (userRoles.some((role: string) => ['ADMIN', 'ADMINISTRATOR'].includes(role))) setActiveTab('pengaturan');
                 else setActiveTab('pengajuan');
             }
         } catch (e) { console.error(e); }
@@ -632,9 +633,9 @@ export default function KeuanganPage({ user: propUser }: { user?: User }) {
                 <div style="max-height: 50vh; overflow-y: auto; padding-right: 8px;">
                 ${req.budget_request_items.map((item: any, idx: number) => `
                     <div style="margin-bottom: 12px; background: var(--n-surface); padding: 10px; border-radius: 8px; border: 1px solid var(--n-border);">
-                        <label style="display: block; font-weight: 600; margin-bottom: 6px; color: var(--n-ink);">${item.item_name} <span style="color:var(--n-muted); font-size:0.8em">(${item.category})</span></label>
+                        <label style="display: block; font-weight: 600; margin-bottom: 6px; color: var(--n-ink);">${escapeFinanceHtml(item.item_name)} <span style="color:var(--n-muted); font-size:0.8em">(${escapeFinanceHtml(item.category)})</span></label>
                         <div style="font-size: 0.8rem; margin-bottom: 6px; color: #059669;">Pengajuan: Rp ${Number(item.total_price).toLocaleString('id-ID')}</div>
-                        <input type="number" id="disburse_item_${item.id}" class="swal2-input" style="width: 100%; box-sizing: border-box; margin: 0; font-size: 0.9rem;" value="${item.actual_price ?? item.total_price}" min="0" max="${item.total_price}" />
+                        <input type="number" id="disburse_item_${escapeFinanceHtml(item.id)}" class="swal2-input" style="width: 100%; box-sizing: border-box; margin: 0; font-size: 0.9rem;" value="${Math.max(0, Number(item.total_price) - Number(item.actual_price || 0))}" min="0" max="${Math.max(0, Number(item.total_price) - Number(item.actual_price || 0))}" />
                     </div>
                 `).join('')}
                 </div>
@@ -758,7 +759,7 @@ export default function KeuanganPage({ user: propUser }: { user?: User }) {
             html: `
                 <div style="text-align: left; font-size: 0.9rem;">
                     <label>File Laporan Kegiatan (PDF):</label><br/>
-                    <input type="file" id="swal-input-report" class="swal2-file" accept=".pdf,image/*">
+                    <input type="file" id="swal-input-report" class="swal2-file" accept="application/pdf,.pdf">
                 </div>
             `,
             focusConfirm: false,
@@ -866,7 +867,7 @@ export default function KeuanganPage({ user: propUser }: { user?: User }) {
     const hasPengajuan = true;
     const hasAntrean = !isPureAdmin;
     const hasPencairan = myOfficerRoles.includes('BENDAHARA');
-    const hasPagu = isOfficer;
+    const hasPagu = isOfficer || isPureAdmin;
     const hasMonitoring = isOfficer;
     const hasPengaturan = isAdmin;
 
@@ -987,6 +988,10 @@ export default function KeuanganPage({ user: propUser }: { user?: User }) {
                         mutationForm={mutationForm}
                         setMutationForm={setMutationForm}
                         savingMutation={savingMutation}
+                        budgets={budgets.filter(budget => String(budget.period) === selectedBudgetYear)}
+                        mutations={mutations.filter(mutation => String(mutation.period) === selectedBudgetYear)}
+                        selectedYear={selectedBudgetYear}
+                        onYearChange={year => { setSelectedBudgetYear(year); setBudgetForm((form: any) => ({ ...form, period: year })); }}
                     />
                 )}
                 {activeTab === 'monitoring' && (
@@ -1251,9 +1256,20 @@ export default function KeuanganPage({ user: propUser }: { user?: User }) {
                         </ModalDetailGrid>
 
                         <div style={{ marginTop: '16px', display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                            {(String(laporanRequest.pj_user_id) === String(user?.id) || myOfficerRoles.includes('BENDAHARA')) && ['Menunggu Laporan PJ', 'Menunggu Laporan', 'Proses Laporan'].includes(laporanRequest.status) && (
                             <Button type="button" variant="primary" size="sm" onClick={() => handleUploadReport(laporanRequest.id)} leftIcon={<i className="bi bi-upload" />}>
                                 Unggah File Laporan (PDF)
                             </Button>
+                            )}
+                            {laporanRequest.status === 'Proses Laporan' && (
+                                (laporanRequest.report_status === 'Menunggu KTU' && myOfficerRoles.includes('KTU')) ||
+                                (laporanRequest.report_status === 'Menunggu Divisi' && myOfficerRoles.includes('KEPALA DIVISI') && myDivisionIds.includes(laporanRequest.division_id)) ||
+                                (laporanRequest.report_status === 'Menunggu PPK' && myOfficerRoles.includes('PPK'))
+                            ) && (
+                                <Button type="button" variant="primary" size="sm" onClick={() => handleApproveReport(laporanRequest.id, laporanRequest.report_status === 'Menunggu PPK' ? 'Selesai' : laporanRequest.report_status === 'Menunggu Divisi' || isTuDivisionId(laporanRequest.division_id) ? 'Menunggu PPK' : 'Menunggu Divisi')}>
+                                    Verifikasi Laporan
+                                </Button>
+                            )}
                             {myOfficerRoles.includes('BENDAHARA') && (
                                 <>
                                     <Button type="button" variant="secondary" size="sm" onClick={() => handleVerifyReceipt(laporanRequest.id)} leftIcon={<i className="bi bi-check-lg" />}>

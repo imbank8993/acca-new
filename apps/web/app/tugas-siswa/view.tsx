@@ -55,6 +55,9 @@ export default function TugasSiswaPage({ user: propUser }: TugasSiswaPageProps) 
 
     // Data state
     const [data, setData] = useState<any[]>([]);
+    const dataVersion = useRef(0);
+    const statsVersion = useRef(0);
+    const pendingChecklist = useRef(new Set<number>());
     const [totalData, setTotalData] = useState(0);
     const [currentPage, setCurrentPage] = useState(1);
     const [limit, setLimit] = useState(10);
@@ -254,6 +257,7 @@ export default function TugasSiswaPage({ user: propUser }: TugasSiswaPageProps) 
     // Load data
     const fetchData = useCallback(async () => {
         if (!user) return;
+        const version = ++dataVersion.current;
         setLoading(true);
         try {
             const params = new URLSearchParams();
@@ -281,6 +285,7 @@ export default function TugasSiswaPage({ user: propUser }: TugasSiswaPageProps) 
             }
 
             const res = await fetch(`/api/tugas-siswa?${params.toString()}`);
+            if (version !== dataVersion.current) return;
             if (!res.ok) {
                 const errorText = await res.text();
                 console.error('API HTTP Error:', res.status, errorText);
@@ -290,6 +295,7 @@ export default function TugasSiswaPage({ user: propUser }: TugasSiswaPageProps) 
                 return;
             }
             const result = await res.json();
+            if (version !== dataVersion.current || pendingChecklist.current.size) return;
 
             if (result.ok) {
                 setData(result.data);
@@ -306,15 +312,17 @@ export default function TugasSiswaPage({ user: propUser }: TugasSiswaPageProps) 
                 Swal.fire('Error', result.error || 'Gagal memuat data', 'error');
             }
         } catch (err) {
+            if (version !== dataVersion.current) return;
             console.error('Fetch data error:', err);
             Swal.fire('Error', 'Gagal memuat data tugas', 'error');
         } finally {
-            setLoading(false);
+            if (version === dataVersion.current) setLoading(false);
         }
     }, [user, currentPage, limit, filters, tahunAjaranParam, isSiswa, isPengurusKelas, userKelas]);
 
     const fetchStats = useCallback(async () => {
         if (!user) return;
+        const version = ++statsVersion.current;
         try {
             const params = new URLSearchParams();
             params.append('userId', user.id.toString());
@@ -335,7 +343,7 @@ export default function TugasSiswaPage({ user: propUser }: TugasSiswaPageProps) 
 
             const res = await fetch(`/api/tugas-siswa/action?${params.toString()}`);
             const json = await res.json();
-            if (json.ok) setStats(json.stats);
+            if (version === statsVersion.current && json.ok) setStats(json.stats);
         } catch (err) {
             console.error('Stats fetch error:', err);
         }
@@ -373,6 +381,10 @@ export default function TugasSiswaPage({ user: propUser }: TugasSiswaPageProps) 
     // Handle checklist toggle
     const handleToggleChecklist = async (id: number, current: boolean) => {
         if (!user) return;
+        if (pendingChecklist.current.size) return;
+        pendingChecklist.current.add(id);
+        ++dataVersion.current;
+        ++statsVersion.current;
 
         // OPTIMISTIC UPDATE: tampilkan centang seketika, sinkron ke server di belakang.
         // Sebelumnya state menunggu getSession + POST + parse selesai → terasa delay.
@@ -399,6 +411,8 @@ export default function TugasSiswaPage({ user: propUser }: TugasSiswaPageProps) 
             const result = await res.json();
 
             if (result.ok) {
+                pendingChecklist.current.delete(id);
+                fetchData();
                 fetchStats();
             } else {
                 revert();
@@ -408,6 +422,8 @@ export default function TugasSiswaPage({ user: propUser }: TugasSiswaPageProps) 
             console.error('Checklist error:', err);
             revert();
             Swal.fire('Gagal', 'Gagal update checklist', 'error');
+        } finally {
+            pendingChecklist.current.delete(id);
         }
     };
 
@@ -478,7 +494,7 @@ export default function TugasSiswaPage({ user: propUser }: TugasSiswaPageProps) 
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify(formData)
+                    body: JSON.stringify({ ...formData, expected_updated_at: editData.updated_at ?? null })
                 });
                 const result = await res.json();
 
@@ -527,7 +543,7 @@ export default function TugasSiswaPage({ user: propUser }: TugasSiswaPageProps) 
 
 
     // Check permissions
-    const isAdmin = user?.roles.includes('ADMIN');
+    const isAdmin = user?.roles.some(role => ['ADMIN', 'ADMINISTRATOR'].includes(role));
     const isGuru = user?.roles.includes('GURU');
     // ADMIN can do everything, GURU and PENGURUS_KELAS can create/edit
     const canCreate = isAdmin || isGuru || isPengurusKelas;
@@ -1002,7 +1018,7 @@ export default function TugasSiswaPage({ user: propUser }: TugasSiswaPageProps) 
                                 setShowDetail(false);
                                 setSelectedTugas(null);
                             }}
-                            onEdit={canEdit ? () => {
+                            onEdit={canEdit && (isAdmin || selectedTugas.created_by === String(user?.id) || (!selectedTugas.created_by && selectedTugas.created_by_nip === user?.nip)) ? () => {
                                 const t = selectedTugas;
                                 setShowDetail(false);
                                 setSelectedTugas(null);

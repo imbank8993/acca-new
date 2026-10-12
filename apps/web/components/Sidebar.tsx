@@ -60,6 +60,8 @@ const DEFAULT_PAGE_CONFIG: Record<string, PageConfig> = {
   'ekstrakurikuler': { id: 'ekstrakurikuler', label: 'Ekstrakurikuler', icon: 'bi-trophy', color: '#f59e0b' },
   'klinik': { id: 'klinik', label: 'Klinik Pembelajaran', icon: 'bi-plus-square', color: '#ef4444' },
   'observasi-kelas': { id: 'observasi-kelas', label: 'Observasi Kelas', icon: 'bi-clipboard-check', color: '#10b981' },
+  'agenda-madrasah': { id: 'agenda-madrasah', label: 'Agenda Madrasah', icon: 'bi-calendar-event', color: '#3083FF' },
+  'notulensi-rapat': { id: 'notulensi-rapat', label: 'Notulensi Rapat', icon: 'bi-journal-check', color: '#3083FF' },
 }
 
 // Collect every page id the user can reach from their pagesTree
@@ -162,6 +164,7 @@ const getMenuIcon = (page: string | null | undefined, title: string) => {
     if (pp.includes('reset-data')) return 'fa-trash'
     if (pp.includes('analisis-beban-kerja')) return 'fa-chart-column'
     if (pp.includes('agenda-madrasah')) return 'fa-calendar'
+    if (pp.includes('notulensi-rapat') || pp.includes('notulensi')) return 'fa-clipboard-list'
     if (pp.includes('monitoring')) return 'fa-desktop'
     if (pp.includes('kinerja-guru')) return 'fa-chart-line'
     if (pp.includes('e-supervisi')) return 'fa-clipboard-list'

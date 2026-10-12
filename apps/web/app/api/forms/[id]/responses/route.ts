@@ -14,7 +14,7 @@ export async function GET(
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { status, body } = await nestFetchAsUser(`/forms/${id}/responses`, token);
+    const { status, body } = await nestFetchAsUser(`/forms/${encodeURIComponent(id)}/responses${request.nextUrl.search}`, token);
     return NextResponse.json(body, { status });
 }
 
@@ -30,7 +30,7 @@ export async function DELETE(
 
     const search = request.nextUrl.search;
     const { status, body } = await nestFetchAsUser(
-        `/forms/${id}/responses${search}`,
+        `/forms/${encodeURIComponent(id)}/responses${search}`,
         token,
         { method: 'DELETE' }
     );

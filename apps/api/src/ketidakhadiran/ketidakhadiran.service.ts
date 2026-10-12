@@ -1,6 +1,7 @@
 import { Injectable, Logger, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
-import { randomUUID } from 'crypto';
+import { randomUUID, createHash } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
+import { absenceJp, boundedInt, canManageJenis, medicalStatus, validDate, validatePeriod, validateQuery, validateStatus, validateText } from './ketidakhadiran-validation';
 
 export interface KetidakhadiranFilter {
   kelas?: string;
@@ -67,6 +68,66 @@ export class KetidakhadiranService {
 
   constructor(private readonly prisma: PrismaService) {}
 
+  private inTransaction = false;
+
+  // The same lock is used by Next's letter renderer. It serializes numbering,
+  // group changes and medical synchronization without changing existing tables.
+  private async atomic<T>(work: (service: KetidakhadiranService) => Promise<T>, user: any, action: string, entityId?: string): Promise<T> {
+    return this.prisma.$transaction(async tx => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(424201)`;
+      const service = new KetidakhadiranService(tx as unknown as PrismaService);
+      service.inTransaction = true;
+      const result = await work(service);
+      await tx.audit_logs.create({ data: {
+        user_id: String(user?.authId || user?.id || ''), user_nip: user?.nip || null,
+        user_name: String(user?.nama_lengkap || user?.nama || '').slice(0, 100),
+        user_role: (user?.roles || []).join(',').slice(0, 100), action,
+        entity: action.includes('MEDICAL') ? 'rekam_medis_siswa' : action.includes('LETTER') ? 'acca_letters' : 'ketidakhadiran',
+        entity_id: entityId || (result as any)?.data?.id || null,
+        details: { outcome: (result as any)?.ok === false ? 'rejected' : 'success' },
+      } });
+      return result;
+    }, { timeout: 20000, maxWait: 10000 });
+  }
+
+  private isUks(user: any): boolean {
+    return !!user?.isAdmin || user?.roles?.some((r: string) => ['ADMIN', 'ADMINISTRATOR', 'OP_UKS'].includes(r)) === true;
+  }
+
+  private safeAbsence(row: any, user: any): any {
+    if (this.isUks(user)) return row;
+    const { rekam_medis_siswa, acca_letters, ...safe } = row;
+    if (row.jenis === 'SAKIT') {
+      Object.assign(safe, { keterangan: 'Sakit', tindakan: null, tindak_lanjut: null, file_url: null,
+        rekam_medis_id: null, rekom_kontrol_barcode: null, letter_barcode: null, letter_file_url: null });
+    }
+    return safe;
+  }
+
+  private async readScope(user: any): Promise<any> {
+    if (!user) throw new ForbiddenException('Sesi tidak dikenali');
+    const roles = user.roles || [];
+    if (user.isAdmin || roles.some((r: string) => ['ADMIN', 'ADMINISTRATOR', 'OP_IZIN', 'OP_UKS'].includes(r))) return {};
+    if (roles.includes('SISWA')) return { nisn: user.username || user.nip || '__none__' };
+    if (roles.some((r: string) => ['ORANG_TUA', 'ORANGTUA'].includes(r))) {
+      const links = await this.prisma.orangtua_siswa.findMany({ where: { user_id: BigInt(user.id) }, select: { nisn: true } });
+      return { nisn: { in: links.map(x => x.nisn) } };
+    }
+    if (!roles.some((r: string) => ['GURU', 'WALI_KELAS', 'GURU_ASUH'].includes(r))) throw new ForbiddenException('Akses ditolak');
+    const nip = user.nip || user.username;
+    if (!nip) throw new ForbiddenException('Identitas pegawai tidak tersedia');
+    const [asuh, wali, jadwal] = await Promise.all([
+      this.prisma.guru_asuh.findMany({ where: { nip, aktif: true }, select: { nisn_siswa: true } }),
+      this.prisma.wali_kelas.findMany({ where: { nip, aktif: true }, select: { nama_kelas: true } }),
+      this.prisma.jadwal_guru.findMany({ where: { nip, aktif: true }, select: { kelas: true } }),
+    ]);
+    return { OR: [{ nisn: { in: asuh.map(x => x.nisn_siswa) } }, { kelas: { in: [...wali.map(x => x.nama_kelas), ...jadwal.map(x => x.kelas)] } }] };
+  }
+
+  private async statusFor(followup: string): Promise<string> {
+    return medicalStatus(followup, (await this.getPresets()).data);
+  }
+
   private async getSchoolToday(): Promise<string> {
     const setting = await this.prisma.site_settings.findUnique({ where: { key: 'timezone' }, select: { value: true } });
     const zone = ['Asia/Jakarta', 'Asia/Makassar', 'Asia/Jayapura'].includes(setting?.value || '')
@@ -113,6 +174,8 @@ export class KetidakhadiranService {
   }
 
   async findAll(apiUser: any, filter: KetidakhadiranFilter) {
+    validateQuery(filter);
+    const scope = await this.readScope(apiUser);
     const { kelas, jenis, status, from, to, q, page, limit, asramaQueue } = filter;
 
     const where: any = {
@@ -138,8 +201,9 @@ export class KetidakhadiranService {
     if (from || to) {
       const fromStr = String(from || to).split('T')[0];
       const toStr = String(to || from).split('T')[0];
-      const fromDate = new Date(`${fromStr}T00:00:00.000Z`);
-      const toDate = new Date(`${toStr}T23:59:59.999Z`);
+      const fromDate = validDate(fromStr);
+      const toDate = validDate(toStr);
+      if (toDate < fromDate) throw new BadRequestException('Rentang tanggal tidak valid');
 
       where.tgl_mulai = { lte: toDate };
       where.tgl_selesai = { gte: fromDate };
@@ -167,16 +231,17 @@ export class KetidakhadiranService {
     }
 
 
+    where.AND = [scope];
     const isPaginated = !!(page || limit);
-    const take = limit ? Math.min(100, Math.max(1, limit)) : 20;
-    const skip = page ? (Math.max(1, page) - 1) * take : 0;
+    const take = boundedInt(limit, 20, 100);
+    const skip = (boundedInt(page, 1, 100000) - 1) * take;
 
     const [total, items] = await Promise.all([
       this.prisma.ketidakhadiran.count({ where }),
       this.prisma.ketidakhadiran.findMany({
         where,
         orderBy: { created_at: 'desc' },
-        ...(isPaginated ? { skip, take } : {}),
+        skip, take: isPaginated ? take : 5000,
         include: {
           rekam_medis_siswa: {
             select: {
@@ -306,7 +371,7 @@ export class KetidakhadiranService {
     });
 
     return {
-      data: enriched,
+      data: enriched.map(row => this.safeAbsence(row, apiUser)),
       total,
       ...(isPaginated
         ? {
@@ -321,11 +386,12 @@ export class KetidakhadiranService {
     };
   }
 
-  async findById(id: string) {
-    const item = await this.prisma.ketidakhadiran.findUnique({
-      where: { id },
+  async findById(id: string, apiUser: any) {
+    const scope = await this.readScope(apiUser);
+    const item = await this.prisma.ketidakhadiran.findFirst({
+      where: { id, AND: [scope] },
       include: {
-        rekam_medis_siswa: true,
+        rekam_medis_siswa: this.isUks(apiUser),
         acca_letters: true,
       },
     });
@@ -333,7 +399,7 @@ export class KetidakhadiranService {
       throw new NotFoundException(`Data ketidakhadiran dengan ID ${id} tidak ditemukan`);
     }
     return {
-      ...item,
+      ...this.safeAbsence(item, apiUser),
       file_size: item.file_size ? Number(item.file_size) : null,
       tgl_mulai: toDateString(item.tgl_mulai),
       tgl_selesai: toDateString(item.tgl_selesai),
@@ -342,12 +408,15 @@ export class KetidakhadiranService {
     };
   }
 
-  async createBulk(apiUser: any, payload: any) {
+  async createBulk(apiUser: any, payload: any): Promise<any> {
+    if (!this.inTransaction) return this.atomic(s => s.createBulk(apiUser, payload), apiUser, 'CREATE');
     const roles: string[] = Array.isArray(apiUser?.roles)
       ? apiUser.roles.map((r: string) => String(r).toUpperCase().replace(/\s+/g, '_'))
       : [];
     const isAdmin = apiUser?.isAdmin || roles.includes('ADMIN') || roles.includes('ADMINISTRATOR');
 
+    validateText(payload);
+    if ((payload.rows?.length || payload.nisList?.length || 0) > 500) throw new BadRequestException('Maksimal 500 siswa per permintaan');
     // 1. Dukungan Import Excel (payload.rows)
     if (Array.isArray(payload?.rows) && payload.rows.length > 0) {
       const rows = payload.rows;
@@ -391,6 +460,9 @@ export class KetidakhadiranService {
         }
 
         try {
+          validateText(r);
+          validatePeriod(r);
+          validateStatus(rJenis, r.status || (rJenis === 'IZIN' ? 'MADRASAH' : 'Ringan'));
           const [siswa, resolved] = await Promise.all([
             this.prisma.master_siswa.findFirst({
               where: { nisn: nisnStr },
@@ -399,6 +471,7 @@ export class KetidakhadiranService {
             this.resolveSiswaKelasReguler(nisnStr, r.kelas, regulerNames),
           ]);
 
+          if (!siswa) throw new BadRequestException('Siswa tidak ditemukan pada master');
           const tglMulai = r.tgl_mulai;
           const tglSelesai = r.tgl_selesai || tglMulai;
           const parsedStart = new Date(tglMulai);
@@ -455,9 +528,9 @@ export class KetidakhadiranService {
               waktu_mulai_real: wMulai,
               waktu_selesai_real: wSelesai,
               is_kontinu: Boolean(r.is_kontinu),
-              petugas_nama: r.petugas_nama || apiUser?.nama_lengkap || apiUser?.nama || 'Petugas',
-              petugas_nip: r.petugas_nip || apiUser?.nip || null,
-              petugas_role: r.petugas_role || apiUser?.roles?.[0] || 'OP_IZIN',
+              petugas_nama: apiUser?.nama_lengkap || apiUser?.nama || 'Petugas',
+              petugas_nip: apiUser?.nip || null,
+              petugas_role: rJenis === 'SAKIT' ? 'OP_UKS' : 'OP_IZIN',
               aktif: true,
             },
           });
@@ -515,11 +588,15 @@ export class KetidakhadiranService {
       }
     }
 
+    canManageJenis(apiUser, jenis);
+    validatePeriod(payload);
+    validateStatus(jenis, status);
+    if (!Array.isArray(nisList) || !nisList.length) throw new BadRequestException('Pilih siswa terlebih dahulu');
     const results = [];
     const failedList: Array<{ nisn: string; nama?: string; error: string }> = [];
     const list = Array.isArray(nisList) ? nisList : [];
     const regulerNames = await this.getRegulerKelasNames();
-    const groupSeriId = list.length > 1 ? (payload.seri_id || randomUUID()) : (payload.seri_id || null);
+    const groupSeriId = randomUUID();
 
     for (const nisn of list) {
       const nisnStr = String(nisn).trim();
@@ -532,6 +609,7 @@ export class KetidakhadiranService {
         this.resolveSiswaKelasReguler(nisnStr, studentClassHint, regulerNames),
       ]);
 
+      if (!siswa) { failedList.push({ nisn: nisnStr, error: 'Siswa tidak ditemukan pada master' }); continue; }
       let wMulai = null;
       if (waktu_mulai_real) {
         const t = String(waktu_mulai_real).slice(0, 8);
@@ -562,7 +640,7 @@ export class KetidakhadiranService {
             is_kontinu: Boolean(payload.is_kontinu),
             petugas_nama: apiUser?.nama_lengkap || apiUser?.nama || 'Petugas',
             petugas_nip: apiUser?.nip || null,
-            petugas_role: apiUser?.roles?.[0] || 'OP_IZIN',
+            petugas_role: jenis === 'SAKIT' ? 'OP_UKS' : 'OP_IZIN',
             seri_id: groupSeriId,
             aktif: true,
           },
@@ -594,7 +672,8 @@ export class KetidakhadiranService {
     };
   }
 
-  async update(id: string, payload: any, apiUser?: any) {
+  async update(id: string, payload: any, apiUser?: any): Promise<any> {
+    if (!this.inTransaction) return this.atomic(s => s.update(id, payload, apiUser), apiUser, 'UPDATE', id);
     const existing = await this.prisma.ketidakhadiran.findUnique({ where: { id } });
     if (!existing) {
       throw new NotFoundException('Data tidak ditemukan');
@@ -612,6 +691,13 @@ export class KetidakhadiranService {
       }
     }
 
+    if (!existing.aktif) throw new NotFoundException('Data tidak aktif');
+    canManageJenis(apiUser, existing.jenis);
+    canManageJenis(apiUser, payload.jenis !== undefined ? payload.jenis : existing.jenis);
+    if (payload.jenis !== undefined && payload.jenis !== existing.jenis) throw new BadRequestException('Jenis data tidak dapat diubah; buat record baru dengan jenis yang sesuai');
+    validateText(payload);
+    validatePeriod({ ...existing, ...payload, tgl_mulai: payload.tgl_mulai || toDateString(existing.tgl_mulai), tgl_selesai: payload.tgl_selesai || toDateString(existing.tgl_selesai), waktu_mulai_real: payload.waktu_mulai_real ?? toTimeString(existing.waktu_mulai_real), waktu_selesai_real: payload.waktu_selesai_real ?? toTimeString(existing.waktu_selesai_real) });
+    validateStatus(payload.jenis !== undefined ? payload.jenis : existing.jenis, payload.status !== undefined ? payload.status : existing.status);
     const updateData: any = {
       updated_at: new Date(),
     };
@@ -633,16 +719,12 @@ export class KetidakhadiranService {
     }
 
     if (payload.scope === 'ALL') {
-      const siblingWhere: any = existing.seri_id
-        ? { seri_id: existing.seri_id, aktif: true }
-        : {
-            tgl_mulai: existing.tgl_mulai,
-            tgl_selesai: existing.tgl_selesai,
-            jenis: existing.jenis,
-            keterangan: existing.keterangan,
-            aktif: true,
-          };
-
+      const siblingWhere: any = { ...(existing.seri_id ? { seri_id: existing.seri_id } : { id }), aktif: true };
+      const siblings = await this.prisma.ketidakhadiran.findMany({ where: siblingWhere });
+      for (const sibling of siblings) canManageJenis(apiUser, sibling.jenis);
+      for (const sibling of siblings) {
+        if (sibling.id !== id) await this.update(sibling.id, { ...payload, scope: 'ONE' }, apiUser);
+      }
       await this.prisma.ketidakhadiran.updateMany({
         where: siblingWhere,
         data: updateData,
@@ -680,7 +762,8 @@ export class KetidakhadiranService {
     };
   }
 
-  async remove(id: string, apiUser?: any, scope?: string) {
+  async remove(id: string, apiUser?: any, scope?: string): Promise<any> {
+    if (!this.inTransaction) return this.atomic(s => s.remove(id, apiUser, scope), apiUser, 'DELETE', id);
     const existing = await this.prisma.ketidakhadiran.findUnique({ where: { id } });
     if (!existing) {
       throw new NotFoundException('Data tidak ditemukan');
@@ -698,22 +781,16 @@ export class KetidakhadiranService {
       }
     }
 
+    canManageJenis(apiUser, existing.jenis);
+    if (!existing.aktif) throw new NotFoundException('Data tidak aktif');
     if (scope === 'ALL') {
-      const whereSiblings: any = existing.seri_id
-        ? { seri_id: existing.seri_id, aktif: true }
-        : {
-            tgl_mulai: existing.tgl_mulai,
-            tgl_selesai: existing.tgl_selesai,
-            jenis: existing.jenis,
-            keterangan: existing.keterangan,
-            aktif: true,
-          };
-
+      const whereSiblings: any = { ...(existing.seri_id ? { seri_id: existing.seri_id } : { id }), aktif: true };
       const siblings = await this.prisma.ketidakhadiran.findMany({
         where: whereSiblings,
-        select: { id: true, rekam_medis_id: true },
+        select: { id: true, rekam_medis_id: true, jenis: true },
       });
 
+      for (const sibling of siblings) canManageJenis(apiUser, sibling.jenis);
       const ids = siblings.map((s) => s.id);
       const rmIds = siblings.map((s) => s.rekam_medis_id).filter(Boolean) as string[];
 
@@ -754,13 +831,16 @@ export class KetidakhadiranService {
   // LOG KETIDAKHADIRAN (Today & History with Statistics)
   // ----------------------------------------------------
   async getLog(query: any, apiUser: any) {
+    validateQuery(query);
     const mode = query.mode || 'today';
-    const tanggal = query.tanggal || new Date().toISOString().split('T')[0];
+    const tanggal = query.tanggal || await this.getSchoolToday();
+    if (!['today', 'history'].includes(mode)) throw new BadRequestException('Mode log tidak valid');
+    const scope = await this.readScope(apiUser);
     const { kelas, jenis, q, from, to } = query;
-    const page = Math.max(1, parseInt(query.page || '1'));
-    const limit = Math.min(100, Math.max(1, parseInt(query.limit || '20')));
+    const page = boundedInt(query.page, 1, 100000);
+    const limit = boundedInt(query.limit, 20, 100);
 
-    const targetDate = new Date(tanggal);
+    const targetDate = validDate(tanggal);
 
     const where: any = {
       aktif: true,
@@ -770,8 +850,9 @@ export class KetidakhadiranService {
       where.tgl_mulai = { lte: targetDate };
       where.tgl_selesai = { gte: targetDate };
     } else {
-      if (to) where.tgl_mulai = { lte: new Date(to) };
-      if (from) where.tgl_selesai = { gte: new Date(from) };
+      if (to) where.tgl_mulai = { lte: validDate(to) };
+      if (from) where.tgl_selesai = { gte: validDate(from) };
+      if (from && to && validDate(to) < validDate(from)) throw new BadRequestException('Rentang tanggal tidak valid');
     }
 
     if (kelas) where.kelas = kelas;
@@ -793,6 +874,7 @@ export class KetidakhadiranService {
       }
     }
 
+    where.AND = [...(where.AND || []), scope];
     const skip = (page - 1) * limit;
 
     const [count, rawRows] = await Promise.all([
@@ -800,7 +882,7 @@ export class KetidakhadiranService {
       this.prisma.ketidakhadiran.findMany({
         where,
         orderBy: { created_at: 'desc' },
-        ...(mode === 'history' ? { skip, take: limit } : {}),
+        skip: mode === 'history' ? skip : 0, take: mode === 'history' ? limit : 5000,
       }),
     ]);
 
@@ -830,7 +912,7 @@ export class KetidakhadiranService {
       const tglMulaiStr = toDateString(r.tgl_mulai) || '';
       const tglSelesaiStr = toDateString(r.tgl_selesai) || '';
       const hari = calcHariKalender(r.tgl_mulai, r.tgl_selesai);
-      const jp = hari * 8;
+      const jp = absenceJp(r);
 
       return {
         ...r,
@@ -856,6 +938,7 @@ export class KetidakhadiranService {
       tgl_selesai: { gte: targetDate },
     };
     if (kelas) statsWhere.kelas = kelas;
+    statsWhere.AND = [scope];
 
     const allTodayRaw = await this.prisma.ketidakhadiran.findMany({
       where: statsWhere,
@@ -907,7 +990,7 @@ export class KetidakhadiranService {
     return {
       success: true,
       mode,
-      rows,
+      rows: rows.map(row => this.safeAbsence(row, apiUser)),
       total: mode === 'today' ? rows.length : count,
       page,
       limit,
@@ -1031,7 +1114,7 @@ export class KetidakhadiranService {
     }
 
     const formattedKetidakhadiran = activeKetidakhadiran.map((r: any) => ({
-      ...r,
+      ...this.safeAbsence(r, { roles: [] }),
       file_size: r.file_size ? Number(r.file_size) : null,
       tgl_mulai: toDateString(r.tgl_mulai),
       tgl_selesai: toDateString(r.tgl_selesai),
@@ -1113,7 +1196,7 @@ export class KetidakhadiranService {
   // ----------------------------------------------------
   async getLogWaliKelas(nip: string, tahunAjaran?: string, isAdmin = false, pilihKelas?: string) {
     let kelasList: string[] = [];
-    const todayStr = new Date().toISOString().split('T')[0];
+    const todayStr = await this.getSchoolToday();
     const todayDate = new Date(todayStr);
 
     if (isAdmin) {
@@ -1170,7 +1253,7 @@ export class KetidakhadiranService {
     records.forEach((r: any) => {
       if (byKelas[r.kelas]) {
         byKelas[r.kelas].push({
-          ...r,
+          ...this.safeAbsence(r, { roles: [] }),
           file_size: r.file_size ? Number(r.file_size) : null,
           tgl_mulai: toDateString(r.tgl_mulai),
           tgl_selesai: toDateString(r.tgl_selesai),
@@ -1202,6 +1285,7 @@ export class KetidakhadiranService {
   // LOG SISWA SPESIFIK (by NISN)
   // ----------------------------------------------------
   async getLogSiswa(nisn: string, tahunAjaran?: string, apiUser?: any) {
+    const scope = await this.readScope(apiUser);
     if (!nisn) {
       throw new BadRequestException('NISN wajib diisi');
     }
@@ -1234,7 +1318,7 @@ export class KetidakhadiranService {
     }
 
     const where: any = {
-      nisn,
+      nisn, AND: [scope],
       aktif: true,
     };
 
@@ -1260,6 +1344,8 @@ export class KetidakhadiranService {
       this.resolveSiswaKelasReguler(nisn),
     ]);
 
+    if (scope.OR && !scope.OR.some((condition: any) => condition.nisn?.in?.includes(nisn) || condition.kelas?.in?.includes(resolvedKelas.kelas))) throw new ForbiddenException('Siswa di luar penugasan Anda');
+
     const riwayat = data.map((r: any) => {
       const hari = calcHariKalender(r.tgl_mulai, r.tgl_selesai);
       return {
@@ -1270,12 +1356,13 @@ export class KetidakhadiranService {
         waktu_mulai_real: toTimeString(r.waktu_mulai_real),
         waktu_selesai_real: toTimeString(r.waktu_selesai_real),
         jumlah_hari: hari,
-        jumlah_jp: hari * 8,
+        jumlah_jp: absenceJp(r),
         hari_kalender: hari,
         display_durasi: `${hari} Hari`,
       };
     });
 
+    const visibleRiwayat = riwayat.map(row => this.safeAbsence(row, apiUser));
     const izinItems = riwayat.filter((r) => r.jenis === 'IZIN');
     const sakitItems = riwayat.filter((r) => r.jenis === 'SAKIT');
     const totalHariIzin = izinItems.reduce((sum, r) => sum + r.jumlah_hari, 0);
@@ -1293,11 +1380,11 @@ export class KetidakhadiranService {
     const stat = {
       total_izin_hari_kalender: totalHariIzin,
       total_sakit_hari_kalender: totalHariSakit,
-      total_izin_hari: Math.round((totalIzinJp / 8) * 10) / 10,
-      total_sakit_hari: Math.round((totalSakitJp / 8) * 10) / 10,
+      total_izin_hari: Math.round((totalIzinJp / 24) * 10) / 10,
+      total_sakit_hari: Math.round((totalSakitJp / 24) * 10) / 10,
       total_izin_jp: totalIzinJp,
       total_sakit_jp: totalSakitJp,
-      total_hari: Math.round(((totalIzinJp + totalSakitJp) / 8) * 10) / 10,
+      total_hari: Math.round(((totalIzinJp + totalSakitJp) / 24) * 10) / 10,
       total_jp: totalIzinJp + totalSakitJp,
     };
 
@@ -1314,9 +1401,9 @@ export class KetidakhadiranService {
       data: {
         siswa: studentData,
         stat,
-        riwayat,
+        riwayat: visibleRiwayat,
       },
-      riwayat,
+      riwayat: visibleRiwayat,
       summary,
     };
   }
@@ -1324,30 +1411,46 @@ export class KetidakhadiranService {
   // ----------------------------------------------------
   // ABSENSI KELAS (Today absent students check)
   // ----------------------------------------------------
-  async getAbsensi(kelas: string, tanggal: string, jamKe?: number) {
+  async getAbsensi(kelas: string, tanggal: string, jamKe: number | undefined, apiUser: any) {
+    const scope = await this.readScope(apiUser);
     if (!kelas || !tanggal) {
       throw new NotFoundException('Kelas dan tanggal wajib diisi');
     }
 
-    const targetDate = new Date(tanggal);
+    const targetDate = validDate(tanggal);
 
     const items = await this.prisma.ketidakhadiran.findMany({
       where: {
-        kelas,
+        kelas, AND: [scope],
         aktif: true,
         tgl_mulai: { lte: targetDate },
         tgl_selesai: { gte: targetDate },
       },
     });
 
-    const mapped = items.map((r: any) => ({
+    let visible = items;
+    if (jamKe !== undefined) {
+      boundedInt(jamKe, 1, 24);
+      const hari = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'][targetDate.getUTCDay()];
+      const slot = await this.prisma.master_waktu.findFirst({ where: { jam_ke: jamKe, hari, program: 'Reguler', aktif: true, is_istirahat: false } });
+      if (!slot) throw new BadRequestException('Jadwal jam tidak ditemukan');
+      const mins = (v: Date) => v.getUTCHours() * 60 + v.getUTCMinutes();
+      visible = items.filter(r => {
+        const day = targetDate.toISOString().slice(0,10);
+        const startDay = toDateString(r.tgl_mulai), endDay = toDateString(r.tgl_selesai);
+        const start = r.is_kontinu && day !== startDay ? 0 : r.waktu_mulai_real ? mins(r.waktu_mulai_real) : 0;
+        const end = r.is_kontinu && day !== endDay ? 1440 : r.waktu_selesai_real ? mins(r.waktu_selesai_real) : 1440;
+        return start < mins(slot.selesai) && end > mins(slot.mulai);
+      });
+    }
+    const mapped = visible.map((r: any) => ({
       id: r.id,
       jenis: r.jenis,
       nisn: r.nisn,
       nama: r.nama,
       kelas: r.kelas,
       status: r.status,
-      keterangan: r.keterangan,
+      keterangan: this.safeAbsence(r, apiUser).keterangan,
       tgl_mulai: toDateString(r.tgl_mulai),
       tgl_selesai: toDateString(r.tgl_selesai),
       waktu_mulai_real: toTimeString(r.waktu_mulai_real),
@@ -1364,7 +1467,9 @@ export class KetidakhadiranService {
   // ----------------------------------------------------
   // REKAP KETIDAKHADIRAN (Periodic Aggregates)
   // ----------------------------------------------------
-  async getRekap(query: any) {
+  async getRekap(query: any, apiUser: any) {
+    validateQuery(query);
+    const scope = await this.readScope(apiUser);
     const { filter_type, tahun_ajaran, semester, tahun, bulan, from, to } = query;
 
     let startDate: Date | undefined;
@@ -1395,6 +1500,10 @@ export class KetidakhadiranService {
     const where: any = {
       aktif: true,
     };
+    where.AND = [scope];
+    if (startDate) validDate(startDate);
+    if (endDate) validDate(endDate);
+    if (startDate && endDate && endDate < startDate) throw new BadRequestException('Rentang tanggal tidak valid');
     if (startDate && endDate) {
       where.tgl_mulai = { lte: endDate };
       where.tgl_selesai = { gte: startDate };
@@ -1402,33 +1511,17 @@ export class KetidakhadiranService {
 
     const records = await this.prisma.ketidakhadiran.findMany({
       where,
-      orderBy: { tgl_mulai: 'asc' },
+      orderBy: { tgl_mulai: 'asc' }, take: 5000,
     });
 
-    const calcRecordMinutes = (r: any): number => {
-      const days = calcHariKalender(r.tgl_mulai, r.tgl_selesai);
-      let startMins: number | null = null;
-      let endMins: number | null = null;
-
-      if (r.waktu_mulai_real) {
-        const d = new Date(r.waktu_mulai_real);
-        startMins = d.getUTCHours() * 60 + d.getUTCMinutes();
-      }
-      if (r.waktu_selesai_real) {
-        const d = new Date(r.waktu_selesai_real);
-        endMins = d.getUTCHours() * 60 + d.getUTCMinutes();
-      }
-
-      if (startMins !== null && endMins !== null) {
-        if (r.is_kontinu && days > 1) {
-          const totalMins = (days - 1) * 24 * 60 - startMins + endMins;
-          return Math.max(0, totalMins);
-        }
-        const perDay = Math.max(0, endMins - startMins);
-        return perDay * days;
-      }
-      return days * 24 * 60;
-    };
+    const clippedRecord = (r: any) => ({
+      ...r,
+      tgl_mulai: startDate && r.tgl_mulai < startDate ? startDate : r.tgl_mulai,
+      tgl_selesai: endDate && r.tgl_selesai > endDate ? endDate : r.tgl_selesai,
+      waktu_mulai_real: r.is_kontinu && startDate && r.tgl_mulai < startDate ? null : r.waktu_mulai_real,
+      waktu_selesai_real: r.is_kontinu && endDate && r.tgl_selesai > endDate ? null : r.waktu_selesai_real,
+    });
+    const calcRecordMinutes = (r: any): number => absenceJp(clippedRecord(r)) * 60;
 
     const byStudent: Record<string, any> = {};
     records.forEach((r: any) => {
@@ -1462,7 +1555,7 @@ export class KetidakhadiranService {
         id: r.id,
         jenis: r.jenis,
         status: r.status,
-        keterangan: r.keterangan || '',
+        keterangan: this.safeAbsence(r, apiUser).keterangan || '',
         tgl_mulai: toDateString(r.tgl_mulai),
         tgl_selesai: toDateString(r.tgl_selesai),
         waktu_mulai_real: toTimeString(r.waktu_mulai_real),
@@ -1544,10 +1637,10 @@ export class KetidakhadiranService {
       tindakan: ['Istirahat di tempat tidur UKS', 'Pemberian Paracetamol 500mg', 'Pemberian Antasida', 'Kompres dahi', 'Pembersihan luka dengan antiseptik', 'Pengukuran tensi dan suhu'],
       tindakLanjut: ['Kembali ke Kelas', 'Istirahat di UKS', 'Pulang ke Rumah / Asrama', 'Rujuk ke RS / Klinik', 'Kontrol'],
       tindakLanjutMapping: [
-        { name: 'Kembali ke Kelas', status: 'Ringan' },
+        { name: 'Kembali ke Kelas', status: 'NONE' },
         { name: 'Istirahat di UKS', status: 'Ringan' },
         { name: 'Pulang ke Rumah / Asrama', status: 'Sedang' },
-        { name: 'Rujuk ke RS / Klinik', status: 'Berat' },
+        { name: 'Rujuk ke RS / Klinik', status: 'Sedang' },
         { name: 'Kontrol', status: 'Kontrol' },
       ],
     };
@@ -1574,8 +1667,13 @@ export class KetidakhadiranService {
     }
   }
 
-  async savePresets(presets: any, apiUser?: any) {
+  async savePresets(presets: any, apiUser?: any): Promise<any> {
+    if (!this.inTransaction) return this.atomic(s => s.savePresets(presets, apiUser), apiUser, 'PRESETS');
     this.checkIsUksStaff(apiUser);
+    if (!presets || Object.values(presets).some(value => !Array.isArray(value))) throw new BadRequestException('Preset tidak valid');
+    const presetKeys = ['penyakit', 'alergi', 'keluhan', 'tataLaksana', 'tindakan', 'tindakLanjut', 'tindakLanjutMapping'];
+    if (Object.keys(presets).some(key => !presetKeys.includes(key)) || Object.entries(presets).some(([key, value]) => (value as any[]).length > 500 || (key !== 'tindakLanjutMapping' && (value as any[]).some(item => typeof item !== 'string' || item.length > 1000)))) throw new BadRequestException('Daftar preset tidak valid');
+    if (presets.tindakLanjutMapping?.some((m: any) => typeof m.name !== 'string' || m.name.length > 100 || !['NONE', 'Ringan', 'Sedang', 'Berat', 'Kontrol'].includes(m.status))) throw new BadRequestException('Mapping tindak lanjut tidak valid');
     try {
       await this.prisma.site_settings.upsert({
         where: { key: 'rekam_medis_presets' },
@@ -1596,10 +1694,9 @@ export class KetidakhadiranService {
     }
   }
 
-  async syncKetidakhadiran(id: string, mappedStatus?: string, apiUser?: any) {
-    if (apiUser) {
-      this.checkIsUksStaff(apiUser);
-    }
+  async syncKetidakhadiran(id: string, mappedStatus?: string, apiUser?: any): Promise<any> {
+    if (!this.inTransaction) return this.atomic(s => s.syncKetidakhadiran(id, mappedStatus, apiUser), apiUser, 'SYNC', id);
+    this.checkIsUksStaff(apiUser);
     if (!id) {
       return { ok: false, error: 'ID rekam medis wajib disertakan' };
     }
@@ -1610,7 +1707,12 @@ export class KetidakhadiranService {
       return { ok: false, error: 'Data rekam medis tidak ditemukan atau tidak aktif' };
     }
 
-    const status = mappedStatus || (rm.tindak_lanjut === 'Rujuk ke RS / Klinik' ? 'Berat' : rm.tindak_lanjut === 'Pulang ke Rumah / Asrama' ? 'Sedang' : 'Ringan');
+    const status = mappedStatus || await this.statusFor(rm.tindak_lanjut);
+    if (status === 'NONE') {
+      await this.prisma.ketidakhadiran.updateMany({ where: { rekam_medis_id: id, aktif: true }, data: { aktif: false, updated_at: new Date() } });
+      return { ok: true, result: { ok: true, skipped: true, reason: 'Tidak memerlukan absensi', mappedStatus: 'NONE' } };
+    }
+    validateStatus('SAKIT', status);
 
     // Check if already synced
     const existing = await this.prisma.ketidakhadiran.findFirst({
@@ -1662,7 +1764,9 @@ export class KetidakhadiranService {
   // ----------------------------------------------------
   // REKAM MEDIS SISWA (UKS)
   // ----------------------------------------------------
-  async getRekamMedisSiswa(query: any) {
+  async getRekamMedisSiswa(query: any, apiUser: any) {
+    this.checkIsUksStaff(apiUser);
+    validateQuery(query);
     const action = query.action;
 
     if (action === 'get_presets') {
@@ -1732,8 +1836,8 @@ export class KetidakhadiranService {
     const q = (query.q || '').trim();
     const kelas = (query.kelas || '').trim();
     const nisn = (query.nisn || '').trim();
-    const page = Math.max(1, parseInt(query.page || '1'));
-    const limit = Math.min(5000, Math.max(1, parseInt(query.limit || '50')));
+    const page = boundedInt(query.page, 1, 100000);
+    const limit = boundedInt(query.limit, 50, 5000);
     const skip = (page - 1) * limit;
 
     const where: any = {
@@ -1789,7 +1893,8 @@ export class KetidakhadiranService {
     };
   }
 
-  async createRekamMedisSiswa(body: any, apiUser: any) {
+  async createRekamMedisSiswa(body: any, apiUser: any): Promise<any> {
+    if (!this.inTransaction) return this.atomic(s => s.createRekamMedisSiswa(body, apiUser), apiUser, 'CREATE_MEDICAL');
     this.checkIsUksStaff(apiUser);
 
     if (body?.action === 'save_presets') {
@@ -1799,7 +1904,29 @@ export class KetidakhadiranService {
       return this.syncKetidakhadiran(body.id, body.mappedStatus, apiUser);
     }
 
-    const todayStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+    validateText(body);
+    const fingerprint = createHash('sha256').update(JSON.stringify(body)).digest('hex');
+    let requestKey: string | undefined;
+    if (body.idempotencyKey) {
+      if (!/^[a-f0-9-]{36}$/i.test(body.idempotencyKey)) throw new BadRequestException('ID permintaan tidak valid');
+      requestKey = 'rm-request-' + createHash('sha256').update(`${apiUser.id || apiUser.nip}:${body.idempotencyKey}`).digest('hex');
+      const receipt = await this.prisma.system_config.findUnique({ where: { key: requestKey } });
+      if (receipt?.value) {
+        const saved = JSON.parse(receipt.value);
+        if (saved.fingerprint !== fingerprint) throw new BadRequestException('ID permintaan sudah digunakan untuk data berbeda');
+        const prior = await this.prisma.rekam_medis_siswa.findUnique({ where: { id: saved.id } });
+        if (!prior?.aktif) throw new BadRequestException('Permintaan ini telah dihapus; gunakan permintaan baru');
+        return { ok: true, data: { ...prior, tanggal: toDateString(prior.tanggal), tanggal_lahir: toDateString(prior.tanggal_lahir), waktu: toTimeString(prior.waktu) }, syncResult: saved.syncResult };
+      }
+    }
+    if (!body.nisn || !body.keluhan?.trim()) throw new BadRequestException('Siswa dan keluhan wajib diisi');
+    validatePeriod({ ...body, tanggal: body.tanggal || await this.getSchoolToday() });
+    const siswa = await this.prisma.master_siswa.findFirst({ where: { nisn: String(body.nisn) } });
+    if (!siswa) throw new BadRequestException('Siswa tidak ditemukan pada master');
+    const resolved = await this.resolveSiswaKelasReguler(String(body.nisn));
+    const asuh = await this.prisma.guru_asuh.findFirst({ where: { nisn_siswa: String(body.nisn), aktif: true }, select: { nama_guru: true } });
+    body = { ...body, nama_siswa: siswa.nama_lengkap, kelas: resolved.kelas, guru_asuh: asuh?.nama_guru || null, gender: siswa.gender, tempat_lahir: siswa.tempat_lahir, tanggal_lahir: toDateString(siswa.tanggal_lahir), alamat: siswa.alamat };
+    const todayStr = (await this.getSchoolToday()).replace(/-/g, '');
     const prefix = `RM-${todayStr}-`;
 
     const latest = await this.prisma.rekam_medis_siswa.findFirst({
@@ -1826,7 +1953,7 @@ export class KetidakhadiranService {
         tempat_lahir: body.tempat_lahir,
         tanggal_lahir: body.tanggal_lahir ? new Date(body.tanggal_lahir) : null,
         alamat: body.alamat,
-        tanggal: body.tanggal ? new Date(body.tanggal) : new Date(),
+        tanggal: validDate(body.tanggal || await this.getSchoolToday()),
         waktu: body.waktu ? new Date(`1970-01-01T${body.waktu}Z`) : new Date(),
         riwayat_penyakit: Array.isArray(body.riwayat_penyakit) ? body.riwayat_penyakit : [],
         riwayat_alergi_obat: Array.isArray(body.riwayat_alergi_obat) ? body.riwayat_alergi_obat : [],
@@ -1842,20 +1969,12 @@ export class KetidakhadiranService {
 
     // Auto-sync to ketidakhadiran
     let syncResult: any = null;
-    const shouldSync = Boolean(body.auto_sync || body.auto_sync_ketidakhadiran || body.sync_ketidakhadiran);
+    const selectedStatus = body.mapped_status || body.mappedStatus || await this.statusFor(created.tindak_lanjut);
+    if (selectedStatus !== 'NONE') validateStatus('SAKIT', selectedStatus);
+    const shouldSync = Boolean(body.auto_sync || body.auto_sync_ketidakhadiran || body.sync_ketidakhadiran) && selectedStatus !== 'NONE';
 
     if (shouldSync) {
-      const statusMap: Record<string, string> = {
-        'Istirahat di UKS': 'Ringan',
-        'Pulang ke Rumah / Asrama': 'Sedang',
-        'Rujuk ke RS / Klinik': 'Berat',
-        'Kontrol': 'Kontrol',
-        'Kembali ke Kelas': 'Ringan',
-      };
-      const requestedStatus = body.mapped_status || body.mappedStatus;
-      const status = (requestedStatus && requestedStatus !== 'NONE')
-        ? requestedStatus
-        : (statusMap[created.tindak_lanjut] || 'Ringan');
+      const status = selectedStatus;
 
       const tglMulai = created.tanggal;
       const tglSelesaiRaw = body.tgl_selesai_sakit || body.tgl_selesai;
@@ -1893,6 +2012,7 @@ export class KetidakhadiranService {
       syncResult = { ok: true, mappedStatus: status, id: syncedKetidakhadiran.id };
     }
 
+    if (requestKey) await this.prisma.system_config.create({ data: { key: requestKey, description: 'Idempotensi input UKS', value: JSON.stringify({ id: created.id, fingerprint, syncResult }) } });
     return {
       ok: true,
       data: {
@@ -1905,7 +2025,8 @@ export class KetidakhadiranService {
     };
   }
 
-  async updateRekamMedisSiswa(id: string, body: any, apiUser: any) {
+  async updateRekamMedisSiswa(id: string, body: any, apiUser: any): Promise<any> {
+    if (!this.inTransaction) return this.atomic(s => s.updateRekamMedisSiswa(id, body, apiUser), apiUser, 'UPDATE_MEDICAL', id);
     this.checkIsUksStaff(apiUser);
 
     const existing = await this.prisma.rekam_medis_siswa.findUnique({ where: { id } });
@@ -1913,6 +2034,8 @@ export class KetidakhadiranService {
       throw new NotFoundException('Data rekam medis tidak ditemukan');
     }
 
+    if (!existing.aktif) throw new NotFoundException('Data tidak aktif');
+    validateText(body);
     const updated = await this.prisma.rekam_medis_siswa.update({
       where: { id },
       data: {
@@ -1926,10 +2049,12 @@ export class KetidakhadiranService {
       },
     });
 
-    // Update synced ketidakhadiran if exists
+    // Apply the same follow-up mapping to every linked active absence.
+    const newStatus = await this.statusFor(updated.tindak_lanjut);
     await this.prisma.ketidakhadiran.updateMany({
-      where: { rekam_medis_id: id },
+      where: { rekam_medis_id: id, aktif: true },
       data: {
+        ...(newStatus === 'NONE' ? { aktif: false } : { status: newStatus }),
         keterangan: updated.keluhan,
         tindak_lanjut: updated.tindak_lanjut,
         tindakan: Array.isArray(updated.tindakan) ? updated.tindakan.join(', ') : (updated.tindakan || null),
@@ -1948,7 +2073,8 @@ export class KetidakhadiranService {
     };
   }
 
-  async deleteRekamMedisSiswa(id: string, apiUser?: any) {
+  async deleteRekamMedisSiswa(id: string, apiUser?: any): Promise<any> {
+    if (!this.inTransaction) return this.atomic(s => s.deleteRekamMedisSiswa(id, apiUser), apiUser, 'DELETE_MEDICAL', id);
     this.checkIsUksStaff(apiUser);
 
     const existing = await this.prisma.rekam_medis_siswa.findUnique({ where: { id } });
@@ -1971,10 +2097,23 @@ export class KetidakhadiranService {
     return { ok: true };
   }
 
-  async saveAccaLetter(body: any) {
+  async saveAccaLetter(body: any, apiUser: any): Promise<any> {
+    if (!this.inTransaction) return this.atomic(s => s.saveAccaLetter(body, apiUser), apiUser, 'SAVE_LETTER', body.id);
     const { id, fileName, file_url, fileUrl } = body;
     if (!id) throw new BadRequestException('ID surat wajib diisi');
 
+    const letter = await this.prisma.acca_letters.findUnique({ where: { id } });
+    if (!letter) throw new NotFoundException('Surat tidak ditemukan');
+    canManageJenis(apiUser, letter.nomor_surat.includes('/UKS/') || ['UKS','SAKIT','REKAM_MEDIK','REKOMENDASI_KONTROL','REKAPAN_SAKIT'].includes(letter.jenis_izin) ? 'SAKIT' : 'IZIN');
+    validateText(body);
+    const url = file_url || fileUrl;
+    if (url) {
+      let parsed: URL;
+      try { parsed = new URL(url); } catch { throw new BadRequestException('URL arsip tidak valid'); }
+      if (parsed.protocol !== 'https:' || parsed.username || parsed.password || !parsed.pathname.toLowerCase().endsWith('.pdf')) throw new BadRequestException('Arsip harus berupa PDF HTTPS');
+      const registered = await this.prisma.file_uploads.findUnique({ where: { file_url: url } });
+      if (!registered) throw new BadRequestException('Berkas arsip tidak terdaftar');
+    }
     const updateData: any = { is_printed: true };
     if (fileName) {
       updateData.file_name = fileName;
@@ -1990,7 +2129,8 @@ export class KetidakhadiranService {
     return { ok: true, data: updated };
   }
 
-  async getAccaLetters(query: any) {
+  async getAccaLetters(query: any, apiUser: any) {
+    validateQuery(query);
     const barcode = query.barcode;
     const type = query.type;
 
@@ -2005,6 +2145,16 @@ export class KetidakhadiranService {
       : 50;
 
     const where: any = {};
+    if (!apiUser?.isAdmin) {
+      const medicalTypes = ['UKS', 'SAKIT', 'REKAM_MEDIK', 'REKOMENDASI_KONTROL', 'REKAPAN_SAKIT'];
+      if (apiUser?.roles?.includes('OP_UKS') && apiUser.roles.includes('OP_IZIN')) {
+        // A dual operator retains both categories.
+      } else if (apiUser?.roles?.includes('OP_UKS')) {
+        where.AND = [{ OR: [{ nomor_surat: { contains: '/UKS/' } }, { jenis_izin: { in: medicalTypes } }, { jenis_izin: { in: ['MENINGGALKAN_ASRAMA','AKHIR_PEKAN'] }, ketidakhadiran: { jenis: 'SAKIT' } }] }];
+      } else if (apiUser?.roles?.includes('OP_IZIN')) {
+        where.AND = [{ NOT: { OR: [{ nomor_surat: { contains: '/UKS/' } }, { jenis_izin: { in: medicalTypes } }] } }];
+      } else throw new ForbiddenException('Daftar surat hanya untuk operator');
+    }
     if (barcode) {
       where.barcode = barcode;
     }
@@ -2074,6 +2224,7 @@ export class KetidakhadiranService {
       return { ok: false, error: 'Surat tidak ditemukan', verified: false };
     }
 
+    const sensitive = letter.nomor_surat.includes('/UKS/') || ['REKAPAN_IZIN','REKAPAN_SAKIT','REKAM_MEDIK','REKOMENDASI_KONTROL','UKS','SAKIT'].includes(letter.jenis_izin);
     let backgroundUrl = '/images/Surat ACCA A4.png';
     try {
       const configData = await this.prisma.config_surat.findFirst({
@@ -2101,12 +2252,12 @@ export class KetidakhadiranService {
         barcode: letter.barcode,
         jenis_izin: letter.jenis_izin,
         siswa_nama: letter.siswa_nama,
-        siswa_nisn: letter.siswa_nisn,
+        siswa_nisn: sensitive ? null : letter.siswa_nisn,
         siswa_kelas: letter.siswa_kelas,
         tgl_mulai: letter.tgl_mulai,
         tgl_selesai: letter.tgl_selesai,
-        keterangan: letter.keterangan,
-        file_url: letter.file_url,
+        keterangan: sensitive ? 'Isi dokumen memerlukan akses petugas' : letter.keterangan,
+        file_url: sensitive ? null : letter.file_url,
         generated_by: letter.generated_by,
         generated_at: letter.generated_at,
         penjabat_nama: letter.penjabat_nama || null,
@@ -2116,7 +2267,8 @@ export class KetidakhadiranService {
     };
   }
 
-  async deleteAccaLetter(id: string, user: any) {
+  async deleteAccaLetter(id: string, user: any): Promise<any> {
+    if (!this.inTransaction) return this.atomic(s => s.deleteAccaLetter(id, user), user, 'DELETE_LETTER', id);
     if (!id) {
       return { ok: false, error: 'ID surat wajib diisi' };
     }
@@ -2135,8 +2287,8 @@ export class KetidakhadiranService {
 
     if (!isAdmin) {
       const canManageThis =
-        (roles.includes('OP_IZIN') && IZIN_LETTER_TYPES.includes(letter.jenis_izin)) ||
-        (roles.includes('OP_UKS') && SAKIT_LETTER_TYPES.includes(letter.jenis_izin));
+        (roles.includes('OP_IZIN') && (IZIN_LETTER_TYPES.includes(letter.jenis_izin) && !letter.nomor_surat.includes('/UKS/'))) ||
+        (roles.includes('OP_UKS') && (SAKIT_LETTER_TYPES.includes(letter.jenis_izin) || letter.nomor_surat.includes('/UKS/')));
 
       if (!canManageThis) {
         return { ok: false, error: 'Anda tidak memiliki izin untuk menghapus surat ini' };
@@ -2146,16 +2298,41 @@ export class KetidakhadiranService {
     await this.prisma.acca_letters.delete({
       where: { id },
     });
+    await this.prisma.system_config.deleteMany({ where: { key: `acca-snapshot-${id}` } });
 
     return { ok: true, message: 'Surat ACCA berhasil dihapus' };
   }
 
-  async createAccaLetter(body: any, appOrigin: string) {
+  async createAccaLetter(body: any, appOrigin: string, apiUser: any): Promise<any> {
+    if (!this.inTransaction) return this.atomic(s => s.createAccaLetter(body, appOrigin, apiUser), apiUser, 'CREATE_LETTER');
+    validateText(body);
+    const record = body.row?.id ? await this.prisma.ketidakhadiran.findUnique({ where: { id: String(body.row.id) } }) : null;
+    if (!record?.aktif) throw new BadRequestException('Data ketidakhadiran tidak ditemukan');
+    canManageJenis(apiUser, record.jenis);
+    if (body.letterType === 'UKS') canManageJenis(apiUser, 'SAKIT');
+    let authoritativeRows = [record];
+    if (body.rows) {
+      if (!Array.isArray(body.rows) || !body.rows.length || body.rows.length > 500) throw new BadRequestException('Daftar siswa tidak valid');
+      authoritativeRows = await this.prisma.ketidakhadiran.findMany({ where: { id: { in: body.rows.map((r: any) => String(r.id)) }, aktif: true } });
+      if (authoritativeRows.length !== body.rows.length) throw new BadRequestException('Data kolektif tidak ditemukan');
+      for (const r of authoritativeRows) { canManageJenis(apiUser, r.jenis); if (r.jenis !== record.jenis || toDateString(r.tgl_mulai) !== toDateString(record.tgl_mulai) || toDateString(r.tgl_selesai) !== toDateString(record.tgl_selesai)) throw new BadRequestException('Periode dan jenis surat kolektif berbeda'); }
+    }
+    body = { ...body, row: { ...record, nama: authoritativeRows.length > 1 ? `${authoritativeRows.length} Siswa (Kolektif)` : record.nama, nisn: authoritativeRows.map(r => r.nisn).join(','), tgl_mulai: toDateString(record.tgl_mulai), tgl_selesai: toDateString(record.tgl_selesai) } };
     const { row, pejabatId, pejabatJabatan: bodyPejabatJabatan, letterType: reqType } = body;
     if (!row) {
       throw new BadRequestException('Data siswa wajib diisi');
     }
 
+    if (body.forceReprint) {
+      if (!body.oldLetterId) throw new BadRequestException('ID surat lama wajib diisi');
+      const old = await this.prisma.acca_letters.findUnique({ where: { id: String(body.oldLetterId) } });
+      if (!old) throw new NotFoundException('Surat lama tidak ditemukan');
+      const oldJenis = old.nomor_surat.includes('/UKS/') ? 'SAKIT' : 'IZIN';
+      canManageJenis(apiUser, oldJenis);
+      if (oldJenis !== record.jenis || old.siswa_nisn !== row.nisn || old.tgl_mulai !== row.tgl_mulai || old.tgl_selesai !== row.tgl_selesai) throw new BadRequestException('Surat lama tidak sesuai data cetak ulang');
+      await this.prisma.acca_letters.delete({ where: { id: old.id } });
+      await this.prisma.system_config.deleteMany({ where: { key: `acca-snapshot-${old.id}` } });
+    }
     const existingRecord = await this.prisma.acca_letters.findFirst({
       where: {
         siswa_nisn: row.nisn,
@@ -2205,7 +2382,7 @@ export class KetidakhadiranService {
       ? `${String(nextNumber).padStart(3, '0')}/UKS/ACCA/${monthRoman}/${tahun}`
       : `${String(nextNumber).padStart(3, '0')}/IZIN/${jenisIzin}/ACCA/${monthRoman}/${tahun}`;
 
-    const barcode = 'ACCA-' + Date.now().toString(36).toUpperCase() + '-' + Math.random().toString(36).slice(2, 8).toUpperCase();
+    const barcode = 'ACCA-' + randomUUID();
 
     let pejabatNama = 'Imran, S.Si.';
     let pejabatNip = '-';
@@ -2244,14 +2421,16 @@ export class KetidakhadiranService {
         nomor_surat: nomorSurat,
         nomor_urut: nextNumber,
         barcode,
-        jenis_izin: isUks ? 'P' : jenisIzin,
+        jenis_izin: isUks ? 'UKS' : jenisIzin,
+        ketidakhadiran_id: record.id,
+        penjabat_nama: pejabatNama, penjabat_jabatan: pejabatJabatan,
         siswa_nama: row.nama,
         siswa_nisn: row.nisn,
         siswa_kelas: row.kelas,
         tgl_mulai: row.tgl_mulai,
         tgl_selesai: row.tgl_selesai,
         keterangan: row.keterangan || '',
-        generated_by: row.petugas_nama || null,
+        generated_by: apiUser.nama_lengkap || apiUser.nama || apiUser.nip,
       },
       select: { id: true, nomor_surat: true, barcode: true, file_url: true }
     });

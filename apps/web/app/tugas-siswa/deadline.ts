@@ -28,18 +28,13 @@ export function getDeadlineInfo(deadlineStr: string | null): DeadlineInfo {
     if (!deadlineStr) return { text: '', tone: 'jauh', icon: 'clock' };
 
     // Tanggal tanpa jam dianggap jatuh tempo di akhir hari (23:59:59)
-    const deadline = new Date(deadlineStr);
-    if (deadlineStr.length <= 10) {
-        deadline.setHours(23, 59, 59, 999);
-    }
+    const day = deadlineStr.slice(0, 10);
+    const deadlinePlain = new Date(day + 'T00:00:00Z');
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(day) || !Number.isFinite(deadlinePlain.getTime()) || deadlinePlain.toISOString().slice(0, 10) !== day) return { text: '', tone: 'jauh', icon: 'clock' };
+    const schoolDate = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Makassar', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+    const today = new Date(schoolDate + 'T00:00:00Z');
 
-    const now = new Date();
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const deadlinePlain = new Date(deadline);
-    deadlinePlain.setHours(0, 0, 0, 0);
-
-    if (deadline.getTime() - now.getTime() < 0) {
+    if (deadlinePlain.getTime() < today.getTime()) {
         return { text: 'Lewat Deadline', tone: 'lewat', icon: 'clock-history' };
     }
 

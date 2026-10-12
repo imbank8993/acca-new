@@ -179,7 +179,7 @@ export default function TugasSiswaTable({
                             return (
                             <tr key={tugas.id} className={`${index % 2 === 0 ? 'even' : 'odd'} ${rowCls}`}>
                                 <td className="tst__td tst__check">
-                                    <button
+                                    {(isSiswa || isPengurusKelas) ? <button
                                         className={`tst__checkBtn ${checklistedIds.includes(tugas.id) ? 'checked' : ''}`}
                                         onClick={() => onToggleChecklist && onToggleChecklist(tugas.id, checklistedIds.includes(tugas.id))}
                                         title={checklistedIds.includes(tugas.id) ? 'Batalkan' : 'Tandai selesai'}
@@ -189,7 +189,7 @@ export default function TugasSiswaTable({
                                         ) : (
                                             <i className={`bi bi-${jenisInfo.icon} tst__checkIcon ${jenisInfo.isPengingat ? 'tst__checkIcon--pengingat' : ''}`}></i>
                                         )}
-                                    </button>
+                                    </button> : <i className={`bi bi-${jenisInfo.icon}`} aria-label={jenisInfo.label} />}
                                 </td>
                                 <td className="tst__td">
                                     <div className="tst__infoMapel" style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>

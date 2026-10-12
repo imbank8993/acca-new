@@ -218,7 +218,7 @@ export default function KeuanganTabPengajuan({
                                         <ActionButton action="edit" title="Perbaiki Pengajuan" onClick={() => setRequestForm({
                                             id: r.id, division_id: r.division_id, activity_name: r.activity_name,
                                             description: r.description || '', route: r.route || 'normal',
-                                            proof_file_url: r.proof_url || '',
+                                            proof_file_url: r.proof_file_url || '',
                                             items: r.budget_request_items.map((it: any) => ({ item_name: it.item_name, category: it.category, quantity: it.quantity, unit: it.unit || 'Pcs', unit_price: it.unit_price }))
                                         })} />
                                     )}
