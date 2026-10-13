@@ -22,7 +22,10 @@ fi
 
 # 3. Build & Jalankan Container dengan Docker Compose
 echo "🐳 [3/4] Melakukan build image dan menjalankan container..."
-docker compose up -d --build --remove-orphans
+docker compose build
+echo "🗄️ Menyiapkan kolom sasaran agenda..."
+docker compose run --rm --no-deps acca-api node node_modules/prisma/build/index.js db execute --schema apps/api/prisma/schema.prisma --file apps/api/prisma/sql/20261013_agenda_sasaran.sql
+docker compose up -d --remove-orphans
 
 # 4. Bersihkan cache/image lama
 echo "🧹 [4/4] Membersihkan docker image lama yang dangling..."

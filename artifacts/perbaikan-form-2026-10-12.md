@@ -1,6 +1,6 @@
 # Perbaikan halaman Form — 12 Oktober 2026
 
-Seluruh temuan F01–F16 dalam audit telah ditangani pada kode lokal. Cakupan mencakup dashboard, builder, pengisian, tanggapan, seleksi, unggahan, ekspor, API, dan skema identitas database. Perubahan belum dipasang ke produksi dan migrasi database belum dijalankan.
+Seluruh temuan F01–F16 dalam audit telah ditangani pada kode lokal. Cakupan mencakup dashboard, builder, pengisian, tanggapan, seleksi, unggahan, ekspor, API, dan skema identitas database. Migrasi identitas berhasil dijalankan pada 13 Oktober 2026; kode aplikasi belum dideploy dalam pekerjaan ini.
 
 ## Hasil perbaikan
 
@@ -37,9 +37,17 @@ Koreksi audit awal: pengisian otomatis identitas sebenarnya sudah tersedia. Perb
 
 Database dan penyimpanan dalam pengujian menggunakan tiruan. Integrasi PostgreSQL/R2 produksi serta Safari pada iPhone fisik belum diuji. Hasil ini tidak menyatakan tidak mungkin ada bug lain.
 
+## Status migrasi — 13 Oktober 2026
+
+Migrasi diterapkan pada database `acca_db` setelah uji transaksi yang dibatalkan dan pembuatan cadangan terenkripsi untuk dua tabel terdampak beserta metadata kolom, constraint, indeks, kebijakan, serta grants. File cadangan dan kunci tersimpan di `scratch/form-backups/`, yang diabaikan Git. Cadangan berhasil dibaca kembali dan diverifikasi sebelum perubahan dijalankan.
+
+Seluruh isi 4 form dan 276 tanggapan identik sebelum/sesudah migrasi. Dua kolom identitas menjadi teks; dua foreign key identitas dan dua kebijakan akses langsung lama dilepas. Constraint lainnya tetap dipertahankan, termasuk hubungan tanggapan ke form. Role database API yang dikonfigurasi adalah `postgres` dan memiliki izin bypass RLS. Pemeriksaan melalui koneksi baru setelah commit memastikan kolom teks tersimpan dan kebijakan lama telah dihapus.
+
+Kesalahan delimiter blok SQL pada skrip awal diperbaiki sebelum uji transaksi. Skrip pelaksana `scripts/migrate-form-identity.cjs` menyediakan mode uji bawaan dan mode `--apply` yang membuat cadangan, memverifikasi data, dan menerapkan perubahan secara atomik.
+
 ## Sebelum deployment
 
-Jalankan migrasi `apps/api/prisma/sql/20261012_forms_identity.sql` sebelum memasang kode yang bergantung pada perubahan identitas. Migrasi mempertahankan nilai UUID lama sebagai teks, melepas relasi identitas lama, dan menambahkan indeks. Kebijakan akses langsung lama ditutup menggunakan RLS; koneksi database API harus menggunakan pemilik tabel atau role dengan BYPASSRLS. Pengelolaan akses tetap diperiksa pada API.
+Migrasi `apps/api/prisma/sql/20261012_forms_identity.sql` sudah diterapkan; langkah berikutnya adalah deployment kode aplikasi ketika diminta. Migrasi mempertahankan nilai UUID lama sebagai teks, melepas relasi identitas lama, dan menambahkan indeks. Kebijakan akses langsung lama ditutup menggunakan RLS; koneksi database API harus menggunakan pemilik tabel atau role dengan BYPASSRLS. Pengelolaan akses tetap diperiksa pada API.
 
 Migrasi tidak menulis ulang jawaban historis. Jawaban lama yang labelnya pernah diubah tanpa histori tidak dapat dipetakan kembali secara pasti. Form dengan pola regex kompleks yang tidak lagi didukung perlu disunting pengelolanya. Agregasi antarmuka dibatasi 10.000 tanggapan; data lebih besar tetap tersedia melalui API berpaginasi. Form publik yang mengizinkan banyak tanggapan tetap dapat diisi anonim, sedangkan satu tanggapan per akun memerlukan login.
 

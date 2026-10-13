@@ -1,6 +1,7 @@
 import { Injectable, Logger, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { randomUUID, createHash } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
+import { resolveStudentNisn } from '../common/student-identity';
 import { absenceJp, boundedInt, canManageJenis, medicalStatus, validDate, validatePeriod, validateQuery, validateStatus, validateText } from './ketidakhadiran-validation';
 
 export interface KetidakhadiranFilter {
@@ -108,7 +109,7 @@ export class KetidakhadiranService {
     if (!user) throw new ForbiddenException('Sesi tidak dikenali');
     const roles = user.roles || [];
     if (user.isAdmin || roles.some((r: string) => ['ADMIN', 'ADMINISTRATOR', 'OP_IZIN', 'OP_UKS'].includes(r))) return {};
-    if (roles.includes('SISWA')) return { nisn: user.username || user.nip || '__none__' };
+    if (roles.includes('SISWA')) return { nisn: await resolveStudentNisn(this.prisma, user) || '__none__' };
     if (roles.some((r: string) => ['ORANG_TUA', 'ORANGTUA'].includes(r))) {
       const links = await this.prisma.orangtua_siswa.findMany({ where: { user_id: BigInt(user.id) }, select: { nisn: true } });
       return { nisn: { in: links.map(x => x.nisn) } };
@@ -1308,7 +1309,7 @@ export class KetidakhadiranService {
             throw new ForbiddenException('Anda tidak memiliki akses ke data kehadiran siswa ini');
           }
         } else if (roles.includes('SISWA')) {
-          if (apiUser.nip !== nisn && apiUser.username !== nisn) {
+          if (scope.nisn !== nisn) {
             throw new ForbiddenException('Anda hanya dapat melihat data kehadiran Anda sendiri');
           }
         } else {

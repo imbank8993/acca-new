@@ -544,3 +544,812 @@
   border-color: rgba(26, 115, 232, 0.35);
 }
 
+/* ============================================================
+   WORKFLOW / ALUR PERSETUJUAN — Clean Step Design
+============================================================ */
+
+.ps-workflow {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ps-workflow-steps {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.ps-workflow-step {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px 4px 5px;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  font-weight: 500;
+  line-height: 1.3;
+}
+
+.ps-workflow-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  font-size: 0.68rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+/* Step 1 — Verifikator (amber/warm) */
+.ps-workflow-step--verif {
+  background: rgba(245, 158, 11, 0.08);
+  color: #92400e;
+}
+
+.ps-workflow-step--verif .ps-workflow-num {
+  background: rgba(245, 158, 11, 0.18);
+  color: #b45309;
+}
+
+.dark .ps-workflow-step--verif {
+  background: rgba(245, 158, 11, 0.1) !important;
+  color: #fcd34d !important;
+}
+
+.dark .ps-workflow-step--verif .ps-workflow-num {
+  background: rgba(245, 158, 11, 0.2) !important;
+  color: #fbbf24 !important;
+}
+
+/* Step 2 — Operator TU (blue) */
+.ps-workflow-step--tu {
+  background: rgba(48, 131, 255, 0.08);
+  color: #1d4ed8;
+}
+
+.ps-workflow-step--tu .ps-workflow-num {
+  background: rgba(48, 131, 255, 0.18);
+  color: var(--ps-accent);
+}
+
+.dark .ps-workflow-step--tu {
+  background: rgba(48, 131, 255, 0.1) !important;
+  color: #93c5fd !important;
+}
+
+.dark .ps-workflow-step--tu .ps-workflow-num {
+  background: rgba(48, 131, 255, 0.2) !important;
+  color: #60a5fa !important;
+}
+
+/* Direct — Langsung TU (green) */
+.ps-workflow-step--direct {
+  background: rgba(16, 185, 129, 0.08);
+  color: #065f46;
+}
+
+.dark .ps-workflow-step--direct {
+  background: rgba(16, 185, 129, 0.1) !important;
+  color: #6ee7b7 !important;
+}
+
+/* Arrow between steps */
+.ps-workflow-arrow {
+  color: var(--ps-text-muted);
+  font-size: 0.7rem;
+  flex-shrink: 0;
+}
+
+/* Description text below steps */
+.ps-workflow-desc {
+  font-size: 0.7rem;
+  color: var(--ps-text-muted);
+  padding-left: 2px;
+}
+
+/* ============================================================
+   MOBILE RESPONSIVE — Permintaan Surat
+============================================================ */
+
+@media (max-width: 768px) {
+  /* Wrap halaman */
+  .ps-wrap {
+    gap: 12px;
+    padding-bottom: 80px; /* ruang untuk bottom nav */
+  }
+
+  /* Card & table scroll horizontal */
+  .ps-card {
+    border-radius: var(--ps-radius-sm);
+  }
+
+  .ps-table-wrap {
+    border-radius: var(--ps-radius-sm);
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Ukuran font tabel lebih kecil di mobile */
+  .ps-table {
+    font-size: 0.82rem;
+    min-width: 600px; /* paksa scroll horizontal jika perlu */
+  }
+
+  .ps-table th,
+  .ps-table td {
+    padding: 10px 12px;
+  }
+
+  /* Workflow di mobile: stack vertikal */
+  .ps-workflow-steps {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+
+  .ps-workflow-arrow {
+    transform: rotate(90deg);
+    margin-left: 8px;
+  }
+
+  .ps-workflow-step {
+    font-size: 0.75rem;
+  }
+
+  .ps-workflow-desc {
+    font-size: 0.68rem;
+  }
+
+  /* Info alert */
+  .ps-info-alert {
+    font-size: 0.78rem;
+    padding: 12px 14px;
+    border-radius: 10px;
+    flex-wrap: wrap;
+  }
+
+  /* Badge responsif */
+  .ps-badge {
+    font-size: 0.7rem;
+    padding: 3px 8px;
+  }
+}
+
+@media (max-width: 480px) {
+  .ps-table {
+    min-width: 520px;
+    font-size: 0.78rem;
+  }
+
+  .ps-table th,
+  .ps-table td {
+    padding: 8px 10px;
+  }
+
+  .ps-workflow-step {
+    padding: 3px 8px 3px 4px;
+    font-size: 0.72rem;
+  }
+
+  .ps-workflow-num {
+    width: 16px;
+    height: 16px;
+    font-size: 0.64rem;
+  }
+}
+
+/* ============================================================
+   MOBILE CARD — ps-mob-card
+   Custom card layout untuk tampilan mobile permintaan surat
+============================================================ */
+
+.ps-mob-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Card utama */
+.ps-mob-card {
+  background: var(--ps-glass-bg);
+  border: 1px solid var(--ps-tb-border);
+  border-radius: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+  cursor: pointer;
+  transition: box-shadow 0.18s ease, transform 0.15s ease, border-color 0.18s ease;
+  -webkit-tap-highlight-color: transparent;
+  outline: none;
+}
+
+.ps-mob-card:hover,
+.ps-mob-card:focus {
+  box-shadow: 0 4px 16px rgba(48, 131, 255, 0.12);
+  border-color: rgba(48, 131, 255, 0.35);
+  transform: translateY(-1px);
+}
+
+.ps-mob-card:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+}
+
+/* Header card */
+.ps-mob-card__header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 14px 10px;
+}
+
+/* Avatar */
+.ps-mob-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #3083FF 0%, #1a73e8 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  overflow: hidden;
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: #fff;
+  letter-spacing: 0.02em;
+}
+
+.ps-mob-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+/* Meta (nama + NIP) */
+.ps-mob-card__meta {
+  flex: 1;
+  min-width: 0;
+}
+
+.ps-mob-card__name {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--ps-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ps-mob-card__nip {
+  font-family: monospace;
+  font-size: 0.72rem;
+  color: var(--ps-text-muted);
+  margin-top: 1px;
+}
+
+/* Body */
+.ps-mob-card__body {
+  padding: 0 14px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ps-mob-card__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.ps-mob-card__date {
+  font-size: 0.74rem;
+  color: var(--ps-text-muted);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.ps-mob-card__judul {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--ps-text-primary);
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.ps-mob-card__keperluan {
+  font-size: 0.78rem;
+  color: var(--ps-text-secondary);
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.ps-mob-card__nomor {
+  font-family: monospace;
+  font-size: 0.72rem;
+  color: var(--ps-accent);
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.ps-mob-card__tolak-note {
+  font-size: 0.75rem;
+  color: #dc2626;
+  display: flex;
+  align-items: flex-start;
+  gap: 5px;
+  background: #fef2f2;
+  border-radius: 8px;
+  padding: 6px 10px;
+  line-height: 1.4;
+}
+
+.dark .ps-mob-card__tolak-note {
+  background: rgba(220, 38, 38, 0.12) !important;
+  color: #fca5a5 !important;
+}
+
+/* Footer actions */
+.ps-mob-card__footer {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 14px;
+  border-top: 1px solid var(--ps-tb-border);
+  background: rgba(248, 250, 252, 0.6);
+  flex-wrap: wrap;
+}
+
+.dark .ps-mob-card__footer {
+  background: rgba(15, 23, 42, 0.4) !important;
+  border-top-color: rgba(26, 115, 232, 0.2) !important;
+}
+
+/* Action buttons in footer */
+.ps-mob-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: all 0.15s ease;
+  line-height: 1;
+}
+
+.ps-mob-btn--approve {
+  background: rgba(14, 165, 233, 0.1);
+  color: #0284c7;
+  flex: 1;
+}
+
+.ps-mob-btn--approve:hover {
+  background: #0284c7;
+  color: #fff;
+}
+
+.dark .ps-mob-btn--approve {
+  background: rgba(14, 165, 233, 0.15) !important;
+  color: #38bdf8 !important;
+}
+
+.ps-mob-btn--edit {
+  background: rgba(245, 158, 11, 0.1);
+  color: #b45309;
+  flex: 1;
+}
+
+.ps-mob-btn--edit:hover {
+  background: #d97706;
+  color: #fff;
+}
+
+.dark .ps-mob-btn--edit {
+  background: rgba(245, 158, 11, 0.15) !important;
+  color: #fbbf24 !important;
+}
+
+.ps-mob-btn--file {
+  background: rgba(100, 116, 139, 0.1);
+  color: #475569;
+  flex: 1;
+}
+
+.ps-mob-btn--file:hover {
+  background: #475569;
+  color: #fff;
+}
+
+.dark .ps-mob-btn--file {
+  background: rgba(100, 116, 139, 0.15) !important;
+  color: #94a3b8 !important;
+}
+
+/* Delete — icon only, no flex grow */
+.ps-mob-btn--delete {
+  background: rgba(220, 38, 38, 0.08);
+  color: #dc2626;
+  padding: 6px 10px;
+  flex-shrink: 0;
+}
+
+.ps-mob-btn--delete:hover {
+  background: #dc2626;
+  color: #fff;
+}
+
+.dark .ps-mob-btn--delete {
+  background: rgba(220, 38, 38, 0.12) !important;
+  color: #f87171 !important;
+}
+
+/* Loading state */
+.ps-mob-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+}
+
+/* Empty state */
+.ps-mob-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 60px 24px;
+  text-align: center;
+  color: var(--ps-text-muted);
+}
+
+.ps-mob-empty i {
+  font-size: 2.5rem;
+  opacity: 0.5;
+  margin-bottom: 4px;
+}
+
+.ps-mob-empty p {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--ps-text-secondary);
+  margin: 0;
+}
+
+.ps-mob-empty span {
+  font-size: 0.8rem;
+  color: var(--ps-text-muted);
+  max-width: 260px;
+}
+
+/* Dark mode adjustments */
+.dark .ps-mob-card {
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25) !important;
+}
+
+.dark .ps-mob-card:hover,
+.dark .ps-mob-card:focus {
+  box-shadow: 0 4px 18px rgba(48, 131, 255, 0.18) !important;
+}
+
+/* ============================================================
+   MOBILE CARD — Anti terpotong
+   Konten panjang (jenis surat, nomor, nama) sebelumnya memaksa kartu
+   lebih lebar dari layar lalu dipotong oleh overflow:hidden.
+============================================================ */
+
+/* Anak flex column default-nya min-width:auto → bisa melebar melewati layar */
+.ps-wrap,
+.ps-wrap > * {
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.ps-mob-list {
+  width: 100%;
+  min-width: 0;
+}
+
+.ps-mob-card {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.ps-mob-card *,
+.ps-mob-card *::before,
+.ps-mob-card *::after {
+  box-sizing: border-box;
+}
+
+/* Header: status tetap utuh, nama yang mengalah (ellipsis) */
+.ps-mob-card__header > .ps-badge {
+  flex-shrink: 0;
+}
+
+/* Body: semua baris boleh menyusut & membungkus */
+.ps-mob-card__body,
+.ps-mob-card__row {
+  min-width: 0;
+}
+
+.ps-mob-card__row .ps-jenis-badge {
+  white-space: normal;
+  max-width: 100%;
+  min-width: 0;
+  line-height: 1.3;
+  word-break: break-word;
+}
+
+.ps-mob-card__judul,
+.ps-mob-card__keperluan,
+.ps-mob-card__tolak-note {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.ps-mob-card__nomor {
+  flex-wrap: wrap;
+  overflow-wrap: anywhere;
+  word-break: break-all;
+}
+
+/* Footer: tombol dibagi rata, tidak mendorong lebar kartu */
+.ps-mob-btn {
+  justify-content: center;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.ps-mob-btn--approve,
+.ps-mob-btn--edit,
+.ps-mob-btn--file {
+  flex: 1 1 0;
+}
+
+@media (max-width: 768px) {
+  /* Ruang bawah agar kartu terakhir tidak tertutup bottom nav + FAB */
+  .ps-wrap {
+    padding-bottom: calc(110px + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+/* ============================================================
+   MOBILE CARD — Pengaturan Jenis Surat
+============================================================ */
+
+.ps-mob-avatar--doc {
+  border-radius: 12px;
+  background: rgba(48, 131, 255, 0.1);
+  color: var(--ps-accent);
+  font-size: 1.1rem;
+}
+
+.dark .ps-mob-avatar--doc {
+  background: rgba(48, 131, 255, 0.18);
+  color: #60a5fa;
+}
+
+.ps-mob-toggle {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: none;
+  border-radius: 20px;
+  padding: 4px 10px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  line-height: 1.2;
+  cursor: pointer;
+  background: rgba(100, 116, 139, 0.12);
+  color: #64748b;
+  transition: all 0.15s ease;
+}
+
+.ps-mob-toggle__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.ps-mob-toggle.is-on {
+  background: rgba(16, 185, 129, 0.12);
+  color: #047857;
+}
+
+.dark .ps-mob-toggle.is-on {
+  background: rgba(16, 185, 129, 0.18);
+  color: #6ee7b7;
+}
+
+.ps-mob-toggle:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+/* Kartu ringkas (Pengaturan) */
+.ps-mob-card--compact .ps-mob-card__header {
+  padding: 12px 12px 8px;
+  gap: 10px;
+}
+
+.ps-mob-card--compact .ps-mob-avatar {
+  width: 34px;
+  height: 34px;
+  font-size: 0.95rem;
+  border-radius: 10px;
+}
+
+.ps-mob-card--compact .ps-mob-card__name {
+  font-size: 0.86rem;
+}
+
+.ps-mob-card--compact .ps-mob-card__nip {
+  font-size: 0.68rem;
+}
+
+.ps-mob-card--compact .ps-mob-card__body {
+  padding: 0 12px 10px;
+  gap: 8px;
+}
+
+.ps-mob-card--compact .ps-mob-card__keperluan {
+  font-size: 0.76rem;
+}
+
+.ps-mob-card--compact .ps-mob-flow__step {
+  font-size: 0.7rem;
+  padding: 3px 8px 3px 4px;
+}
+
+.ps-mob-card--compact .ps-mob-flow__step b {
+  width: 16px;
+  height: 16px;
+  font-size: 0.62rem;
+}
+
+.ps-mob-card__footer--split {
+  justify-content: space-between;
+  flex-wrap: nowrap;
+  padding: 8px 12px;
+}
+
+.ps-mob-icon-group {
+  display: inline-flex;
+  gap: 6px;
+}
+
+.ps-mob-icon-btn {
+  width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.ps-mob-icon-btn--edit {
+  background: rgba(48, 131, 255, 0.1);
+  color: var(--ps-accent);
+}
+
+.ps-mob-icon-btn--edit:hover {
+  background: var(--ps-accent);
+  color: #fff;
+}
+
+.ps-mob-icon-btn--delete {
+  background: rgba(220, 38, 38, 0.08);
+  color: #dc2626;
+}
+
+.ps-mob-icon-btn--delete:hover {
+  background: #dc2626;
+  color: #fff;
+}
+
+.dark .ps-mob-icon-btn--edit {
+  background: rgba(48, 131, 255, 0.18);
+  color: #60a5fa;
+}
+
+.dark .ps-mob-icon-btn--delete {
+  background: rgba(220, 38, 38, 0.14);
+  color: #f87171;
+}
+
+.ps-mob-flow {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-width: 0;
+}
+
+.ps-mob-flow__step {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  min-width: 0;
+  padding: 4px 10px 4px 5px;
+  border-radius: 8px;
+  font-size: 0.74rem;
+  font-weight: 500;
+  line-height: 1.3;
+}
+
+.ps-mob-flow__step > span {
+  overflow-wrap: anywhere;
+}
+
+.ps-mob-flow__step b {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  font-size: 0.66rem;
+  flex-shrink: 0;
+}
+
+.ps-mob-flow__step--verif { background: rgba(245, 158, 11, 0.08); color: #92400e; }
+.ps-mob-flow__step--verif b { background: rgba(245, 158, 11, 0.18); color: #b45309; }
+.ps-mob-flow__step--tu { background: rgba(48, 131, 255, 0.08); color: #1d4ed8; }
+.ps-mob-flow__step--tu b { background: rgba(48, 131, 255, 0.18); color: var(--ps-accent); }
+.ps-mob-flow__step--direct { background: rgba(16, 185, 129, 0.08); color: #065f46; padding-left: 10px; }
+
+.dark .ps-mob-flow__step--verif { background: rgba(245, 158, 11, 0.1); color: #fcd34d; }
+.dark .ps-mob-flow__step--tu { background: rgba(48, 131, 255, 0.1); color: #93c5fd; }
+.dark .ps-mob-flow__step--direct { background: rgba(16, 185, 129, 0.1); color: #6ee7b7; }
+
+.ps-mob-flow__arrow {
+  font-size: 0.7rem;
+  color: var(--ps-text-muted);
+}
+
+@media (max-width: 360px) {
+  .ps-mob-card__header {
+    padding: 12px 12px 8px;
+  }
+
+  .ps-mob-card__body {
+    padding: 0 12px 10px;
+  }
+
+  .ps-mob-card__footer {
+    padding: 8px 12px;
+  }
+
+  .ps-mob-btn {
+    padding: 6px 8px;
+    font-size: 0.74rem;
+  }
+}

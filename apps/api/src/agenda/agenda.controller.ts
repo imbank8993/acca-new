@@ -19,13 +19,15 @@ export class AgendaController {
 
   /** Sengaja anonim: hanya agenda ber-`is_publik` yang dikembalikan. */
   @Get('public')
-  async getPublicAgendas(@Query('bulan') bulan: string, @Query('limit') limit?: string) {
+  async getPublicAgendas(@Query('bulan') bulan: string, @Query('limit') limit?: string, @Query('page') page?: string) {
     // `parseInt('abc')` menghasilkan NaN yang dulu diteruskan sebagai `take` ke
     // Prisma dan berujung 500. Dijepit ke rentang wajar.
     const diminta = Number.parseInt(String(limit ?? ''), 10);
     const take = Number.isFinite(diminta) ? Math.min(Math.max(diminta, 1), 200) : 50;
-    const data = await this.agendaService.getPublicAgendas(bulan, take);
-    return { success: true, data };
+    const pageNumber = page === undefined ? 1 : Number(page);
+    if (!Number.isSafeInteger(pageNumber) || pageNumber < 1 || pageNumber > 10000) throw new BadRequestException('Halaman tidak valid');
+    const list = await this.agendaService.getPublicAgendas(bulan, take + 1, (pageNumber - 1) * take);
+    return { success: true, data: list.slice(0, take), has_more: list.length > take, page: pageNumber };
   }
 
   /** Hak pemanggil atas modul ini, agar UI tidak perlu menebak sendiri. */

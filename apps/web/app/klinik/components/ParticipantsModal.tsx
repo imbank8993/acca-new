@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Modal, ModalBody, ModalFooter } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 
@@ -21,9 +21,8 @@ interface ParticipantsModalProps {
   isSiswa: boolean;
   onCancelParticipant: (
     slotId: string,
-    siswaId: number,
-    namaSiswa: string
-  ) => Promise<void> | void;
+    siswaIds: number[]
+  ) => Promise<void>;
   onOpenAbsensi?: (slot: any) => void;
 }
 
@@ -38,15 +37,48 @@ export default function ParticipantsModal({
   onCancelParticipant,
   onOpenAbsensi,
 }: ParticipantsModalProps) {
-  const [pesertaToDelete, setPesertaToDelete] = useState<{
-    slotId: string;
-    siswaId: number;
-    namaSiswa: string;
-    isSelf: boolean;
-  } | null>(null);
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [pesertaToDelete, setPesertaToDelete] = useState<any[] | null>(null);
   const [cancelling, setCancelling] = useState(false);
+  const [feedback, setFeedback] = useState<{ error: boolean; text: string } | null>(null);
+  const pesertaList: any[] = useMemo(() => slot?.klinik_peserta || [], [slot]);
+  const pengelolaSesi = isAdmin || (isGuru && String(user?.id) === String(slot?.guru_id));
+  const isInitiator = (p: any) => slot?.initiator_type === 'SISWA'
+    && String(slot?.initiator_siswa_id) === String(p.siswa_id);
+  const canCancel = (p: any) => !isInitiator(p) && !p.kehadiran
+    && ['pending_guru', 'pending', 'open', 'full'].includes(slot?.status)
+    && (pengelolaSesi || (isSiswa && String(user?.id) === String(p.siswa_id) && p.status !== 'ditugaskan'));
+  const eligible = pesertaList.filter(canCancel);
+  const selected = eligible.filter(p => selectedIds.includes(Number(p.siswa_id)));
+  const allSelected = eligible.length > 0 && selected.length === eligible.length;
+  const isSelf = pesertaToDelete?.length === 1 && String(pesertaToDelete[0].siswa_id) === String(user?.id);
 
-  const pesertaList = useMemo(() => slot?.klinik_peserta || [], [slot]);
+  useEffect(() => {
+    setSelectedIds([]);
+    setPesertaToDelete(null);
+    setFeedback(null);
+  }, [slot?.id, isOpen]);
+
+  const requestDelete = (participants: any[]) => {
+    setFeedback(null);
+    setPesertaToDelete(participants);
+  };
+  const confirmDelete = async () => {
+    if (!pesertaToDelete || cancelling) return;
+    setCancelling(true);
+    setFeedback(null);
+    try {
+      await onCancelParticipant(slot.id, pesertaToDelete.map(p => Number(p.siswa_id)));
+      const removed = new Set(pesertaToDelete.map(p => Number(p.siswa_id)));
+      setSelectedIds(ids => ids.filter(id => !removed.has(id)));
+      setFeedback({ error: false, text: isSelf ? 'Pendaftaran Anda berhasil dibatalkan.' : `${pesertaToDelete.length} peserta berhasil dihapus.` });
+      setPesertaToDelete(null);
+    } catch (err) {
+      setFeedback({ error: true, text: err instanceof Error ? err.message : 'Gagal menghapus peserta. Silakan coba lagi.' });
+    } finally {
+      setCancelling(false);
+    }
+  };
 
   const rekapAbsen = useMemo(() => {
     const r = { H: 0, S: 0, I: 0, A: 0, belum: 0 };
@@ -73,12 +105,13 @@ export default function ParticipantsModal({
     <>
       <Modal
         open={isOpen}
-        onClose={onClose}
-        size="md"
+        onClose={() => { if (!cancelling && !pesertaToDelete) onClose(); }}
+        size="lg"
         variant="default"
         icon="people"
         title="Peserta & Absensi Klinik"
         subtitle={`${slot.mapel} • ${slot.nama_guru}`}
+        className="participants-modal"
       >
         <ModalBody>
           <div className="quota-tracker" style={{ padding: '0 0 14px 0' }}>
@@ -97,12 +130,12 @@ export default function ParticipantsModal({
             </div>
             {sesiAktifAtauSelesai && pesertaList.length > 0 && (
               <div className="abs-ringkas" style={{ paddingTop: 10, paddingBottom: 0 }}>
-                <span className="abs-ringkas__item abs-ringkas__item--h">
+                <span className={`abs-ringkas__item ${rekapAbsen.H > 0 ? 'abs-ringkas__item--h' : ''}`}>
                   Hadir {rekapAbsen.H}
                 </span>
                 <span className="abs-ringkas__item">Sakit {rekapAbsen.S}</span>
                 <span className="abs-ringkas__item">Izin {rekapAbsen.I}</span>
-                <span className="abs-ringkas__item abs-ringkas__item--a">
+                <span className={`abs-ringkas__item ${rekapAbsen.A > 0 ? 'abs-ringkas__item--a' : ''}`}>
                   Alpa {rekapAbsen.A}
                 </span>
                 {rekapAbsen.belum > 0 && (
@@ -119,36 +152,62 @@ export default function ParticipantsModal({
             )}
           </div>
 
+          {pengelolaSesi && eligible.length > 0 && (
+            <div className="participants-toolbar">
+              <label className="participants-select-all">
+                <input type="checkbox" checked={allSelected}
+                  ref={el => { if (el) el.indeterminate = selected.length > 0 && !allSelected; }}
+                  disabled={cancelling || !!pesertaToDelete}
+                  onChange={() => setSelectedIds(allSelected ? [] : eligible.map(p => Number(p.siswa_id)))} />
+                <span>Pilih semua <small>({eligible.length})</small></span>
+              </label>
+              <span className="participants-selected-count">{selected.length} dipilih</span>
+              <Button variant="danger" disabled={!selected.length || cancelling || !!pesertaToDelete}
+                onClick={() => requestDelete(selected)} leftIcon={<i className="bi bi-trash3" />}>
+                Hapus terpilih
+              </Button>
+            </div>
+          )}
+          {pengelolaSesi && pesertaList.some(p => p.kehadiran || isInitiator(p)) && (
+            <p className="form-hint">Pengaju dan peserta dengan absensi tercatat tidak dapat dipilih untuk dihapus.</p>
+          )}
+          {feedback && (
+            <div className={`participants-feedback ${feedback.error ? 'is-error' : 'is-success'}`}
+              role={feedback.error ? 'alert' : 'status'}>{feedback.text}</div>
+          )}
+          {pesertaToDelete && (
+            <div className="participants-confirm" role="group" aria-label="Konfirmasi penghapusan peserta">
+              <strong>{isSelf ? 'Batalkan pendaftaran Anda?' : `Hapus ${pesertaToDelete.length} peserta dari sesi ini?`}</strong>
+              <p>{pesertaToDelete.map(p => p.nama_siswa).join(', ')}</p>
+              <small>Peserta akan dikeluarkan dari sesi klinik ini.</small>
+              <div className="participants-confirm-actions">
+                <Button variant="outline" disabled={cancelling} onClick={() => { setPesertaToDelete(null); setFeedback(null); }}>Batal</Button>
+                <Button variant="danger" isLoading={cancelling} onClick={confirmDelete}
+                  leftIcon={<i className="bi bi-trash3" />}>{isSelf ? 'Ya, Batalkan' : 'Ya, Hapus'}</Button>
+              </div>
+            </div>
+          )}
+
           <div className="plist-container" style={{ padding: '8px 0' }}>
             {pesertaList.length > 0 ? (
               pesertaList.map((p: any) => {
-                const isInitiator = slot.initiator_type === 'SISWA' && slot.initiator_siswa_id === p.siswa_id;
-                const pengelolaSesi = (isGuru && String(user?.id) === String(slot.guru_id)) || isAdmin;
-                const canCancel =
-                  !isInitiator &&
-                  ['pending_guru', 'pending', 'open', 'full'].includes(slot.status) && (
-                    pengelolaSesi ||
-                    (isSiswa && String(user?.id) === String(p.siswa_id) && p.status !== 'ditugaskan')
-                  );
-
+                const initiator = isInitiator(p);
+                const canDelete = canCancel(p);
+                const checked = selectedIds.includes(Number(p.siswa_id));
                 return (
-                  <div key={p.id} className="p-card">
-                    <div className="p-avatar">{p.nama_siswa?.charAt(0)}</div>
+                  <div key={p.id} className={`p-card ${checked && canDelete ? 'is-selected' : ''}`}>
+                    {pengelolaSesi && ['pending_guru', 'pending', 'open', 'full'].includes(slot.status) && (
+                      <input className="participants-checkbox" type="checkbox"
+                        aria-label={`Pilih ${p.nama_siswa}`} checked={checked && canDelete}
+                        disabled={!canDelete || cancelling || !!pesertaToDelete}
+                        onChange={() => setSelectedIds(ids => checked
+                          ? ids.filter(id => id !== Number(p.siswa_id)) : [...ids, Number(p.siswa_id)])} />
+                    )}
                     <div className="p-info">
                       <p className="p-name">
                         {p.nama_siswa}
-                        {isInitiator && (
-                          <span
-                            style={{
-                              marginLeft: 6,
-                              fontSize: '0.7rem',
-                              fontWeight: 600,
-                              background: '#e0f2fe',
-                              color: '#0369a1',
-                              padding: '2px 6px',
-                              borderRadius: 4,
-                            }}
-                          >
+                        {initiator && (
+                          <span className="p-initiator-badge">
                             Pengaju
                           </span>
                         )}
@@ -172,19 +231,14 @@ export default function ParticipantsModal({
                       </span>
                     ) : null}
                     <div className="p-actions">
-                      {canCancel && (
+                      {canDelete && (
                         <button
                           type="button"
-                          onClick={() =>
-                            setPesertaToDelete({
-                              slotId: slot.id,
-                              siswaId: p.siswa_id,
-                              namaSiswa: p.nama_siswa,
-                              isSelf: String(user?.id) === String(p.siswa_id),
-                            })
-                          }
+                          onClick={() => requestDelete([p])}
+                          disabled={cancelling || !!pesertaToDelete}
+                          aria-label={`${String(user?.id) === String(p.siswa_id) ? 'Batalkan pendaftaran' : 'Hapus'} ${p.nama_siswa}`}
                           className="p-del-btn"
-                          title="Batalkan Pendaftaran"
+                          title={pengelolaSesi ? "Hapus peserta" : "Batalkan pendaftaran"}
                         >
                           <i className="bi bi-trash3-fill" />
                         </button>
@@ -203,12 +257,13 @@ export default function ParticipantsModal({
         </ModalBody>
 
         <ModalFooter align={onOpenAbsensi ? 'between' : 'end'}>
-          <Button variant="cancel" onClick={onClose}>
+          <Button variant="outline" disabled={cancelling} onClick={onClose}>
             Tutup
           </Button>
           {onOpenAbsensi && (
             <Button
               variant="primary"
+              disabled={cancelling || !!pesertaToDelete}
               onClick={() => {
                 onClose();
                 onOpenAbsensi(slot);
@@ -221,60 +276,6 @@ export default function ParticipantsModal({
         </ModalFooter>
       </Modal>
 
-      {/* Delete / Cancel Participant Confirmation Modal */}
-      {pesertaToDelete && (
-        <Modal
-          open={!!pesertaToDelete}
-          onClose={() => !cancelling && setPesertaToDelete(null)}
-          size="sm"
-          variant="delete"
-          icon="trash3"
-          title={pesertaToDelete.isSelf ? 'Batalkan Pendaftaran?' : 'Hapus Siswa dari Daftar?'}
-        >
-          <ModalBody>
-            <div style={{ fontSize: '0.85rem', color: 'var(--n-ink)' }}>
-              {pesertaToDelete.isSelf ? (
-                <span>Apakah Anda yakin ingin membatalkan pendaftaran Anda dari klinik ini?</span>
-              ) : (
-                <span>
-                  Apakah Anda yakin ingin menghapus <strong>{pesertaToDelete.namaSiswa}</strong> dari daftar peserta?
-                </span>
-              )}
-            </div>
-          </ModalBody>
-          <ModalFooter align="end">
-            <Button
-              variant="cancel"
-              onClick={() => setPesertaToDelete(null)}
-              disabled={cancelling}
-            >
-              Batal
-            </Button>
-            <Button
-              variant="danger"
-              onClick={async () => {
-                setCancelling(true);
-                try {
-                  await onCancelParticipant(
-                    pesertaToDelete.slotId,
-                    pesertaToDelete.siswaId,
-                    pesertaToDelete.namaSiswa
-                  );
-                  setPesertaToDelete(null);
-                } catch (err: any) {
-                  console.error('Gagal menghapus peserta:', err);
-                } finally {
-                  setCancelling(false);
-                }
-              }}
-              isLoading={cancelling}
-              leftIcon={<i className="bi bi-trash3-fill" />}
-            >
-              {pesertaToDelete.isSelf ? 'Ya, Batalkan' : 'Ya, Hapus'}
-            </Button>
-          </ModalFooter>
-        </Modal>
-      )}
     </>
   );
 }

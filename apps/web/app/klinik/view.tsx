@@ -499,6 +499,9 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
         const json = await safeJson(res);
         if (json.ok) {
           setSlots(json.data);
+          setShowParticipantsModal(current => current
+            ? json.data.find((s: KlinikSlot) => s.id === current.id) || current
+            : null);
           if (json.user_tingkat) setUserTingkat(json.user_tingkat);
           if (json.user_kelas) setUserKelas(json.user_kelas);
           // Jam server dipakai sebagai acuan jendela absensi; yang disimpan
@@ -1325,29 +1328,28 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
     }
   }
 
-  async function handleCancel(slotId: string, siswaId: number, name: string) {
-    if (actionLoadingId) return;
-    setActionLoadingId(`cancel_${slotId}_${siswaId}`);
+  async function handleCancel(slotId: string, siswaIds: number[]) {
+    if (actionLoadingId) throw new Error('Tunggu proses sebelumnya selesai.');
+    setActionLoadingId(`cancel_${slotId}`);
     try {
       const res = await fetch('/api/klinik', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'cancel_registration',
-          slot_id: slotId,
-          siswa_id: siswaId,
-        }),
+        body: JSON.stringify({ action: 'cancel_registration', slot_id: slotId, siswa_ids: siswaIds }),
       });
       const json = await safeJson(res);
-      if (json.ok) {
-        Swal.fire('Berhasil', 'Pendaftaran telah dibatalkan', 'success');
-        setShowParticipantsModal(null);
-        fetchUserAndSlots();
-      } else {
-        Swal.fire('Gagal', json.error || 'Gagal memproses pembatalan', 'error');
-      }
+      if (!res.ok || !json.ok) throw new Error(json.error || 'Gagal menghapus peserta. Silakan coba lagi.');
+      const removed = new Set<number>(json.removed_siswa_ids || siswaIds);
+      const updateSlot = (s: KlinikSlot): KlinikSlot => s.id === slotId ? {
+        ...s,
+        status: json.status || s.status,
+        klinik_peserta: (s.klinik_peserta || []).filter(p => !removed.has(Number(p.siswa_id))),
+      } : s;
+      setSlots(current => current.map(updateSlot));
+      setShowParticipantsModal(current => current ? updateSlot(current) : null);
+      await fetchUserAndSlots(true);
     } catch (err) {
-      Swal.fire('Error', 'Gagal memproses pembatalan', 'error');
+      throw new Error(err instanceof Error ? err.message : 'Gagal menghapus peserta. Silakan coba lagi.');
     } finally {
       setActionLoadingId(null);
     }

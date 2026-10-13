@@ -3,8 +3,11 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import Swal from 'sweetalert2';
 import { Spinner } from '@/components/ui/Spinner';
-import { Button } from '@/components/ui/Button';
-import { FilterToolbar, FilterSearch, FilterSelect, FilterActions } from '@/components/ui/FilterToolbar';
+import { FilterToolbar, FilterSearch, FilterSelect } from '@/components/ui/FilterToolbar';
+import { MobileFab } from '@/components/mobile';
+import { DesktopFab } from '@/components/ui/DesktopFab';
+import { Plus } from 'lucide-react';
+import { useIsMobile } from '@/hooks/use-breakpoint';
 import { ActionButton, ActionGroup } from '@/components/ui/ActionButtons';
 import ModalPengaturanJenisSurat, { ROLE_OPTIONS } from '../components/ModalPengaturanJenisSurat';
 import { getRoleApproverLabel, JenisSuratConfig } from '../components/AddPermintaanModal';
@@ -23,6 +26,7 @@ export default function TabPengaturanSurat({ onSaved }: TabPengaturanSuratProps 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editItem, setEditItem] = useState<JenisSuratConfig | null>(null);
+  const isMobile = useIsMobile();
 
   const loadPengaturan = useCallback(async () => {
     setLoading(true);
@@ -209,6 +213,10 @@ export default function TabPengaturanSurat({ onSaved }: TabPengaturanSuratProps 
 
   return (
     <>
+      {/* FAB Tambah Jenis Surat (ikon berbeda dari Ajukan Surat) */}
+      <DesktopFab label="Tambah Jenis Surat" icon={<Plus size={20} />} mobileIcon="plus-lg" mobileLabel="Tambah" onClick={handleOpenAdd} />
+      <MobileFab label="Tambah" icon="plus-lg" onClick={handleOpenAdd} />
+
       {/* Toolbar Filter & Pencarian */}
       <FilterToolbar>
         <FilterSearch
@@ -227,19 +235,118 @@ export default function TabPengaturanSurat({ onSaved }: TabPengaturanSuratProps 
           options={approverOptions}
         />
 
-        <FilterActions>
-          <Button
-            variant="primary"
-            icon="add"
-            onClick={handleOpenAdd}
-            disabled={loading || saving}
-          >
-            Tambah Jenis Surat
-          </Button>
-        </FilterActions>
       </FilterToolbar>
 
-      {/* Tabel Konfigurasi Data */}
+      {/* Tampilan Mobile — Kartu */}
+      {isMobile && (
+        loading ? (
+          <div className="ps-mob-loading">
+            <Spinner variant="buble" label="Memuat konfigurasi jenis surat..." />
+          </div>
+        ) : filteredConfigs.length === 0 ? (
+          <div className="ps-mob-empty">
+            <i className="bi bi-gear" />
+            <p>
+              {configs.length === 0
+                ? 'Belum ada konfigurasi jenis surat'
+                : 'Tidak ada jenis surat yang cocok'}
+            </p>
+          </div>
+        ) : (
+          <div className="ps-mob-list">
+            {filteredConfigs.map((item, idx) => {
+              const aktif = item.is_active !== false;
+              const approverText =
+                item.approver_type === 'USER'
+                  ? item.approver_user_nama || `NIP ${item.approver_user_nip}`
+                  : getRoleApproverLabel(item.approver_role);
+
+              return (
+                <div
+                  key={item.id || idx}
+                  className="ps-mob-card ps-mob-card--compact"
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => handleOpenEdit(item)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleOpenEdit(item)}
+                >
+                  <div className="ps-mob-card__header">
+                    <div className="ps-mob-avatar ps-mob-avatar--doc">
+                      <i className="bi bi-file-earmark-text" />
+                    </div>
+                    <div className="ps-mob-card__meta">
+                      <div className="ps-mob-card__name">{item.nama}</div>
+                      <div className="ps-mob-card__nip">ID: {item.id}</div>
+                    </div>
+                  </div>
+
+                  <div className="ps-mob-card__body">
+                    {item.deskripsi && (
+                      <div className="ps-mob-card__keperluan">{item.deskripsi}</div>
+                    )}
+                    <div className="ps-mob-flow">
+                      {item.perlu_approval ? (
+                        <>
+                          <span className="ps-mob-flow__step ps-mob-flow__step--verif">
+                            <b>1</b>
+                            <span>{approverText}</span>
+                          </span>
+                          <i className="bi bi-arrow-right ps-mob-flow__arrow" />
+                          <span className="ps-mob-flow__step ps-mob-flow__step--tu">
+                            <b>2</b>
+                            <span>Operator TU</span>
+                          </span>
+                        </>
+                      ) : (
+                        <span className="ps-mob-flow__step ps-mob-flow__step--direct">
+                          <i className="bi bi-lightning-charge-fill" />
+                          <span>Langsung Operator TU</span>
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="ps-mob-card__footer ps-mob-card__footer--split" onClick={(e) => e.stopPropagation()}>
+                    <button
+                      type="button"
+                      className={`ps-mob-toggle ${aktif ? 'is-on' : ''}`}
+                      onClick={() => handleToggleActive(item)}
+                      disabled={saving}
+                      title="Ketuk untuk mengubah status"
+                    >
+                      <span className="ps-mob-toggle__dot" />
+                      {aktif ? 'Aktif' : 'Nonaktif'}
+                    </button>
+                    <div className="ps-mob-icon-group">
+                      <button
+                        type="button"
+                        className="ps-mob-icon-btn ps-mob-icon-btn--edit"
+                        onClick={() => handleOpenEdit(item)}
+                        aria-label="Ubah"
+                        title="Ubah"
+                      >
+                        <i className="bi bi-pencil" />
+                      </button>
+                      <button
+                        type="button"
+                        className="ps-mob-icon-btn ps-mob-icon-btn--delete"
+                        onClick={() => handleDelete(item)}
+                        aria-label="Hapus"
+                        title="Hapus"
+                      >
+                        <i className="bi bi-trash3" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )
+      )}
+
+      {/* Tabel Konfigurasi Data (Desktop) */}
+      {!isMobile && (
       <div className="ps-card">
         <div className="ps-table-wrap">
           <table className="ps-table">
@@ -300,64 +407,29 @@ export default function TabPengaturanSurat({ onSaved }: TabPengaturanSuratProps 
                     </td>
                     <td>
                       {item.perlu_approval ? (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                            <span
-                              style={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: 4,
-                                padding: '3px 8px',
-                                borderRadius: 6,
-                                background: 'rgba(245, 158, 11, 0.12)',
-                                border: '1px solid rgba(245, 158, 11, 0.35)',
-                                color: '#b45309',
-                                fontSize: '0.74rem',
-                                fontWeight: 600,
-                              }}
-                            >
-                              <i className="bi bi-1-circle-fill" /> Pihak Berwenang: {approverText}
-                            </span>
-                            <i className="bi bi-arrow-right" style={{ color: 'var(--ps-text-muted)', fontSize: '0.8rem' }} />
-                            <span
-                              style={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: 4,
-                                padding: '3px 8px',
-                                borderRadius: 6,
-                                background: 'rgba(48, 131, 255, 0.12)',
-                                border: '1px solid rgba(48, 131, 255, 0.35)',
-                                color: 'var(--ps-accent)',
-                                fontSize: '0.74rem',
-                                fontWeight: 600,
-                              }}
-                            >
-                              <i className="bi bi-2-circle-fill" /> Operator TU
-                            </span>
+                        <div className="ps-workflow">
+                          <div className="ps-workflow-steps">
+                            <div className="ps-workflow-step ps-workflow-step--verif">
+                              <span className="ps-workflow-num">1</span>
+                              <span className="ps-workflow-label">{approverText}</span>
+                            </div>
+                            <i className="bi bi-chevron-right ps-workflow-arrow" />
+                            <div className="ps-workflow-step ps-workflow-step--tu">
+                              <span className="ps-workflow-num">2</span>
+                              <span className="ps-workflow-label">Operator TU</span>
+                            </div>
                           </div>
-                          <span style={{ fontSize: '0.72rem', color: 'var(--ps-text-muted)' }}>
-                            Harus diverifikasi sebelum diproses dan diterbitkan Operator TU
-                          </span>
+                          <span className="ps-workflow-desc">Verifikasi → Proses &amp; Terbit</span>
                         </div>
                       ) : (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                          <span
-                            style={{
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: 4,
-                              padding: '3px 8px',
-                              borderRadius: 6,
-                              background: 'rgba(16, 185, 129, 0.12)',
-                              border: '1px solid rgba(16, 185, 129, 0.35)',
-                              color: '#047857',
-                              fontSize: '0.74rem',
-                              fontWeight: 600,
-                            }}
-                          >
-                            <i className="bi bi-check2-circle" /> Langsung ke Operator TU
-                          </span>
+                        <div className="ps-workflow">
+                          <div className="ps-workflow-steps">
+                            <div className="ps-workflow-step ps-workflow-step--direct">
+                              <i className="bi bi-lightning-charge-fill" style={{ fontSize: '0.7rem' }} />
+                              <span className="ps-workflow-label">Langsung Operator TU</span>
+                            </div>
+                          </div>
+                          <span className="ps-workflow-desc">Tanpa verifikasi tambahan</span>
                         </div>
                       )}
                     </td>
@@ -407,6 +479,7 @@ export default function TabPengaturanSurat({ onSaved }: TabPengaturanSuratProps 
         </table>
       </div>
       </div>
+      )}
 
       {/* Modal Pengaturan Item */}
       <ModalPengaturanJenisSurat

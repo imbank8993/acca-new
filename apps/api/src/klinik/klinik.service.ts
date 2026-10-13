@@ -1382,48 +1382,53 @@ export async function handlePost(req: any, action: string, payload: any, db: Pri
         }
 
         if (action === 'cancel_registration') {
-            const { slot_id, siswa_id } = payload;
-
-            // Sebelumnya endpoint ini sama sekali tanpa penjagaan: cukup kirim
-            // slot_id + siswa_id dan siapa pun yang login bisa mengeluarkan peserta
-            // mana pun dari sesi mana pun. Sekarang: diri sendiri, guru pengampu,
-            // atau admin.
+            const { slot_id, siswa_id, siswa_ids } = payload;
+            const rawIds = siswa_ids === undefined ? [siswa_id] : siswa_ids;
+            if (!slot_id || !Array.isArray(rawIds) || rawIds.length === 0
+                || rawIds.some(id => !['number', 'string'].includes(typeof id)
+                    || !Number.isSafeInteger(Number(id)) || Number(id) <= 0)) {
+                throw new HttpException({ ok: false, error: 'Pilih peserta yang valid untuk dihapus' }, 400);
+            }
+            const targetIds = [...new Set(rawIds.map(Number))];
             const callerRecord = await resolveUserRecord(db, user.authId, user.nip);
             if (!callerRecord) throw new ForbiddenException('User tidak ditemukan');
 
-            const { data: slot } = await db.from('klinik_slots')
+            const { data: slot, error: slotErr } = await db.from('klinik_slots')
                 .select('max_siswa, status, guru_id, initiator_type, initiator_siswa_id').eq('id', slot_id).maybeSingle();
+            if (slotErr) throw slotErr;
             if (!slot) throw new Error('Jadwal tidak ditemukan');
-
-            const targetId = Number(siswa_id);
 
             // Siswa pengaju kelompok adalah penanggung jawab pengajuan — mereka
             // tidak boleh keluar dari kelompoknya sendiri. Jika ingin membatalkan,
             // mereka harus membatalkan/menghapus jadwalnya via delete_slot.
-            if (slot.initiator_type === 'SISWA' && slot.initiator_siswa_id === targetId) {
+            if (slot.initiator_type === 'SISWA' && targetIds.includes(slot.initiator_siswa_id)) {
                 throw new ForbiddenException('Pengaju kelompok tidak dapat keluar dari sesi. Batalkan atau hapus pengajuan jadwal bila tidak jadi dilaksanakan.');
             }
 
             const pengelolaSesi = can(user, 'klinik.kelola_sesi') || slot.guru_id === callerRecord.id;
-            const bolehBatal = pengelolaSesi || targetId === callerRecord.id;
+            const bolehBatal = pengelolaSesi || (targetIds.length === 1 && targetIds[0] === callerRecord.id);
             if (!bolehBatal) {
                 throw new ForbiddenException('Anda hanya dapat membatalkan pendaftaran Anda sendiri');
             }
 
-            const { data: pesertaRow } = await db.from('klinik_peserta')
-                .select('status, kehadiran').eq('slot_id', slot_id).eq('siswa_id', targetId).maybeSingle();
+            const { data: pesertaRows, error: pesertaErr } = await db.from('klinik_peserta')
+                .select('id, siswa_id, status, kehadiran').eq('slot_id', slot_id).in('siswa_id', targetIds);
+            if (pesertaErr) throw pesertaErr;
+            if ((pesertaRows || []).length !== targetIds.length) {
+                throw new HttpException({ ok: false, error: 'Sebagian peserta sudah tidak terdaftar. Perbarui daftar lalu pilih kembali.' }, 409);
+            }
 
             // Penugasan bukan pendaftaran sukarela: yang DITUNJUK pembentuk sesi
             // tidak boleh mengundurkan diri. Yang mendaftar sendiri ke sesi yang
             // sama (kalau kuotanya longgar) tetap boleh membatalkan.
-            if (pesertaRow?.status === STATUS_DITUGASKAN && !pengelolaSesi) {
+            if (pesertaRows.some(p => p.status === STATUS_DITUGASKAN) && !pengelolaSesi) {
                 throw new ForbiddenException('Anda ditugaskan mengikuti sesi ini — hubungi guru pengampu bila berhalangan');
             }
 
             // Kehadiran menempel pada baris peserta; menghapus barisnya berarti
             // menghapus catatan absensinya. Kalau memang keliru, guru pengampu
             // dapat mengosongkan kehadirannya dulu lewat absensi, baru dikeluarkan.
-            if (pesertaRow?.kehadiran) {
+            if (pesertaRows.some(p => p.kehadiran)) {
                 throw new HttpException({
                     ok: false,
                     error: 'Kehadiran peserta ini sudah tercatat. Kosongkan dulu absensinya bila memang keliru.',
@@ -1438,23 +1443,28 @@ export async function handlePost(req: any, action: string, payload: any, db: Pri
                     error: 'Sesi ini sudah dilaporkan, daftar peserta tidak dapat diubah lagi',
                 }, 409);
             }
+            if (!['pending_guru', 'pending', 'open', 'full', 'finished'].includes(slot.status)) {
+                throw new HttpException({ ok: false, error: 'Daftar peserta sesi ini tidak dapat diubah' }, 409);
+            }
 
-            // 1. Delete the registration
+            // Seluruh pilihan divalidasi sebelum satu perintah hapus.
             const { error: deleteErr } = await db
                 .from('klinik_peserta')
                 .delete()
                 .eq('slot_id', slot_id)
-                .eq('siswa_id', targetId);
+                .in('id', pesertaRows.map(p => p.id));
 
             if (deleteErr) throw deleteErr;
 
             // 2. Check current count to see if we should reopen the slot
             const count = await hitungPeserta(db, slot_id);
-            if (count < slot.max_siswa && slot.status === 'full') {
-                await db.from('klinik_slots').update({ status: 'open' }).eq('id', slot_id);
+            const status = count < slot.max_siswa && slot.status === 'full' ? 'open' : slot.status;
+            if (status !== slot.status) {
+                const { error: updateErr } = await db.from('klinik_slots').update({ status }).eq('id', slot_id);
+                if (updateErr) throw updateErr;
             }
 
-            return { ok: true };
+            return { ok: true, removed_siswa_ids: targetIds, status };
         }
 
         if (action === 'update_slot') {

@@ -10,15 +10,17 @@ import { Spinner } from '@/components/ui/Spinner'
 
 interface KokurikulerSiswaProps { user?: any }
 
+const getTodayStr = () => new Date().toLocaleDateString('en-CA')
+
 export default function KokurikulerSiswaPage({ user }: KokurikulerSiswaProps) {
     const roles: string[] = (user?.roles || []).map((r: string) => String(r).toUpperCase())
-    const isOrangTua = roles.includes('ORANG_TUA') || user?.role === 'ORANG_TUA'
+    const isOrangTua = roles.includes('ORANG_TUA') || roles.includes('ORANGTUA') || user?.role === 'ORANG_TUA'
     const selfNisn: string = isOrangTua ? '' : (user?.nisn || user?.nip || user?.username || '')
 
-    const [tanggal, setTanggal] = useState<string>(new Date().toISOString().split('T')[0])
+    const [tanggal, setTanggal] = useState<string>(getTodayStr)
     const [masterList, setMasterList] = useState<any[]>([])
     const [checklist, setChecklist] = useState<any[]>([])
-    const [customs, setCustoms] = useState<{ id: number, nama_kegiatan: string }[]>([])
+    const [customs, setCustoms] = useState<{ id: string | number, nama_kegiatan: string, status?: string, catatan?: string }[]>([])
     const [loading, setLoading] = useState(true)
     const [saving, setSaving] = useState(false)
 
@@ -44,7 +46,9 @@ export default function KokurikulerSiswaPage({ user }: KokurikulerSiswaProps) {
             if (json.ok && Array.isArray(json.data)) {
                 const mapped = json.data.map((d: any) => ({ nisn: d.nisn, nama: d.nama_lengkap }))
                 setAnakList(mapped)
-                if (mapped.length === 1) setSelectedNisn(mapped[0].nisn)
+                if (mapped.length > 0) {
+                    setSelectedNisn(prev => prev || mapped[0].nisn)
+                }
             }
         } catch (e) {
             console.error(e)
@@ -67,10 +71,20 @@ export default function KokurikulerSiswaPage({ user }: KokurikulerSiswaProps) {
             const res = await fetch(`/api/kokurikuler/siswa?nisn=${encodeURIComponent(activeNisn)}&tanggal=${tanggal}`)
             const json = await res.json()
             if (json.ok) {
-                const logs = json.data
-                const checked = logs.filter((l: any) => !l.is_custom).map((l: any) => ({ kegiatan_id: l.kegiatan_id, nama_kegiatan: l.nama_kegiatan, status: l.status }))
-                const csts = logs.filter((l: any) => l.is_custom).map((l: any, i: number) => ({ id: i, nama_kegiatan: l.nama_kegiatan, status: l.status }))
-                
+                const logs = json.data || []
+                const checked = logs.filter((l: any) => !l.is_custom).map((l: any) => ({
+                    kegiatan_id: l.kegiatan_id,
+                    nama_kegiatan: l.nama_kegiatan,
+                    status: l.status,
+                    catatan: l.catatan
+                }))
+                const csts = logs.filter((l: any) => l.is_custom).map((l: any, i: number) => ({
+                    id: l.id || i,
+                    nama_kegiatan: l.nama_kegiatan,
+                    status: l.status,
+                    catatan: l.catatan
+                }))
+
                 setChecklist(checked)
                 setCustoms(csts)
             }
@@ -83,6 +97,16 @@ export default function KokurikulerSiswaPage({ user }: KokurikulerSiswaProps) {
     const handleCheck = (m: any) => {
         const exist = checklist.find(c => c.kegiatan_id === m.id)
         if (exist) {
+            if (exist.status === 'Disetujui' || exist.status === 'Ditolak') {
+                Swal.fire({
+                    icon: 'info',
+                    title: exist.status === 'Disetujui' ? 'Kegiatan Sudah Disetujui' : 'Kegiatan Ditolak Pembina',
+                    text: exist.catatan
+                        ? `Catatan pembina: "${exist.catatan}"`
+                        : 'Kegiatan yang telah diverifikasi oleh Pembina Asrama tidak dapat diubah sendiri.',
+                })
+                return
+            }
             setChecklist(checklist.filter(c => c.kegiatan_id !== m.id))
         } else {
             setChecklist([...checklist, { kegiatan_id: m.id, nama_kegiatan: m.nama_kegiatan, status: 'Pending' }])
@@ -90,14 +114,25 @@ export default function KokurikulerSiswaPage({ user }: KokurikulerSiswaProps) {
     }
 
     const addCustom = () => {
-        setCustoms([...customs, { id: Date.now(), nama_kegiatan: '' }])
+        setCustoms([...customs, { id: Date.now(), nama_kegiatan: '', status: 'Pending' }])
     }
 
-    const updateCustom = (id: number, val: string) => {
+    const updateCustom = (id: string | number, val: string) => {
         setCustoms(customs.map(c => c.id === id ? { ...c, nama_kegiatan: val } : c))
     }
 
-    const removeCustom = (id: number) => {
+    const removeCustom = (id: string | number) => {
+        const target = customs.find(c => c.id === id)
+        if (target && (target.status === 'Disetujui' || target.status === 'Ditolak')) {
+            Swal.fire({
+                icon: 'info',
+                title: target.status === 'Disetujui' ? 'Kegiatan Sudah Disetujui' : 'Kegiatan Ditolak Pembina',
+                text: target.catatan
+                    ? `Catatan pembina: "${target.catatan}"`
+                    : 'Kegiatan yang telah diverifikasi Pembina Asrama tidak dapat dihapus.',
+            })
+            return
+        }
         setCustoms(customs.filter(c => c.id !== id))
     }
 
@@ -120,13 +155,13 @@ export default function KokurikulerSiswaPage({ user }: KokurikulerSiswaProps) {
             })
             const json = await res.json()
             if (json.ok) {
-                Swal.fire({ icon: 'success', title: 'Berhasil', text: 'Catatan kokurikuler berhasil disimpan' })
+                Swal.fire({ icon: 'success', title: 'Berhasil', text: 'Catatan kokurikuler berhasil disimpan', timer: 1500, showConfirmButton: false })
                 fetchLog()
             } else {
-                Swal.fire({ icon: 'error', title: 'Gagal', text: json.error })
+                Swal.fire({ icon: 'error', title: 'Gagal', text: json.error || 'Terjadi kesalahan' })
             }
-        } catch (e) {
-            Swal.fire({ icon: 'error', title: 'Gagal', text: 'Terjadi kesalahan' })
+        } catch (e: any) {
+            Swal.fire({ icon: 'error', title: 'Gagal', text: e?.message || 'Terjadi kesalahan sistem' })
         }
         setSaving(false)
     }
@@ -168,7 +203,7 @@ export default function KokurikulerSiswaPage({ user }: KokurikulerSiswaProps) {
                     />
                 )}
                 <FilterField label="Tanggal Kegiatan" icon="calendar-event" bare width="200px">
-                    <DatePicker value={tanggal} onChange={setTanggal} />
+                    <DatePicker value={tanggal} onChange={setTanggal} max={getTodayStr()} />
                 </FilterField>
             </FilterToolbar>
 
@@ -188,12 +223,19 @@ export default function KokurikulerSiswaPage({ user }: KokurikulerSiswaProps) {
                                     <div className="kk__items">
                                         {groupedMaster[cat].map(m => {
                                             const isChecked = checklist.some(c => c.kegiatan_id === m.id)
-                                            const itemStatus = checklist.find(c => c.kegiatan_id === m.id)?.status
+                                            const checkItem = checklist.find(c => c.kegiatan_id === m.id)
+                                            const itemStatus = checkItem?.status
+                                            const itemCatatan = checkItem?.catatan
                                             return (
-                                                <label key={m.id} className={`kk__item ${isChecked ? 'active' : ''}`}>
+                                                <label key={m.id} className={`kk__item ${isChecked ? 'active' : ''} ${itemCatatan ? 'has-catatan' : ''}`}>
                                                     <input type="checkbox" checked={isChecked} onChange={() => handleCheck(m)} />
                                                     <span className="kk__checkIcon"><i className="bi bi-check" /></span>
-                                                    <span className="kk__text">{m.nama_kegiatan}</span>
+                                                    <div className="kk__itemDetails">
+                                                        <span className="kk__text">{m.nama_kegiatan}</span>
+                                                        {itemCatatan && (
+                                                            <span className="kk__catatanText"><i className="bi bi-chat-left-dots" /> {itemCatatan}</span>
+                                                        )}
+                                                    </div>
                                                     {itemStatus && itemStatus !== 'Pending' && (
                                                         <span className={`kk__statusBadge ${itemStatus === 'Disetujui' ? 'st-ok' : 'st-err'}`}>{itemStatus}</span>
                                                     )}
@@ -208,29 +250,39 @@ export default function KokurikulerSiswaPage({ user }: KokurikulerSiswaProps) {
                         <div className="kk__customs">
                             <h3>Kegiatan Lainnya (Opsional)</h3>
                             <p>Tambahkan kegiatan positif lain yang tidak ada di atas.</p>
-                            
+
                             <div className="kk__customList">
                                 {customs.map((c) => (
-                                    <div key={c.id} className="kk__customItem">
-                                        <input 
-                                            type="text" 
-                                            placeholder="Contoh: Membantu membersihkan masjid" 
-                                            value={c.nama_kegiatan} 
-                                            onChange={e => updateCustom(c.id, e.target.value)} 
-                                        />
-                                        <ActionButton action="delete" size="sm" onClick={() => removeCustom(c.id)} label="Hapus" />
-                                        {(c as any).status && (c as any).status !== 'Pending' && (
-                                            <span className={`kk__statusBadge ${(c as any).status === 'Disetujui' ? 'st-ok' : 'st-err'}`}>{(c as any).status}</span>
+                                    <div key={c.id} className="kk__customItemWrapper">
+                                        <div className="kk__customItem">
+                                            <input
+                                                type="text"
+                                                placeholder="Contoh: Membantu membersihkan masjid"
+                                                value={c.nama_kegiatan}
+                                                disabled={c.status === 'Disetujui' || c.status === 'Ditolak'}
+                                                onChange={e => updateCustom(c.id, e.target.value)}
+                                            />
+                                            {c.status !== 'Disetujui' && c.status !== 'Ditolak' && (
+                                                <ActionButton action="delete" size="sm" onClick={() => removeCustom(c.id)} label="Hapus" />
+                                            )}
+                                            {c.status && c.status !== 'Pending' && (
+                                                <span className={`kk__statusBadge ${c.status === 'Disetujui' ? 'st-ok' : 'st-err'}`}>{c.status}</span>
+                                            )}
+                                        </div>
+                                        {c.catatan && (
+                                            <div className="kk__customCatatanText">
+                                                <i className="bi bi-chat-left-dots" /> Catatan Pembina: {c.catatan}
+                                            </div>
                                         )}
                                     </div>
                                 ))}
                             </div>
-                            
+
                             <Button variant="outline" size="sm" onClick={addCustom} leftIcon={<i className="bi bi-plus-lg" />}>
                                 Tambah Kegiatan
                             </Button>
                         </div>
-                        
+
                         <div className="kk__actions" style={{ marginTop: '28px', display: 'flex', justifyContent: 'flex-end' }}>
                             <Button variant="primary" size="lg" onClick={submitData} isLoading={saving} leftIcon={<i className="bi bi-save" />}>
                                 Simpan Catatan
@@ -243,34 +295,38 @@ export default function KokurikulerSiswaPage({ user }: KokurikulerSiswaProps) {
             <style jsx>{`
                 .kk__container { width: 100%; padding: 0; font-family: 'Inter', sans-serif; }
                 .kk__card { background: #fff; border-radius: 20px; padding: 30px; box-shadow: 0 10px 40px rgba(0,0,0,0.05); border: 1px solid rgba(0,0,0,0.02); }
-                
+
                 .kk__catGroup { margin-bottom: 25px; }
                 .kk__catGroup h3 { font-size: 1.05rem; font-weight: 700; color: #475569; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #f1f5f9; }
                 .kk__items { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
-                
+
                 .kk__item { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-radius: 14px; border: 1.5px solid #f1f5f9; cursor: pointer; transition: all 0.2s; position: relative; }
                 .kk__item:hover { border-color: #cbd5e1; background: #f8fafc; }
                 .kk__item.active { border-color: #3b82f6; background: rgba(59, 130, 246, 0.04); }
                 .kk__item input { display: none; }
-                
+
                 .kk__checkIcon { width: 24px; height: 24px; border-radius: 8px; border: 2px solid #cbd5e1; display: flex; align-items: center; justify-content: center; color: transparent; transition: all 0.2s; flex-shrink: 0; }
                 .kk__item.active .kk__checkIcon { background: #3b82f6; border-color: #3b82f6; color: #fff; }
-                
-                .kk__text { font-size: 0.95rem; font-weight: 600; color: #334155; flex: 1; }
-                
+
+                .kk__itemDetails { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+                .kk__text { font-size: 0.95rem; font-weight: 600; color: #334155; }
+                .kk__catatanText { font-size: 0.75rem; color: #b91c1c; font-weight: 600; display: flex; align-items: center; gap: 4px; }
+
                 .kk__statusBadge { font-size: 0.7rem; font-weight: 700; padding: 3px 8px; border-radius: 6px; }
                 .st-ok { background: #dcfce7; color: #16a34a; }
                 .st-err { background: #fee2e2; color: #dc2626; }
-                
+
                 .kk__customs { margin-top: 30px; padding-top: 25px; border-top: 1.5px dashed #e2e8f0; }
                 .kk__customs h3 { font-size: 1.1rem; font-weight: 700; color: #1e293b; margin-bottom: 4px; }
                 .kk__customs p { color: #64748b; font-size: 0.85rem; margin-bottom: 16px; }
-                
+
                 .kk__customList { display: flex; flex-direction: column; gap: 12px; margin-bottom: 16px; }
+                .kk__customItemWrapper { display: flex; flex-direction: column; gap: 4px; }
                 .kk__customItem { display: flex; align-items: center; gap: 10px; }
                 .kk__customItem input { flex: 1; padding: 12px 16px; border: 1.5px solid #e2e8f0; border-radius: 12px; font-size: 0.95rem; outline: none; transition: all 0.2s; }
                 .kk__customItem input:focus { border-color: #3b82f6; }
-                
+                .kk__customCatatanText { font-size: 0.75rem; color: #b91c1c; font-weight: 600; padding-left: 8px; display: flex; align-items: center; gap: 4px; }
+
                 .kk__loading { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 40px; color: #64748b; font-weight: 600; }
 
                 @media (max-width: 640px) {

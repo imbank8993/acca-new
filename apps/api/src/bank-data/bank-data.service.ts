@@ -34,20 +34,7 @@ export class BankDataService {
         }
 
         // Cek apakah user memiliki akses halaman Bank Data (via role_pages, page_overrides, atau hak kelola)
-        let hasAccess = admin || bolehKelola || a.pageIds.includes('bank-data');
-        if (!hasAccess) {
-            // Direct DB fallback untuk menghindari staleness cache in-memory 30s saat role baru saja diatur
-            const userRoles = a.roles.map(r => r.toUpperCase());
-            const directRolePage = await this.prisma.role_pages.findFirst({
-                where: {
-                    role: { in: userRoles },
-                    page_id: 'bank-data',
-                },
-            });
-            if (directRolePage) {
-                hasAccess = true;
-            }
-        }
+        const hasAccess = admin || bolehKelola || a.pageIds.includes('bank-data');
 
         if (!hasAccess) {
             throw new ForbiddenException('Tidak memiliki akses Bank Data');
@@ -63,8 +50,8 @@ export class BankDataService {
         const savedCols = Array.isArray(row?.kolom_diizinkan) ? row.kolom_diizinkan.filter((k: string) => validSet.has(k)) : [];
         return {
             aktif: row ? row.aktif === true : true,
-            kolomDiizinkan: savedCols.length > 0 ? savedCols : defaultCols,
-            batasBaris: Math.max(1, Math.min(def.batasBaris, Number(row?.batas_baris) || def.batasBaris)),
+            kolomDiizinkan: row ? savedCols : defaultCols,
+            batasBaris: Math.max(1, Math.min(def.batasBaris, Math.floor(Number(row?.batas_baris) || def.batasBaris))),
             catatan: row?.catatan || ''
         };
     }
@@ -75,7 +62,7 @@ export class BankDataService {
                 const cfg = this.config(def as DatasetDef, configs.find(c => c.dataset_id === def.id));
                 return { id: def.id, label: def.label, ikon: def.ikon, deskripsi: def.deskripsi, filter: def.filter, ...cfg,
                     kolom: kolomEfektif(def as DatasetDef, null, cfg.kolomDiizinkan, permission.bolehSensitif).map(k => ({ ...k, pendukung: !!k.pendukung })) };
-            }).filter(d => d.aktif) };
+            }).filter(d => d.aktif && d.kolom.length > 0) };
     }
     async getConfig(user: any) {
         await this.manager(user);
@@ -134,10 +121,15 @@ export class BankDataService {
         }
         return where;
     }
-    private async rows(def: DatasetDef, columns: KolomDef[], filter: any, take?: number) {
+    private async rows(def: DatasetDef, columns: KolomDef[], filter: any, take: number, skip = 0, query = '') {
         const where: any = {};
         for (const b of def.baseFilter || [])
             where[b.kolom] = b.op === 'eq' ? b.nilai : { equals: b.nilai, mode: 'insensitive' };
+        // Search only permitted identity fields; hidden columns cannot be probed.
+        if (query) {
+            const fields = columns.filter(c => !c.pendukung && c.tipe === 'teks');
+            where.OR = fields.length ? fields.map(c => ({ [c.key]: { contains: query, mode: 'insensitive' } })) : [{ id: { in: [] } }];
+        }
         const p = def.prasaring;
         if (p && (filter.tahun_ajaran || filter.semester || filter.kelas?.length)) {
             const pre = this.filter(p, filter);
@@ -163,8 +155,9 @@ export class BankDataService {
             this.model(def.table).findMany({
                 where,
                 select,
-                ...(take ? { take } : {}),
-                orderBy: def.urut ? { [def.urut.kolom]: def.urut.naik === false ? 'desc' : 'asc' } : { id: 'asc' }
+                take,
+                skip,
+                orderBy: def.urut && def.urut.kolom !== 'id' ? [{ [def.urut.kolom]: def.urut.naik === false ? 'desc' : 'asc' }, { id: 'asc' }] : { id: 'asc' }
             })
         ]);
         const raw: Record<string, any[]>[] = rows.map(() => ({}));
@@ -192,7 +185,7 @@ export class BankDataService {
     async handlePost(body: any, user: any, ip = '') {
         const permission = await this.permission(user);
         const def = getDataset(body?.dataset_id);
-        if (!def || !['preview', 'export'].includes(body?.action))
+        if (!def || !['data', 'preview', 'export'].includes(body?.action))
             throw new BadRequestException('Dataset atau aksi tidak dikenal');
         const cfg = this.config(def, await this.prisma.bank_data_dataset_config.findUnique({ where: { dataset_id: def.id } }));
         if (!cfg.aktif)
@@ -200,19 +193,32 @@ export class BankDataService {
         if (!Array.isArray(body.kolom) || !body.kolom.length)
             throw new BadRequestException('Pilih kolom');
         const columns = kolomEfektif(def, body.kolom, cfg.kolomDiizinkan, permission.bolehSensitif);
-        if (body.kolom.some((k: any) => !columns.some(c => c.key === k)))
+        if (!columns.length || body.kolom.some((k: any) => !columns.some(c => c.key === k)))
             throw new ForbiddenException('Kolom tidak diizinkan');
-        const filter = body.filter || {};
-        if (filter.kelas && (!Array.isArray(filter.kelas) || filter.kelas.some((v: any) => typeof v !== 'string')))
+        const filter = body.filter ?? {};
+        if (typeof filter !== 'object' || Array.isArray(filter) || Object.keys(filter).some(k => !def.filter.includes(k as any)))
+            throw new BadRequestException('Filter tidak didukung');
+        if (filter.kelas !== undefined && (!Array.isArray(filter.kelas) || filter.kelas.some((v: any) => typeof v !== 'string')))
             throw new BadRequestException('Filter kelas tidak valid');
-        if (filter.tahun_ajaran && typeof filter.tahun_ajaran !== 'string')
+        if (filter.tahun_ajaran !== undefined && typeof filter.tahun_ajaran !== 'string')
             throw new BadRequestException('Filter tahun ajaran tidak valid');
-        if (filter.semester && typeof filter.semester !== 'string')
+        if (filter.semester !== undefined && typeof filter.semester !== 'string')
             throw new BadRequestException('Filter semester tidak valid');
-
-        const result = await this.rows(def, columns, filter, body.action === 'preview' ? 50 : undefined);
+        if (filter.semester && !['1', '2', 'ganjil', 'genap'].includes(filter.semester.trim().toLowerCase()))
+            throw new BadRequestException('Semester tidak valid');
+        if ((filter.kelas?.length || 0) > 200 || filter.kelas?.some((v: string) => v.length > 100) || (filter.tahun_ajaran?.length || 0) > 50)
+            throw new BadRequestException('Filter terlalu panjang');
+        if (body.q !== undefined && (typeof body.q !== 'string' || body.q.length > 100))
+            throw new BadRequestException('Pencarian tidak valid');
+        const query = body.q?.trim() || '';
+        const page = body.halaman ?? 1, limit = body.perHalaman ?? 20;
+        if (body.action === 'data' && (!Number.isSafeInteger(page) || page < 1 || page > cfg.batasBaris || !Number.isInteger(limit) || limit < 1 || limit > 100))
+            throw new BadRequestException('Halaman tidak valid');
+        const skip = body.action === 'data' ? (page - 1) * limit : 0;
+        const take = body.action === 'data' ? Math.max(0, Math.min(limit, cfg.batasBaris - skip)) : Math.min(body.action === 'preview' ? 50 : cfg.batasBaris, cfg.batasBaris);
+        const result = await this.rows(def, columns, filter, take, skip, query);
         
-        if (body.action === 'preview') {
+        if (body.action !== 'export') {
             // Catat audit trail pratinjau jika terdapat kolom sensitif
             if (columns.some(c => c.sensitif)) {
                 await this.prisma.bank_data_log.create({
@@ -220,16 +226,21 @@ export class BankDataService {
                         user_id: user?.id ? BigInt(user.id) : null,
                         nama_user: user?.nama || user?.username || '',
                         dataset_id: def.id,
-                        filter: { ...filter, _tipe: 'preview' },
+                        filter: { ...filter, q: query, _tipe: body.action },
                         kolom: columns.map(c => c.key),
                         jumlah_baris: result.data.length,
                         ip: ip || null,
                     },
-                }).catch(() => null);
+                });
             }
             return {
                 ok: true,
                 ...result,
+                totalTersedia: Math.min(result.total, cfg.batasBaris),
+                batas: cfg.batasBaris,
+                terpotong: result.total > cfg.batasBaris,
+                halaman: page,
+                perHalaman: limit,
                 kolom: columns.map(c => ({ key: c.key, label: c.label })),
             };
         }
@@ -385,7 +396,7 @@ export class BankDataService {
                 user_id: user?.id ? BigInt(user.id) : null,
                 nama_user: user?.nama || user?.username || '',
                 dataset_id: def.id,
-                filter,
+                filter: { ...filter, q: query },
                 kolom: columns.map(c => c.key),
                 jumlah_baris: result.data.length,
                 ip: ip || null,

@@ -1,0 +1,58 @@
+[
+  {
+    "name": "Configured manager cannot access agenda actions",
+    "evidence": {
+      "serverCanManage": true,
+      "clientCanManage": false
+    }
+  },
+  {
+    "name": "Retry after upload failure creates duplicate agenda",
+    "evidence": {
+      "createdAgendas": 2,
+      "notifications": [
+        "Upload gagal",
+        "Upload gagal"
+      ]
+    }
+  },
+  {
+    "name": "Failed existing-photo metadata save is treated as success",
+    "evidence": {
+      "status": 500,
+      "exceptionThrown": false
+    }
+  },
+  {
+    "name": "Calendar silently truncates an agenda at 100 days",
+    "evidence": {
+      "daysRendered": 100,
+      "october13Visible": false
+    }
+  },
+  {
+    "name": "Public display fetches oldest 50 agendas and omits newer agendas",
+    "evidence": {
+      "limit": 50,
+      "sort": {
+        "tanggal_mulai": "asc"
+      },
+      "latestAgendaIncluded": false
+    }
+  },
+  {
+    "name": "Calendar reports empty data when both API requests return 500",
+    "evidence": {
+      "apiCalls": 2,
+      "errorDisplayed": null,
+      "agendasDisplayed": 0
+    }
+  },
+  {
+    "name": "Simultaneous photo uploads overwrite each other",
+    "evidence": {
+      "successfulUploads": 2,
+      "photosInLastWrite": 1
+    }
+  }
+]

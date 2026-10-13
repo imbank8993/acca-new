@@ -32,13 +32,15 @@ const BULAN_OPTIONS = [
     { value: '12', label: 'Desember' },
 ]
 
+const getTodayStr = () => new Date().toLocaleDateString('en-CA')
+
 export default function KokurikulerVerifikasiPage({ user, isAdmin = false, pembinaJabatan = '' }: KokurikulerVerifikasiProps) {
     const taFilter = useTahunAjaranFilter()
-    const [tanggal, setTanggal] = useState<string>(new Date().toISOString().split('T')[0])
+    const [tanggal, setTanggal] = useState<string>(getTodayStr)
     const [selectedBulan, setSelectedBulan] = useState<string>('0')
     const [selectedKelas, setSelectedKelas] = useState<string>('')
     const [kelasList, setKelasList] = useState<{ id: number; nama: string }[]>([])
-    
+
     const [students, setStudents] = useState<any[]>([])
     const [searchQuery, setSearchQuery] = useState('')
     /** Tanggal lain yang masih menyimpan kegiatan menunggu verifikasi. */
@@ -65,12 +67,12 @@ export default function KokurikulerVerifikasiPage({ user, isAdmin = false, pembi
 
     // Fetch list of active regular classes (sorted by level)
     useEffect(() => {
-        fetch('/api/master/kelas')
+        fetch('/api/master/kelas?limit=200')
             .then(res => res.json())
             .then(json => {
                 if (json.ok && Array.isArray(json.data)) {
                     const regulerOnly = json.data.filter((k: any) => k.program === 'Reguler');
-                    
+
                     const getTingkatRank = (k: { nama: string; tingkat?: number }) => {
                         if (k.tingkat) return Number(k.tingkat);
                         const name = (k.nama || '').trim().toUpperCase();
@@ -101,16 +103,20 @@ export default function KokurikulerVerifikasiPage({ user, isAdmin = false, pembi
         setLoading(true)
         try {
             const queryParams = new URLSearchParams()
-            if (tanggal) queryParams.set('tanggal', tanggal)
+            // Jika memilih bulan tertentu, prioritaskan filter bulan (jangan kirim tanggal)
+            if (selectedBulan && selectedBulan !== '0') {
+                queryParams.set('bulan', selectedBulan)
+            } else if (tanggal) {
+                queryParams.set('tanggal', tanggal)
+            }
             if (genderFilter) queryParams.set('gender', genderFilter)
             if (selectedKelas) queryParams.set('kelas', selectedKelas)
-            if (selectedBulan) queryParams.set('bulan', selectedBulan)
             if (taFilter.selected) queryParams.set('tahun_ajaran', taFilter.selected)
 
             const res = await fetch(`/api/kokurikuler/verifikasi?${queryParams.toString()}`)
             const json = await res.json()
             if (json.ok) {
-                setStudents(json.data)
+                setStudents(json.data || [])
                 setPendingLain(json.pendingLain || [])
             }
         } catch (e) {
@@ -122,28 +128,62 @@ export default function KokurikulerVerifikasiPage({ user, isAdmin = false, pembi
     const handleApproveAll = async (nisn: string) => {
         setActioning(nisn)
         try {
+            const payload: any = {
+                action: 'approve_all_for_nisn',
+                nisn,
+                verifier_nip: verifierNip
+            }
+            if (selectedBulan && selectedBulan !== '0') {
+                payload.bulan = selectedBulan
+                if (taFilter.selected) payload.tahun_ajaran = taFilter.selected
+            } else if (tanggal) {
+                payload.tanggal = tanggal
+            }
+
+            const res = await fetch('/api/kokurikuler/verifikasi', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            })
+            const json = await res.json()
+            if (json.ok) {
+                fetchStudents()
+            } else {
+                Swal.fire({ icon: 'error', title: 'Gagal', text: json.error || 'Terjadi kesalahan' })
+            }
+        } catch (e: any) {
+            Swal.fire({ icon: 'error', title: 'Gagal', text: e?.message || 'Terjadi kesalahan sistem' })
+        }
+        setActioning(null)
+    }
+
+    const handleApproveOne = async (logId: string) => {
+        setActioning(logId)
+        try {
             const res = await fetch('/api/kokurikuler/verifikasi', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    action: 'approve_all_for_nisn',
-                    nisn,
-                    tanggal,
+                    action: 'update_status',
+                    log_id: logId,
+                    status: 'Disetujui',
                     verifier_nip: verifierNip
                 })
             })
             const json = await res.json()
             if (json.ok) {
                 fetchStudents()
+            } else {
+                Swal.fire({ icon: 'error', title: 'Gagal', text: json.error || 'Terjadi kesalahan' })
             }
-        } catch (e) {
-            console.error(e)
+        } catch (e: any) {
+            Swal.fire({ icon: 'error', title: 'Gagal', text: e?.message || 'Terjadi kesalahan sistem' })
         }
         setActioning(null)
     }
 
     const handleReject = async (logId: string) => {
-        const { value: catatan } = await Swal.fire({
+        const { value: catatan, isConfirmed } = await Swal.fire({
             title: 'Tolak Kegiatan',
             input: 'text',
             inputLabel: 'Catatan pembinaan (contoh: Didapati tidur saat jam tahajud)',
@@ -151,7 +191,7 @@ export default function KokurikulerVerifikasiPage({ user, isAdmin = false, pembi
             showCancelButton: true
         })
 
-        if (catatan !== undefined) {
+        if (isConfirmed) {
             setActioning(logId)
             try {
                 const res = await fetch('/api/kokurikuler/verifikasi', {
@@ -161,13 +201,19 @@ export default function KokurikulerVerifikasiPage({ user, isAdmin = false, pembi
                         action: 'update_status',
                         log_id: logId,
                         status: 'Ditolak',
-                        catatan,
+                        catatan: catatan || '',
                         verifier_nip: verifierNip
                     })
                 })
                 const json = await res.json()
-                if (json.ok) fetchStudents()
-            } catch (e) {}
+                if (json.ok) {
+                    fetchStudents()
+                } else {
+                    Swal.fire({ icon: 'error', title: 'Gagal', text: json.error || 'Terjadi kesalahan' })
+                }
+            } catch (e: any) {
+                Swal.fire({ icon: 'error', title: 'Gagal', text: e?.message || 'Terjadi kesalahan sistem' })
+            }
             setActioning(null)
         }
     }
@@ -234,7 +280,10 @@ export default function KokurikulerVerifikasiPage({ user, isAdmin = false, pembi
                                 key={p.tanggal}
                                 type="button"
                                 className="kv__pendingChip"
-                                onClick={() => setTanggal(p.tanggal)}
+                                onClick={() => {
+                                    setSelectedBulan('0')
+                                    setTanggal(p.tanggal)
+                                }}
                                 title={`Buka tanggal ${p.tanggal}`}
                             >
                                 {new Date(p.tanggal + 'T00:00:00').toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}
@@ -252,7 +301,7 @@ export default function KokurikulerVerifikasiPage({ user, isAdmin = false, pembi
                     {filteredStudents.map(s => {
                         const hasPending = s.logs.some((l: any) => l.status === 'Pending')
                         if (s.logs.length === 0) return null
-                        
+
                         return (
                             <div key={s.nisn} className="kv__studentCard">
                                 <div className="kv__stHead">
@@ -261,8 +310,8 @@ export default function KokurikulerVerifikasiPage({ user, isAdmin = false, pembi
                                         <span className="kv__stKelas">{s.kelas}</span>
                                     </div>
                                     {hasPending && (
-                                        <Button 
-                                            variant="primary" 
+                                        <Button
+                                            variant="primary"
                                             size="sm"
                                             onClick={() => handleApproveAll(s.nisn)}
                                             isLoading={actioning === s.nisn}
@@ -273,32 +322,46 @@ export default function KokurikulerVerifikasiPage({ user, isAdmin = false, pembi
                                     )}
                                 </div>
                                 <div className="kv__logs">
-                                    {s.logs.map((log: any) => (
-                                        <div key={log.id} className={`kv__logItem st-${log.status.toLowerCase()}`}>
-                                            <div className="kv__logText">
-                                                <span className="kv__logName">
-                                                    {log.nama_kegiatan}
-                                                    {log.is_custom && <span className="kv__badgeCustom">Custom</span>}
-                                                </span>
-                                                <span className={`kv__statusTxt st-${log.status.toLowerCase()}`}>{log.status}</span>
-                                                {log.catatan && <div className="kv__catatan">Catatan: {log.catatan}</div>}
+                                    {s.logs.map((log: any) => {
+                                        const statusLower = (log.status || 'Pending').toLowerCase()
+                                        return (
+                                            <div key={log.id} className={`kv__logItem st-${statusLower}`}>
+                                                <div className="kv__logText">
+                                                    <span className="kv__logName">
+                                                        {log.nama_kegiatan}
+                                                        {log.is_custom && <span className="kv__badgeCustom">Custom</span>}
+                                                    </span>
+                                                    <span className={`kv__statusTxt st-${statusLower}`}>{log.status || 'Pending'}</span>
+                                                    {log.catatan && <div className="kv__catatan">Catatan: {log.catatan}</div>}
+                                                </div>
+                                                <div className="kv__logActions" style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                                                    {log.status !== 'Disetujui' && (
+                                                        <ActionButton
+                                                            action="approve"
+                                                            size="sm"
+                                                            onClick={() => handleApproveOne(log.id)}
+                                                            disabled={actioning === log.id}
+                                                            label="Setujui"
+                                                        />
+                                                    )}
+                                                    {log.status !== 'Ditolak' && (
+                                                        <ActionButton
+                                                            action="reject"
+                                                            size="sm"
+                                                            onClick={() => handleReject(log.id)}
+                                                            disabled={actioning === log.id}
+                                                            label="Tolak"
+                                                        />
+                                                    )}
+                                                </div>
                                             </div>
-                                            {log.status === 'Pending' && (
-                                                <ActionButton 
-                                                    action="reject"
-                                                    size="sm"
-                                                    onClick={() => handleReject(log.id)}
-                                                    disabled={actioning === log.id}
-                                                    label="Tolak"
-                                                />
-                                            )}
-                                        </div>
-                                    ))}
+                                        )
+                                    })}
                                 </div>
                             </div>
                         )
                     })}
-                    
+
                     {filteredStudents.filter(s => s.logs.length > 0).length === 0 && (
                         <div className="kv__emptyState">
                             <i className="bi bi-inbox" />
@@ -313,7 +376,7 @@ export default function KokurikulerVerifikasiPage({ user, isAdmin = false, pembi
                 .kv__students { display: flex; flex-direction: column; gap: 20px; }
                 .kv__studentCard { background: #fff; border-radius: 16px; padding: 20px; box-shadow: 0 6px 20px rgba(0,0,0,0.04); border: 1px solid #f1f5f9; transition: all 0.2s; }
                 .kv__studentCard:hover { box-shadow: 0 10px 25px rgba(0,0,0,0.06); }
-                
+
                 .kv__stHead { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid #f1f5f9; }
                 .kv__stInfo h4 { font-size: 1.1rem; font-weight: 700; color: #1e293b; margin-bottom: 4px; }
                 .kv__stKelas { font-size: 0.8rem; background: #f1f5f9; color: #475569; padding: 2px 8px; border-radius: 6px; font-weight: 600; }
@@ -322,16 +385,16 @@ export default function KokurikulerVerifikasiPage({ user, isAdmin = false, pembi
                 .kv__logItem { display: flex; justify-content: space-between; align-items: flex-start; padding: 12px; border-radius: 10px; border: 1px solid #e2e8f0; background: #f8fafc; }
                 .kv__logItem.st-disetujui { background: #f0fdf4; border-color: #bbf7d0; }
                 .kv__logItem.st-ditolak { background: #fef2f2; border-color: #fecaca; }
-                
+
                 .kv__logText { display: flex; flex-direction: column; gap: 4px; }
                 .kv__logName { font-weight: 600; color: #334155; font-size: 0.9rem; display: flex; align-items: center; gap: 6px; }
                 .kv__badgeCustom { font-size: 0.65rem; background: #e0e7ff; color: #002a7a; padding: 2px 6px; border-radius: 4px; font-weight: 700; text-transform: uppercase; }
-                
+
                 .kv__statusTxt { font-size: 0.75rem; font-weight: 700; }
                 .kv__statusTxt.st-pending { color: #d97706; }
                 .kv__statusTxt.st-disetujui { color: #16a34a; }
                 .kv__statusTxt.st-ditolak { color: #dc2626; }
-                
+
                 .kv__catatan { font-size: 0.8rem; color: #b91c1c; margin-top: 4px; font-style: italic; }
                 .kv__loading { text-align: center; padding: 50px; color: #64748b; font-weight: 600; display: flex; justify-content: center; }
 

@@ -4,7 +4,7 @@ import React, { useState, useEffect, useMemo } from 'react'
 import Swal from 'sweetalert2'
 import DatePicker from '@/components/ui/DatePicker'
 import Tab from '@/components/ui/Tab'
-import { FilterToolbar, FilterField, FilterSearch } from '@/components/ui/FilterToolbar'
+import { FilterToolbar, FilterField, FilterSelect, FilterSearch } from '@/components/ui/FilterToolbar'
 import { Button } from '@/components/ui/Button'
 import { ActionButton, ActionGroup } from '@/components/ui/ActionButtons'
 import { Modal, ModalHeader, ModalBody, ModalFooter } from '@/components/ui/Modal'
@@ -19,6 +19,8 @@ interface KokurikulerAdminProps {
     koordinatorJabatan?: string
     initialTab?: 'master' | 'laporan'
 }
+
+const getTodayStr = () => new Date().toLocaleDateString('en-CA')
 
 export default function KokurikulerAdminPage({ user, isAdmin = false, koordinatorJabatan = '', initialTab }: KokurikulerAdminProps) {
     const [activeTab, setActiveTab] = useState<'master' | 'laporan'>(initialTab || 'master')
@@ -43,11 +45,33 @@ export default function KokurikulerAdminPage({ user, isAdmin = false, koordinato
 
     // Laporan States
     const [startDate, setStartDate] = useState(() => {
-        const d = new Date(); d.setDate(d.getDate() - 7); return d.toISOString().split('T')[0]
+        const d = new Date()
+        d.setDate(d.getDate() - 7)
+        return d.toLocaleDateString('en-CA')
     })
-    const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0])
+    const [endDate, setEndDate] = useState(getTodayStr)
     const [summary, setSummary] = useState<any[]>([])
     const [loadingLaporan, setLoadingLaporan] = useState(false)
+    const [kelasList, setKelasList] = useState<{ id: number; nama: string }[]>([])
+
+    const kelasFilter = (!isAdmin && koordinatorJabatan.toLowerCase().includes('kelas'))
+        ? (koordinatorJabatan.trim().split(/\s+/).pop() || '')
+        : ''
+
+    const [selectedKelas, setSelectedKelas] = useState<string>(kelasFilter || '')
+
+    useEffect(() => {
+        if (isAdmin) {
+            fetch('/api/master/kelas?limit=200')
+                .then(res => res.json())
+                .then(json => {
+                    if (json.ok && Array.isArray(json.data)) {
+                        setKelasList(json.data.filter((k: any) => k.program === 'Reguler'))
+                    }
+                })
+                .catch(() => {})
+        }
+    }, [isAdmin])
 
     const filteredMasterList = useMemo(() => {
         if (!searchQuery.trim()) return masterList
@@ -61,14 +85,10 @@ export default function KokurikulerAdminPage({ user, isAdmin = false, koordinato
         return summary.filter(s => (s.name || '').toLowerCase().includes(q))
     }, [summary, searchQuery])
 
-    const kelasFilter = (!isAdmin && koordinatorJabatan.toLowerCase().includes('kelas'))
-        ? (koordinatorJabatan.trim().split(/\s+/).pop() || '')
-        : ''
-
     useEffect(() => {
         if (activeTab === 'master') fetchMaster()
         else fetchLaporan()
-    }, [activeTab, startDate, endDate])
+    }, [activeTab, startDate, endDate, selectedKelas])
 
     // --- MASTER DATA LOGIC ---
     const fetchMaster = async () => {
@@ -76,12 +96,17 @@ export default function KokurikulerAdminPage({ user, isAdmin = false, koordinato
         try {
             const res = await fetch('/api/kokurikuler/master')
             const json = await res.json()
-            if (json.ok) setMasterList(json.data)
+            if (json.ok) setMasterList(json.data || [])
         } catch (e) {}
         setLoadingMaster(false)
     }
 
     const handleSaveMaster = async () => {
+        if (!formData.nama_kegiatan.trim()) {
+            Swal.fire({ icon: 'warning', title: 'Nama Kegiatan Kosong', text: 'Nama kegiatan wajib diisi.' })
+            return
+        }
+
         setSavingMaster(true)
         try {
             const method = editItem ? 'PUT' : 'POST'
@@ -96,23 +121,37 @@ export default function KokurikulerAdminPage({ user, isAdmin = false, koordinato
                 setShowModal(false)
                 fetchMaster()
                 Swal.fire({ icon: 'success', title: 'Berhasil', timer: 1500, showConfirmButton: false })
+            } else {
+                Swal.fire({ icon: 'error', title: 'Gagal Menyimpan', text: json.error || 'Terjadi kesalahan' })
             }
-        } catch (e) {}
+        } catch (e: any) {
+            Swal.fire({ icon: 'error', title: 'Gagal Menyimpan', text: e?.message || 'Terjadi kesalahan sistem' })
+        }
         finally { setSavingMaster(false) }
     }
 
     const handleDeleteMaster = async (id: string) => {
         const { isConfirmed } = await Swal.fire({
             title: 'Hapus Kegiatan?',
-            text: 'Data yang terhapus tidak dapat dikembalikan.',
+            text: 'Data yang terhapus tidak dapat dikembalikan. Jika kegiatan sudah memiliki riwayat log siswa, kegiatan sebaiknya dinonaktifkan.',
             icon: 'warning',
-            showCancelButton: true
+            showCancelButton: true,
+            confirmButtonText: 'Hapus',
+            cancelButtonText: 'Batal'
         })
         if (isConfirmed) {
             try {
                 const res = await fetch(`/api/kokurikuler/master?id=${id}`, { method: 'DELETE' })
-                if ((await res.json()).ok) fetchMaster()
-            } catch (e) {}
+                const json = await res.json()
+                if (json.ok) {
+                    fetchMaster()
+                    Swal.fire({ icon: 'success', title: 'Berhasil', text: 'Kegiatan berhasil dihapus.', timer: 1500, showConfirmButton: false })
+                } else {
+                    Swal.fire({ icon: 'error', title: 'Gagal Menghapus', text: json.error || 'Terjadi kesalahan' })
+                }
+            } catch (e: any) {
+                Swal.fire({ icon: 'error', title: 'Gagal Menghapus', text: e?.message || 'Terjadi kesalahan sistem' })
+            }
         }
     }
 
@@ -120,9 +159,10 @@ export default function KokurikulerAdminPage({ user, isAdmin = false, koordinato
     const fetchLaporan = async () => {
         setLoadingLaporan(true)
         try {
-            const res = await fetch(`/api/kokurikuler/laporan?start_date=${startDate}&end_date=${endDate}&kelas=${kelasFilter}`)
+            const activeKelas = (!isAdmin && kelasFilter) ? kelasFilter : selectedKelas
+            const res = await fetch(`/api/kokurikuler/laporan?start_date=${startDate}&end_date=${endDate}&kelas=${encodeURIComponent(activeKelas)}`)
             const json = await res.json()
-            if (json.ok) setSummary(json.summary)
+            if (json.ok) setSummary(json.summary || [])
         } catch (e) {}
         setLoadingLaporan(false)
     }
@@ -182,7 +222,7 @@ export default function KokurikulerAdminPage({ user, isAdmin = false, koordinato
                                             </td>
                                             <td style={{ textAlign: 'center' }}>
                                                 <ActionGroup align="center">
-                                                    <ActionButton action="edit" size="sm" onClick={() => { setEditItem(m); setFormData(m); setShowModal(true) }} label="Edit" />
+                                                    <ActionButton action="edit" size="sm" onClick={() => { setEditItem(m); setFormData({ nama_kegiatan: m.nama_kegiatan, kategori: m.kategori || 'Ibadah', aktif: m.aktif ?? true }); setShowModal(true) }} label="Edit" />
                                                     <ActionButton action="delete" size="sm" onClick={() => handleDeleteMaster(m.id)} label="Hapus" />
                                                 </ActionGroup>
                                             </td>
@@ -203,11 +243,24 @@ export default function KokurikulerAdminPage({ user, isAdmin = false, koordinato
                             onChange={setSearchQuery}
                             placeholder="Cari kegiatan..."
                         />
+                        {isAdmin && (
+                            <FilterSelect
+                                label="Kelas"
+                                icon="door-open"
+                                value={selectedKelas}
+                                onChange={setSelectedKelas}
+                                options={[
+                                    { value: '', label: 'Semua Kelas' },
+                                    ...kelasList.map(k => ({ value: k.nama, label: `Kelas ${k.nama}` }))
+                                ]}
+                                width="170px"
+                            />
+                        )}
                         <FilterField label="Dari Tanggal" icon="calendar-event" bare width="200px">
-                            <DatePicker value={startDate} onChange={setStartDate} />
+                            <DatePicker value={startDate} onChange={setStartDate} max={endDate} />
                         </FilterField>
                         <FilterField label="Sampai Tanggal" icon="calendar-event" bare width="200px">
-                            <DatePicker value={endDate} onChange={setEndDate} />
+                            <DatePicker value={endDate} onChange={setEndDate} min={startDate} />
                         </FilterField>
                     </FilterToolbar>
                     <div className="ka__content">

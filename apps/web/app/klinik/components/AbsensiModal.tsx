@@ -84,7 +84,7 @@ export default function AbsensiModal({
     <Modal
       open={isOpen}
       onClose={onClose}
-      size="md"
+      size="lg"
       variant="default"
       icon="clipboard-check"
       title="Absensi Peserta"
@@ -120,7 +120,6 @@ export default function AbsensiModal({
           ) : (
             pesertaList.map((p: any) => (
               <div key={p.id} className="abs-row">
-                <div className="p-avatar">{p.nama_siswa?.charAt(0)}</div>
                 <div className="abs-row__info">
                   <p className="p-name">{p.nama_siswa}</p>
                   <span className="p-class">
@@ -161,7 +160,7 @@ export default function AbsensiModal({
       </ModalBody>
 
       <ModalFooter align="end">
-        <Button variant="cancel" onClick={onClose} disabled={saving}>
+        <Button variant="outline" onClick={onClose} disabled={saving}>
           Tutup
         </Button>
         <Button

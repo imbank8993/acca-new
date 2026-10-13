@@ -228,8 +228,9 @@ export default function GuruAsuhTabKokurikuler({ user }: GuruAsuhTabProps) {
                                             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                                                 <span style={{ fontWeight: 'bold', color: '#334155' }}>{detail.nama_kegiatan}</span>
                                                 {detail.is_custom && <span style={{ fontSize: '0.7rem', color: '#3b82f6', background: '#eff6ff', padding: '2px 6px', borderRadius: '4px', width: 'fit-content' }}>Kustom</span>}
+                                                {detail.catatan && <span style={{ fontSize: '0.75rem', color: '#b91c1c', fontStyle: 'italic' }}><i className="bi bi-chat-left-dots" /> Catatan: {detail.catatan}</span>}
                                             </div>
-                                            <span className={`gakk-badge gakk-badge-${detail.status.toLowerCase()}`}>{detail.status}</span>
+                                            <span className={`gakk-badge gakk-badge-${(detail.status || 'pending').toLowerCase()}`}>{detail.status || 'Pending'}</span>
                                         </div>
                                     ))}
                                 </div>

@@ -15,6 +15,8 @@ import { swalSuccess, swalError, swalWarning, swalConfirm } from '@/lib/swal-pre
 import { useModalBlur } from '@/components/ModalBlurProvider';
 import type { User } from '@/lib/types';
 import { useTimezone } from '@/hooks/use-timezone';
+import { SASARAN_AGENDA, sasaranAgenda, fetchAgendaList } from '@/lib/agenda';
+import SasaranAgenda from '../components/SasaranAgenda';
 import { getCurrentAcademicYear, getAcademicYearFromDate, getSemesterFromDate } from '@/lib/date-utils';
 
 interface AgendaFoto {
@@ -36,11 +38,12 @@ interface Agenda {
     warna: string;
     is_publik: boolean;
     skip_hari_libur: boolean;
+    sasaran?: string[];
     foto?: AgendaFoto[] | null;
     created_at: string;
 }
 
-const MAX_FOTO = 4;
+const MAX_FOTO = 10;
 
 /** Kompres gambar di browser: resize maks 1600px & konversi ke JPEG agar upload ringan */
 async function compressImage(file: File): Promise<File> {
@@ -114,18 +117,17 @@ function formatWaktu(waktu: string | null) {
 const EMPTY_FORM = {
     judul: '', deskripsi: '', tanggal_mulai: '', tanggal_selesai: '',
     waktu_mulai: '', waktu_selesai: '', lokasi: '', kategori: 'Umum',
-    warna: '#3083FF', is_publik: true, skip_hari_libur: false,
+    warna: '#3083FF', is_publik: true, skip_hari_libur: false, sasaran: ['UMUM'] as string[],
 };
 
 export interface KelolaAgendaTabProps {
     user?: User | null;
     onBack?: () => void;
     headerTabs?: React.ReactNode;
+    canManage: boolean;
 }
 
-export default function KelolaAgendaTab({ user, onBack, headerTabs }: KelolaAgendaTabProps) {
-    const roles = user?.roles || [];
-    const canManage = roles.some(r => ['ADMIN', 'ADMINISTRATOR', 'OP_AGENDA'].includes(r.toUpperCase()));
+export default function KelolaAgendaTab({ user, onBack, headerTabs, canManage }: KelolaAgendaTabProps) {
 
     const { getCurrentDate } = useTimezone();
     const today = getCurrentDate();
@@ -133,6 +135,7 @@ export default function KelolaAgendaTab({ user, onBack, headerTabs }: KelolaAgen
     const [agendas, setAgendas] = useState<Agenda[]>([]);
     const [categories, setCategories] = useState<Category[]>([]);
     const [loading, setLoading] = useState(true);
+    const [loadError, setLoadError] = useState<string | null>(null);
     const [filterKategori, setFilterKategori] = useState('');
     const [searchQuery, setSearchQuery] = useState('');
     
@@ -189,12 +192,10 @@ export default function KelolaAgendaTab({ user, onBack, headerTabs }: KelolaAgen
     const fetchData = useCallback(async () => {
         setLoading(true);
         try {
-            const res = await fetch('/api/agenda-madrasah');
-            const json = await res.json();
-            const list = json.success && Array.isArray(json.data) ? json.data : (Array.isArray(json.data) ? json.data : (Array.isArray(json) ? json : []));
-            setAgendas(list);
-        } catch {
-            swalError('Error', 'Gagal memuat data agenda');
+            setAgendas(await fetchAgendaList());
+            setLoadError(null);
+        } catch (error) {
+            setLoadError(error instanceof Error ? error.message : 'Gagal memuat data agenda.');
         } finally {
             setLoading(false);
         }
@@ -238,6 +239,7 @@ export default function KelolaAgendaTab({ user, onBack, headerTabs }: KelolaAgen
             waktu_selesai: a.waktu_selesai?.slice(0, 5) || '', lokasi: a.lokasi || '',
             kategori: a.kategori, warna: a.warna, is_publik: a.is_publik,
             skip_hari_libur: a.skip_hari_libur || false,
+            sasaran: sasaranAgenda(a.sasaran),
         });
         resetFotoState();
         setExistingFoto(Array.isArray(a.foto) ? a.foto : []);
@@ -302,11 +304,14 @@ export default function KelolaAgendaTab({ user, onBack, headerTabs }: KelolaAgen
 
     const syncFoto = async (agendaId: number | string) => {
         if (editingId && existingFoto.length > 0) {
-            await fetch('/api/agenda-madrasah/foto', {
+            const response = await fetch('/api/agenda-madrasah/foto', {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ agenda_id: agendaId, foto: existingFoto }),
             });
+            const json = await response.json();
+            if (!response.ok || !json.success) throw new Error(json.error || json.message || 'Gagal menyimpan keterangan foto');
+            setExistingFoto(json.data);
         }
         if (newFoto.length === 0) return;
 
@@ -329,7 +334,10 @@ export default function KelolaAgendaTab({ user, onBack, headerTabs }: KelolaAgen
         if (form.tanggal_selesai && form.tanggal_selesai < form.tanggal_mulai) {
             return swalWarning('Perhatian', 'Tanggal selesai tidak boleh sebelum tanggal mulai');
         }
+        if (saving) return;
+        if (!form.sasaran.length) return swalWarning('Perhatian', 'Pilih minimal satu sasaran agenda.');
         setSaving(true);
+        let agendaSaved = false;
         try {
             const method = editingId ? 'PUT' : 'POST';
             const body = editingId ? { ...form, id: editingId } : form;
@@ -340,6 +348,9 @@ export default function KelolaAgendaTab({ user, onBack, headerTabs }: KelolaAgen
             if (!res.ok || !json.success) throw new Error(json.error || 'Gagal menyimpan');
 
             const agendaId = editingId || json.data?.id;
+            if (!agendaId) throw new Error('ID agenda tidak diterima. Perbarui daftar sebelum mencoba lagi.');
+            agendaSaved = true;
+            setEditingId(agendaId);
             if (agendaId) {
                 await syncFoto(agendaId);
             }
@@ -349,7 +360,10 @@ export default function KelolaAgendaTab({ user, onBack, headerTabs }: KelolaAgen
             fetchData();
             swalSuccess(editingId ? 'Berhasil diperbarui!' : 'Agenda ditambahkan!');
         } catch (e: any) {
-            swalError('Error', e.message);
+            if (agendaSaved) {
+                void fetchData();
+                swalError('Foto belum tersimpan', 'Agenda sudah tersimpan. ' + e.message + '. Klik Simpan lagi untuk mencoba foto tanpa membuat agenda baru.');
+            } else swalError('Error', e.message);
         } finally {
             setSaving(false);
         }
@@ -502,6 +516,8 @@ export default function KelolaAgendaTab({ user, onBack, headerTabs }: KelolaAgen
         <div className="page-wrapper">
             {headerTabs}
 
+            {loadError && <div className="ag-load-error" role="alert"><span>{loadError}</span>
+                <Button variant="secondary" onClick={fetchData} disabled={loading}>Coba lagi</Button></div>}
             {/* ── FILTER BAR ── */}
             <FilterToolbar 
                 style={{ marginBottom: '16px' }} 
@@ -582,7 +598,7 @@ export default function KelolaAgendaTab({ user, onBack, headerTabs }: KelolaAgen
                 <div style={{ display: 'flex', justifyContent: 'center', padding: '40px 0' }}>
                     <Spinner variant="buble" />
                 </div>
-            ) : filteredAgendas.length === 0 ? (
+            ) : loadError && agendas.length === 0 ? null : filteredAgendas.length === 0 ? (
                 <div className="empty-state">
                     <i className="bi bi-calendar-x"></i>
                     <p>Belum ada agenda.</p>
@@ -640,6 +656,7 @@ export default function KelolaAgendaTab({ user, onBack, headerTabs }: KelolaAgen
                                                 </td>
                                                 <td>
                                                     <div style={{ fontWeight: 700, fontSize: '0.88rem', color: 'var(--n-ink)', lineHeight: '1.35' }}>{a.judul}</div>
+                                                    <SasaranAgenda sasaran={a.sasaran} />
                                                     {a.deskripsi && (
                                                         <div 
                                                             title={a.deskripsi}
@@ -740,7 +757,8 @@ export default function KelolaAgendaTab({ user, onBack, headerTabs }: KelolaAgen
                                                             {isTodayCard && !isPast && <span className="status-badge" style={{ background: `${a.warna}25`, color: a.warna, padding: '1px 7px' }}>Hari Ini</span>}
                                                         </div>
                                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px', width: '100%' }}>
-                                                            <div className="tl-card-title" style={{ margin: 0, flex: 1 }}>{a.judul}</div>
+                                                            <div style={{ flex: 1, minWidth: 0 }}><div className="tl-card-title" style={{ margin: 0 }}>{a.judul}</div>
+                                                                <SasaranAgenda sasaran={a.sasaran} /></div>
                                                             {canManage && (
                                                                 <div className="pm-card-menu-wrap" style={{ marginTop: '-4px', marginRight: '-8px' }}>
                                                                     <button
@@ -812,14 +830,14 @@ export default function KelolaAgendaTab({ user, onBack, headerTabs }: KelolaAgen
                 open={showModal}
                 size="lg"
                 variant={editingId ? 'edit' : 'add'}
-                onClose={() => setShowModal(false)}
+                onClose={() => { if (!saving) setShowModal(false); }}
                 labelledBy="modal-agenda-title"
             >
                 <ModalHeader
                     id="modal-agenda-title"
                     title={editingId ? 'Edit Agenda' : 'Tambah Agenda Baru'}
                     icon={editingId ? 'pencil-square' : 'calendar-plus'}
-                    onClose={() => setShowModal(false)}
+                    onClose={() => { if (!saving) setShowModal(false); }}
                 />
 
                 <ModalBody>
@@ -880,6 +898,18 @@ export default function KelolaAgendaTab({ user, onBack, headerTabs }: KelolaAgen
                         </div>
                     </div>
 
+                    <fieldset className="ag-sasaran-field">
+                        <legend>Sasaran agenda</legend>
+                        <p>Pilih satu atau lebih kelompok yang dituju.</p>
+                        <div className="ag-sasaran-options">
+                            {SASARAN_AGENDA.map(option => <label key={option.value}>
+                                <input type="checkbox" checked={form.sasaran.includes(option.value)} disabled={saving}
+                                    onChange={e => setForm(prev => ({ ...prev, sasaran: e.target.checked
+                                        ? [...prev.sasaran, option.value] : prev.sasaran.filter(value => value !== option.value) }))} />
+                                {option.label}
+                            </label>)}
+                        </div>
+                    </fieldset>
                     <div className="form-row">
                         <div className="form-col">
                             <div className="toggle-row" onClick={() => setForm(prev => ({ ...prev, is_publik: !prev.is_publik }))}>

@@ -8,7 +8,6 @@ import { useFileViewer } from '@/components/useFileViewer';
 import { ActionButton, ActionGroup } from '@/components/ui/ActionButtons';
 import { Spinner } from '@/components/ui/Spinner';
 import { useIsMobile } from '@/hooks/use-breakpoint';
-import { MobileList, MobileListItem, MobileEmpty } from '@/components/mobile';
 import { getProxiedImageUrl } from '@/lib/image-utils';
 import type { PermintaanSuratRow } from '../components/DetailPermintaanModal';
 
@@ -103,41 +102,128 @@ export default function TabSemuaPermintaan({
     return null;
   };
 
-  // ── Mobile View ────────────────────────────────────────────────────────────
+  const getInitials = (nama: string) => {
+    if (!nama) return '?';
+    const parts = nama.trim().split(/\s+/);
+    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  };
+
+  // ── Mobile View — Custom Clean Cards ───────────────────────────────────────
   if (isMobile) {
     return (
       <>
         {loading ? (
-          <div className="mui-loading">
-            <Spinner variant="buble" />
+          <div className="ps-mob-loading">
+            <Spinner variant="buble" label="Memuat data..." />
           </div>
         ) : rows.length === 0 ? (
-          <MobileEmpty
-            icon="folder2-open"
-            title="Belum ada permintaan surat"
-            subtitle="Tidak ada data pengajuan surat yang sesuai saringan saat ini"
-          />
+          <div className="ps-mob-empty">
+            <i className="bi bi-folder2-open" />
+            <p>Belum ada permintaan surat</p>
+            <span>Tidak ada data yang sesuai dengan saringan saat ini</span>
+          </div>
         ) : (
-          <MobileList label="Daftar permintaan surat">
-            {paginatedRows.map((row) => (
-              <MobileListItem
-                key={row.id}
-                title={row.pemohon_nama || 'Pemohon'}
-                seed={row.pemohon_nip || row.pemohon_nama || row.id}
-                avatarSrc={fotoById.get(row.id)}
-                icon="file-earmark-text-fill"
-                subtitle={`${row.jenis_surat} · ${formatDate(row.created_at)}`}
-                badge={
-                  isPending(row.status) ? (
-                    <span className="mui-badge isWarn">Menunggu</span>
-                  ) : (row.status || '').toLowerCase() === 'diproses' ? (
-                    <span className="mui-badge" style={{ background: '#f3e8ff', color: '#7e22ce' }}>Diproses</span>
-                  ) : undefined
-                }
-                onClick={() => onView(row)}
-              />
-            ))}
-          </MobileList>
+          <div className="ps-mob-list">
+            {paginatedRows.map((row) => {
+              const pending = isPending(row.status);
+              const isOwner = !userNip || row.pemohon_nip === userNip;
+              const canEditRow = pending && (isOwner || canManage);
+              const canDeleteRow = pending && (isOwner || canManage);
+              const canApproveRow = canManage && (pending || (row.status || '').toLowerCase() === 'diproses');
+              const fileAttachment = getFirstAttachmentUrl(row);
+              const avatarSrc = fotoById.get(row.id);
+              const initials = getInitials(row.pemohon_nama || '');
+
+              return (
+                <div
+                  key={row.id}
+                  className="ps-mob-card"
+                  onClick={() => onView(row)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.target !== e.currentTarget) return;
+                    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onView(row); }
+                  }}
+                >
+                  {/* Header: avatar + nama + status */}
+                  <div className="ps-mob-card__header">
+                    <div className="ps-mob-avatar">
+                      {avatarSrc ? (
+                        <img src={avatarSrc} alt={row.pemohon_nama || ''} />
+                      ) : (
+                        <span>{initials}</span>
+                      )}
+                    </div>
+                    <div className="ps-mob-card__meta">
+                      <div className="ps-mob-card__name">{row.pemohon_nama || '—'}</div>
+                      {row.pemohon_nip && (
+                        <div className="ps-mob-card__nip">{row.pemohon_nip}</div>
+                      )}
+                    </div>
+                    <StatusBadge status={row.status} />
+                  </div>
+
+                  {/* Body */}
+                  <div className="ps-mob-card__body">
+                    <div className="ps-mob-card__row">
+                      <JenisBadge jenis={row.jenis_surat} />
+                      <span className="ps-mob-card__date">
+                        <i className="bi bi-calendar3" />
+                        {formatDate(row.created_at)}
+                      </span>
+                    </div>
+                    {row.judul && (
+                      <div className="ps-mob-card__judul">{row.judul}</div>
+                    )}
+                    {row.keperluan && (
+                      <div className="ps-mob-card__keperluan">{row.keperluan}</div>
+                    )}
+                    {row.nomor_surat && (
+                      <div className="ps-mob-card__nomor">
+                        <i className="bi bi-hash" />
+                        {row.nomor_surat}
+                      </div>
+                    )}
+                    {(row.status || '').toLowerCase() === 'ditolak' &&
+                      (row.approved_catatan || row.status_catatan) && (
+                        <div className="ps-mob-card__tolak-note">
+                          <i className="bi bi-exclamation-circle-fill" />
+                          {row.approved_catatan || row.status_catatan}
+                        </div>
+                      )}
+                  </div>
+
+                  {/* Footer actions */}
+                  {(canEditRow || canApproveRow || canDeleteRow || fileAttachment) && (
+                    <div className="ps-mob-card__footer" onClick={(e) => e.stopPropagation()}>
+                      {canApproveRow && (
+                        <button type="button" className="ps-mob-btn ps-mob-btn--approve" onClick={() => onApprove(row)}>
+                          <i className="bi bi-check-circle" /> Tinjau
+                        </button>
+                      )}
+                      {canEditRow && (
+                        <button type="button" className="ps-mob-btn ps-mob-btn--edit" onClick={() => onEdit(row)}>
+                          <i className="bi bi-pencil" /> Edit
+                        </button>
+                      )}
+                      {fileAttachment && (
+                        <button type="button" className="ps-mob-btn ps-mob-btn--file" onClick={() => openFile(fileAttachment.url, fileAttachment.name)}>
+                          <i className="bi bi-paperclip" /> Lampiran
+                        </button>
+                      )}
+                      {canDeleteRow && (
+                        <button type="button" className="ps-mob-btn ps-mob-btn--delete" onClick={() => onDelete(row.id)}>
+                          <i className="bi bi-trash3" />
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         )}
         <Pagination
           currentPage={page}

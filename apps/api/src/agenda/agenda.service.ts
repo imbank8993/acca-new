@@ -1,5 +1,6 @@
-import { Injectable, BadRequestException, NotFoundException, Logger } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException, ConflictException, Logger } from '@nestjs/common';
 import { randomBytes } from 'crypto';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { StorageService } from '../common/storage.service';
 import { AuditService } from '../common/audit.service';
@@ -54,9 +55,19 @@ function toLocalISOTime(d: Date | null) {
   return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
 }
 
+function parseSasaran(raw: unknown): string[] {
+  if (raw === undefined) return ['UMUM'];
+  const allowed = ['GURU', 'STAF', 'SISWA', 'UMUM'];
+  if (!Array.isArray(raw) || raw.length === 0 || raw.some(value => typeof value !== 'string' || !allowed.includes(value))) {
+    throw new BadRequestException('Pilih minimal satu sasaran agenda yang valid: Guru, Staf, Siswa, atau Umum');
+  }
+  return [...new Set(raw)];
+}
+
 function formatAgenda(item: any) {
   return {
     ...item,
+    sasaran: item.sasaran?.length ? item.sasaran : ['UMUM'],
     id: item.id ? item.id.toString() : item.id,
     tanggal_mulai: toLocalISODate(item.tanggal_mulai),
     tanggal_selesai: toLocalISODate(item.tanggal_selesai),
@@ -149,7 +160,7 @@ export class AgendaService {
   }
 
   // AGENDA MADRASAH
-  async getPublicAgendas(bulan?: string, limit = 50) {
+  async getPublicAgendas(bulan?: string, limit = 50, offset = 0) {
     const where: any = { is_publik: true };
     if (bulan) {
       const { start, end } = rentangBulan(bulan);
@@ -162,8 +173,9 @@ export class AgendaService {
 
     const data = await this.prisma.agenda_akademik.findMany({
       where,
-      orderBy: { tanggal_mulai: 'asc' },
+      orderBy: [{ tanggal_mulai: 'asc' }, { id: 'asc' }],
       take: limit,
+      skip: offset,
     });
 
     return data.map(formatAgenda);
@@ -224,6 +236,7 @@ export class AgendaService {
         warna: warna ? String(warna).trim() : '#3083FF',
         is_publik: is_publik !== false,
         skip_hari_libur: !!skip_hari_libur,
+        ...(body.sasaran !== undefined ? { sasaran: parseSasaran(body.sasaran) } : {}),
       },
     });
 
@@ -279,6 +292,7 @@ export class AgendaService {
         warna: warna ? String(warna).trim() : '#3083FF',
         is_publik: is_publik !== false,
         skip_hari_libur: !!skip_hari_libur,
+        ...(body.sasaran !== undefined ? { sasaran: parseSasaran(body.sasaran) } : {}),
       },
     });
 
@@ -311,19 +325,8 @@ export class AgendaService {
     });
     if (!agenda) throw new NotFoundException('Agenda tidak ditemukan');
     
-    if (agenda && Array.isArray(agenda.foto)) {
-      for (const f of agenda.foto) {
-        if (!(f as any)?.url) continue;
-        const url = (f as any).url;
-        const { error } = await this.storage.removeByUrl(url);
-        if (error) this.logger.warn(`Gagal menghapus berkas foto ${url}: ${error.message}`);
-        await this.unregisterUpload(url);
-      }
-    }
-
-    await this.prisma.agenda_akademik.delete({
-      where: { id: idBigInt },
-    });
+    const deleted = await this.prisma.agenda_akademik.delete({ where: { id: idBigInt } });
+    await this.cleanupFoto(this.parseFoto(deleted.foto).map(f => f.url));
 
     if (this.audit) {
       await this.audit.record({
@@ -468,6 +471,29 @@ export class AgendaService {
       .map((f: any) => ({ url: f.url, caption: f.caption || null, tanggal: f.tanggal || null }));
   }
 
+  private async mutateFoto(agendaId: bigint, change: (foto: any[]) => any[]) {
+    for (let attempt = 0; attempt < 8; attempt++) {
+      const agenda = await this.prisma.agenda_akademik.findUnique({ where: { id: agendaId }, select: { id: true, judul: true, foto: true } });
+      if (!agenda) throw new NotFoundException('Agenda tidak ditemukan');
+      const foto = change(this.parseFoto(agenda.foto));
+      const updated = await this.prisma.agenda_akademik.updateMany({
+        where: { id: agendaId, foto: { equals: agenda.foto ?? Prisma.JsonNull } }, data: { foto },
+      });
+      if (updated.count === 1) return { agenda, foto };
+    }
+    throw new ConflictException('Foto sedang diubah pengguna lain. Silakan coba lagi.');
+  }
+
+  private async cleanupFoto(urls: string[]) {
+    for (const url of urls) {
+      try {
+        const { error } = await this.storage.removeByUrl(url);
+        if (error) { this.logger.warn('Gagal membersihkan foto agenda: ' + error.message); continue; }
+        await this.unregisterUpload(url);
+      } catch (error) { this.logger.warn('Gagal membersihkan foto agenda'); }
+    }
+  }
+
   async uploadFoto(agendaId: any, files: any[], captions: string[], tanggals: string[], user?: any, req?: any) {
     const agendaIdBigInt = this.parseBigIntId(agendaId, 'agenda_id');
     const MAX_FOTO = 10;
@@ -495,45 +521,52 @@ export class AgendaService {
       }
     }
 
-    const uploaded = [];
+    const uploaded: any[] = [];
+    let newFoto: any[];
+    try {
 
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-      // Ekstensi diturunkan dari jenis berkas yang SUDAH lolos allowlist, bukan
-      // dari nama kiriman klien. `originalname.split('.').pop()` dulu meloloskan
-      // apa saja — termasuk `php`, `svg`, bahkan nilai bergaris miring seperti
-      // `/evil` (dari "a../../../evil") yang menyelipkan path ke luar folder.
-      const ext = EXT_PER_MIME[file.mimetype] || 'jpg';
-      const fileName = `${Date.now()}_${randomBytes(6).toString('hex')}.${ext}`;
-      const filePath = `agenda/${agendaIdBigInt.toString()}/${fileName}`;
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        // Ekstensi diturunkan dari jenis berkas yang SUDAH lolos allowlist, bukan
+        // dari nama kiriman klien. `originalname.split('.').pop()` dulu meloloskan
+        // apa saja — termasuk `php`, `svg`, bahkan nilai bergaris miring seperti
+        // `/evil` (dari "a../../../evil") yang menyelipkan path ke luar folder.
+        const ext = EXT_PER_MIME[file.mimetype] || 'jpg';
+        const fileName = `${Date.now()}_${randomBytes(6).toString('hex')}.${ext}`;
+        const filePath = `agenda/${agendaIdBigInt.toString()}/${fileName}`;
 
-      const { error: uploadError } = await this.storage
-        .from('documents')
-        .upload(filePath, file.buffer, { contentType: file.mimetype, upsert: false });
-      
-      if (uploadError) throw new BadRequestException(uploadError.message);
+        const { error: uploadError } = await this.storage
+          .from('documents')
+          .upload(filePath, file.buffer, { contentType: file.mimetype, upsert: false });
 
-      const { data: { publicUrl } } = this.storage.from('documents').getPublicUrl(filePath);
-      uploaded.push({ 
-        url: publicUrl, 
-        caption: captions[i]?.trim() || null, 
-        tanggal: tanggals[i]?.trim() || null 
+        if (uploadError) throw new BadRequestException(uploadError.message);
+
+        const { data: { publicUrl } } = this.storage.from('documents').getPublicUrl(filePath);
+        uploaded.push({
+          url: publicUrl,
+          caption: captions[i]?.trim() || null,
+          tanggal: tanggals[i]?.trim() || null
+        });
+
+        uploaded[uploaded.length - 1].uploadEntry = {
+          file_url: publicUrl,
+          file_name: file.originalname,
+          folder: 'agenda',
+          size_bytes: file.size,
+          storage_type: 'cloudflare',
+        };
+      }
+
+      const result = await this.mutateFoto(agendaIdBigInt, current => {
+        if (current.length + uploaded.length > MAX_FOTO) throw new BadRequestException(`Maksimal ${MAX_FOTO} foto per agenda`);
+        return [...current, ...uploaded.map(({ uploadEntry, ...foto }) => foto)];
       });
-
-      await this.registerUpload({
-        file_url: publicUrl,
-        file_name: file.originalname,
-        folder: 'agenda',
-        size_bytes: file.size,
-        storage_type: 'cloudflare',
-      });
+      newFoto = result.foto;
+    } catch (error) {
+      await this.cleanupFoto(uploaded.map(foto => foto.url));
+      throw error;
     }
-
-    const newFoto = [...existing, ...uploaded];
-    await this.prisma.agenda_akademik.update({
-      where: { id: agendaIdBigInt },
-      data: { foto: newFoto as any }
-    });
+    for (const foto of uploaded) await this.registerUpload(foto.uploadEntry);
 
     if (this.audit) {
       await this.audit.record({
@@ -557,22 +590,15 @@ export class AgendaService {
     const agendaIdBigInt = this.parseBigIntId(body?.agenda_id, 'agenda_id');
     const MAX_FOTO = 10;
 
-    const existingAgenda = await this.prisma.agenda_akademik.findUnique({
-      where: { id: agendaIdBigInt },
-      select: { id: true, judul: true, foto: true }
-    });
-    if (!existingAgenda) throw new NotFoundException('Agenda tidak ditemukan');
-
-    const existing = this.parseFoto(existingAgenda.foto);
-    const existingUrls = new Set(existing.map((f: any) => f.url));
-
-    const newFoto = this.parseFoto(body.foto)
-      .filter((f: any) => existingUrls.has(f.url))
-      .slice(0, MAX_FOTO);
-
-    await this.prisma.agenda_akademik.update({
-      where: { id: agendaIdBigInt },
-      data: { foto: newFoto as any }
+    if (!Array.isArray(body.foto) || body.foto.length > MAX_FOTO) throw new BadRequestException('Daftar foto tidak valid');
+    const requested = this.parseFoto(body.foto);
+    if (new Set(requested.map(f => f.url)).size !== requested.length) throw new BadRequestException('Foto tidak boleh duplikat');
+    const { agenda: existingAgenda, foto: newFoto } = await this.mutateFoto(agendaIdBigInt, current => {
+      const urls = new Set(current.map(f => f.url));
+      const desired = requested.filter(f => urls.has(f.url));
+      const submitted = new Set(desired.map(f => f.url));
+      // Foto baru dari pengguna lain dipertahankan; penghapusan hanya lewat DELETE.
+      return [...desired, ...current.filter(f => !submitted.has(f.url))];
     });
 
     if (this.audit) {
@@ -595,25 +621,11 @@ export class AgendaService {
   async deleteFoto(agendaId: string, url: string, user?: any, req?: any) {
     const agendaIdBigInt = this.parseBigIntId(agendaId, 'agenda_id');
 
-    const existingAgenda = await this.prisma.agenda_akademik.findUnique({
-      where: { id: agendaIdBigInt },
-      select: { id: true, judul: true, foto: true }
+    const { agenda: existingAgenda, foto: newFoto } = await this.mutateFoto(agendaIdBigInt, current => {
+      if (!current.some(f => f.url === url)) throw new NotFoundException('Foto tidak ditemukan pada agenda ini');
+      return current.filter(f => f.url !== url);
     });
-    if (!existingAgenda) throw new NotFoundException('Agenda tidak ditemukan');
-
-    const existing = this.parseFoto(existingAgenda.foto);
-    const target = existing.find((f: any) => f.url === url);
-    if (!target) throw new NotFoundException('Foto tidak ditemukan pada agenda ini');
-
-    const { error } = await this.storage.removeByUrl(url);
-    if (error) this.logger.warn(`Gagal menghapus berkas foto ${url}: ${error.message}`);
-    await this.unregisterUpload(url);
-
-    const newFoto = existing.filter((f: any) => f.url !== url);
-    await this.prisma.agenda_akademik.update({
-      where: { id: agendaIdBigInt },
-      data: { foto: newFoto as any }
-    });
+    await this.cleanupFoto([url]);
 
     if (this.audit) {
       await this.audit.record({

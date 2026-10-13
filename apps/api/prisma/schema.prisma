@@ -678,6 +678,7 @@ model agenda_akademik {
   @@index([is_publik], map: "idx_agenda_akademik_publik")
   @@index([tanggal_mulai], map: "idx_agenda_akademik_tanggal")
   @@schema("public")
+  sasaran         String[]  @default(["UMUM"])
 }
 
 model notulensi_rapat {

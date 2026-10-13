@@ -5,9 +5,8 @@ import Tab, { TabItem } from '@/components/ui/Tab';
 import { Spinner } from '@/components/ui/Spinner';
 import { useTabParam } from '@/hooks/useTabParam';
 import { useCapabilities } from '@/hooks/use-capabilities';
-import Swal from 'sweetalert2';
 
-import ExportModal from './components/ExportModal';
+import DataTab from './tabs/DataTab';
 import RiwayatTab from './tabs/RiwayatTab';
 import PengaturanTab from './tabs/PengaturanTab';
 import type { DatasetKatalog } from './types';
@@ -15,12 +14,13 @@ import './bank-data.css';
 
 export default function BankDataView() {
   const { can, siap: capsSiap } = useCapabilities();
-  const bolehKelola = can('bank_data.kelola');
+  const [izinKelola, setIzinKelola] = useState<boolean | null>(null);
+  const bolehKelola = izinKelola ?? can('bank_data.kelola');
 
   const [katalog, setKatalog] = useState<DatasetKatalog[]>([]);
   const [loading, setLoading] = useState(true);
   const [ditolak, setDitolak] = useState(false);
-  const [datasetAktif, setDatasetAktif] = useState<DatasetKatalog | null>(null);
+  const [errorKatalog, setErrorKatalog] = useState('');
 
   const tabDiizinkan = [
     'ekspor',
@@ -33,20 +33,23 @@ export default function BankDataView() {
 
   const tabAktif = (tabDiizinkan as readonly string[]).includes(activeTab) ? activeTab : 'ekspor';
   useEffect(() => {
-    if (capsSiap && activeTab !== tabAktif) setActiveTab(tabAktif as any);
+    if (capsSiap && activeTab !== tabAktif) setActiveTab(tabAktif);
   }, [capsSiap, activeTab, tabAktif, setActiveTab]);
 
   const muatKatalog = useCallback(async () => {
     setLoading(true);
+    setErrorKatalog('');
     try {
       const res = await fetch('/api/bank-data?action=catalog');
-      if (res.status === 403) { setDitolak(true); setKatalog([]); return; }
+      if (res.status === 403 || res.status === 401) { setDitolak(true); setIzinKelola(false); setKatalog([]); return; }
       const json = await res.json();
-      if (!json.ok) throw new Error(json.error || 'Gagal memuat katalog');
+      if (!res.ok || !json.ok) throw new Error(json.error || json.message || 'Gagal memuat katalog');
       setDitolak(false);
+      setIzinKelola(json.bolehKelola === true);
       setKatalog(json.data || []);
-    } catch (e: any) {
-      Swal.fire('Gagal', e.message || 'Daftar data tidak dapat dimuat', 'error');
+    } catch (e) {
+      setKatalog([]);
+      setErrorKatalog(e instanceof Error ? e.message : 'Daftar data tidak dapat dimuat');
     } finally {
       setLoading(false);
     }
@@ -55,7 +58,7 @@ export default function BankDataView() {
   useEffect(() => { muatKatalog(); }, [muatKatalog]);
 
   const tabs: TabItem<'ekspor' | 'riwayat' | 'pengaturan'>[] = [
-    { key: 'ekspor', label: 'Ekspor Data', icon: 'download' },
+    { key: 'ekspor', label: 'Data', icon: 'table' },
     ...(bolehKelola ? [
       { key: 'riwayat' as const, label: 'Riwayat', icon: 'clock-history' },
       { key: 'pengaturan' as const, label: 'Pengaturan', icon: 'gear' },
@@ -67,8 +70,8 @@ export default function BankDataView() {
       {tabs.length > 1 && (
         <Tab
           tabs={tabs}
-          activeTab={tabAktif as any}
-          onChange={(key) => setActiveTab(key as any)}
+          activeTab={tabAktif}
+          onChange={setActiveTab}
           ariaLabel="Navigasi Bank Data"
           variant="slider"
         />
@@ -95,6 +98,8 @@ export default function BankDataView() {
             <i className="bi bi-arrow-clockwise" /> Coba Lagi
           </button>
         </div>
+      ) : errorKatalog ? (
+        <div className="bd-empty" role="alert"><p>{errorKatalog}</p><button type="button" className="bd-btn-retry" onClick={muatKatalog}>Coba Lagi</button></div>
       ) : katalog.length === 0 ? (
         <div className="bd-empty">
           <div className="bd-empty__icon">
@@ -117,56 +122,7 @@ export default function BankDataView() {
           )}
         </div>
       ) : (
-        <div className="bd-grid">
-          {katalog.map(d => (
-            <div
-              key={d.id}
-              className="bd-card"
-              onClick={() => setDatasetAktif(d)}
-              role="button"
-              tabIndex={0}
-              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setDatasetAktif(d); }}
-            >
-              <div className="bd-card__top">
-                <div className="bd-card__icon">
-                  <i className={`bi ${d.ikon}`} />
-                </div>
-                <span className="bd-card__pill">
-                  <i className="bi bi-table" /> {d.kolom.length} Kolom
-                </span>
-              </div>
-              <div className="bd-card__body">
-                <h3 className="bd-card__name">{d.label}</h3>
-                <p className="bd-card__desc">{d.deskripsi}</p>
-              </div>
-              <div className="bd-card__footer">
-                <div className="bd-card__filters">
-                  {d.filter.includes('tahun_ajaran') && (
-                    <span className="bd-filter-tag" title="Mendukung filter Tahun Ajaran">TA</span>
-                  )}
-                  {d.filter.includes('semester') && (
-                    <span className="bd-filter-tag" title="Mendukung filter Semester">Sem</span>
-                  )}
-                  {d.filter.includes('kelas') && (
-                    <span className="bd-filter-tag" title="Mendukung filter Kelas">Kelas</span>
-                  )}
-                </div>
-                <button
-                  type="button"
-                  className="bd-card__btn"
-                  onClick={(e) => { e.stopPropagation(); setDatasetAktif(d); }}
-                >
-                  <span>Ekspor</span>
-                  <i className="bi bi-download" />
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {datasetAktif && (
-        <ExportModal dataset={datasetAktif} onClose={() => setDatasetAktif(null)} />
+        <DataTab datasets={katalog} />
       )}
     </div>
   );

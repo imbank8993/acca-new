@@ -95,4 +95,21 @@ describe('DashboardService student summary', () => {
       '004': { kode: 'HADIR', keterangan: 'Hadir hari ini' },
     });
   });
+  it('uses the verified account NISN when the login username is custom', async () => {
+    prisma.master_siswa.findUnique.mockImplementation(async ({ where }: any) => where.nisn === '001' ? { id: 10n, nisn: '001' } : null);
+    prisma.guru_asuh.findFirst.mockResolvedValue({ nama_guru: 'Guru Asuh', nip: 'G01' });
+    prisma.guru_asuh.findMany.mockResolvedValue([{ nisn_siswa: '002', nama_siswa: 'Saudara', kelas: 'X A' }]);
+    const result = await service.getDashboardSummary({ id: 1n, username: 'custom_login', nip: '001', roles: ['SISWA', 'PENGURUS_KELAS'] }, '999');
+    expect(result.siswaData.nisn).toBe('001');
+    expect(result.siswaData.guruAsuh.nama).toBe('Guru Asuh');
+    expect(result.siswaData.saudaraAsuh).toHaveLength(1);
+    expect(prisma.guru_asuh.findFirst).toHaveBeenCalledWith(expect.objectContaining({ where: { nisn_siswa: '001', aktif: true, tahun_ajaran: '2026/2027' } }));
+  });
+
+  it('does not resolve an unknown student or use a request NISN as their identity', async () => {
+    prisma.master_siswa.findUnique.mockResolvedValue(null);
+    const result = await service.getDashboardSummary({ id: 1n, username: 'custom_login', nip: 'unknown', roles: ['SISWA'] }, '001');
+    expect(result.siswaData).toBeNull();
+    expect(prisma.guru_asuh.findFirst).not.toHaveBeenCalled();
+  });
 });

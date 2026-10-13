@@ -2,6 +2,19 @@
    AGENDA MADRASAH - STYLESHEET TERPADU
    ========================================================================== */
 
+.ag-sasaran-field { border: 1px solid var(--n-border, #e2e8f0); border-radius: 12px; padding: 12px 14px; margin: 0 0 16px; min-width: 0; }
+.ag-sasaran-field legend { color: var(--n-ink, #0f172a); font-size: 0.85rem; font-weight: 700; padding: 0 4px; }
+.ag-sasaran-field p { color: var(--n-muted, #64748b); font-size: 0.78rem; margin: 0 0 10px; }
+.ag-sasaran-options { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.ag-sasaran-options label { display: flex; align-items: center; gap: 8px; padding: 10px; border: 1px solid var(--n-border, #e2e8f0); border-radius: 8px; cursor: pointer; color: var(--n-ink, #0f172a); font-size: 0.82rem; }
+.ag-sasaran-options label:has(input:checked) { background: var(--n-soft, #eff6ff); border-color: var(--n-primary, #3083ff); }
+.ag-sasaran-options input { width: 17px; height: 17px; flex-shrink: 0; accent-color: var(--n-primary, #3083ff); }
+.ag-sasaran-badges { display: flex; flex-wrap: wrap; gap: 4px; margin: 5px 0; }
+.ag-sasaran-badge { display: inline-flex; padding: 2px 7px; border-radius: 6px; color: var(--n-primary, #2563eb); border: 1px solid var(--n-border, #e2e8f0); background: var(--n-soft, #eff6ff); font-size: 0.7rem; font-weight: 600; line-height: 1.4; }
+.ag-load-error { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; padding: 12px; border: 1px solid #fecaca; border-radius: 10px; background: var(--n-surface, #fff); color: #b91c1c; font-size: 0.84rem; }
+.dark .ag-load-error { color: #fca5a5; border-color: #7f1d1d; }
+@media (max-width: 480px) { .ag-sasaran-options { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
 /* ── 1. PAGE LAYOUT & WRAPPERS ── */
 .page-wrapper {
     display: flex;

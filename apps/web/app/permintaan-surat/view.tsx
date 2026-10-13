@@ -4,6 +4,7 @@ import MaintenanceBanner from '@/components/MaintenanceBanner';
 import { FilterToolbar, FilterSelect, FilterSearch } from '@/components/ui/FilterToolbar';
 import { MobileFab } from '@/components/mobile';
 import { DesktopFab } from '@/components/ui/DesktopFab';
+import { Send } from 'lucide-react';
 import Tab, { TabItem } from '@/components/ui/Tab';
 import { useState, useEffect, useCallback, useMemo, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
@@ -363,8 +364,8 @@ function PermintaanSuratPageContent({ user }: { user?: any }) {
       {/* Tombol Ajukan (Floating Desktop + Mobile) - hanya di tab permintaan */}
       {viewMode !== 'pengaturan' && (
         <>
-          <DesktopFab label="Ajukan Surat" icon="plus-lg" onClick={handleAjukan} />
-          <MobileFab label="Ajukan" icon="plus-lg" onClick={handleAjukan} />
+          <DesktopFab label="Ajukan Surat" icon={<Send size={20} />} mobileIcon="send" onClick={handleAjukan} />
+          <MobileFab label="Ajukan" icon="send" onClick={handleAjukan} />
         </>
       )}
 

@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { rolesUser } from '../auth/feature-access.guard';
+import { resolveStudentNisn } from '../common/student-identity';
 
 function serializeBigInt(obj: any): any {
   return JSON.parse(JSON.stringify(obj, (_, v) =>
@@ -69,8 +70,8 @@ export class DashboardService {
 
     // Tentukan effectiveNisn untuk Siswa atau Orang Tua (atau Admin melihat siswa)
     let effectiveNisn: string | null = null;
-    if (isSiswa && user.username) {
-      effectiveNisn = targetNisn && targetNisn === user.username ? targetNisn : user.username;
+    if (isSiswa) {
+      effectiveNisn = await resolveStudentNisn(this.prisma, user);
     } else if (isOrtu && user.id) {
       const relasi = await this.prisma.orangtua_siswa.findMany({
         where: { user_id: BigInt(user.id) },
@@ -268,6 +269,7 @@ export class DashboardService {
       }
 
       siswaData = {
+        nisn,
         id: sMaster?.id || null,
         kelasSekarang: currentKelas,
         kelasHistory: uniqueClasses,

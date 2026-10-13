@@ -6,9 +6,12 @@ import { Button } from '@/components/ui/Button';
 import { Spinner } from '@/components/ui/Spinner';
 import { JAM_SEMUA, labelLingkup, normalizeJamKe, normalizeLingkup } from '@/lib/libur';
 import '../agenda.css';
+import { fetchAgendaList } from '@/lib/agenda';
+import SasaranAgenda from './SasaranAgenda';
 
 interface AgendaItem {
-    id: number;
+    id: number | string;
+    sasaran?: string[];
     judul: string;
     deskripsi: string | null;
     tanggal_mulai: string;
@@ -101,27 +104,24 @@ export default function AgendaDisplayView({ headerTabs }: { headerTabs?: React.R
     const [viewMonth, setViewMonth] = useState(now.getMonth()); 
     const [selectedDay, setSelectedDay] = useState<string | null>(todayStr);
     const [activeTab, setActiveTab] = useState<'selected' | 'ongoing' | 'upcoming'>('selected');
-    const [expandedEventId, setExpandedEventId] = useState<number | null>(null);
+    const [expandedEventId, setExpandedEventId] = useState<number | string | null>(null);
 
+    const [retry, setRetry] = useState(0);
     const [categories, setCategories] = useState<{ nama: string; color: string }[]>([]);
 
     useEffect(() => {
+        const controller = new AbortController();
+        let cancelled = false;
         const fetchAgenda = async () => {
             setLoading(true);
             setError(null);
             try {
-                let res = await fetch('/api/agenda-madrasah');
-                if (res.status === 401 || !res.ok) {
-                    res = await fetch('/api/agenda-madrasah/public');
-                }
-                const json = await res.json();
-                
-                const list = json.success && Array.isArray(json.data) ? json.data : (Array.isArray(json.data) ? json.data : (Array.isArray(json) ? json : []));
-                setAgendas(list);
+                const list = await fetchAgendaList(true, controller.signal);
+                if (!cancelled) setAgendas(list);
             } catch (e: any) {
-                setError("Gagal memuat data agenda.");
+                if (!cancelled) setError(e.message || 'Gagal memuat data agenda.');
             } finally {
-                setLoading(false);
+                if (!cancelled) setLoading(false);
             }
         };
         const fetchCategories = async () => {
@@ -135,7 +135,8 @@ export default function AgendaDisplayView({ headerTabs }: { headerTabs?: React.R
         };
         fetchAgenda();
         fetchCategories();
-    }, []);
+        return () => { cancelled = true; controller.abort(); };
+    }, [retry]);
 
     const categoryColorMap = useMemo(() => {
         const map: Record<string, string> = {};
@@ -197,29 +198,37 @@ export default function AgendaDisplayView({ headerTabs }: { headerTabs?: React.R
                     ? new Date(a.tanggal_selesai.includes("T") ? a.tanggal_selesai : a.tanggal_selesai + "T00:00:00") 
                     : start;
                 if (isNaN(start.getTime())) return;
-                const curr = new Date(start);
-                curr.setHours(0, 0, 0, 0);
-                const stop = new Date(end);
-                stop.setHours(0, 0, 0, 0);
-                let limit = 0;
-                while (curr.getTime() <= stop.getTime() && limit < 100) {
-                    const key = toDateStr(curr.getFullYear(), curr.getMonth() + 1, curr.getDate());
-                    const dow = curr.getDay();
-                    const isWeekend = dow === 0 || dow === 6;
-                    // Agenda hanya dilewati kalau harinya benar-benar libur untuk
-                    // seluruh madrasah — libur sebagian kelas tidak membatalkan agenda.
-                    const isHoliday = (holidayMap[key] || []).some(isLiburPenuhSekolah);
-                    if (!(a.skip_hari_libur && (isWeekend || isHoliday))) {
-                        if (!map[key]) map[key] = [];
-                        map[key].push(a);
+                const monthStart = new Date(viewYear, viewMonth, 1);
+                const monthEnd = new Date(viewYear, viewMonth + 1, 0);
+                const selected = selectedDay ? new Date(selectedDay + 'T00:00:00') : monthStart;
+                const today = new Date(todayStr + 'T00:00:00');
+                const ranges = [[monthStart, monthEnd], [selected, selected], [today, today]];
+                const seen = new Set<string>();
+                for (const [rangeStart, rangeEnd] of ranges) {
+                    const curr = new Date(Math.max(start.getTime(), rangeStart.getTime()));
+                    curr.setHours(0, 0, 0, 0);
+                    const stop = new Date(Math.min(end.getTime(), rangeEnd.getTime()));
+                    stop.setHours(0, 0, 0, 0);
+                    while (curr.getTime() <= stop.getTime()) {
+                        const key = toDateStr(curr.getFullYear(), curr.getMonth() + 1, curr.getDate());
+                        if (seen.has(key)) { curr.setDate(curr.getDate() + 1); continue; }
+                        seen.add(key);
+                        const dow = curr.getDay();
+                        const isWeekend = dow === 0 || dow === 6;
+                        // Agenda hanya dilewati kalau harinya benar-benar libur untuk
+                        // seluruh madrasah — libur sebagian kelas tidak membatalkan agenda.
+                        const isHoliday = (holidayMap[key] || []).some(isLiburPenuhSekolah);
+                        if (!(a.skip_hari_libur && (isWeekend || isHoliday))) {
+                            if (!map[key]) map[key] = [];
+                            map[key].push(a);
+                        }
+                        curr.setDate(curr.getDate() + 1);
                     }
-                    curr.setDate(curr.getDate() + 1);
-                    limit++;
                 }
             } catch (err) { }
         });
         return map;
-    }, [effectiveAgendas, holidayMap]);
+    }, [effectiveAgendas, holidayMap, viewYear, viewMonth, selectedDay, todayStr]);
 
     const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
     const firstDayOfWeek = new Date(viewYear, viewMonth, 1).getDay();
@@ -245,13 +254,7 @@ export default function AgendaDisplayView({ headerTabs }: { headerTabs?: React.R
     const [displayY, displayM, displayD] = displayDay.split("-").map(Number);
 
     // Filter events for sidebar
-    const ongoingEvents = useMemo(() => {
-        return effectiveAgendas.filter(a => {
-            const start = a.tanggal_mulai;
-            const end = a.tanggal_selesai || a.tanggal_mulai;
-            return todayStr >= start && todayStr <= end;
-        });
-    }, [effectiveAgendas, todayStr]);
+    const ongoingEvents = useMemo(() => eventMap[todayStr] || [], [eventMap, todayStr]);
 
     const upcomingEvents = useMemo(() => {
         return effectiveAgendas
@@ -371,6 +374,7 @@ export default function AgendaDisplayView({ headerTabs }: { headerTabs?: React.R
                                 <div className="ag-state-msg error">
                                     <i className="bi bi-exclamation-triangle-fill" style={{ fontSize: '2rem', color: '#ef4444' }}></i>
                                     <p>{error}</p>
+                                    <Button variant="secondary" onClick={() => setRetry(value => value + 1)}>Coba lagi</Button>
                                 </div>
                             ) : (
                                 <div className="ag-timeline">
@@ -408,6 +412,7 @@ export default function AgendaDisplayView({ headerTabs }: { headerTabs?: React.R
                                                                 <span className="ag-mini-dot" style={{ backgroundColor: ev.warna }} />
                                                                 <div className="ag-mini-info">
                                                                     <span className="ag-mini-title">{ev.judul}</span>
+                                                                    <SasaranAgenda sasaran={ev.sasaran} />
                                                                     <span className="ag-mini-date">{subtitle}</span>
                                                                 </div>
                                                                 <i className={`bi ${isExpanded ? 'bi-chevron-up' : 'bi-chevron-down'} ag-mini-arrow`}></i>
@@ -450,6 +455,7 @@ export default function AgendaDisplayView({ headerTabs }: { headerTabs?: React.R
                                                                 <span className="ag-mini-dot" style={{ backgroundColor: ev.warna }} />
                                                                 <div className="ag-mini-info">
                                                                     <span className="ag-mini-title">{ev.judul}</span>
+                                                                    <SasaranAgenda sasaran={ev.sasaran} />
                                                                     <span className="ag-mini-date">{subtitle}</span>
                                                                 </div>
                                                                 <i className={`bi ${isExpanded ? 'bi-chevron-up' : 'bi-chevron-down'} ag-mini-arrow`}></i>
@@ -486,6 +492,7 @@ export default function AgendaDisplayView({ headerTabs }: { headerTabs?: React.R
                                                         <span className="ag-mini-dot" style={{ backgroundColor: ev.warna }} />
                                                         <div className="ag-mini-info">
                                                             <span className="ag-mini-title">{ev.judul}</span>
+                                                                    <SasaranAgenda sasaran={ev.sasaran} />
                                                             <span className="ag-mini-date">{formatDateRange(ev.tanggal_mulai, ev.tanggal_selesai)}</span>
                                                         </div>
                                                     </div>
@@ -534,6 +541,7 @@ function EventCard({ event }: { event: AgendaItem }) {
                 </span>
             </div>
             <h4 className="ag-ev-title">{event.judul}</h4>
+            <SasaranAgenda sasaran={event.sasaran} />
             
             {event.deskripsi && (
                 <div className="ag-ev-desc-wrapper">

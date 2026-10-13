@@ -53,7 +53,7 @@ export default function DashboardContent({ user, headerExtra }: { user: User; he
         const loadSummary = async () => {
             if (!user) return;
             try {
-                const targetNisn = user.nisn || (user.roles?.includes('SISWA') || user.role === 'SISWA' ? user.username : '');
+                const targetNisn = user.nisn || (user.roles?.includes('SISWA') || user.role === 'SISWA' ? user.nip || user.username : '');
                 const url = targetNisn ? `/api/dashboard/summary?nisn=${encodeURIComponent(targetNisn)}` : '/api/dashboard/summary';
                 const res = await fetch(url);
                 if (!res.ok) return;

@@ -3,18 +3,18 @@
 BEGIN;
 -- Forms now use server-side JWT authorization. Legacy direct client access
 -- must remain closed after identifiers cease to be UUIDs.
-DO $
+DO $$
 DECLARE p record;
 BEGIN
   FOR p IN SELECT tablename, policyname FROM pg_policies
     WHERE schemaname='public' AND tablename IN ('custom_forms','custom_form_responses')
   LOOP EXECUTE format('DROP POLICY %I ON public.%I', p.policyname, p.tablename); END LOOP;
-END $;
+END $$;
 ALTER TABLE public.custom_forms ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.custom_form_responses ENABLE ROW LEVEL SECURITY;
 -- The API database role must own these tables or have BYPASSRLS; browser roles
 -- no longer query them directly. No rows or legacy identifiers are removed.
-DO $
+DO $$
 DECLARE r record;
 BEGIN
   FOR r IN

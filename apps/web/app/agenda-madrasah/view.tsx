@@ -71,7 +71,7 @@ export default function AgendaAkademikPage({ user }: { user?: User | null }) {
             <div className="agw-root">
                 <div className="agw-content" role="tabpanel">
                     {activeTab === 'kelola' && canManageAgenda && (
-                        <KelolaAgendaTab user={user} headerTabs={headerTabs} />
+                        <KelolaAgendaTab user={user} headerTabs={headerTabs} canManage={canManageAgenda} />
                     )}
                     {activeTab === 'kalender' && (
                         <KalenderAgendaTab headerTabs={headerTabs} />

@@ -1,0 +1,67 @@
+{
+  "nodeTests": [
+    {
+      "suite": "agenda.test.log",
+      "tests": 12,
+      "pass": 12,
+      "fail": 0
+    },
+    {
+      "suite": "bank-data.test.log",
+      "tests": 11,
+      "pass": 11,
+      "fail": 0
+    },
+    {
+      "suite": "forms-security.test.log",
+      "tests": 28,
+      "pass": 28,
+      "fail": 0
+    },
+    {
+      "suite": "ketidakhadiran-security.test.log",
+      "tests": 34,
+      "pass": 34,
+      "fail": 0
+    },
+    {
+      "suite": "keuangan-security.test.log",
+      "tests": 19,
+      "pass": 19,
+      "fail": 0
+    },
+    {
+      "suite": "klinik-participants.test.log",
+      "tests": 11,
+      "pass": 11,
+      "fail": 0
+    },
+    {
+      "suite": "kokurikuler.test.log",
+      "tests": 6,
+      "pass": 6,
+      "fail": 0
+    },
+    {
+      "suite": "prestasi-security.test.log",
+      "tests": 17,
+      "pass": 17,
+      "fail": 0
+    },
+    {
+      "suite": "tugas-siswa-security.test.log",
+      "tests": 24,
+      "pass": 24,
+      "fail": 0
+    }
+  ],
+  "jest": {
+    "suites": 7,
+    "tests": 59,
+    "pass": 59
+  },
+  "typecheck": {
+    "frontend": "passed",
+    "backend": "passed"
+  }
+}

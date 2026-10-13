@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import type { User } from '@/lib/types'
 import { Spinner } from '@/components/ui/Spinner'
 import Tab from '@/components/ui/Tab'
@@ -9,6 +9,7 @@ import KokurikulerVerifikasiPage from './verifikasi/view'
 import KokurikulerAdminPage from './admin/view'
 import { getActiveSettings } from '@/lib/settings-client'
 import MaintenanceBanner from '@/components/MaintenanceBanner'
+import { getUserRoles, isUserAdmin } from '@/lib/auth-client'
 
 export default function KokurikulerPage(props: { user: User }) {
     return (
@@ -20,17 +21,44 @@ export default function KokurikulerPage(props: { user: User }) {
 }
 
 function KokurikulerPageContent({ user }: { user: User }) {
-    const isSiswa = user?.roles?.includes('SISWA') || user?.roles?.includes('ORANG_TUA')
-    const isGuru = user?.roles?.includes('GURU') || user?.roles?.includes('KAMAD')
-    const isAdmin = user?.roles?.includes('ADMIN') || user?.roles?.includes('ADMINISTRATOR') || user?.roles?.includes('TATA_USAHA')
+    const roles = getUserRoles(user)
+    const isSiswa = roles.includes('SISWA') || roles.includes('ORANG_TUA') || roles.includes('ORANGTUA')
+    const isGuru = roles.includes('GURU') || roles.includes('KAMAD')
+    const isAdmin = isUserAdmin(user) || roles.includes('TATA_USAHA') || roles.includes('TU')
+    const userNip = user?.nip || user?.username || ''
 
     const [loading, setLoading] = useState(isGuru && !isAdmin) // Only fetch for non-admin gurus
     const [isPembina, setIsPembina] = useState(false)
     const [isKoordinator, setIsKoordinator] = useState(false)
     const [pembinaJabatan, setPembinaJabatan] = useState('')
     const [koordinatorJabatan, setKoordinatorJabatan] = useState('')
-    const [activeTab, setActiveTab] = useState('catatan')
-    const [tabs, setTabs] = useState<{id: string, label: string, icon: string}[]>([])
+
+    const tabs = useMemo<{ id: string; label: string; icon: string }[]>(() => {
+        const availableTabs: { id: string; label: string; icon: string }[] = []
+        if (isSiswa || (!isGuru && !isAdmin)) {
+            availableTabs.push({ id: 'catatan', label: 'Catatan Harian', icon: 'bi-calendar-check-fill' })
+        }
+        if (isPembina || isAdmin) {
+            availableTabs.push({ id: 'verifikasi', label: 'Verifikasi Kegiatan', icon: 'bi-shield-fill-check' })
+        }
+        if (isKoordinator || isAdmin) {
+            availableTabs.push({ id: 'master', label: 'Master Kegiatan', icon: 'bi-list-check' })
+            availableTabs.push({ id: 'laporan', label: 'Laporan & Tren', icon: 'bi-pie-chart' })
+        }
+        return availableTabs
+    }, [isSiswa, isGuru, isAdmin, isPembina, isKoordinator])
+
+    const [activeTab, setActiveTab] = useState<string>(() => {
+        if (isSiswa || (!isGuru && !isAdmin)) return 'catatan'
+        if (isAdmin) return 'verifikasi'
+        return 'catatan'
+    })
+
+    useEffect(() => {
+        if (tabs.length > 0 && !tabs.some((t: { id: string }) => t.id === activeTab)) {
+            setActiveTab(tabs[0].id)
+        }
+    }, [tabs, activeTab])
 
     useEffect(() => {
         let mounted = true
@@ -44,7 +72,7 @@ function KokurikulerPageContent({ user }: { user: User }) {
             try {
                 const settings = await getActiveSettings()
                 const ta = settings?.tahun_ajaran || ''
-                const res = await fetch(`/api/tugas-tambahan?nip=${encodeURIComponent(user?.nip || '')}&tahun_ajaran=${encodeURIComponent(ta)}`)
+                const res = await fetch(`/api/tugas-tambahan?nip=${encodeURIComponent(userNip)}&tahun_ajaran=${encodeURIComponent(ta)}`)
                 const json = await res.json()
                 
                 if (json.ok && mounted) {
@@ -66,32 +94,7 @@ function KokurikulerPageContent({ user }: { user: User }) {
 
         fetchTugasTambahan()
         return () => { mounted = false }
-    }, [isGuru, isAdmin, user?.nip])
-
-    useEffect(() => {
-        if (loading) return
-        
-        const availableTabs = []
-        
-        if (isSiswa || (!isGuru && !isAdmin)) {
-            availableTabs.push({ id: 'catatan', label: 'Catatan Harian', icon: 'bi-calendar-check-fill' })
-        }
-        
-        if (isPembina || isAdmin) {
-            availableTabs.push({ id: 'verifikasi', label: 'Verifikasi Kegiatan', icon: 'bi-shield-fill-check' })
-        }
-        
-        if (isKoordinator || isAdmin) {
-            availableTabs.push({ id: 'master', label: 'Master Kegiatan', icon: 'bi-list-check' })
-            availableTabs.push({ id: 'laporan', label: 'Laporan & Tren', icon: 'bi-pie-chart' })
-        }
-
-        setTabs(availableTabs)
-        
-        if (availableTabs.length > 0 && !availableTabs.find(t => t.id === activeTab)) {
-            setActiveTab(availableTabs[0].id)
-        }
-    }, [loading, isSiswa, isGuru, isAdmin, isPembina, isKoordinator])
+    }, [isGuru, isAdmin, userNip])
 
     if (loading) {
         return (
@@ -144,7 +147,7 @@ function KokurikulerPageContent({ user }: { user: User }) {
                 variant="slider"
                 activeTab={activeTab}
                 onChange={setActiveTab}
-                tabs={tabs.map(t => ({ key: t.id, label: t.label, icon: t.icon }))}
+                tabs={tabs.map((t: { id: string; label: string; icon: string }) => ({ key: t.id, label: t.label, icon: t.icon }))}
             />
 
             <div className="db__content">

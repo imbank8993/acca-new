@@ -15,7 +15,8 @@ function moduleOf(file, imports = {}, globals = {}) {
   return module.exports;
 }
 const validation = moduleOf('apps/api/src/ketidakhadiran/ketidakhadiran-validation.ts');
-const { KetidakhadiranService: Service } = moduleOf('apps/api/src/ketidakhadiran/ketidakhadiran.service.ts', { './ketidakhadiran-validation': validation });
+const studentIdentity = moduleOf('apps/api/src/common/student-identity.ts');
+const { KetidakhadiranService: Service } = moduleOf('apps/api/src/ketidakhadiran/ketidakhadiran.service.ts', { './ketidakhadiran-validation': validation, '../common/student-identity': studentIdentity });
 const date = new Date('2026-10-12T00:00Z');
 const time = t => new Date(`1970-01-01T${t}:00Z`);
 const uks = { id: 1, nip: 'uks', nama: 'UKS Operator', roles: ['OP_UKS'] };
@@ -95,7 +96,7 @@ function fixture(seed = {}, fail = () => false) {
 
 test('Siswa hanya menerima log sendiri dan kolom medis disamarkan', async () => {
   const f=fixture({ketidakhadiran:[absence(),absence('other',{nisn:'other'})]});
-  const result=await f.service.getLog({mode:'history'}, {roles:['SISWA'],username:'student'});
+  const result=await f.service.getLog({mode:'history',tanggal:'2026-10-12'}, {roles:['SISWA'],username:'student'});
   assert.equal(result.rows.length,1);assert.equal(result.rows[0].keterangan,'Sakit');assert.equal(result.rows[0].tindakan,null);
   assert.equal(result.stats.total_today,1);
 });
@@ -312,4 +313,12 @@ test('Pratinjau medis anonim ditolak; arsip snapshot tidak dihitung ulang', asyn
   const req={nextUrl:new URL('https://school.example/api/ketidakhadiran/pdf-preview?barcode=code'),headers:{get:()=> 'school.example'}};
   assert.equal((await route.GET(req)).status,401);
   actor={roles:['OP_UKS']};const result=await route.GET(req);assert.equal(result.status,200);assert.equal(result.body,'<p>Immutable snapshot</p>');assert.equal(result.headers['Cache-Control'],'no-store');
+});
+
+test('Siswa dengan username khusus membaca log NISN akun dan tetap ditolak untuk siswa lain', async () => {
+  const f=fixture({ketidakhadiran:[absence(),absence('other',{nisn:'other'})]});
+  const user={roles:['SISWA','PENGURUS_KELAS'],username:'custom_student',nip:'student'};
+  const result=await f.service.getLog({mode:'history'},user);
+  assert.equal(result.rows.length,1);assert.equal(result.rows[0].nisn,'student');
+  await assert.rejects(f.service.getLogSiswa('other',undefined,user),/sendiri/);
 });
