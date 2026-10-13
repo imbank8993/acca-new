@@ -152,6 +152,9 @@ function DatasetTable({ dataset, datasets, onDataset }: { dataset: DatasetKatalo
         <Pagination currentPage={page} totalPages={Math.ceil(result.totalTersedia / limit)} totalItems={result.totalTersedia} limit={limit} onPageChange={setPage} onLimitChange={value => { setLimit(value); setPage(1); }} />
       </>}
     </section>
-    <p className="bd-data-hint">Pencarian berlaku pada kolom identitas yang diizinkan. Ekspor mencakup seluruh halaman sesuai filter, mengikuti batas baris pengelola.</p>
+    <p className="bd-data-hint">
+      Pencarian berlaku pada kolom identitas yang diizinkan. Ekspor mencakup seluruh halaman sesuai filter, mengikuti batas baris pengelola.
+      {dataset.id === 'siswa' && !tahun && ' Ekspor semua tahun ajaran akan otomatis dipisahkan ke sheet berbeda berdasarkan tahun ajaran.'}
+    </p>
   </div>;
 }

@@ -207,6 +207,11 @@ export default function ExportModal({ dataset, onClose }: Props) {
                     minWidth="100%"
                     height="38px"
                   />
+                  {!tahunAjaran && dataset.id === 'siswa' && (
+                    <small style={{ color: 'var(--n-muted)', fontSize: '0.75rem', marginTop: 3 }}>
+                      * Ekspor semua tahun ajaran akan otomatis dipisahkan per sheet sesuai tahun ajaran
+                    </small>
+                  )}
                 </div>
               )}
               {punya('semester') && (

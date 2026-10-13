@@ -245,6 +245,95 @@ export class BankDataService {
             };
         }
 
+        const book = new Workbook();
+        book.creator = 'ACCA Madrasah';
+        book.lastModifiedBy = user?.nama || user?.username || 'ACCA System';
+        book.created = new Date();
+        book.modified = new Date();
+
+        let totalRowsExported = 0;
+        const isSiswaAllYears = def.id === 'siswa' && (!filter.tahun_ajaran || !String(filter.tahun_ajaran).trim());
+
+        if (isSiswaAllYears) {
+            let distinctTas: any[] = [];
+            let masterTas: any[] = [];
+            try {
+                if (this.prisma.siswa_kelas?.findMany) {
+                    distinctTas = await this.prisma.siswa_kelas.findMany({
+                        where: { tahun_ajaran: { not: '' } },
+                        select: { tahun_ajaran: true },
+                        distinct: ['tahun_ajaran'],
+                        orderBy: { tahun_ajaran: 'desc' },
+                    });
+                }
+            } catch {
+                distinctTas = [];
+            }
+            try {
+                if (this.prisma.master_tahun_ajaran?.findMany) {
+                    masterTas = await this.prisma.master_tahun_ajaran.findMany({
+                        select: { tahun_ajaran: true },
+                        distinct: ['tahun_ajaran'],
+                        orderBy: { tahun_ajaran: 'desc' },
+                    });
+                }
+            } catch {
+                masterTas = [];
+            }
+
+            const allTas = Array.from(new Set([
+                ...distinctTas.map((t: any) => t.tahun_ajaran).filter(Boolean),
+                ...masterTas.map((t: any) => t.tahun_ajaran).filter(Boolean),
+            ])).sort().reverse();
+
+            const exportedNisns = new Set<string>();
+            let hasSheet = false;
+
+            for (const ta of allTas) {
+                const taResult = await this.rows(def, columns, { ...filter, tahun_ajaran: ta }, cfg.batasBaris, 0, query);
+                if (taResult.data.length > 0) {
+                    this.buildWorksheet(book, ta, columns, taResult.data);
+                    totalRowsExported += taResult.data.length;
+                    taResult.data.forEach((r: any) => { if (r.nisn) exportedNisns.add(String(r.nisn)); });
+                    hasSheet = true;
+                }
+            }
+
+            const unassigned = result.data.filter((r: any) => r.nisn && !exportedNisns.has(String(r.nisn)));
+            if (unassigned.length > 0) {
+                this.buildWorksheet(book, 'Tanpa Tahun Ajaran', columns, unassigned);
+                totalRowsExported += unassigned.length;
+                hasSheet = true;
+            }
+
+            if (!hasSheet) {
+                const sheetName = (def.label || 'Data').replace(/[:\\/?*[\]]/g, '-').slice(0, 31);
+                this.buildWorksheet(book, sheetName, columns, result.data);
+                totalRowsExported = result.data.length;
+            }
+        } else {
+            const sheetName = (filter.tahun_ajaran ? filter.tahun_ajaran : (def.label || 'Data')).replace(/[:\\/?*[\]]/g, '-').slice(0, 31);
+            this.buildWorksheet(book, sheetName, columns, result.data);
+            totalRowsExported = result.data.length;
+        }
+
+        const buffer = await book.xlsx.writeBuffer();
+
+        await this.prisma.bank_data_log.create({
+            data: {
+                user_id: user?.id ? BigInt(user.id) : null,
+                nama_user: user?.nama || user?.username || '',
+                dataset_id: def.id,
+                filter: { ...filter, q: query },
+                kolom: columns.map(c => c.key),
+                jumlah_baris: totalRowsExported,
+                ip: ip || null,
+            },
+        });
+        return new StreamableFile(Buffer.from(buffer));
+    }
+
+    private buildWorksheet(book: Workbook, sheetName: string, columns: KolomDef[], rowData: Record<string, any>[]) {
         const sanitizeCellValue = (val: any, tipe: string, key: string) => {
             if (val === null || val === undefined) return '';
             if (tipe === 'boolean') {
@@ -254,14 +343,12 @@ export class BankDataService {
                 return val.toISOString().slice(0, 10);
             }
             if (typeof val === 'string') {
-                // Format ISO string date jika cocok YYYY-MM-DD
                 if (/^\d{4}-\d{2}-\d{2}(T|\b)/.test(val)) {
                     const d = new Date(val);
                     if (!isNaN(d.getTime())) {
                         return val.slice(0, 10);
                     }
                 }
-                // Prevent Formula / CSV Injection (CWE-1236)
                 if (/^[=+@-]/s.test(val)) {
                     return `'${val}`;
                 }
@@ -270,25 +357,17 @@ export class BankDataService {
             return String(val);
         };
 
-        const book = new Workbook();
-        book.creator = 'ACCA Madrasah';
-        book.lastModifiedBy = user?.nama || user?.username || 'ACCA System';
-        book.created = new Date();
-        book.modified = new Date();
-
-        const sheetName = (def.label || 'Data').replace(/[:\\/?*[\]]/g, '-').slice(0, 31);
-        const sheet = book.addWorksheet(sheetName, {
+        const safeSheetName = sheetName.replace(/[:\\/?*[\]]/g, '-').slice(0, 31);
+        const sheet = book.addWorksheet(safeSheetName, {
             views: [{ state: 'frozen', xSplit: 0, ySplit: 1 }],
         });
 
-        // Set kolom dasar
         sheet.columns = columns.map(c => ({
             header: c.label,
             key: c.key,
             width: Math.max(c.label.length + 4, 14),
         }));
 
-        // Styling Baris Header (Baris 1)
         const headerRow = sheet.getRow(1);
         headerRow.height = 28;
         headerRow.eachCell((cell) => {
@@ -301,7 +380,7 @@ export class BankDataService {
             cell.fill = {
                 type: 'pattern',
                 pattern: 'solid',
-                fgColor: { argb: 'FF1E40AF' }, // Royal Blue
+                fgColor: { argb: 'FF1E40AF' },
             };
             cell.alignment = {
                 vertical: 'middle',
@@ -316,9 +395,8 @@ export class BankDataService {
             };
         });
 
-        // Data Rows
         const textKeyPatterns = ['nisn', 'nip', 'nik', 'no_hp', 'nomor', 'rekening'];
-        result.data.forEach((r: any, idx: number) => {
+        rowData.forEach((r: any, idx: number) => {
             const cleanRow: Record<string, any> = {};
             for (const c of columns) {
                 cleanRow[c.key] = sanitizeCellValue(r[c.key], c.tipe, c.key);
@@ -369,13 +447,11 @@ export class BankDataService {
             });
         });
 
-        // AutoFilter
         sheet.autoFilter = {
             from: { row: 1, column: 1 },
             to: { row: 1, column: columns.length },
         };
 
-        // Hitung lebar kolom dinamis
         sheet.columns.forEach((column: any) => {
             let maxLen = column.header ? String(column.header).length : 10;
             if (column.eachCell) {
@@ -389,19 +465,6 @@ export class BankDataService {
             column.width = Math.min(Math.max(maxLen + 4, 12), 48);
         });
 
-        const buffer = await book.xlsx.writeBuffer();
-        
-        await this.prisma.bank_data_log.create({
-            data: {
-                user_id: user?.id ? BigInt(user.id) : null,
-                nama_user: user?.nama || user?.username || '',
-                dataset_id: def.id,
-                filter: { ...filter, q: query },
-                kolom: columns.map(c => c.key),
-                jumlah_baris: result.data.length,
-                ip: ip || null,
-            },
-        });
-        return new StreamableFile(Buffer.from(buffer));
+        return sheet;
     }
 }

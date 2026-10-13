@@ -202,6 +202,16 @@ export const DATASETS = {
                 },
             },
 
+            {
+                key: 'email', label: 'Email', tipe: 'teks', sensitif: true,
+                pendukung: {
+                    table: 'public_users',
+                    kunciInduk: 'nisn',
+                    kunciPendukung: 'nip',
+                    kolomNilai: 'email',
+                },
+            },
+
             // ── Sensitif ────────────────────────────────────────────────────
             { key: 'nik', label: 'NIK', tipe: 'teks', sensitif: true },
             { key: 'nama_ayah', label: 'Nama Ayah', tipe: 'teks', sensitif: true },
@@ -272,10 +282,19 @@ export const DATASETS = {
                     tipeSemester: 'angka',
                 },
             },
+            {
+                key: 'email', label: 'Email', tipe: 'teks', sensitif: true,
+                pendukung: {
+                    table: 'public_users',
+                    kunciInduk: 'nip',
+                    kunciPendukung: 'nip',
+                    kolomNilai: 'email',
+                },
+            },
 
             // ── Sensitif ────────────────────────────────────────────────────
             { key: 'alamat', label: 'Alamat', tipe: 'teks', sensitif: true },
-            { key: 'no_hp', label: 'No. HP', tipe: 'teks', sensitif: true },
+            { key: 'no_hp', label: 'Nomor WA', tipe: 'teks', sensitif: true },
             { key: 'rekening_1_nama_bank', label: 'Bank', tipe: 'teks', sensitif: true },
             { key: 'rekening_1_nomor', label: 'No. Rekening', tipe: 'teks', sensitif: true },
             { key: 'rekening_1_atas_nama', label: 'Rekening a.n.', tipe: 'teks', sensitif: true },
@@ -318,9 +337,18 @@ export const DATASETS = {
                     tipeSemester: 'angka',
                 },
             },
+            {
+                key: 'email', label: 'Email', tipe: 'teks', sensitif: true,
+                pendukung: {
+                    table: 'public_users',
+                    kunciInduk: 'nip',
+                    kunciPendukung: 'nip',
+                    kolomNilai: 'email',
+                },
+            },
 
             { key: 'alamat', label: 'Alamat', tipe: 'teks', sensitif: true },
-            { key: 'no_hp', label: 'No. HP', tipe: 'teks', sensitif: true },
+            { key: 'no_hp', label: 'Nomor WA', tipe: 'teks', sensitif: true },
             { key: 'rekening_1_nama_bank', label: 'Bank', tipe: 'teks', sensitif: true },
             { key: 'rekening_1_nomor', label: 'No. Rekening', tipe: 'teks', sensitif: true },
             { key: 'rekening_1_atas_nama', label: 'Rekening a.n.', tipe: 'teks', sensitif: true },
