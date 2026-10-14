@@ -23,6 +23,25 @@ let _cachedUser: User | null = null;
 let _cacheTimestamp: number = 0;
 const CACHE_TTL_MS = 60_000; // 1 menit
 
+/** Retry only temporary failures; invalid sessions and denied access stop immediately. */
+async function fetchSession(): Promise<Response> {
+    for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+            const response = await fetch('/api/auth/me', {
+                credentials: 'include',
+                cache: 'no-store',
+                headers: { 'Cache-Control': 'no-cache' },
+                signal: AbortSignal.timeout(10_000),
+            });
+            if ((response.status !== 429 && response.status < 500) || attempt === 2) return response;
+        } catch (error) {
+            if (attempt === 2) throw error;
+        }
+        await new Promise(resolve => setTimeout(resolve, 600 * (attempt + 1)));
+    }
+    throw new Error('Sesi belum dapat diperiksa. Silakan coba lagi.');
+}
+
 /**
  * Ambil data user yang sedang login.
  * 
@@ -62,10 +81,7 @@ export async function getCurrentUser(options: { throwOnFailure?: boolean } = {})
 
     // 3. Fetch dari server
     try {
-        const res = await fetch('/api/auth/me', {
-            credentials: 'include', // pastikan cookies sesi dikirim
-            headers: { 'Cache-Control': 'no-cache' }
-        });
+        const res = await fetchSession();
 
         if (res.status === 401) { clearUserCache(); return null; }
         if (!res.ok) throw new Error('Sesi belum dapat diperiksa. Silakan coba lagi.');

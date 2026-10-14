@@ -27,6 +27,7 @@ export async function GET(request: NextRequest) {
             return NextResponse.json({ ok: false, error: 'Unauthorized' }, { status: 401, headers: NO_STORE_HEADERS });
         }
         if (status < 200 || status >= 300 || !payload?.user) {
+            console.warn('[auth/me] Access check failed:', { status, hasUser: Boolean(payload?.user) });
             return NextResponse.json(
                 { ok: false, error: 'Sesi belum dapat diperiksa. Silakan coba lagi.' },
                 { status: status === 403 ? 403 : 503, headers: NO_STORE_HEADERS }
