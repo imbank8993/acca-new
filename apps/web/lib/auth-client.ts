@@ -31,7 +31,7 @@ const CACHE_TTL_MS = 60_000; // 1 menit
  * 2. SessionStorage cache (bertahan antar navigasi, tidak ada network)
  * 3. Fetch ke /api/auth/me (server-side, paling akurat)
  */
-export async function getCurrentUser(): Promise<User | null> {
+export async function getCurrentUser(options: { throwOnFailure?: boolean } = {}): Promise<User | null> {
     const now = Date.now();
 
     // Guard server context: jangan pernah pakai cache modul di server —
@@ -67,10 +67,11 @@ export async function getCurrentUser(): Promise<User | null> {
             headers: { 'Cache-Control': 'no-cache' }
         });
 
-        if (!res.ok) return null;
+        if (res.status === 401) { clearUserCache(); return null; }
+        if (!res.ok) throw new Error('Sesi belum dapat diperiksa. Silakan coba lagi.');
 
         const json = await res.json();
-        if (!json.ok || !json.user) return null;
+        if (!json.ok || !json.user) throw new Error('Respons pemeriksaan sesi tidak lengkap. Silakan coba lagi.');
 
         const user = json.user as User;
 
@@ -94,6 +95,7 @@ export async function getCurrentUser(): Promise<User | null> {
         } else {
             console.error('[auth-client] Failed to fetch /api/auth/me:', err);
         }
+        if (options.throwOnFailure) throw err;
         return null;
     }
 }

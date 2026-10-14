@@ -22,6 +22,7 @@ import MaintenanceBanner from '@/components/MaintenanceBanner'
 import UserHeartbeat from '@/components/UserHeartbeat'
 import { applyThemeColor } from '@/lib/theme-color'
 import { Spinner } from '@/components/ui/Spinner'
+import { Button } from '@/components/ui/Button'
 import { DashboardUserContext } from '@/components/UserContext'
 import '../dokumen/dokumen.css'
 import '../jadwal/jadwal.css'
@@ -31,6 +32,7 @@ export default function DashboardShellLayout({ children }: { children: React.Rea
   const pathname = usePathname()
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
+  const [authError, setAuthError] = useState('')
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
 
@@ -146,11 +148,12 @@ export default function DashboardShellLayout({ children }: { children: React.Rea
   }, [router, resolvePath])
 
   const checkAuth = useCallback(async () => {
+    setLoading(true)
     try {
       // Langsung cek via /api/auth/me — membaca cookie acca_session di server.
       // JANGAN gunakan supabase.auth.getSession() karena customStorage.setItem adalah no-op,
       // sehingga getSession() selalu mengembalikan null setelah login.
-      const userData = await getCurrentUser()
+      const userData = await getCurrentUser({ throwOnFailure: true })
 
       if (!userData) {
         console.warn('[dashboard-layout] No user session found, redirecting to login...')
@@ -159,25 +162,31 @@ export default function DashboardShellLayout({ children }: { children: React.Rea
       }
 
       setUser(userData)
+      setAuthError('')
 
       // Log login activity if not already logged in this session (simple check)
-      const lastLog = sessionStorage.getItem('last_login_log')
-      const now = new Date().getTime()
+      // Browser storage can be blocked; activity logging must not cancel a valid login.
+      try {
+        const lastLog = sessionStorage.getItem('last_login_log')
+        const now = new Date().getTime()
 
-      if (!lastLog || now - parseInt(lastLog) > 30 * 60 * 1000) {
-        fetch('/api/user/log', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            action: 'LOGIN',
-            details: `User logged in or refreshed dashboard. Role: ${userData?.role}`
-          })
-        }).catch(err => console.error('Failed to log login:', err))
-        sessionStorage.setItem('last_login_log', now.toString())
+        if (!lastLog || now - parseInt(lastLog) > 30 * 60 * 1000) {
+          fetch('/api/user/log', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              action: 'LOGIN',
+              details: `User logged in or refreshed dashboard. Role: ${userData?.role}`
+            })
+          }).catch(err => console.error('Failed to log login:', err))
+          sessionStorage.setItem('last_login_log', now.toString())
+        }
+      } catch (error) {
+        console.warn('Login activity storage unavailable:', error)
       }
     } catch (error) {
       console.error('Auth check error:', error)
-      router.push('/login')
+      setAuthError('Sesi belum dapat diperiksa. Silakan coba lagi.')
     } finally {
       setLoading(false)
     }
@@ -265,6 +274,16 @@ export default function DashboardShellLayout({ children }: { children: React.Rea
         </div>
       </div>
     )
+  }
+
+  if (authError) {
+    return <div style={{ minHeight: '100dvh', display: 'grid', placeItems: 'center', padding: 24, background: 'var(--n-surface, #fff)' }}>
+      <div role="alert" style={{ maxWidth: 420, textAlign: 'center', color: 'var(--n-ink, #0f172a)' }}>
+        <h1 style={{ fontSize: 20, marginBottom: 12 }}>Belum dapat membuka halaman</h1>
+        <p style={{ marginBottom: 16 }}>{authError}</p>
+        <Button variant="primary" onClick={checkAuth}>Coba lagi</Button>
+      </div>
+    </div>
   }
 
   if (!user || !userContextValue) return null
