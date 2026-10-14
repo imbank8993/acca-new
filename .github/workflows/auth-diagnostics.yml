@@ -27,9 +27,12 @@ jobs:
                 const lines = logs.split("\n");
                 const markers = ["[auth/me]", "Error in /api/auth/me:", "nestFetchAsUser /access/me", "ECONNREFUSED", "ETIMEDOUT", "ENOTFOUND", "fetch failed", "P2024", "P1001", "P1002"];
                 for (const marker of markers) console.log(JSON.stringify({ marker, count: lines.filter(line => line.includes(marker)).length }));
+                const statuses = {};
                 for (const line of lines.filter(line => line.includes("[auth/me]"))) {
-                  console.log(JSON.stringify({ status: line.match(/status: (\d+)/)?.[1], hasUser: line.match(/hasUser: (true|false)/)?.[1] }));
+                  const status = line.match(/status: (\d+)/)?.[1] || "unknown";
+                  statuses[status] = (statuses[status] || 0) + 1;
                 }
+                console.log(JSON.stringify({ sessionFailureStatuses: statuses }));
               });'
             docker exec acca-web node -e '
               (async () => {
@@ -52,6 +55,11 @@ jobs:
               process.stdin.on("end", () => {
                 for (const marker of ["/api/access/me", "P2024", "P1001", "P1002", "Too many connections", "Timed out", "ECONNREFUSED"]) {
                   const lines = logs.split("\n").filter(line => line.includes(marker));
-                  console.log(JSON.stringify({ apiMarker: marker, count: lines.length, statuses: lines.map(line => line.match(/Status: (\d+)/)?.[1]).filter(Boolean) }));
+                  const statuses = {};
+                  for (const line of lines) {
+                    const status = line.match(/Status: (\d+)/)?.[1];
+                    if (status) statuses[status] = (statuses[status] || 0) + 1;
+                  }
+                  console.log(JSON.stringify({ apiMarker: marker, count: lines.length, statuses }));
                 }
               });'
