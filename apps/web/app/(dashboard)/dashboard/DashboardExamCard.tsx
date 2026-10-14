@@ -12,7 +12,6 @@ import { InlineSelect, type InlineSelectOption } from '@/components/ui/InlineSel
 interface ExamAttempt {
     id: string;
     status: string;
-    score: number | null;
     started_at: string | null;
     finished_at: string | null;
 }
@@ -265,7 +264,7 @@ export default function DashboardExamCard({ user, isSiswa, isGuru, isAdmin }: Da
                                         </p>
                                     </div>
 
-                                    {/* Line 4: Info Sasaran / Nilai & Tombol Aksi */}
+                                    {/* Line 4: Info Sasaran / Status Pengerjaan & Tombol Aksi */}
                                     <div className="exam-item-foot">
                                         {isSiswa ? (
                                              /* Siswa View */
@@ -273,20 +272,8 @@ export default function DashboardExamCard({ user, isSiswa, isGuru, isAdmin }: Da
                                                 {isCompleted ? (
                                                     <div className="exam-foot-row">
                                                         <span className="exam-foot-meta">
-                                                            {exam.attempt?.score != null ? (
-                                                                <>Nilai: <strong>{exam.attempt.score}</strong>/100</>
-                                                            ) : (
-                                                                'Sudah dikerjakan'
-                                                            )}
+                                                            {exam.isCompleted ? 'Sudah dikerjakan' : 'Belum dikerjakan'}
                                                         </span>
-                                                        <a
-                                                            href="/api/sso/cbt"
-                                                            target="_blank"
-                                                            rel="noopener noreferrer"
-                                                            className="exam-action-btn exam-action-btn--ghost"
-                                                        >
-                                                            Hasil
-                                                        </a>
                                                     </div>
                                                 ) : isActive ? (
                                                     <div className="exam-foot-row">

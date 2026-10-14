@@ -118,11 +118,10 @@ export async function GET(request: NextRequest) {
                     cbt_subjects: { select: { id: true, name: true } },
                     cbt_profiles: { select: { id: true, full_name: true } },
                     cbt_exam_attempts: {
-                        where: candidateUserIds.length > 0 ? { user_id: { in: candidateUserIds } } : undefined,
+                        where: { user_id: { in: candidateUserIds } },
                         select: {
                             id: true,
                             status: true,
-                            total_score: true,
                             started_at: true,
                             finished_at: true
                         }
@@ -160,7 +159,6 @@ export async function GET(request: NextRequest) {
                     attempt: attempt ? {
                         id: attempt.id,
                         status: attempt.status,
-                        score: attempt.total_score != null ? Math.round(Number(attempt.total_score)) : null,
                         started_at: attempt.started_at,
                         finished_at: attempt.finished_at
                     } : null,
@@ -278,8 +276,7 @@ export async function GET(request: NextRequest) {
                     cbt_exam_attempts: {
                         select: {
                             id: true,
-                            status: true,
-                            total_score: true
+                            status: true
                         }
                     }
                 },
