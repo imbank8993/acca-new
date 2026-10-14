@@ -16,8 +16,9 @@ jobs:
           key: ${{ secrets.VPS_SSH_KEY }}
           port: 22
           command_timeout: 3m
-          script_stop: true
+          script_stop: false
           script: |
+            set -e
             docker ps --format '{{.Names}} {{.Status}}' --filter name=acca
             docker logs --since 30m --tail 3000 acca-web 2>&1 | docker exec -i acca-web node -e '
               let logs = "";
