@@ -1330,7 +1330,7 @@ export class UsersService {
    * keempatnya hanya boleh diubah admin. `aktif` juga tidak.
    */
   private static readonly PROFIL_SISWA_WRITABLE = [
-    'nik', 'gender', 'tempat_lahir', 'tanggal_lahir',
+    'nik', 'gender', 'tempat_lahir', 'tanggal_lahir', 'nomor_hp',
     'nomor_hp_ayah', 'nomor_hp_ibu', 'alamat', 'asal_sekolah',
   ];
 
@@ -1402,6 +1402,18 @@ export class UsersService {
     const data = this.pickProfilFields(input, UsersService.PROFIL_SISWA_WRITABLE);
     if (Object.keys(data).length === 0) {
       throw new BadRequestException('Tidak ada kolom yang dapat diperbarui');
+    }
+
+    if (data.nomor_hp !== undefined) {
+      if (data.nomor_hp === null || String(data.nomor_hp).trim() === '') {
+        data.nomor_hp = null;
+      } else {
+        const hpStr = String(data.nomor_hp).trim();
+        if (!/^[0-9+\-\s]{8,25}$/.test(hpStr)) {
+          throw new BadRequestException('Format nomor HP siswa tidak valid (harus 8-25 digit/karakter angka)');
+        }
+        data.nomor_hp = hpStr;
+      }
     }
 
     const updated = await this.prisma.master_siswa.update({

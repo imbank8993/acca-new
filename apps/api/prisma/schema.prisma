@@ -2984,6 +2984,7 @@ model master_siswa {
   gender                String?
   tempat_lahir          String?
   tanggal_lahir         DateTime?               @db.Date
+  nomor_hp              String?
   nama_ayah             String?
   nama_ibu              String?
   nomor_hp_ayah         String?

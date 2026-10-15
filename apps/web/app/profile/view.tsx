@@ -41,6 +41,7 @@ interface SiswaData {
     gender?: string
     tempat_lahir?: string
     tanggal_lahir?: string
+    nomor_hp?: string
     nama_ayah?: string
     nama_ibu?: string
     nomor_hp_ayah?: string
@@ -151,7 +152,7 @@ export default function ProfilePage({ user, onRefreshUser }: ProfilePageProps) {
     // Siswa data
     const [siswaData, setSiswaData] = useState<SiswaData | null>(null)
     const [siswaForm, setSiswaForm] = useState({
-        gender: '', tempat_lahir: '', tanggal_lahir: '', nomor_hp_ayah: '', nomor_hp_ibu: '',
+        gender: '', tempat_lahir: '', tanggal_lahir: '', nomor_hp: '', nomor_hp_ayah: '', nomor_hp_ibu: '',
         alamat: '', asal_sekolah: ''
     })
     const [savingSiswa, setSavingSiswa] = useState(false)
@@ -306,6 +307,7 @@ export default function ProfilePage({ user, onRefreshUser }: ProfilePageProps) {
                     gender: s.gender || '',
                     tempat_lahir: s.tempat_lahir || '',
                     tanggal_lahir: s.tanggal_lahir ? String(s.tanggal_lahir).split('T')[0] : '',
+                    nomor_hp: s.nomor_hp || '',
                     nomor_hp_ayah: s.nomor_hp_ayah || '',
                     nomor_hp_ibu: s.nomor_hp_ibu || '',
                     alamat: s.alamat || '',
@@ -318,6 +320,13 @@ export default function ProfilePage({ user, onRefreshUser }: ProfilePageProps) {
 
     const handleSaveSiswa = async (e: React.FormEvent) => {
         e.preventDefault()
+        if (siswaForm.nomor_hp && siswaForm.nomor_hp.trim()) {
+            const cleanHp = siswaForm.nomor_hp.trim()
+            if (!/^[0-9+\-\s]{8,25}$/.test(cleanHp)) {
+                swalError('Format Tidak Valid', 'Nomor HP siswa harus berupa nomor yang valid (8-25 digit/karakter angka).')
+                return
+            }
+        }
         setSavingSiswa(true)
         try {
             const res = await fetch('/api/profile-siswa', {
@@ -1178,6 +1187,16 @@ export default function ProfilePage({ user, onRefreshUser }: ProfilePageProps) {
                                                     <option value="L">Laki-Laki</option>
                                                     <option value="P">Perempuan</option>
                                                 </select>
+                                            </div>
+                                            <div className="ps-field-group">
+                                                <label>No. HP Siswa</label>
+                                                <input
+                                                    type="tel"
+                                                    className="ps-glass-input"
+                                                    value={siswaForm.nomor_hp}
+                                                    onChange={e => setSiswaForm(p => ({ ...p, nomor_hp: e.target.value }))}
+                                                    placeholder="08xxxxxxxxxx"
+                                                />
                                             </div>
                                             <div className="ps-field-group">
                                                 <label>Tempat Lahir</label>

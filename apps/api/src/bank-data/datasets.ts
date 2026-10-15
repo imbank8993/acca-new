@@ -214,6 +214,7 @@ export const DATASETS = {
 
             // ── Sensitif ────────────────────────────────────────────────────
             { key: 'nik', label: 'NIK', tipe: 'teks', sensitif: true },
+            { key: 'nomor_hp', label: 'No. HP Siswa', tipe: 'teks', sensitif: true },
             { key: 'nama_ayah', label: 'Nama Ayah', tipe: 'teks', sensitif: true },
             { key: 'nama_ibu', label: 'Nama Ibu', tipe: 'teks', sensitif: true },
             { key: 'nomor_hp_ayah', label: 'No. HP Ayah', tipe: 'teks', sensitif: true },

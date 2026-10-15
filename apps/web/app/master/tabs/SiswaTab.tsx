@@ -28,6 +28,7 @@ interface RawSiswa {
   gender: 'L' | 'P';
   tempat_lahir: string;
   tanggal_lahir: string;
+  nomor_hp?: string;
   nama_ayah: string;
   nama_ibu: string;
   nomor_hp_ayah: string;
@@ -602,6 +603,7 @@ export default function SiswaTab({ user }: { user?: any }) {
       'Nama Lengkap': s.nama_lengkap || '',
       'NIK': s.nik || '',
       'Jenis Kelamin': s.gender || '',
+      'Nomor HP': s.nomor_hp || '',
       'Tempat Lahir': s.tempat_lahir || '',
       'Tanggal Lahir': s.tanggal_lahir || '',
       'Nama Ayah': s.nama_ayah || '',
@@ -654,10 +656,15 @@ export default function SiswaTab({ user }: { user?: any }) {
       nama_lengkap: String(namaRaw).trim(),
       nik: String(getVal(['NIK', 'nik']) || '').replace(/[^0-9]/g, ''),
       gender: (String(getVal(['Jenis Kelamin', 'Gender'])).toUpperCase().startsWith('P') ? 'P' : 'L'),
+      nomor_hp: String(getVal(['Nomor HP', 'Nomor HP Siswa', 'No HP', 'No. HP', 'HP', 'No HP Siswa', 'Telepon', 'No. Telepon']) || '').trim(),
       tempat_lahir: getVal(['Tempat Lahir']),
       tanggal_lahir: parseDate(getVal(['Tanggal Lahir'])),
       nama_ayah: getVal(['Nama Ayah']),
       nama_ibu: getVal(['Nama Ibu']),
+      nomor_hp_ayah: String(getVal(['Nomor HP Ayah', 'No HP Ayah', 'No. HP Ayah', 'HP Ayah']) || '').trim(),
+      nomor_hp_ibu: String(getVal(['Nomor HP Ibu', 'No HP Ibu', 'No. HP Ibu', 'HP Ibu']) || '').trim(),
+      alamat: getVal(['Alamat', 'alamat']),
+      asal_sekolah: getVal(['Asal Sekolah', 'asal_sekolah']),
       aktif: String(getVal(['Status Aktif', 'Status'])).toUpperCase() !== 'FALSE' && String(getVal(['Status Aktif', 'Status'])).toUpperCase() !== 'NON-AKTIF'
     };
   }
@@ -829,7 +836,7 @@ export default function SiswaTab({ user }: { user?: any }) {
               <th>Nama</th>
               <th className="cGender">L/P</th>
               <th>TTL</th>
-              <th>Kontak Ortu</th>
+              <th>Kontak</th>
               <th className="cCardId">Card ID</th>
               <th className="cStatus">Status</th>
               <th className="cAksi">Aksi</th>
@@ -871,7 +878,17 @@ export default function SiswaTab({ user }: { user?: any }) {
                     <div className="sk__cellMeta">{siswa.tanggal_lahir || '-'}</div>
                   </td>
                   <td>
-                    <div className="sk__cellSub">Ayah: {siswa.nama_ayah || '-'} ({siswa.nomor_hp_ayah || '-'})</div>
+                    {siswa.nomor_hp ? (
+                      <div className="sk__cellSub" style={{ fontWeight: 600, color: '#16a34a', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <i className="bi bi-phone" />
+                        <span>{siswa.nomor_hp}</span>
+                      </div>
+                    ) : (
+                      <div className="sk__cellSub" style={{ color: '#94a3b8', fontSize: '0.85em' }}>
+                        HP: -
+                      </div>
+                    )}
+                    <div className="sk__cellMeta">Ayah: {siswa.nama_ayah || '-'} ({siswa.nomor_hp_ayah || '-'})</div>
                     <div className="sk__cellMeta">Ibu: {siswa.nama_ibu || '-'} ({siswa.nomor_hp_ibu || '-'})</div>
                   </td>
                   <td className="cCardId">
@@ -1026,6 +1043,11 @@ export default function SiswaTab({ user }: { user?: any }) {
                   </div>
 
                   <div className="sk__field">
+                    <label>No. HP Siswa</label>
+                    <input type="text" name="nomor_hp" value={formData.nomor_hp || ''} onChange={handleInputChange} placeholder="08xxxxxxxxxx" />
+                  </div>
+
+                  <div className="sk__field">
                     <label>Asal Sekolah</label>
                     <input type="text" name="asal_sekolah" value={formData.asal_sekolah || ''} onChange={handleInputChange} placeholder="SMP/MTs..." />
                   </div>
@@ -1122,7 +1144,7 @@ export default function SiswaTab({ user }: { user?: any }) {
                 fetchSiswa();
                 setShowImportModal(false);
               }}
-              templateColumns={['No', 'NISN', 'Nama Lengkap', 'NIK', 'Jenis Kelamin', 'Tempat Lahir', 'Tanggal Lahir', 'Nama Ayah', 'Nama Ibu', 'Nomor HP Ayah', 'Nomor HP Ibu', 'Alamat', 'Asal Sekolah', 'Status Aktif']}
+              templateColumns={['No', 'NISN', 'Nama Lengkap', 'NIK', 'Jenis Kelamin', 'Nomor HP', 'Tempat Lahir', 'Tanggal Lahir', 'Nama Ayah', 'Nama Ibu', 'Nomor HP Ayah', 'Nomor HP Ibu', 'Alamat', 'Asal Sekolah', 'Status Aktif']}
               templateName="Template_Siswa"
               apiEndpoint="/api/master/students?upsert=true"
               mapRowData={mapImportRow}
@@ -1168,6 +1190,11 @@ export default function SiswaTab({ user }: { user?: any }) {
                 <div className="sk__readInput">
                   {selectedSiswa.gender === 'L' ? 'Laki-laki (L)' : selectedSiswa.gender === 'P' ? 'Perempuan (P)' : '-'}
                 </div>
+              </div>
+
+              <div className="sk__field">
+                <label>No. HP Siswa</label>
+                <div className="sk__readInput">{selectedSiswa.nomor_hp || '-'}</div>
               </div>
 
               <div className="sk__field">

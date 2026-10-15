@@ -149,10 +149,10 @@ export const MASTER_ENTITIES: Record<string, MasterEntityConfig> = {
   siswa: {
     model: 'master_siswa',
     uniqueField: 'nisn',
-    searchFields: ['nama_lengkap', 'nisn'],
+    searchFields: ['nama_lengkap', 'nisn', 'nomor_hp'],
     writable: [
       'nisn', 'nik', 'nama_lengkap', 'gender',
-      'tempat_lahir', 'tanggal_lahir',
+      'tempat_lahir', 'tanggal_lahir', 'nomor_hp',
       'nama_ayah', 'nama_ibu',
       'nomor_hp_ayah', 'nomor_hp_ibu',
       'alamat', 'asal_sekolah', 'aktif',
@@ -163,7 +163,7 @@ export const MASTER_ENTITIES: Record<string, MasterEntityConfig> = {
     // Pemakai non-master (dropdown di permintaan-surat, prestasi, ekskul,
     // siswa-kelas) hanya membaca id/nisn/nama_lengkap.
     sensitiveFields: [
-      'nik', 'tempat_lahir', 'tanggal_lahir',
+      'nik', 'nomor_hp', 'tempat_lahir', 'tanggal_lahir',
       'nama_ayah', 'nama_ibu', 'nomor_hp_ayah', 'nomor_hp_ibu',
       'alamat', 'asal_sekolah',
     ],
