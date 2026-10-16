@@ -494,3 +494,48 @@
 }
 .dark .nilai-page__legend-desc { color: #e2e8f0 !important; }
 .dark .nilai-page__legend-icon { color: #60a5fa !important; }
+.nilai-page__source-badge {
+  display: inline-flex;
+  align-self: flex-start;
+  width: fit-content;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(26, 115, 232, .1);
+  color: var(--n-primary);
+  font-size: .7rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.nilai-page__source-note {
+  color: var(--n-muted);
+  font-size: .75rem;
+  line-height: 1.6;
+  margin: 0 0 16px;
+}
+.nilai-page__score-type {
+  display: block;
+  color: var(--n-muted);
+  font-size: .7rem;
+  margin-top: 4px;
+}
+.nilai-page__cbt-meta {
+  margin: 10px 0 0;
+  font-size: .75rem;
+  line-height: 1.5;
+}
+.nilai-page__cbt-meta > div {
+  display: grid;
+  grid-template-columns: 65px minmax(0, 1fr);
+  gap: 8px;
+  margin-top: 4px;
+}
+.nilai-page__cbt-meta dt { color: var(--n-muted); }
+.nilai-page__cbt-meta dd { margin: 0; overflow-wrap: anywhere; }
+.nilai-page .nilai-page__stat-value--kelas {
+  font-size: .875rem;
+  font-weight: 600;
+  line-height: 1.45;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.nilai-page .nilai-page__stat-body { min-width: 0; }

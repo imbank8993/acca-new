@@ -9,7 +9,7 @@ import { ActionButton } from '@/components/ui/ActionButtons';
 import { getProxiedImageUrl } from '@/lib/image-utils';
 import { MobileList, MobileListItem, MobileAvatar } from '@/components/mobile/MobileList';
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { getCurrentUser } from '@/lib/auth-client';
 import { getActiveTahunAjaranList, currentSemesterDefault } from '@/lib/tahun-ajaran-client';
@@ -22,6 +22,10 @@ import type { User } from '@/lib/types';
 import './nilai-siswa.css';
 
 interface NilaiItem {
+    sumber?: 'guru' | 'cbt';
+    score_type?: string;
+    grading_status?: string;
+    periode_dari_tanggal?: boolean;
     id: string;
     nip: string;
     kelas: string;
@@ -49,7 +53,7 @@ interface SiswaInfo {
 interface KelasInfo {
     kelas: string;
     tahun_ajaran: string;
-    semester: number;
+    semester: string | number | null;
 }
 
 interface StudentWithKelas {
@@ -77,6 +81,7 @@ interface ApresiasiItem {
 }
 
 interface GroupedData {
+    cbt_linkage?: string;
     siswa: SiswaInfo | null;
     kelas: KelasInfo[];
     grouped: Record<string, Record<string, NilaiItem[]>>;
@@ -137,6 +142,8 @@ function NilaiSiswaPage() {
     const [selectedTahunAjaran, setSelectedTahunAjaran] = useState('');
     const [selectedSemester, setSelectedSemester] = useState('');
     const [selectedMapel, setSelectedMapel] = useState('');
+    const [selectedSumber, setSelectedSumber] = useState('all');
+    const nilaiRequest = useRef(0);
     const [availableTahunAjaran, setAvailableTahunAjaran] = useState<string[]>([]);
     const [availableSemester, setAvailableSemester] = useState<string[]>([]);
     const [kkmMap, setKkmMap] = useState<Record<string, number>>({});
@@ -203,10 +210,11 @@ function NilaiSiswaPage() {
 
         // Filter out empty PAS rows as requested by user
         return items.filter(i => {
+            if (selectedSumber !== 'all' && (i.sumber || 'guru') !== selectedSumber) return false;
             if (i.jenis === 'PAS' && (i.nilai === null || i.nilai === undefined)) return false;
             return true;
         });
-    }, [data, selectedTahunAjaran, selectedSemester]);
+    }, [data, selectedTahunAjaran, selectedSemester, selectedSumber]);
 
     /** Disaring mengikuti pemilih tahun ajaran, semester, dan mapel yang sama dengan tabel nilai. */
     const currentApresiasi = useMemo(() => {
@@ -215,12 +223,13 @@ function NilaiSiswaPage() {
         const parsed = parseInt(selectedSemester);
         const semNum = isNaN(parsed) ? null : parsed;
         return apresiasi.filter(a => {
+            if (selectedSumber === 'cbt') return false;
             if (selectedTahunAjaran && a.tahun_ajaran && a.tahun_ajaran !== selectedTahunAjaran) return false;
             if (semNum !== null && a.semester !== null && a.semester !== semNum) return false;
             if (selectedMapel && a.mapel && a.mapel !== selectedMapel) return false;
             return true;
         });
-    }, [apresiasi, selectedTahunAjaran, selectedSemester, selectedMapel]);
+    }, [apresiasi, selectedTahunAjaran, selectedSemester, selectedMapel, selectedSumber]);
 
     const groupedByMapel = useMemo(() => {
         const grouped: Record<string, NilaiItem[]> = {};
@@ -246,6 +255,27 @@ function NilaiSiswaPage() {
         return currentItems.filter(i => i.mapel === selectedMapel);
     }, [currentItems, selectedMapel]);
 
+    const displayedGradeGroups = useMemo(() => {
+        const groups = displayedMapelList.map(mapel => ({
+            key: `guru:${mapel}`, title: mapel, isCbt: false,
+            items: groupedByMapel[mapel].filter(item => item.sumber !== 'cbt'),
+        })).filter(group => group.items.length > 0);
+        const cbtItems = displayedItems.filter(item => item.sumber === 'cbt');
+        if (cbtItems.length) groups.push({ key: 'cbt', title: 'Nilai ACCA-CBT', isCbt: true, items: cbtItems });
+        return groups;
+    }, [displayedMapelList, groupedByMapel, displayedItems]);
+
+    const regularKelas = useMemo(() => {
+        const normalizeSemester = (value: string | number | null) => {
+            const normalized = String(value || '').trim().toLowerCase();
+            return normalized === 'ganjil' ? '1' : normalized === 'genap' ? '2' : normalized;
+        };
+        return [...new Set((data?.kelas || []).filter(item =>
+            (!selectedTahunAjaran || item.tahun_ajaran === selectedTahunAjaran) &&
+            (!selectedSemester || normalizeSemester(item.semester) === selectedSemester)
+        ).map(item => item.kelas).filter(Boolean))].join(', ') || '-';
+    }, [data?.kelas, selectedTahunAjaran, selectedSemester]);
+
     const stats = useMemo(() => {
         const validItems = displayedItems.filter(i => i.nilai !== null);
         const avg = validItems.length > 0
@@ -255,9 +285,9 @@ function NilaiSiswaPage() {
             total: displayedItems.length,
             mapel: displayedMapelList.length,
             avg,
-            kelas: [...new Set(displayedItems.map(i => i.kelas))].join(', ') || '-'
+            kelas: regularKelas,
         };
-    }, [displayedItems, displayedMapelList]);
+    }, [displayedItems, displayedMapelList, regularKelas]);
 
     // --- Callbacks ---
     const checkAuth = useCallback(async () => {
@@ -359,12 +389,16 @@ function NilaiSiswaPage() {
     }, [router, selectedNisn]);
 
     const fetchNilai = useCallback(async (nisn: string) => {
+        const requestId = ++nilaiRequest.current;
         try {
             setLoading(true);
             setError(null);
+            setData(null);
+            setApresiasi([]);
             // Fetch all data without semester filter so all nilai (Tugas, UH, Kuis, etc.) are shown
             const res = await fetch(`/api/nilai/siswa?nisn=${encodeURIComponent(nisn)}`);
             const json: ApiResponse<GroupedData> = await res.json();
+            if (requestId !== nilaiRequest.current) return;
             if (!json.ok) throw new Error(json.error || 'Gagal memuat data nilai');
 
             setData(json.data || null);
@@ -389,12 +423,11 @@ function NilaiSiswaPage() {
             setKkmMap(kkmDict);
 
             if (json.data?.grouped) {
-                // Pilihan tahun ajaran HANYA yang aktif di master_tahun_ajaran —
-                // tahun nonaktif tidak ditawarkan. Fallback ke tahun yang punya
-                // data hanya bila tidak ada TA aktif sama sekali.
+                // Include periods with results so historical CBT grades remain reachable.
                 const activeYears = await getActiveTahunAjaranList();
+                if (requestId !== nilaiRequest.current) return;
                 const dataYears = Object.keys(json.data.grouped);
-                const tahunList = [...new Set<string>(activeYears.length > 0 ? activeYears : dataYears)]
+                const tahunList = [...new Set<string>([...activeYears, ...dataYears])]
                     .sort((a, b) => b.localeCompare(a));
                 setAvailableTahunAjaran(tahunList);
                 if (tahunList.length > 0) setSelectedTahunAjaran(tahunList[0]);
@@ -410,16 +443,18 @@ function NilaiSiswaPage() {
             try {
                 const resApr = await fetch(`/api/nilai/siswa/apresiasi?nisn=${encodeURIComponent(nisn)}&tahun_ajaran=all`);
                 const jsonApr = await resApr.json();
+                if (requestId !== nilaiRequest.current) return;
                 setApresiasi(jsonApr?.ok ? (jsonApr.data || []) : []);
             } catch {
-                setApresiasi([]);
+                if (requestId === nilaiRequest.current) setApresiasi([]);
             }
         } catch (e: any) {
+            if (requestId !== nilaiRequest.current) return;
             console.error('Fetch nilai error:', e);
             setError(e.message);
             Swal.fire({ icon: 'error', title: 'Error', text: e.message });
         } finally {
-            setLoading(false);
+            if (requestId === nilaiRequest.current) setLoading(false);
         }
     }, []);
 
@@ -429,6 +464,9 @@ function NilaiSiswaPage() {
     }, [fetchNilai]);
 
     const handleResetSelection = useCallback(() => {
+        nilaiRequest.current++;
+        setLoading(false);
+        setSelectedSumber('all');
         setSelectedNisn('');
         setData(null);
         setApresiasi([]);
@@ -447,11 +485,11 @@ function NilaiSiswaPage() {
         if (data?.grouped && selectedTahunAjaran) {
             // Always show both semesters 1 and 2
             const allSemesters = ['1', '2'];
-            setAvailableSemester(allSemesters);
             // Default mengikuti semester berjalan (Jul–Des = Ganjil, Jan–Jun = Genap);
             // jika semester itu belum ada datanya, pakai semester yang ada datanya.
             const monthDefault = currentSemesterDefault();
             const withData = Object.keys(data.grouped[selectedTahunAjaran] || {});
+            setAvailableSemester([...new Set([...allSemesters, ...withData])]);
             setSelectedSemester(withData.includes(monthDefault) ? monthDefault : (withData[0] || monthDefault));
         }
     }, [data, selectedTahunAjaran]);
@@ -471,12 +509,13 @@ function NilaiSiswaPage() {
         const s = String(sem);
         if (s === '1') return 'Ganjil';
         if (s === '2') return 'Genap';
+        if (s === '0' || s === 'Unknown') return 'Belum ditentukan';
         return s;
     };
 
     const getNilaiBadge = (nilai: number | null | undefined, kkm = 75) => {
         if (nilai === null || nilai === undefined) return { cls: 'nilai-page__nilai-badge--none', label: '-' };
-        const val = Number(nilai);
+        const val = Number(Number(nilai).toFixed(2));
         const highThreshold = Math.max(kkm + 10, 85);
         if (val < kkm) return { cls: 'nilai-page__nilai-badge--merah', label: String(val) };
         if (val < highThreshold) return { cls: 'nilai-page__nilai-badge--orange', label: String(val) };
@@ -531,6 +570,7 @@ function NilaiSiswaPage() {
     };
 
     const parseSumInfo = (item: NilaiItem) => {
+        if (item.sumber === 'cbt') return { sumGroup: '-', actualTopic: item.materi_tp, isSumType: false };
         const full = getTopikDisplay(item);
         
         // 1. Check for SUM X pattern
@@ -696,14 +736,20 @@ function NilaiSiswaPage() {
                 <DetailHeader
                     onBack={isAdmin && !(isOrangTua && allStudents.length <= 1) ? handleResetSelection : undefined}
                     name={data?.siswa?.nama_lengkap || selectedStudent?.nama || 'Siswa'}
-                    meta={`NISN ${data?.siswa?.nisn || (isAdmin ? selectedNisn : user?.nip)}${data?.kelas?.[0]?.kelas ? ` - ${data.kelas[0].kelas}` : ''}`}
+                    meta={`NISN ${data?.siswa?.nisn || (isAdmin ? selectedNisn : user?.nip)}${regularKelas !== '-' ? ` - ${regularKelas}` : ''}`}
                 />
 
                 {/* Content */}
                 <div className="nilai-page__content">
                     {/* Filters Toolbar */}
-                    {(availableTahunAjaran.length > 0 || availableSemester.length > 0 || availableMapel.length > 0) && (
+                    {data && (
                         <FilterToolbar className="nilai-page__filter-toolbar">
+                            <FilterSelect label="Sumber Nilai" icon="funnel" value={selectedSumber}
+                                onChange={setSelectedSumber} options={[
+                                    { value: 'all', label: 'Semua Sumber' },
+                                    { value: 'guru', label: 'Input Guru' },
+                                    { value: 'cbt', label: 'CBT' },
+                                ]} />
                             {availableTahunAjaran.length > 0 && (
                                 <FilterSelect
                                     label="Tahun Ajaran"
@@ -736,6 +782,12 @@ function NilaiSiswaPage() {
                             )}
                         </FilterToolbar>
                     )}
+                    {selectedSumber !== 'guru' && data?.cbt_linkage === 'ambiguous' && (
+                        <p className="nilai-page__source-note" role="status">Akun CBT belum dapat dicocokkan secara pasti. Hubungi administrator untuk memeriksa identitas akun.</p>
+                    )}
+                    {selectedSumber !== 'guru' && data?.cbt_linkage === 'unlinked' && (
+                        <p className="nilai-page__source-note" role="status">Belum ditemukan akun CBT yang terhubung dengan siswa ini.</p>
+                    )}
                     {/* Stats Cards */}
                     <div className="nilai-page__stats-grid">
                         {[
@@ -752,7 +804,7 @@ function NilaiSiswaPage() {
                                 </div>
                                 <div className="nilai-page__stat-body">
                                     <p className="nilai-page__stat-label">{stat.label}</p>
-                                    <p className="nilai-page__stat-value">{stat.value}</p>
+                                    <p className={`nilai-page__stat-value${stat.label === 'Kelas' ? ' nilai-page__stat-value--kelas' : ''}`}>{stat.value}</p>
                                 </div>
                             </div>
                         ))}
@@ -765,8 +817,7 @@ function NilaiSiswaPage() {
                         </div>
                     ) : (
                     <div className="nilai-page__mapel-list">
-                        {displayedMapelList.map((mapel) => {
-                            const items = groupedByMapel[mapel];
+                        {displayedGradeGroups.map(({ key, title: mapel, items, isCbt }) => {
                             const itemsWithInfo = items.map(i => ({
                                 ...i,
                                 info: parseSumInfo(i)
@@ -850,7 +901,7 @@ function NilaiSiswaPage() {
                                 : null;
 
                             return (
-                                <div key={mapel} className="nilai-page__mapel-card">
+                                <div key={key} className="nilai-page__mapel-card">
                                     <div className="nilai-page__mapel-header">
                                         <div className="nilai-page__mapel-header-left">
                                             <div className="nilai-page__mapel-icon">
@@ -860,7 +911,7 @@ function NilaiSiswaPage() {
                                             </div>
                                             <div className="nilai-page__mapel-info">
                                                 <h3 className="nilai-page__mapel-title" style={{ fontWeight: 500 }}>{mapel}</h3>
-                                                <p className="nilai-page__mapel-guru" style={{ fontSize: '0.75rem', color: 'var(--n-muted)', marginTop: '2px', fontWeight: 500 }}>{Array.from(new Set(items.map(i => i.nama_guru).filter(Boolean))).join(', ')}</p>
+                                                {!isCbt && <p className="nilai-page__mapel-guru" style={{ fontSize: '0.75rem', color: 'var(--n-muted)', marginTop: '2px', fontWeight: 500 }}>{Array.from(new Set(items.map(i => i.nama_guru).filter(Boolean))).join(', ')}</p>}
                                             </div>
                                         </div>
                                         {avg !== null && (
@@ -873,6 +924,7 @@ function NilaiSiswaPage() {
                                         )}
                                     </div>
                                     <div className="nilai-page__mapel-body">
+                                        {isCbt ? <CbtGrades items={items} getBadge={getNilaiBadge} /> : <>
                                         {/* Desktop Table */}
                                         <div className="nilai-page__table-wrap">
                                             <table className="nilai-page__table">
@@ -917,6 +969,7 @@ function NilaiSiswaPage() {
                                                                 </td>
                                                                 <td className="nilai-page__td nilai-page__td--right">
                                                                     <span className={`nilai-page__nilai-badge ${nilai.cls}`}>{nilai.label}</span>
+                                                                    {item.sumber === 'cbt' && item.catatan && <small className="nilai-page__score-type">{item.catatan}</small>}
                                                                 </td>
                                                             </tr>
                                                         );
@@ -962,6 +1015,7 @@ function NilaiSiswaPage() {
                                                         }}>
                                                             <div className="nilai-page__mobile-card-header">
                                                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                                                    <span className="nilai-page__source-badge">{item.sumber === 'cbt' ? `CBT · ${item.score_type === 'classical' ? 'Klasikal' : item.score_type?.replace('_', ' ').toUpperCase()}` : 'Input Guru'}</span>
                                                                     {item.info.sumGroup === 'PAS' && (
                                                                         <span style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--n-primary)', background: 'rgba(59, 130, 246, 0.14)', padding: '2px 8px', borderRadius: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                                                                             Penilaian Akhir Semester (PAS)
@@ -997,6 +1051,7 @@ function NilaiSiswaPage() {
                                                 );
                                             })}
                                         </div>
+                                        </>}
                                     </div>
                                 </div>
                             );
@@ -1125,6 +1180,51 @@ function NilaiSiswaPage() {
 
 
 // --- AUTOMATED MAINTENANCE WRAPPER ---
+function CbtGrades({ items, getBadge }: { items: NilaiItem[]; getBadge: (nilai: number | null, kkm?: number) => { cls: string; label: string } }) {
+    const scoreLabel = (item: NilaiItem) => item.score_type === 'classical' ? 'Klasikal'
+        : item.score_type?.replace('_', ' ').toUpperCase() || '-';
+    return <>
+        <div className="nilai-page__table-wrap">
+            <table className="nilai-page__table nilai-page__cbt-table">
+                <thead><tr>
+                    {['Nama Ujian', 'Pembuat', 'Jenis Nilai', 'Mapel', 'Nilai'].map((label, index) =>
+                        <th key={label} className={`nilai-page__th${index === 4 ? ' nilai-page__th--right' : ''}`}>{label}</th>)}
+                </tr></thead>
+                <tbody>{items.map(item => {
+                    const badge = getBadge(item.nilai, item.kkm);
+                    return <tr key={item.id} className="nilai-page__tr">
+                        <td className="nilai-page__td">{item.materi_tp}</td>
+                        <td className="nilai-page__td nilai-page__td--muted">{item.nama_guru || '-'}</td>
+                        <td className="nilai-page__td"><span className="nilai-page__source-badge">{scoreLabel(item)}</span></td>
+                        <td className="nilai-page__td nilai-page__td--muted">{item.mapel}</td>
+                        <td className="nilai-page__td nilai-page__td--right">
+                            <span className={`nilai-page__nilai-badge ${badge.cls}`}>{badge.label}</span>
+                            {item.catatan && <small className="nilai-page__score-type">{item.catatan}</small>}
+                        </td>
+                    </tr>;
+                })}</tbody>
+            </table>
+        </div>
+        <div className="nilai-page__mobile-cards" style={{ gap: '10px' }}>
+            {items.map(item => {
+                const badge = getBadge(item.nilai, item.kkm);
+                return <div key={item.id} className="nilai-page__mobile-card">
+                    <div className="nilai-page__mobile-card-header">
+                        <span className="nilai-page__source-badge">{scoreLabel(item)}</span>
+                        <span className={`nilai-page__nilai-badge ${badge.cls}`}>{badge.label}</span>
+                    </div>
+                    <div className="nilai-page__mobile-card-topic">{item.materi_tp}</div>
+                    <dl className="nilai-page__cbt-meta">
+                        <div><dt>Pembuat</dt><dd>{item.nama_guru || '-'}</dd></div>
+                        <div><dt>Mapel</dt><dd>{item.mapel}</dd></div>
+                    </dl>
+                    {item.catatan && <p className="nilai-page__score-type">{item.catatan}</p>}
+                </div>;
+            })}
+        </div>
+    </>;
+}
+
 export default function MaintenanceWrappedNilaiSiswaPage(props: any) {
     return (
         <>

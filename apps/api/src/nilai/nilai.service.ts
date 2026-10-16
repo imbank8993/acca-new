@@ -1,5 +1,6 @@
 import { Injectable, ForbiddenException, BadRequestException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { loadCbtStudentGrades } from './cbt-student-grades';
 
 function serializeBigInt(obj: any): any {
   if (obj === null || obj === undefined) return obj;
@@ -671,7 +672,7 @@ export class NilaiService {
     if (!user?.id || !nisn) return false;
     if (this.isPrivileged(user)) return true;
     const roles = user.roles || String(user.role || '').split(/[,|]/).map((r: string) => r.trim().toUpperCase());
-    if (roles.includes('SISWA')) return String(user.nip || user.username || '') === nisn;
+    if (roles.includes('SISWA')) return !!user.nip && String(user.nip) === nisn;
     if (roles.some((r: string) => ['ORANG_TUA','ORANGTUA'].includes(r))) return !!await this.prisma.orangtua_siswa.findFirst({ where: { user_id: BigInt(user.id), nisn } });
     if (!user.nip) return false;
     const isGuruAsuh = await this.prisma.guru_asuh.findFirst({ where: { nip: user.nip, nisn_siswa: nisn, aktif: true } });
@@ -692,6 +693,8 @@ export class NilaiService {
     }
 
     const { semester, tahun_ajaran, guruNip, mapel, kelas } = query || {};
+    const sumber = query?.sumber || 'all';
+    if (!['all', 'guru', 'cbt'].includes(sumber)) throw new BadRequestException('Sumber nilai tidak valid');
     const where: any = { nisn: cleanNisn };
 
     if (semester) where.semester = mapSemester(semester);
@@ -767,20 +770,13 @@ export class NilaiService {
         || 75;
       return {
         ...r,
+        sumber: 'guru',
+        nilai: r.nilai === null ? null : Number(r.nilai),
         nama_guru: guruMap.get(r.nip) || r.nip,
         topik,
         kkm,
       };
     });
-
-    const grouped: Record<string, Record<string, any[]>> = {};
-    for (const r of enriched) {
-      const ta = r.tahun_ajaran || 'Unknown';
-      const sem = String(r.semester || 'Unknown');
-      if (!grouped[ta]) grouped[ta] = {};
-      if (!grouped[ta][sem]) grouped[ta][sem] = [];
-      grouped[ta][sem].push(r);
-    }
 
     let siswaData: any = await this.prisma.master_siswa.findUnique({
       where: { nisn: cleanNisn },
@@ -818,6 +814,27 @@ export class NilaiService {
       select: { kelas: true, tahun_ajaran: true, semester: true },
       orderBy: [{ tahun_ajaran: 'desc' }, { semester: 'asc' }],
     });
+    // siswa_kelas also stores elective/UTBK memberships. Only the master
+    // category identifies regular classes; membership alone is insufficient.
+    const regularClasses = rawKelasData.length ? await this.prisma.master_kelas.findMany({
+      where: { nama: { in: [...new Set(rawKelasData.map(row => row.kelas))] },
+        program: { equals: 'Reguler', mode: 'insensitive' } },
+      select: { nama: true },
+    }) : [];
+    const regularNames = new Set(regularClasses.map(row => row.nama));
+    const regularKelasData = rawKelasData.filter(row => regularNames.has(row.kelas));
+
+    const cbt = sumber === 'guru' ? { items: [], linkage: 'not_requested' }
+      : await loadCbtStudentGrades(this.prisma, cleanNisn, regularKelasData, query);
+    const all = [...(sumber === 'cbt' ? [] : enriched), ...cbt.items];
+    const grouped: Record<string, Record<string, any[]>> = {};
+    for (const row of all) {
+      const ta = row.tahun_ajaran || 'Unknown';
+      const sem = String(row.semester || 'Unknown');
+      if (!grouped[ta]) grouped[ta] = {};
+      if (!grouped[ta][sem]) grouped[ta][sem] = [];
+      grouped[ta][sem].push(row);
+    }
 
     const bobotList = await this.prisma.nilai_bobot.findMany({
       where: {
@@ -831,9 +848,10 @@ export class NilaiService {
       ok: true,
       data: {
         siswa: serializeBigInt(siswaData),
-        kelas: serializeBigInt(rawKelasData || []),
+        kelas: serializeBigInt(regularKelasData),
         grouped: serializeBigInt(grouped),
-        all: serializeBigInt(enriched),
+        all: serializeBigInt(all),
+        cbt_linkage: cbt.linkage,
       },
       bobot: serializeBigInt(bobotList),
     };
