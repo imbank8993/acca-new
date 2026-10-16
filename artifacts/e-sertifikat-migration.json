@@ -1,0 +1,23 @@
+{
+  "migration": "20261016_e_sertifikat.sql",
+  "applied": true,
+  "tables": [
+    {
+      "name": "ecert_assets",
+      "rls": true
+    },
+    {
+      "name": "ecert_audit",
+      "rls": true
+    },
+    {
+      "name": "ecert_events",
+      "rls": true
+    },
+    {
+      "name": "ecert_recipients",
+      "rls": true
+    }
+  ],
+  "existingApplicationTablesModified": false
+}

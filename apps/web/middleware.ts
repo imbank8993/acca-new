@@ -52,8 +52,8 @@ const ALWAYS_ALLOWED = new Set([
 
 /** Halaman yang hanya relevan untuk role tertentu tetapi belum diseed di role_pages. */
 const ROLE_SCOPED_EXTRAS: Record<string, string[]> = {
-    ADMIN: ['audit-log', 'monitoring'],
-    ADMINISTRATOR: ['audit-log', 'monitoring'],
+    ADMIN: ['audit-log', 'monitoring', 'e-sertifikat'],
+    ADMINISTRATOR: ['audit-log', 'monitoring', 'e-sertifikat'],
     WKM_AKADEMIK: ['audit-log'],
     WKM_KESISWAAN: ['audit-log'],
     WKM_KEASRAMAAN: ['audit-log'],
@@ -159,6 +159,7 @@ export async function middleware(request: NextRequest) {
         '/monitoring/laporan', // Halaman publik monitoring laporan guru asuh, klinik & ekskul untuk komite
         '/api/auth', // CRITICAL: Allow login/me/logout API calls to pass through
         '/api/public',
+        '/e-sertifikat/verifikasi/', // QR verification only; management remains authenticated.
         '/api/monitoring',
         // Lolos gerbang sesi di middleware, TAPI backend-nya menuntut ADMIN
         // (`assertAdmin` di site-settings.controller): endpoint ini memindai

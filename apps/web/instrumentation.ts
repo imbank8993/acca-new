@@ -6,7 +6,7 @@
 
 export async function register() {
     // Pastikan hanya berjalan di server-side Node.js runtime (bukan edge runtime ataupun client browser)
-    if (process.env.NEXT_RUNTIME === 'nodejs') {
+    if (process.env.NEXT_RUNTIME === 'nodejs' && process.env.DISABLE_WHATSAPP_AUTOSTART !== 'true') {
         try {
             const { startBaileys } = await import('./lib/baileys')
             console.log('[Instrumentation] Inisialisasi otomatis koneksi Baileys WhatsApp saat server boot...')

@@ -70,6 +70,9 @@ const nextConfig: NextConfig = {
     optimizePackageImports: ['lucide-react', 'react-icons', '@supabase/supabase-js'],
   },
   serverExternalPackages: ['pdfjs-dist', '@whiskeysockets/baileys', 'sharp'],
+  outputFileTracingIncludes: {
+    '/api/public/e-sertifikat-worker': ['../../node_modules/pdfjs-dist/build/pdf.worker.min.js'],
+  },
 
   // Fix: react-pdf / pdfjs-dist uses `this` at module-scope which breaks in webpack-bundled ESM with eval source maps.
   // Hanya dipakai oleh `next build --webpack` dan `next dev --webpack`; dev

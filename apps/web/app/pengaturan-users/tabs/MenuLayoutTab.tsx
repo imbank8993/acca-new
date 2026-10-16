@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import Swal from 'sweetalert2'
-import { MENU_GROUPS, PAGE_LABELS, type MenuGroupDef } from '@/lib/sidebar-menu'
+import { MENU_GROUPS, PAGE_LABELS, canArrangeMenuPage, type MenuGroupDef } from '@/lib/sidebar-menu'
 import { PageLoader } from '@/components/ui/Spinner'
 import Button from '@/components/ui/Button'
 
@@ -65,7 +65,8 @@ export default function MenuLayoutTab() {
         // Layout kosong = belum pernah disusun → mulai dari template bawaan.
         // Kalau request GAGAL kita TIDAK memakai template, supaya susunan yang
         // sah di DB tidak tertimpa saat admin menekan Simpan.
-        const layout: MenuGroupDef[] = d.layout.length ? d.layout : MENU_GROUPS
+        const layout: MenuGroupDef[] = (d.layout.length ? d.layout : MENU_GROUPS)
+          .map((group: MenuGroupDef) => ({ ...group, pages: group.pages.filter(canArrangeMenuPage) }))
         const lbls: Record<string, string> = (d.labels && typeof d.labels === 'object') ? d.labels : {}
         setGroups(layout)
         setLabels(lbls)
@@ -97,7 +98,7 @@ export default function MenuLayoutTab() {
   }, [groups])
 
   const unassigned = useMemo(
-    () => Object.keys(PAGE_LABELS).filter(id => !assignedIds.has(id)),
+    () => Object.keys(PAGE_LABELS).filter(id => canArrangeMenuPage(id) && !assignedIds.has(id)),
     [assignedIds]
   )
 

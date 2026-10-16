@@ -1,0 +1,19 @@
+{
+  "checks": 85,
+  "database": "isolated schema; no existing application data modified",
+  "cases": [
+    "authorization and owner scope",
+    "migration idempotency",
+    "input validation",
+    "template validation",
+    "safe Excel mapping",
+    "atomic import and issue",
+    "concurrent retries",
+    "immutable snapshots",
+    "document publication",
+    "public DTO privacy",
+    "revocation",
+    "PDF creation"
+  ],
+  "pdfPages": 1
+}

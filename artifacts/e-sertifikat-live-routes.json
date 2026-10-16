@@ -1,0 +1,9 @@
+{
+  "baseUrl": "http://localhost:3006",
+  "checks": [
+    { "route": "/api/e-sertifikat", "withoutLogin": true, "status": 401 },
+    { "route": "/api/public/e-sertifikat/<unknown-token>", "withoutLogin": true, "status": 404, "databaseConnected": true },
+    { "route": "/e-sertifikat/verifikasi/<unknown-token>", "withoutLogin": true, "status": 200, "redirectedToLogin": false },
+    { "route": "/e-sertifikat", "withoutLogin": true, "status": 307, "redirect": "/login" }
+  ]
+}

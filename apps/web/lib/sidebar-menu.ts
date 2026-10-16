@@ -28,7 +28,13 @@ export interface BuiltGroup {
 // Role", tapi tidak dirender sebagai item menu maupun masuk grup "Lainnya".
 // - 'cbt-app'         → dibuka via tombol CBT khusus di sidebar
 // - 'pengumuman'      → dikelola di tab Kelola Pengumuman di halaman Informasi (/informasi/kelola)
-const EXCLUDED_PAGES = new Set(['cbt-app', 'tools-app', 'jurnal-banding', 'pengumuman', 'surat-daftar'])
+const INTEGRATED_PAGES = new Set(['pengumuman'])
+const EXCLUDED_PAGES = new Set(['cbt-app', 'tools-app', 'jurnal-banding', 'surat-daftar', ...INTEGRATED_PAGES])
+
+/** Integrated pages retain access metadata, but are arranged through their parent page. */
+export function canArrangeMenuPage(id: string): boolean {
+  return !INTEGRATED_PAGES.has(id)
+}
 
 export const MENU_GROUPS: MenuGroupDef[] = [
   {
@@ -62,7 +68,7 @@ export const MENU_GROUPS: MenuGroupDef[] = [
     key: 'layanan',
     label: 'Layanan & Surat',
     icon: 'fa-envelope',
-    pages: ['permintaan-surat', 'surat', 'layanan-ptsp'],
+    pages: ['permintaan-surat', 'surat', 'layanan-ptsp', 'e-sertifikat'],
   },
   {
     key: 'portal-siswa',
@@ -131,6 +137,7 @@ export const PAGE_LABELS: Record<string, string> = {
   'bimbingan-konseling': 'Bimbingan Konseling',
   'permintaan-surat': 'Permintaan Surat',
   'surat': 'Generate Surat',
+  'e-sertifikat': 'E-Sertifikat',
   'surat-daftar': 'Daftar Surat',
   'layanan-ptsp': 'Layanan PTSP',
   'kokurikuler': 'Kokurikuler',

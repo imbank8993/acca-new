@@ -53,8 +53,9 @@ jobs:
             echo "🐳 Build Docker..."
             docker compose build
 
-            echo "🗄️ Siapkan kolom sasaran agenda sebelum aplikasi baru aktif..."
+            echo "🗄️ Siapkan migrasi database sebelum aplikasi baru aktif..."
             docker compose run --rm --no-deps acca-api node node_modules/prisma/build/index.js db execute --schema apps/api/prisma/schema.prisma --file apps/api/prisma/sql/20261013_agenda_sasaran.sql
+            docker compose run --rm --no-deps acca-api node node_modules/prisma/build/index.js db execute --schema apps/api/prisma/schema.prisma --file apps/api/prisma/sql/20261016_e_sertifikat.sql
 
             echo "🔄 Restart aplikasi..."
             docker compose up -d --remove-orphans

@@ -23,6 +23,7 @@ export interface PageRequirement {
 }
 
 export const PAGE_ROLE_REQUIREMENTS: Record<string, PageRequirement> = {
+    'e-sertifikat': { allowedRoles: ['ADMIN', 'ADMINISTRATOR', 'GURU', 'STAF', 'TENDIK', 'KAMAD', 'KTU'], defaultAction: 'manage', description: 'Kelola dan terbitkan e-sertifikat kegiatan' },
     // === DASHBOARD & INFO ===
     'dashboard': { allowedRoles: ['ADMIN', 'GURU', 'WALI_KELAS', 'SISWA'], defaultAction: 'view', description: 'Dashboard utama' },
     'informasi': { allowedRoles: ['ADMIN', 'GURU', 'WALI_KELAS', 'SISWA'], defaultAction: 'view', description: 'Informasi' },

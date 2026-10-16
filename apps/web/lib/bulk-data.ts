@@ -39,7 +39,7 @@ export interface BulkRow {
 
 // Operational data only. Credentials, access control, and audit history have
 // dedicated update flows and must not be exposed through a general replacement.
-const protectedTable = /(^_?backup|_backup$|^audit_|^auth_|^_prisma|^pg_|^sql_|token|session|credential|capabilit|permission|^role_|^user_roles$|^site_settings$|^system_config$|^activity_logs$)/i
+const protectedTable = /(^_?backup|_backup$|^audit_|^auth_|^ecert_|^_prisma|^pg_|^sql_|token|session|credential|capabilit|permission|^role_|^user_roles$|^site_settings$|^system_config$|^activity_logs$)/i
 const protectedColumn = /(password|passwd|secret|token|salt|credential|private_key|auth_id|cbt_auth_id|page_overrides|permissions|^caps$|^pinned_pages$|^recovery_|^encrypted_|^mfa_)/i
 const adminColumn = /^(role|roles|is_admin|is_superuser|aktif)$/i
 const quote = (name: string) => '"' + name.replace(/"/g, '""') + '"'
