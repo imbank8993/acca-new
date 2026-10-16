@@ -1282,12 +1282,18 @@ export class UsersService {
 
   /** `data: null` bila akun ini bukan siswa — lihat catatan di getProfileGuru. */
   async getProfileSiswa(user: any) {
-    const nisn = user.username || user.nip;
+    const nisn = this.profileSiswaIdentity(user);
     const data = nisn
       ? await this.prisma.master_siswa.findFirst({ where: { nisn } })
       : null;
     if (!data) return { ok: true, data: null };
     return { ok: true, data: this.serialize(data) };
+  }
+
+  private profileSiswaIdentity(user: any): string {
+    // NIP stores the student NISN and can only be changed by an administrator.
+    // Username is editable by the account itself, so it cannot establish ownership.
+    return typeof user?.nip === 'string' ? user.nip.trim() : '';
   }
 
   /**
@@ -1390,7 +1396,7 @@ export class UsersService {
   }
 
   async updateProfileSiswa(user: any, input: any) {
-    const nisn = String(user?.username || user?.nip || '').trim();
+    const nisn = this.profileSiswaIdentity(user);
     if (!nisn) throw new BadRequestException('Akun Anda belum tertaut ke NISN');
 
     const milik = await this.prisma.master_siswa.findFirst({

@@ -14,31 +14,37 @@ function VerifySiswaPage() {
     const identifier = params?.nisn ? String(params.nisn).trim() : '';
 
     useEffect(() => {
+        const controller = new AbortController();
         if (identifier) {
-            fetchData();
+            void fetchData(controller.signal);
         } else {
+            setData(null);
             setLoading(false);
             setError('ID Kartu atau NISN tidak ditemukan di URL.');
         }
+        return () => controller.abort();
     }, [identifier]);
 
-    const fetchData = async () => {
+    const fetchData = async (signal: AbortSignal) => {
         setLoading(true);
+        setData(null);
+        setError(null);
         try {
             // Try card_id first (format: ACCA-XXXXXXXX)
             const isCardId = identifier.startsWith('ACCA-');
             const paramKey = isCardId ? 'card_id' : 'nisn';
-            const res = await fetch(`/api/master/students/verify?${paramKey}=${encodeURIComponent(identifier)}`);
+            const res = await fetch(`/api/master/students/verify?${paramKey}=${encodeURIComponent(identifier)}`, { signal });
             const json = await res.json();
-            if (json.ok) {
+            if (signal.aborted) return;
+            if (res.ok && json?.ok && json.data) {
                 setData(json.data);
             } else {
-                setError(json.error || 'Siswa tidak ditemukan');
+                setError(json?.error || 'Siswa tidak ditemukan');
             }
         } catch (e: any) {
-            setError(e.message || 'Gagal memuat data');
+            if (!signal.aborted) setError(e.message || 'Gagal memuat data');
         } finally {
-            setLoading(false);
+            if (!signal.aborted) setLoading(false);
         }
     };
 
@@ -56,7 +62,7 @@ function VerifySiswaPage() {
 
     if (loading) {
         return (
-            <div className="scan-page-wrap animate-srt-fade-in" style={{ padding: '16px', minHeight: '100vh', display: 'flex', flexDirection: 'column', background: '#f8fafc', color: 'var(--n-text)' }}>
+            <div className="scan-page-wrap animate-srt-fade-in" style={{ padding: '16px', minHeight: '100vh', display: 'flex', flexDirection: 'column', background: 'var(--n-bg, #f8fafc)', color: 'var(--n-text)' }}>
                 <div className="scan-loading" style={{ minHeight: '60vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
                     <Spinner size={40} />
                     <p style={{ marginTop: '16px', color: 'var(--n-muted)', fontWeight: 500 }}>Memverifikasi identitas siswa...</p>
@@ -65,11 +71,11 @@ function VerifySiswaPage() {
         );
     }
 
-    if (error || !data) {
+    if (error || !data || data.status === 'CARD_INACTIVE') {
         return (
-            <div className="scan-page-wrap animate-srt-fade-in" style={{ padding: '16px', minHeight: '100vh', display: 'flex', flexDirection: 'column', background: '#f8fafc', color: 'var(--n-text)' }}>
+            <div className="scan-page-wrap animate-srt-fade-in" style={{ padding: '16px', minHeight: '100vh', display: 'flex', flexDirection: 'column', background: 'var(--n-bg, #f8fafc)', color: 'var(--n-text)' }}>
                 {/* Header Bar */}
-                <header className="scan-header-bar" style={{ padding: '12px 16px', borderRadius: '12px', background: 'white', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <header className="scan-header-bar" style={{ padding: '12px 16px', borderRadius: '12px', background: 'var(--n-card, #fff)', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <a href="/" className="scan-btn-back" style={{ color: 'var(--n-muted)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 600 }}>
                         <i className="bi bi-arrow-left"></i>
                         <span>Kembali</span>
@@ -98,9 +104,9 @@ function VerifySiswaPage() {
     const { siswa, card_id, schoolName, schoolLogo, verified, message } = data;
 
     return (
-        <div className="scan-page-wrap animate-srt-fade-in" style={{ padding: '16px', minHeight: '100vh', display: 'flex', flexDirection: 'column', background: '#f8fafc', color: 'var(--n-text)' }}>
+        <div className="scan-page-wrap animate-srt-fade-in" style={{ padding: '16px', minHeight: '100vh', display: 'flex', flexDirection: 'column', background: 'var(--n-bg, #f8fafc)', color: 'var(--n-text)' }}>
             {/* Header Bar */}
-            <header className="scan-header-bar" style={{ padding: '12px 16px', borderRadius: '12px', background: 'white', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <header className="scan-header-bar" style={{ padding: '12px 16px', borderRadius: '12px', background: 'var(--n-card, #fff)', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <a href="/" className="scan-btn-back" style={{ color: 'var(--n-muted)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 600 }}>
                     <i className="bi bi-arrow-left"></i>
                     <span>Kembali</span>
@@ -116,7 +122,7 @@ function VerifySiswaPage() {
                 {/* Verification Badge */}
                 <div style={{
                     display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '6px',
-                    padding: '20px', borderRadius: '16px', background: 'white', boxShadow: '0 4px 12px rgba(0,0,0,0.05)'
+                    padding: '20px', borderRadius: '16px', background: 'var(--n-card, #fff)', boxShadow: '0 4px 12px rgba(0,0,0,0.05)'
                 }}>
                     {verified ? (
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#16a34a', fontWeight: 800, fontSize: '1.2rem' }}>
@@ -135,7 +141,7 @@ function VerifySiswaPage() {
                 </div>
 
                 {/* Student Card */}
-                <div style={{ background: 'white', borderRadius: '16px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)', overflow: 'hidden' }}>
+                <div style={{ background: 'var(--n-card, #fff)', borderRadius: '16px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)', overflow: 'hidden' }}>
                     {/* School Header */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '16px 20px', background: 'linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%)', color: 'white' }}>
                         {schoolLogo ? (
@@ -155,10 +161,10 @@ function VerifySiswaPage() {
                     <div style={{ padding: '20px' }}>
                         {/* Large Name Display */}
                         <div style={{ textAlign: 'center', marginBottom: '20px' }}>
-                            <div style={{ fontSize: '1.6rem', fontWeight: 800, color: 'var(--n-text)', lineHeight: 1.2 }}>
+                            <div style={{ fontSize: '1.6rem', fontWeight: 800, color: 'var(--n-text)', lineHeight: 1.2, overflowWrap: 'anywhere' }}>
                                 {siswa?.nama_lengkap || '-'}
                             </div>
-                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '12px', marginTop: '8px', padding: '6px 12px', background: '#f1f5f9', borderRadius: '8px', fontSize: '0.85rem', color: 'var(--n-muted)', fontWeight: 600 }}>
+                            <div style={{ display: 'inline-flex', flexWrap: 'wrap', justifyContent: 'center', alignItems: 'center', gap: '12px', marginTop: '8px', padding: '6px 12px', maxWidth: '100%', boxSizing: 'border-box', overflowWrap: 'anywhere', background: 'var(--n-surface-2, #f1f5f9)', borderRadius: '8px', fontSize: '0.85rem', color: 'var(--n-muted)', fontWeight: 600 }}>
                                 <span>NISN: {siswa?.nisn || '-'}</span>
                                 {card_id && (
                                     <>
@@ -170,7 +176,7 @@ function VerifySiswaPage() {
                         </div>
 
                         {/* Info Grid */}
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '12px', background: '#f8fafc', padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '12px', background: 'var(--n-bg, #f8fafc)', padding: '16px', borderRadius: '12px', border: '1px solid var(--n-border, #e2e8f0)' }}>
                             <div style={{ display: 'flex', flexDirection: 'column' }}>
                                 <span style={{ fontSize: '0.75rem', color: 'var(--n-muted)', fontWeight: 600, textTransform: 'uppercase' }}>Jenis Kelamin</span>
                                 <span style={{ fontSize: '0.9rem', color: 'var(--n-text)', fontWeight: 500 }}>{getGenderLabel(siswa?.gender)}</span>
@@ -221,7 +227,7 @@ function VerifySiswaPage() {
 
                         {/* System Usage Hints */}
                         {verified && card_id && (
-                            <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #e2e8f0' }}>
+                            <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid var(--n-border, #e2e8f0)' }}>
                                 <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--n-muted)', marginBottom: '12px', textTransform: 'uppercase' }}>
                                     <i className="bi bi-info-circle" style={{ marginRight: '6px' }}></i> Fasilitas Kartu:
                                 </div>
@@ -232,7 +238,7 @@ function VerifySiswaPage() {
                                         { icon: 'bi-book', label: 'Perpustakaan' },
                                         { icon: 'bi-clock-history', label: 'Peminjaman' },
                                     ].map((item) => (
-                                        <div key={item.label} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.8rem', color: 'var(--n-muted)', fontWeight: 500, padding: '6px', background: '#f8fafc', borderRadius: '6px' }}>
+                                        <div key={item.label} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.8rem', color: 'var(--n-muted)', fontWeight: 500, padding: '6px', background: 'var(--n-bg, #f8fafc)', borderRadius: '6px' }}>
                                             <i className={item.icon} style={{ fontSize: '0.9rem', color: '#3b82f6' }}></i>
                                             {item.label}
                                         </div>

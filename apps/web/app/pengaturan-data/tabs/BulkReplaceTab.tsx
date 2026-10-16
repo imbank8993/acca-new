@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Button from '@/components/ui/Button'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -10,12 +10,22 @@ export interface PreviewRow {
   table: string
   column: string
   oldValue: string
+  oldJson: string
   newValue: string
   rowLabel: string
   nip?: string
   nisn?: string
   tableKey: string
   rowId: string
+}
+
+interface ReplaceResult {
+  id: string
+  table: string
+  column: string
+  rowId: string
+  status: 'ok' | 'error' | 'skipped'
+  error?: string
 }
 
 // ─── Display helpers ─────────────────────────────────────────────────────────
@@ -150,11 +160,19 @@ export default function BulkReplaceTab() {
   const [dataBaru, setDataBaru]   = useState('')
   const [previewRows, setPreviewRows] = useState<PreviewRow[]>([])
   const [selectedIds, setSelectedIds]  = useState<Set<string>>(new Set())
-  const [allChecked, setAllChecked]    = useState(false)
+  const allChecked = previewRows.length > 0 && selectedIds.size === previewRows.length
   const [searched, setSearched]        = useState(false)
   const [loading, setLoading]          = useState(false)
   const [executing, setExecuting]      = useState(false)
   const [msg, setMsg] = useState<{ type: 'success' | 'error' | 'info'; text: string } | null>(null)
+  const requestVersion = useRef(0)
+  const pendingSearch = useRef<AbortController | null>(null)
+  const [coverage, setCoverage] = useState('')
+  useEffect(() => () => { pendingSearch.current?.abort(); requestVersion.current++ }, [])
+  const invalidate = () => {
+    pendingSearch.current?.abort(); requestVersion.current++
+    setSearched(false); setPreviewRows([]); setSelectedIds(new Set()); setCoverage(''); setMsg(null); setLoading(false)
+  }
 
   // ── Search ──────────────────────────────────────────────────────────────────
   const handlePreview = async () => {
@@ -172,19 +190,23 @@ export default function BulkReplaceTab() {
     }
 
     setLoading(true)
+    pendingSearch.current?.abort()
+    const controller = new AbortController()
+    pendingSearch.current = controller
+    const version = ++requestVersion.current
     setMsg(null)
     setSearched(false)
     setPreviewRows([])
     setSelectedIds(new Set())
-    setAllChecked(false)
 
     try {
       const res = await fetch(
-        `/api/reset-data/search?value=${encodeURIComponent(dataLama.trim())}`
+        `/api/reset-data/search?value=${encodeURIComponent(dataLama.trim())}`, { signal: controller.signal }
       )
       const data = await res.json()
+      if (controller.signal.aborted || version !== requestVersion.current) return
 
-      if (!data.ok) {
+      if (!res.ok || !data.ok) {
         setMsg({ type: 'error', text: data.error || 'Gagal mencari data.' })
         return
       }
@@ -196,6 +218,7 @@ export default function BulkReplaceTab() {
 
       setPreviewRows(rows)
       setSearched(true)
+      setCoverage(`Diperiksa ${data.tablesSearched} dari ${data.tablesAvailable} tabel, dengan ${data.columnsAvailable} kolom data yang dapat diganti.${data.truncated ? ` Hasil dibatasi ${data.limit} sel. Setelah mengganti, cari ulang untuk hasil berikutnya.` : ''}`)
 
       if (rows.length === 0) {
         setMsg({ type: 'info', text: `Tidak ditemukan data "${dataLama.trim()}" di database manapun.` })
@@ -207,9 +230,10 @@ export default function BulkReplaceTab() {
         })
       }
     } catch {
+      if (controller.signal.aborted || version !== requestVersion.current) return
       setMsg({ type: 'error', text: 'Terjadi kesalahan koneksi saat mencari data.' })
     } finally {
-      setLoading(false)
+      if (!controller.signal.aborted && version === requestVersion.current) setLoading(false)
     }
   }
 
@@ -217,7 +241,8 @@ export default function BulkReplaceTab() {
   const toggleRow = (id: string) => {
     setSelectedIds(prev => {
       const next = new Set(prev)
-      next.has(id) ? next.delete(id) : next.add(id)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
       return next
     })
   }
@@ -225,15 +250,14 @@ export default function BulkReplaceTab() {
   const toggleAll = () => {
     if (allChecked) {
       setSelectedIds(new Set())
-      setAllChecked(false)
     } else {
       setSelectedIds(new Set(previewRows.map(r => r.id)))
-      setAllChecked(true)
     }
   }
 
   // ── Execute ─────────────────────────────────────────────────────────────────
   const handleExecute = async () => {
+    if (!searched || loading || executing) return
     if (selectedIds.size === 0) {
       setMsg({ type: 'error', text: 'Pilih minimal satu baris untuk diperbarui.' })
       return
@@ -263,6 +287,7 @@ export default function BulkReplaceTab() {
           // sebagai teks. Tanpa ini, cascade tidak punya kunci pencarian —
           // master berubah sementara tabel lain tidak tersentuh.
           oldValue: r.oldValue,
+          oldJson: r.oldJson,
           newValue: dataBaru.trim(),
           tableKey: r.tableKey,
           rowId:    r.rowId,
@@ -292,31 +317,30 @@ export default function BulkReplaceTab() {
        */
       const updatedIds = new Set(
         data.results
-          .filter((r: any) => r.status === 'ok')
-          .map((r: any) => `${r.table}:${r.rowId}`)
+          .filter((r: ReplaceResult) => r.status === 'ok')
+          .map((r: { id: string }) => r.id)
       )
 
       // Always remove successfully updated rows from preview
       const remaining = previewRows.filter(r => !updatedIds.has(r.id))
       setPreviewRows(remaining)
       setSelectedIds(new Set())
-      setAllChecked(false)
       setSearched(remaining.length > 0)
 
       if (data.failed === 0) {
-        setMsg({ type: 'success', text: `Berhasil memperbarui ${data.updated} record!` })
+        setMsg({ type: 'success', text: data.message || `Berhasil memperbarui ${data.updated} sel!` })
       } else if (data.updated > 0) {
         // Partial success
         // 'skipped' ikut dihitung gagal oleh server, jadi alasannya harus ikut
         // ditampilkan — kalau tidak, pesannya berbunyi "Gagal: 2. Detail:" kosong.
         const failedErrors = data.results
-          .filter((r: any) => r.status === 'error' || r.status === 'skipped')
-          .map((r: any) => `[${r.table}.${r.column}] ${r.error}`)
+          .filter((r: ReplaceResult) => r.status === 'error' || r.status === 'skipped')
+          .map((r: ReplaceResult) => `[${r.table}.${r.column}] ${r.error}`)
           .join('; ')
         setMsg({ type: 'error', text: `Berhasil: ${data.updated}, Gagal: ${data.failed}. Detail: ${failedErrors}` })
       } else {
         // All failed
-        const firstError = data.results?.find((r: any) => r.status !== 'ok') || data.results?.[0]
+        const firstError = data.results?.find((r: ReplaceResult) => r.status !== 'ok') || data.results?.[0]
         setMsg({ type: 'error', text: `Gagal: [${firstError?.table}.${firstError?.column}] ${firstError?.error}` })
       }
     } catch (err) {
@@ -347,12 +371,13 @@ export default function BulkReplaceTab() {
               <input
                 type="text"
                 value={dataLama}
-                onChange={e => { setDataLama(e.target.value); setSearched(false) }}
+                onChange={e => { setDataLama(e.target.value); invalidate() }}
+                disabled={executing}
                 placeholder="Ketik data yang akan diganti..."
                 onKeyDown={e => { if (e.key === 'Enter') handlePreview() }}
               />
             </div>
-            <span className="bulk__hint">Mencari di SEMUA kolom & tabel database</span>
+            <span className="bulk__hint">Mencari nilai persis pada seluruh kolom data yang dapat diganti.</span>
           </div>
 
           {/* Arrow */}
@@ -372,7 +397,8 @@ export default function BulkReplaceTab() {
               <input
                 type="text"
                 value={dataBaru}
-                onChange={e => { setDataBaru(e.target.value); setSearched(false) }}
+                onChange={e => { setDataBaru(e.target.value); invalidate() }}
+                disabled={executing}
                 placeholder="Ketik data pengganti..."
                 onKeyDown={e => { if (e.key === 'Enter') handlePreview() }}
               />
@@ -392,13 +418,16 @@ export default function BulkReplaceTab() {
             variant="primary"
             icon="search"
             onClick={handlePreview}
-            disabled={loading || !dataLama.trim() || !dataBaru.trim()}
+            disabled={loading || executing || !dataLama.trim() || !dataBaru.trim()}
             isLoading={loading}
           >
             Cari Data
           </Button>
         </div>
       </div>
+
+      <p className="bulk__hint">Mendukung teks, angka, boolean, tanggal, JSON, dan array. Gunakan format JSON untuk JSON/array, <code>null</code> untuk nilai kosong, atau <code>{'""'}</code> untuk teks kosong. ID utama, kolom otomatis, kredensial, serta konfigurasi akses tetap dikelola melalui menu khususnya.</p>
+      {coverage && <p className="bulk__hint" role="status">{coverage}</p>}
 
       {/* Danger Alert */}
       <div className="bulk__danger">
@@ -507,7 +536,7 @@ export default function BulkReplaceTab() {
         <div className="bulk__empty">
           <i className="bi bi-search"></i>
           <h4>Tidak Ada Data Ditemukan</h4>
-          <p>Tidak ada record yang cocok dengan "{dataLama}" di database manapun.</p>
+          <p>Tidak ada nilai yang cocok dengan &quot;{dataLama}&quot; pada kolom data yang diperiksa.</p>
         </div>
       )}
 

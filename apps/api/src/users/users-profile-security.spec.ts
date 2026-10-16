@@ -19,10 +19,30 @@ describe('UsersService Profile Siswa Security & Validation', () => {
     );
   });
 
-  it('rejects student update if account has no NISN / username / nip', async () => {
+  it('rejects student update if account has no protected NISN link', async () => {
     await expect(
       service.updateProfileSiswa({ username: '', nip: '' }, { nomor_hp: '08123456789' }),
     ).rejects.toThrow(BadRequestException);
+    expect(prismaMock.master_siswa.findFirst).not.toHaveBeenCalled();
+  });
+
+  it('uses the protected NISN identity instead of an editable username for reads and updates', async () => {
+    prismaMock.master_siswa.findFirst.mockResolvedValue({ id: 100n, nisn: '0012345678' });
+    prismaMock.master_siswa.update.mockResolvedValue({ id: 100n, nisn: '0012345678' });
+    const actor = { username: '9999999999', nip: ' 0012345678 ' };
+    const result = await service.getProfileSiswa(actor);
+    expect(result.data?.nisn).toBe('0012345678');
+    await service.updateProfileSiswa(actor, { nomor_hp: '08123456789', nisn: '9999999999' });
+    for (const [query] of prismaMock.master_siswa.findFirst.mock.calls) {
+      expect(query.where).toEqual({ nisn: '0012345678' });
+    }
+    expect(prismaMock.master_siswa.update.mock.calls[0][0].where).toEqual({ id: 100n });
+  });
+
+  it('does not use username to access another student when the protected link is missing', async () => {
+    const actor = { username: '0012345678', nip: '' };
+    expect(await service.getProfileSiswa(actor)).toEqual({ ok: true, data: null });
+    await expect(service.updateProfileSiswa(actor, { nomor_hp: '08123456789' })).rejects.toThrow(BadRequestException);
     expect(prismaMock.master_siswa.findFirst).not.toHaveBeenCalled();
   });
 
@@ -30,7 +50,7 @@ describe('UsersService Profile Siswa Security & Validation', () => {
     prismaMock.master_siswa.findFirst.mockResolvedValue(null);
 
     await expect(
-      service.updateProfileSiswa({ username: '0012345678' }, { nomor_hp: '08123456789' }),
+      service.updateProfileSiswa({ username: 'nama-login', nip: '0012345678' }, { nomor_hp: '08123456789' }),
     ).rejects.toThrow(NotFoundException);
   });
 
@@ -51,7 +71,7 @@ describe('UsersService Profile Siswa Security & Validation', () => {
       nomor_hp: '08123456789',
     };
 
-    const res = await service.updateProfileSiswa({ username: '0012345678' }, maliciousInput);
+    const res = await service.updateProfileSiswa({ username: 'nama-login', nip: '0012345678' }, maliciousInput);
 
     expect(res.ok).toBe(true);
     expect(prismaMock.master_siswa.update).toHaveBeenCalledWith({
@@ -75,16 +95,16 @@ describe('UsersService Profile Siswa Security & Validation', () => {
 
     // Too short
     await expect(
-      service.updateProfileSiswa({ username: '0012345678' }, { nomor_hp: '123' }),
+      service.updateProfileSiswa({ username: 'nama-login', nip: '0012345678' }, { nomor_hp: '123' }),
     ).rejects.toThrow(BadRequestException);
 
     // Contains alphabets or scripts / injection
     await expect(
-      service.updateProfileSiswa({ username: '0012345678' }, { nomor_hp: '08123456abc' }),
+      service.updateProfileSiswa({ username: 'nama-login', nip: '0012345678' }, { nomor_hp: '08123456abc' }),
     ).rejects.toThrow(BadRequestException);
 
     await expect(
-      service.updateProfileSiswa({ username: '0012345678' }, { nomor_hp: "<script>alert('xss')</script>" }),
+      service.updateProfileSiswa({ username: 'nama-login', nip: '0012345678' }, { nomor_hp: "<script>alert('xss')</script>" }),
     ).rejects.toThrow(BadRequestException);
 
     expect(prismaMock.master_siswa.update).not.toHaveBeenCalled();
@@ -99,7 +119,7 @@ describe('UsersService Profile Siswa Security & Validation', () => {
     });
 
     const res = await service.updateProfileSiswa(
-      { username: '0012345678' },
+      { username: 'nama-login', nip: '0012345678' },
       { nomor_hp: '  +62 812-3456-7890  ' },
     );
 
@@ -121,7 +141,7 @@ describe('UsersService Profile Siswa Security & Validation', () => {
     });
 
     const res = await service.updateProfileSiswa(
-      { username: '0012345678' },
+      { username: 'nama-login', nip: '0012345678' },
       { nomor_hp: '   ' },
     );
 

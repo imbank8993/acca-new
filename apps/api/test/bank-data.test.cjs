@@ -52,6 +52,56 @@ function fixture({ config = { dataset_id: 'siswa', aktif: true, kolom_diizinkan:
 const payload = { action: 'data', dataset_id: 'siswa', kolom: ['nama_lengkap', 'nisn'], filter: {}, halaman: 1, perHalaman: 2 };
 const reject = (promise, name) => assert.rejects(promise, error => error.name === name);
 
+function multiYearFixture() {
+  const f = fixture();
+  const memberships = [
+    { nisn: '001', tahun_ajaran: '2025/2026', semester: 'Ganjil', kelas: 'X A', aktif: true },
+    { nisn: '002', tahun_ajaran: '2026/2027', semester: 'Genap', kelas: 'X B', aktif: true },
+    { nisn: '003', tahun_ajaran: '2024/2025', semester: 'Ganjil', kelas: 'X C', aktif: true },
+  ];
+  f.service.prisma.siswa_kelas.findMany = async query => memberships.filter(row =>
+    Object.entries(query.where || {}).every(([key, condition]) =>
+      condition && typeof condition === 'object' ? condition.in ? condition.in.includes(row[key]) : row[key] !== condition.not : row[key] === condition,
+    ),
+  );
+  return f;
+}
+
+test('Pilihan beberapa tahun, semester dan kelas menyaring tabel serta ekspor secara sama', async () => {
+  const f = multiYearFixture();
+  const filter = { tahun_ajaran: ['2025/2026', '2026/2027'], semester: ['Ganjil', 'Genap'], kelas: ['X A', 'X B'] };
+  const result = await f.service.handlePost({ ...payload, filter }, actor);
+  assert.deepEqual(Array.from(result.data, row => row.nisn), ['001', '002']);
+  const exported = await f.service.handlePost({ ...payload, action: 'export', filter }, actor);
+  const workbook = new Workbook();
+  await workbook.xlsx.load(exported.buffer);
+  assert.deepEqual(workbook.worksheets.map(sheet => sheet.name), ['2025-2026', '2026-2027']);
+  const nisnColumn = workbook.worksheets[0].getRow(1).values.indexOf('NISN');
+  assert(nisnColumn > 0);
+  assert.equal(workbook.worksheets[0].getRow(2).getCell(nisnColumn).value, '001');
+  assert.equal(workbook.worksheets[1].getRow(2).getCell(nisnColumn).value, '002');
+  const single = await f.service.handlePost({ ...payload, action: 'export', filter: { tahun_ajaran: ['2025/2026'] } }, actor);
+  await workbook.xlsx.load(single.buffer);
+  assert.equal(workbook.worksheets.length, 1);
+  assert.equal(workbook.worksheets[0].name, '2025-2026');
+});
+
+test('Filter lama tetap didukung dan pilihan kosong berarti semua data', async () => {
+  const f = multiYearFixture();
+  const result = await f.service.handlePost({ ...payload, filter: { tahun_ajaran: '2025/2026', semester: 'Ganjil' } }, actor);
+  assert.deepEqual(Array.from(result.data, row => row.nisn), ['001']);
+  const all = await f.service.handlePost({ ...payload, filter: { tahun_ajaran: [], semester: [], kelas: [] } }, actor);
+  assert.equal(all.total, 4);
+});
+
+test('Filter multiselect yang salah bentuk atau terlalu panjang ditolak', async () => {
+  for (const filter of [
+    { tahun_ajaran: [2026] }, { tahun_ajaran: { in: ['2026/2027'] } },
+    { semester: ['Ganjil', 'Lainnya'] }, { semester: [1] },
+    { tahun_ajaran: Array(51).fill('2026/2027') }, { tahun_ajaran: ['a'.repeat(51)] },
+  ]) await reject(fixture().service.handlePost({ ...payload, filter }, actor), 'BadRequestException');
+});
+
 test('Dataset dan kolom yang tidak diizinkan ditolak pada tabel serta ekspor', async () => {
   for (const action of ['data', 'export', 'preview']) {
     await reject(fixture().service.handlePost({ ...payload, action, kolom: ['nik'] }, actor), 'ForbiddenException');

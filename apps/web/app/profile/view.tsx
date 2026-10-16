@@ -101,17 +101,7 @@ interface ProfilePageProps {
 }
 
 export default function ProfilePage({ user, onRefreshUser }: ProfilePageProps) {
-    /**
-     * `isGuru`/`isSiswa` HANYA menentukan permintaan mana yang perlu dicoba.
-     * Yang menentukan tampil atau tidaknya tab "Data Diri" adalah ada/tidaknya
-     * baris di `master_guru`/`master_siswa` (lihat `guruData`/`siswaData`).
-     *
-     * Dulu tabnya digerbangi langsung oleh kedua flag ini, dan itu memakai string
-     * role — akibatnya 5 pegawai yang datanya ADA di master tidak bisa mengubah
-     * data dirinya sendiri hanya karena role-nya tidak memuat kata "GURU":
-     * empat staf TU dan Kepala Madrasah. Sebaliknya satu akun ber-role SISWA yang
-     * tidak punya baris master mendapat tab yang isinya error.
-     */
+    // Students keep their Biodata tab while loading or when the master link needs repair.
     const isGuru = user?.roles?.some((r: string) => r.toUpperCase() === 'GURU') ?? false
     const isSiswa = user?.roles?.some((r: string) => r.toUpperCase() === 'SISWA') ?? false
     const [activeTab, setActiveTab] = useState<string>('akun')
@@ -151,6 +141,9 @@ export default function ProfilePage({ user, onRefreshUser }: ProfilePageProps) {
 
     // Siswa data
     const [siswaData, setSiswaData] = useState<SiswaData | null>(null)
+    const [siswaStatus, setSiswaStatus] = useState<'loading' | 'ready' | 'missing' | 'error'>('loading')
+    const [siswaError, setSiswaError] = useState('')
+    const profileRequest = useRef(0)
     const [siswaForm, setSiswaForm] = useState({
         gender: '', tempat_lahir: '', tanggal_lahir: '', nomor_hp: '', nomor_hp_ayah: '', nomor_hp_ibu: '',
         alamat: '', asal_sekolah: ''
@@ -166,15 +159,15 @@ export default function ProfilePage({ user, onRefreshUser }: ProfilePageProps) {
                 icon: 'person-gear',
             },
         ]
-        if (guruData || siswaData) {
+        if (guruData || siswaData || isSiswa) {
             list.push({
                 key: 'data-diri',
-                label: guruData ? 'Data Kepegawaian' : 'Biodata Siswa',
+                label: isSiswa || siswaData ? 'Biodata Siswa' : 'Data Kepegawaian',
                 icon: 'person-vcard',
             })
         }
         return list
-    }, [guruData, siswaData])
+    }, [guruData, siswaData, isSiswa])
 
     // Formatted role information: primary roles and remaining others
     const { primaryRoles, remainingRolesCount, remainingRolesTooltip } = useMemo(() => {
@@ -230,13 +223,15 @@ export default function ProfilePage({ user, onRefreshUser }: ProfilePageProps) {
     }, [showCamera, imageToCrop, isGuru, showRekModal])
 
     useEffect(() => {
-        // Siswa tidak mungkin punya baris pegawai dan sebaliknya, jadi hanya satu
-        // permintaan yang dilewati — sisanya tetap dicoba supaya role apa pun yang
-        // datanya ada di master (TU, Kamad, PTSP, dst.) ikut mendapat tabnya.
-        // Akun tanpa baris master dijawab `data: null`, bukan error.
-        if (!isSiswa) fetchGuruData()
-        if (!isGuru) fetchSiswaData()
-    }, [isGuru, isSiswa])
+        const controller = new AbortController()
+        const version = ++profileRequest.current
+        setGuruData(null)
+        setSiswaData(null)
+        setRekeningList([])
+        if (!isSiswa) void fetchGuruData(controller.signal, version)
+        void fetchSiswaData(controller.signal, version)
+        return () => { controller.abort(); profileRequest.current++ }
+    }, [user.id, user.nip, user.username, isSiswa])
 
 
 
@@ -251,11 +246,12 @@ export default function ProfilePage({ user, onRefreshUser }: ProfilePageProps) {
 
     // ─── Guru Data Fetch ──────────────────────────────────────────────────────
 
-    const fetchGuruData = async () => {
+    const fetchGuruData = async (signal?: AbortSignal, version = profileRequest.current) => {
         setLoading(true)
         try {
-            const res = await fetch('/api/profile-guru')
+            const res = await fetch('/api/profile-guru', { signal })
             const json = await res.json()
+            if (signal?.aborted || version !== profileRequest.current) return
             if (json.ok && json.data) {
                 const g = json.data as GuruData
                 setGuruData(g)
@@ -271,8 +267,8 @@ export default function ProfilePage({ user, onRefreshUser }: ProfilePageProps) {
                     no_hp: g.no_hp || '',
                 })
             }
-        } catch (e) { console.error(e) }
-        finally { setLoading(false) }
+        } catch (e) { if (!signal?.aborted) console.error(e) }
+        finally { if (!signal?.aborted && version === profileRequest.current) setLoading(false) }
     }
 
     const handleSaveGuru = async (e: React.FormEvent) => {
@@ -295,14 +291,19 @@ export default function ProfilePage({ user, onRefreshUser }: ProfilePageProps) {
         finally { setSavingGuru(false) }
     }
 
-    const fetchSiswaData = async () => {
+    const fetchSiswaData = async (signal?: AbortSignal, version = profileRequest.current) => {
         setLoading(true)
+        setSiswaStatus('loading')
+        setSiswaError('')
         try {
-            const res = await fetch('/api/profile-siswa')
+            const res = await fetch('/api/profile-siswa', { signal })
             const json = await res.json()
-            if (json.ok && json.data) {
+            if (signal?.aborted || version !== profileRequest.current) return
+            if (!res.ok || !json.ok) throw new Error(json.error || json.message || 'Biodata siswa belum dapat dimuat.')
+            if (json.data) {
                 const s = json.data as SiswaData
                 setSiswaData(s)
+                setSiswaStatus('ready')
                 setSiswaForm({
                     gender: s.gender || '',
                     tempat_lahir: s.tempat_lahir || '',
@@ -313,9 +314,14 @@ export default function ProfilePage({ user, onRefreshUser }: ProfilePageProps) {
                     alamat: s.alamat || '',
                     asal_sekolah: s.asal_sekolah || '',
                 })
-            }
-        } catch (e) { console.error(e) }
-        finally { setLoading(false) }
+            } else { setSiswaData(null); setSiswaStatus('missing') }
+        } catch (e) {
+            if (signal?.aborted || version !== profileRequest.current) return
+            setSiswaData(null)
+            setSiswaStatus('error')
+            setSiswaError(e instanceof Error ? e.message : 'Biodata siswa belum dapat dimuat.')
+        }
+        finally { if (!signal?.aborted && version === profileRequest.current) setLoading(false) }
     }
 
     const handleSaveSiswa = async (e: React.FormEvent) => {
@@ -1155,6 +1161,17 @@ export default function ProfilePage({ user, onRefreshUser }: ProfilePageProps) {
                 )}
 
                 {/* ── Tab: Data Diri (SISWA) ── */}
+                {activeTab === 'data-diri' && isSiswa && !siswaData && (
+                    <div className="profile-tab-content" role={siswaStatus === 'error' ? 'alert' : 'status'}>
+                        {siswaStatus === 'loading' ? <Spinner label="Memuat biodata siswa..." /> : (
+                            <div className="ps-glass-section">
+                                <h3>{siswaStatus === 'error' ? 'Biodata belum dapat dimuat' : 'Biodata siswa belum tertaut'}</h3>
+                                <p>{siswaStatus === 'error' ? siswaError : 'NISN pada akun Anda belum cocok dengan data master siswa. Hubungi operator untuk memeriksa tautan akun dan NISN. Data Anda tidak dihapus.'}</p>
+                                <button type="button" className="ps-btn-primary" onClick={() => void fetchSiswaData()}>Coba lagi</button>
+                            </div>
+                        )}
+                    </div>
+                )}
                 {activeTab === 'data-diri' && siswaData && (
                     <form onSubmit={handleSaveSiswa} className="profile-tab-content">
                         {loading ? (
@@ -1538,7 +1555,7 @@ export default function ProfilePage({ user, onRefreshUser }: ProfilePageProps) {
     .ps-gen-refresh { width: 32px; height: 32px; border-radius: 7px; border: 1px solid var(--n-border); background: var(--n-card); color: var(--n-muted); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; flex-shrink: 0; }
     .ps-gen-refresh:hover { background: var(--n-bg); color: var(--n-primary); }
     .ps-gen-copy { padding: 0 10px; height: 32px; border-radius: 7px; border: none; background: var(--n-primary); color: white; font-size: 0.68rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 4px; flex-shrink: 0; transition: all 0.2s; }
-    .ps-gen-copy:hover { background: var(--n-primary-light); }
+    .ps-gen-copy:hover:not(:disabled) { background: #2563eb; background: color-mix(in srgb, var(--n-primary) 85%, #000); color: #fff; }
 
     /* Kepegawaian Summary Strip */
     .ps-kepegawaian-summary {
@@ -1642,7 +1659,8 @@ export default function ProfilePage({ user, onRefreshUser }: ProfilePageProps) {
     .ps-footer-note span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .ps-footer-note i { font-size: 0.9rem; color: #0284c7; flex-shrink: 0; }
     .ps-btn-submit-premium { padding: 10px 24px; background: var(--n-primary); color: white; border: none; border-radius: 10px; font-weight: 700; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; gap: 7px; transition: all 0.2s; white-space: nowrap; flex-shrink: 0; }
-    .ps-btn-submit-premium:hover:not(:disabled) { background: var(--n-primary-light); transform: translateY(-1px); }
+    .ps-btn-submit-premium:hover:not(:disabled) { background: #2563eb; background: color-mix(in srgb, var(--n-primary) 85%, #000); color: #fff; transform: translateY(-1px); }
+    .ps-btn-submit-premium:focus-visible:not(:disabled) { outline: 2px solid var(--n-primary); outline-offset: 3px; }
     .ps-btn-submit-premium:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
 
     /* Ekskul Tab */
@@ -1653,7 +1671,7 @@ export default function ProfilePage({ user, onRefreshUser }: ProfilePageProps) {
     .ps-tab-title { margin: 0; font-size: 1.05rem; font-weight: 800; color: var(--n-ink); }
     .ps-tab-desc { margin: 2px 0 0; color: var(--n-muted); font-size: 0.75rem; }
     .ps-btn-primary { padding: 8px 14px; background: var(--n-primary); color: white; border: none; border-radius: 9px; font-weight: 700; font-size: 0.78rem; cursor: pointer; display: flex; align-items: center; gap: 5px; transition: all 0.2s; white-space: nowrap; }
-    .ps-btn-primary:hover { background: var(--n-primary-light); transform: translateY(-1px); }
+    .ps-btn-primary:hover:not(:disabled) { background: #2563eb; background: color-mix(in srgb, var(--n-primary) 85%, #000); color: #fff; transform: translateY(-1px); }
     .ps-btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
     .ps-aa-stats { display: flex; gap: 9px; margin-bottom: 12px; }
     .ps-aa-stat { background: var(--n-bg); border: 1px solid var(--n-border); border-radius: 10px; padding: 10px 16px; text-align: center; flex: 1; min-width: 68px; }

@@ -1,7 +1,9 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { FilterToolbar, FilterSelect, FilterSearch, FilterActions } from '@/components/ui/FilterToolbar';
+import { FilterToolbar, FilterField, FilterSearch } from '@/components/ui/FilterToolbar';
+import SearchableSelect from '@/components/ui/SearchableSelect';
+import DesktopFab from '@/components/ui/DesktopFab';
 import Pagination from '@/components/ui/Pagination';
 import { Spinner } from '@/components/ui/Spinner';
 import { getAllAcademicYears } from '@/lib/settings-client';
@@ -28,7 +30,16 @@ function nilai(value: unknown) {
 
 // Dataset selection is navigation, so toolbar reset/count applies only to filters.
 function DatasetSelect({ dataset, datasets, onDataset }: { dataset: DatasetKatalog; datasets: DatasetKatalog[]; onDataset: (id: string) => void }) {
-  return <FilterSelect label="Dataset" icon="database" value={dataset.id} onChange={onDataset} options={datasets.map(d => ({ value: d.id, label: d.label }))} width={180} />;
+  return <FilterField label="Dataset" bare width={200}><SearchableSelect value={dataset.id} onChange={value => onDataset(String(value))} options={datasets.map(d => ({ value: d.id, label: d.label }))} placeholder="Cari dataset..." /></FilterField>;
+}
+
+function BankDataFilter({ label, value, onChange, options, placeholder }: {
+  label: string; value: string[]; onChange: (value: string[]) => void;
+  options: { value: string; label: string }[]; placeholder: string;
+}) {
+  return <FilterField label={label} bare width={210}>
+    <SearchableSelect multiple value={value} onChange={next => onChange(Array.isArray(next) ? next.map(String) : [])} options={options} placeholder={placeholder} itemLabel={label.toLowerCase()} />
+  </FilterField>;
 }
 
 export default function DataTab({ datasets }: { datasets: DatasetKatalog[] }) {
@@ -39,9 +50,9 @@ export default function DataTab({ datasets }: { datasets: DatasetKatalog[] }) {
 }
 
 function DatasetTable({ dataset, datasets, onDataset }: { dataset: DatasetKatalog; datasets: DatasetKatalog[]; onDataset: (id: string) => void }) {
-  const [tahun, setTahun] = useState('');
-  const [semester, setSemester] = useState('');
-  const [kelas, setKelas] = useState('');
+  const [tahun, setTahun] = useState<string[]>([]);
+  const [semester, setSemester] = useState<string[]>([]);
+  const [kelas, setKelas] = useState<string[]>([]);
   const [q, setQ] = useState('');
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
@@ -77,9 +88,9 @@ function DatasetTable({ dataset, datasets, onDataset }: { dataset: DatasetKatalo
     kolom: dataset.kolom.map(c => c.key),
     q: search,
     filter: {
-      ...(tahun ? { tahun_ajaran: tahun } : {}),
-      ...(semester ? { semester } : {}),
-      ...(kelas ? { kelas: [kelas] } : {}),
+      ...(tahun.length ? { tahun_ajaran: tahun } : {}),
+      ...(semester.length ? { semester } : {}),
+      ...(kelas.length ? { kelas } : {}),
     },
   }), [dataset.id, dataset.kolom, search, tahun, semester, kelas]);
 
@@ -102,11 +113,11 @@ function DatasetTable({ dataset, datasets, onDataset }: { dataset: DatasetKatalo
     return () => controller.abort();
   }, [payload, page, limit, reload]);
 
-  const changeFilter = (setter: (value: string) => void) => (value: string) => { setter(value); setPage(1); };
-  const reset = () => { setTahun(''); setSemester(''); setKelas(''); setQ(''); setSearch(''); setPage(1); };
+  const changeFilter = (setter: (value: string[]) => void) => (value: string[]) => { setter(Array.isArray(value) ? value : []); setPage(1); };
+  const canDownload = !loading && !!result?.data.length && q.trim() === search;
 
   async function download() {
-    if (downloading) return;
+    if (downloading || !canDownload) return;
     setDownloading(true); setExportError('');
     try {
       const response = await fetch('/api/bank-data', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...payload, action: 'export' }) });
@@ -128,16 +139,10 @@ function DatasetTable({ dataset, datasets, onDataset }: { dataset: DatasetKatalo
   return <div className="bd-data">
     <FilterToolbar actionsInline>
       <DatasetSelect dataset={dataset} datasets={datasets} onDataset={onDataset} />
-      {has('tahun_ajaran') && <FilterSelect label="Tahun Ajaran" icon="calendar3" value={tahun} onChange={changeFilter(setTahun)} options={[{ value: '', label: 'Semua Tahun Ajaran' }, ...years.map(value => ({ value, label: value }))]} />}
-      {has('semester') && <FilterSelect label="Semester" icon="calendar-range" value={semester} onChange={changeFilter(setSemester)} options={[{ value: '', label: 'Semua Semester' }, { value: 'Ganjil', label: 'Ganjil' }, { value: 'Genap', label: 'Genap' }]} />}
-      {has('kelas') && <FilterSelect label="Kelas" icon="people" value={kelas} onChange={changeFilter(setKelas)} options={[{ value: '', label: 'Semua Kelas' }, ...classes.map(value => ({ value, label: value }))]} />}
+      {has('tahun_ajaran') && <BankDataFilter label="Tahun Ajaran" value={tahun} onChange={changeFilter(setTahun)} options={years.map(value => ({ value, label: value }))} placeholder="Semua tahun ajaran" />}
+      {has('semester') && <BankDataFilter label="Semester" value={semester} onChange={changeFilter(setSemester)} options={[{ value: 'Ganjil', label: 'Ganjil' }, { value: 'Genap', label: 'Genap' }]} placeholder="Semua semester" />}
+      {has('kelas') && <BankDataFilter label="Kelas" value={kelas} onChange={changeFilter(setKelas)} options={classes.map(value => ({ value, label: value }))} placeholder="Semua kelas" />}
       <FilterSearch value={q} onChange={setQ} placeholder="Cari identitas yang ditampilkan..." />
-      <FilterActions>
-        <button type="button" className="ftb-btn ftb-btn-icon-mobile" title="Reset filter" aria-label="Reset filter" onClick={reset}><i className="bi bi-arrow-counterclockwise" /></button>
-        <button type="button" className="ftb-btn ftb-btn--export ftb-btn-icon-mobile" title="Unduh Excel sesuai filter" aria-label="Unduh Excel sesuai filter" onClick={download} disabled={downloading || loading || !result?.data.length || q.trim() !== search}>
-          <i className={`bi ${downloading ? 'bi-hourglass-split' : 'bi-download'}`} /><span>{downloading ? 'Mengunduh...' : 'Ekspor Excel'}</span>
-        </button>
-      </FilterActions>
     </FilterToolbar>
     <section className="bd-data-panel" aria-label={dataset.label} aria-busy={loading}>
       <div className="bd-data-heading"><div><h3>{dataset.label}</h3><p>{dataset.deskripsi}</p></div><span className="bd-data-count">{loading ? 'Memuat...' : `${result?.totalTersedia ?? 0} data · ${result?.kolom.length ?? dataset.kolom.length} kolom`}</span></div>
@@ -154,7 +159,9 @@ function DatasetTable({ dataset, datasets, onDataset }: { dataset: DatasetKatalo
     </section>
     <p className="bd-data-hint">
       Pencarian berlaku pada kolom identitas yang diizinkan. Ekspor mencakup seluruh halaman sesuai filter, mengikuti batas baris pengelola.
-      {dataset.id === 'siswa' && !tahun && ' Ekspor semua tahun ajaran akan otomatis dipisahkan ke sheet berbeda berdasarkan tahun ajaran.'}
+      {dataset.id === 'siswa' && tahun.length !== 1 && ' Ekspor akan dipisahkan ke sheet berbeda berdasarkan tahun ajaran.'}
     </p>
+    {downloading && <p className="bd-data-hint" role="status">Menyiapkan unduhan Excel...</p>}
+    {canDownload && !downloading && <DesktopFab label="Ekspor Excel" icon="download" onClick={download} title="Unduh Excel sesuai filter" mobileLabel="Ekspor" />}
   </div>;
 }

@@ -106,18 +106,25 @@ export class BankDataService {
         const type = Prisma.dmmf.datamodel.models.find(m => m.name === table)?.fields.find(f => f.name === column)?.type;
         return values.map(v => type === 'BigInt' ? BigInt(v) : type === 'Int' ? Number(v) : String(v));
     }
+    private filterValues(value: string | string[] | undefined): string[] {
+        return [...new Set((Array.isArray(value) ? value : value ? [value] : []).map(v => v.trim()).filter(Boolean))];
+    }
     private filter(p: any, f: any) {
         const where: any = {};
         if (p.kolomAktif)
             where[p.kolomAktif] = true;
-        if (p.kolomTahunAjaran && typeof f?.tahun_ajaran === 'string' && f.tahun_ajaran.trim())
-            where[p.kolomTahunAjaran] = f.tahun_ajaran.trim();
-        if (p.kolomSemester && f?.semester) {
-            const semStr = String(f.semester).trim().toLowerCase();
-            const n = ['1', 'ganjil'].includes(semStr) ? 1 : ['2', 'genap'].includes(semStr) ? 2 : 0;
-            if (!n)
-                throw new BadRequestException('Semester tidak valid');
-            where[p.kolomSemester] = p.tipeSemester === 'angka' ? n : n === 1 ? 'Ganjil' : 'Genap';
+        const years = this.filterValues(f?.tahun_ajaran);
+        if (p.kolomTahunAjaran && years.length)
+            where[p.kolomTahunAjaran] = Array.isArray(f.tahun_ajaran) ? { in: years } : years[0];
+        const semesters = this.filterValues(f?.semester);
+        if (p.kolomSemester && semesters.length) {
+            const values = [...new Set(semesters.map(semester => {
+                const semStr = semester.toLowerCase();
+                const n = ['1', 'ganjil'].includes(semStr) ? 1 : ['2', 'genap'].includes(semStr) ? 2 : 0;
+                if (!n) throw new BadRequestException('Semester tidak valid');
+                return p.tipeSemester === 'angka' ? n : n === 1 ? 'Ganjil' : 'Genap';
+            }))];
+            where[p.kolomSemester] = Array.isArray(f.semester) ? { in: values } : values[0];
         }
         return where;
     }
@@ -131,7 +138,7 @@ export class BankDataService {
             where.OR = fields.length ? fields.map(c => ({ [c.key]: { contains: query, mode: 'insensitive' } })) : [{ id: { in: [] } }];
         }
         const p = def.prasaring;
-        if (p && (filter.tahun_ajaran || filter.semester || filter.kelas?.length)) {
+        if (p && (this.filterValues(filter.tahun_ajaran).length || this.filterValues(filter.semester).length || filter.kelas?.length)) {
             const pre = this.filter(p, filter);
             if (p.kolomKelas && filter.kelas?.length)
                 pre[p.kolomKelas] = { in: filter.kelas };
@@ -200,13 +207,16 @@ export class BankDataService {
             throw new BadRequestException('Filter tidak didukung');
         if (filter.kelas !== undefined && (!Array.isArray(filter.kelas) || filter.kelas.some((v: any) => typeof v !== 'string')))
             throw new BadRequestException('Filter kelas tidak valid');
-        if (filter.tahun_ajaran !== undefined && typeof filter.tahun_ajaran !== 'string')
-            throw new BadRequestException('Filter tahun ajaran tidak valid');
-        if (filter.semester !== undefined && typeof filter.semester !== 'string')
-            throw new BadRequestException('Filter semester tidak valid');
-        if (filter.semester && !['1', '2', 'ganjil', 'genap'].includes(filter.semester.trim().toLowerCase()))
+        for (const key of ['tahun_ajaran', 'semester']) {
+            const value = filter[key];
+            if (value !== undefined && typeof value !== 'string' && (!Array.isArray(value) || value.some((v: any) => typeof v !== 'string')))
+                throw new BadRequestException(`Filter ${key === 'semester' ? 'semester' : 'tahun ajaran'} tidak valid`);
+            if ((Array.isArray(value) && value.length > 50) || this.filterValues(value).some(v => v.length > 50))
+                throw new BadRequestException('Filter terlalu panjang');
+        }
+        if (this.filterValues(filter.semester).some(v => !['1', '2', 'ganjil', 'genap'].includes(v.toLowerCase())))
             throw new BadRequestException('Semester tidak valid');
-        if ((filter.kelas?.length || 0) > 200 || filter.kelas?.some((v: string) => v.length > 100) || (filter.tahun_ajaran?.length || 0) > 50)
+        if ((filter.kelas?.length || 0) > 200 || filter.kelas?.some((v: string) => v.length > 100))
             throw new BadRequestException('Filter terlalu panjang');
         if (body.q !== undefined && (typeof body.q !== 'string' || body.q.length > 100))
             throw new BadRequestException('Pencarian tidak valid');
@@ -252,7 +262,8 @@ export class BankDataService {
         book.modified = new Date();
 
         let totalRowsExported = 0;
-        const isSiswaAllYears = def.id === 'siswa' && (!filter.tahun_ajaran || !String(filter.tahun_ajaran).trim());
+        const selectedYears = this.filterValues(filter.tahun_ajaran);
+        const isSiswaAllYears = def.id === 'siswa' && selectedYears.length !== 1;
 
         if (isSiswaAllYears) {
             let distinctTas: any[] = [];
@@ -281,7 +292,7 @@ export class BankDataService {
                 masterTas = [];
             }
 
-            const allTas = Array.from(new Set([
+            const allTas = selectedYears.length ? selectedYears : Array.from(new Set([
                 ...distinctTas.map((t: any) => t.tahun_ajaran).filter(Boolean),
                 ...masterTas.map((t: any) => t.tahun_ajaran).filter(Boolean),
             ])).sort().reverse();
@@ -312,7 +323,7 @@ export class BankDataService {
                 totalRowsExported = result.data.length;
             }
         } else {
-            const sheetName = (filter.tahun_ajaran ? filter.tahun_ajaran : (def.label || 'Data')).replace(/[:\\/?*[\]]/g, '-').slice(0, 31);
+            const sheetName = (selectedYears.length === 1 ? selectedYears[0] : (def.label || 'Data')).replace(/[:\\/?*[\]]/g, '-').slice(0, 31);
             this.buildWorksheet(book, sheetName, columns, result.data);
             totalRowsExported = result.data.length;
         }
