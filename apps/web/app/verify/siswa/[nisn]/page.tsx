@@ -62,7 +62,7 @@ function VerifySiswaPage() {
 
     if (loading) {
         return (
-            <div className="scan-page-wrap animate-srt-fade-in" style={{ padding: '16px', minHeight: '100vh', display: 'flex', flexDirection: 'column', background: 'var(--n-bg, #f8fafc)', color: 'var(--n-text)' }}>
+            <div className="scan-page-wrap animate-srt-fade-in" style={{ position: 'relative', zIndex: 1, padding: '16px', minHeight: '100vh', display: 'flex', flexDirection: 'column', background: 'var(--n-bg, #f8fafc)', color: 'var(--n-text)' }}>
                 <div className="scan-loading" style={{ minHeight: '60vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
                     <Spinner size={40} />
                     <p style={{ marginTop: '16px', color: 'var(--n-muted)', fontWeight: 500 }}>Memverifikasi identitas siswa...</p>
@@ -73,16 +73,16 @@ function VerifySiswaPage() {
 
     if (error || !data || data.status === 'CARD_INACTIVE') {
         return (
-            <div className="scan-page-wrap animate-srt-fade-in" style={{ padding: '16px', minHeight: '100vh', display: 'flex', flexDirection: 'column', background: 'var(--n-bg, #f8fafc)', color: 'var(--n-text)' }}>
+            <div className="scan-page-wrap animate-srt-fade-in" style={{ position: 'relative', zIndex: 1, padding: '16px', minHeight: '100vh', display: 'flex', flexDirection: 'column', background: 'var(--n-bg, #f8fafc)', color: 'var(--n-text)' }}>
                 {/* Header Bar */}
-                <header className="scan-header-bar" style={{ padding: '12px 16px', borderRadius: '12px', background: 'var(--n-card, #fff)', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <header className="scan-header-bar" style={{ padding: '12px 16px', borderRadius: '12px', background: 'var(--n-card, #fff)', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', marginBottom: '16px', display: 'flex', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                     <a href="/" className="scan-btn-back" style={{ color: 'var(--n-muted)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 600 }}>
                         <i className="bi bi-arrow-left"></i>
                         <span>Kembali</span>
                     </a>
                     <div className="scan-system-badge" style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#3b82f6', fontWeight: 600, fontSize: '0.85rem' }}>
                         <i className="bi bi-shield-check"></i>
-                        <span className="hide-mobile">Sistem Verifikasi Siswa</span>
+                        <span>Sistem Verifikasi Siswa</span>
                     </div>
                 </header>
 
@@ -93,9 +93,6 @@ function VerifySiswaPage() {
                     <div className="scan-help">
                         <p>Pastikan Anda memindai QR Code yang benar dari kartu siswa.</p>
                     </div>
-                    <div className="scan-id-display">
-                        <span>ID: {identifier || '-'}</span>
-                    </div>
                 </div>
             </div>
         );
@@ -104,16 +101,16 @@ function VerifySiswaPage() {
     const { siswa, card_id, schoolName, schoolLogo, verified, message } = data;
 
     return (
-        <div className="scan-page-wrap animate-srt-fade-in" style={{ padding: '16px', minHeight: '100vh', display: 'flex', flexDirection: 'column', background: 'var(--n-bg, #f8fafc)', color: 'var(--n-text)' }}>
+        <div className="scan-page-wrap animate-srt-fade-in" style={{ position: 'relative', zIndex: 1, padding: '16px', minHeight: '100vh', display: 'flex', flexDirection: 'column', background: 'var(--n-bg, #f8fafc)', color: 'var(--n-text)' }}>
             {/* Header Bar */}
-            <header className="scan-header-bar" style={{ padding: '12px 16px', borderRadius: '12px', background: 'var(--n-card, #fff)', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <header className="scan-header-bar" style={{ padding: '12px 16px', borderRadius: '12px', background: 'var(--n-card, #fff)', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', marginBottom: '16px', display: 'flex', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                 <a href="/" className="scan-btn-back" style={{ color: 'var(--n-muted)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 600 }}>
                     <i className="bi bi-arrow-left"></i>
                     <span>Kembali</span>
                 </a>
                 <div className="scan-system-badge" style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#3b82f6', fontWeight: 600, fontSize: '0.85rem' }}>
                     <i className="bi bi-shield-check"></i>
-                    <span className="hide-mobile">Sistem Verifikasi Siswa</span>
+                    <span>Sistem Verifikasi Siswa</span>
                 </div>
             </header>
 
@@ -166,12 +163,6 @@ function VerifySiswaPage() {
                             </div>
                             <div style={{ display: 'inline-flex', flexWrap: 'wrap', justifyContent: 'center', alignItems: 'center', gap: '12px', marginTop: '8px', padding: '6px 12px', maxWidth: '100%', boxSizing: 'border-box', overflowWrap: 'anywhere', background: 'var(--n-surface-2, #f1f5f9)', borderRadius: '8px', fontSize: '0.85rem', color: 'var(--n-muted)', fontWeight: 600 }}>
                                 <span>NISN: {siswa?.nisn || '-'}</span>
-                                {card_id && (
-                                    <>
-                                        <span style={{ color: '#cbd5e1' }}>|</span>
-                                        <span>ID: {card_id}</span>
-                                    </>
-                                )}
                             </div>
                         </div>
 
