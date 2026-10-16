@@ -11,9 +11,15 @@ jobs:
     name: Deploy to VPS
     runs-on: ubuntu-latest
     timeout-minutes: 75
+    permissions:
+      contents: read
     steps:
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.0.3
+        env:
+          DEPLOY_TOKEN: ${{ github.token }}
+          DEPLOY_REPOSITORY: ${{ github.repository }}
+          DEPLOY_SHA: ${{ github.sha }}
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USERNAME }}
@@ -21,12 +27,28 @@ jobs:
           port: 22
           command_timeout: 60m
           script_stop: true
+          envs: DEPLOY_TOKEN,DEPLOY_REPOSITORY,DEPLOY_SHA
           script: |
+            set -eu
+            set +x
             cd /www/wwwroot/acca-new
 
             echo "📥 Pull kode terbaru..."
-            git fetch origin main
-            git reset --hard origin/main
+            : "${DEPLOY_TOKEN:?Token deployment belum tersedia}"
+            : "${DEPLOY_REPOSITORY:?Repository deployment belum tersedia}"
+            : "${DEPLOY_SHA:?Commit deployment belum tersedia}"
+            export GIT_TERMINAL_PROMPT=0
+            # Temporary process configuration; never write the token to origin/config.
+            export GIT_CONFIG_COUNT=3
+            export GIT_CONFIG_KEY_0=credential.helper
+            export GIT_CONFIG_VALUE_0=''
+            export GIT_CONFIG_KEY_1=http.https://github.com/.extraheader
+            export GIT_CONFIG_VALUE_1=''
+            export GIT_CONFIG_KEY_2=http.https://github.com/.extraheader
+            export GIT_CONFIG_VALUE_2="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$DEPLOY_TOKEN" | base64 | tr -d '\n')"
+            git fetch --no-tags "https://github.com/${DEPLOY_REPOSITORY}.git" "$DEPLOY_SHA"
+            git reset --hard "$DEPLOY_SHA"
+            unset DEPLOY_TOKEN GIT_CONFIG_COUNT GIT_CONFIG_KEY_0 GIT_CONFIG_VALUE_0 GIT_CONFIG_KEY_1 GIT_CONFIG_VALUE_1 GIT_CONFIG_KEY_2 GIT_CONFIG_VALUE_2
 
             echo "🐳 Build Docker..."
             docker compose build
