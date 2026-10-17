@@ -255,29 +255,19 @@ export default function NotulensiModal({
 
                         {/* ── EDITOR POIN-POIN HASIL RAPAT ── */}
                         <div className="nr-poin-section">
-                            <div className="nr-poin-section-header">
-                                <div>
-                                    <span className="nr-poin-section-title">
-                                        Poin-Poin Hasil Rapat &amp; Tindak Lanjut
-                                    </span>
-                                    <p className="nr-poin-section-desc">
-                                        Catat setiap keputusan rapat dan tentukan status tindak lanjutnya (Belum, Proses, Selesai).
-                                    </p>
-                                </div>
-                                <button
-                                    type="button"
-                                    onClick={handleAddPoin}
-                                    className="nr-add-poin-btn"
-                                >
-                                    <i className="bi bi-plus-circle" /> Tambah Poin
-                                </button>
-                            </div>
-
                             <div className="nr-poin-editor">
                                 {form.poin_poin.length === 0 ? (
                                     <div className="nr-poin-empty">
                                         <i className="bi bi-journal-plus" style={{ fontSize: '1.6rem', display: 'block', marginBottom: '8px', opacity: 0.6 }} />
-                                        Belum ada poin hasil rapat. Klik <strong>Tambah Poin</strong> di atas untuk menambahkan.
+                                        <p style={{ margin: '0 0 12px' }}>Belum ada poin hasil rapat.</p>
+                                        <button
+                                            type="button"
+                                            onClick={handleAddPoin}
+                                            className="nr-add-poin-btn"
+                                            style={{ margin: '0 auto' }}
+                                        >
+                                            <i className="bi bi-plus-circle" /> Tambah Poin
+                                        </button>
                                     </div>
                                 ) : (
                                     form.poin_poin.map((p, idx) => (
