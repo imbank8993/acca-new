@@ -116,12 +116,15 @@ export default function WaliKelasTabAbsensi({ user }: WaliKelasTabProps) {
         setBulan(`${y}-${String(selectedMonth).padStart(2, '0')}`);
     }, [ta.selected, selectedMonth]);
 
+    const [loadError, setLoadError] = useState<string | null>(null);
+
     const loadData = useCallback(async () => {
         if (!nip && !isAdmin) return;
         if (!selectedKelas) return;
         if (periodeType === 'bulanan' && !bulan) return;
         if (periodeType === 'harian' && !tanggal) return;
         setLoading(true);
+        setLoadError(null);
         try {
             let params = new URLSearchParams();
             params.append('nip', nip || '');
@@ -131,8 +134,15 @@ export default function WaliKelasTabAbsensi({ user }: WaliKelasTabProps) {
             else if (periodeType === 'bulanan' && bulan) params.append('bulan', bulan);
             const res = await fetch(`/api/wali-kelas/absensi-akumulasi?${params.toString()}`);
             const result = await res.json();
-            if (res.ok && !result.error) setData(result);
-        } catch (err) { console.error(err); } finally { setLoading(false); }
+            if (res.ok && !result.error) {
+                setData(result);
+            } else {
+                setLoadError(result.message || result.error || 'Gagal memuat rekap absensi.');
+            }
+        } catch (err: any) {
+            console.error(err);
+            setLoadError(err.message || 'Gagal memuat rekap absensi.');
+        } finally { setLoading(false); }
     }, [nip, isAdmin, selectedKelas, periodeType, tanggal, bulan, ta.selected]);
 
     const loadKelasList = useCallback(async () => {
@@ -328,6 +338,15 @@ export default function WaliKelasTabAbsensi({ user }: WaliKelasTabProps) {
                 {loading ? (
                     <div className="wka-loading">
                         <Spinner variant="buble" size={32} />
+                    </div>
+                ) : loadError ? (
+                    <div style={{ padding: '36px 16px', textAlign: 'center', background: 'var(--n-card)', border: '1px solid var(--n-border)', borderRadius: 14 }}>
+                        <i className="bi bi-exclamation-triangle" style={{ fontSize: '2.2rem', color: '#e11d48', display: 'inline-block', marginBottom: 8 }} />
+                        <h4 style={{ margin: '8px 0 6px', fontWeight: 700, fontSize: '1rem', color: 'var(--n-text)' }}>Gagal Memuat Data Absensi</h4>
+                        <p style={{ color: 'var(--n-muted)', fontSize: '0.82rem', marginBottom: 16 }}>{loadError}</p>
+                        <Button variant="secondary" size="sm" onClick={() => loadData()}>
+                            <i className="bi bi-arrow-clockwise" /> Coba Lagi
+                        </Button>
                     </div>
                 ) : (
                     <>

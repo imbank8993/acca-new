@@ -15,9 +15,22 @@ export const JP_PER_HARI = 24;
 const MENIT_PER_JP = 60;
 export const MENIT_AKHIR_HARI = 24 * 60;
 
-export function toMinutes(t?: string | null): number | null {
+export function toMinutes(t?: string | Date | null): number | null {
     if (!t) return null;
-    const [h, m] = t.split(':').map(Number);
+    if (t instanceof Date) {
+        if (isNaN(t.getTime())) return null;
+        return t.getUTCHours() * 60 + t.getUTCMinutes();
+    }
+    const str = String(t).trim();
+    if (!str) return null;
+    if (str.includes('T')) {
+        const timePart = str.split('T')[1]?.replace(/Z.*$/, '');
+        if (timePart) {
+            const [h, m] = timePart.split(':').map(Number);
+            if (!isNaN(h) && !isNaN(m)) return h * 60 + m;
+        }
+    }
+    const [h, m] = str.split(':').map(Number);
     if (isNaN(h) || isNaN(m)) return null;
     return h * 60 + m;
 }
