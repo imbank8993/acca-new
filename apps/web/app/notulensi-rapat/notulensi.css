@@ -386,6 +386,13 @@
 }
 
 /* ── Form Modal: Controls & Dynamic Poin Editor ───────────────────────────── */
+.nr-modal-form-body {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding-bottom: 6px;
+}
+
 .nr-form-group {
     display: flex;
     flex-direction: column;
@@ -408,15 +415,16 @@
 .nr-form-textarea {
     width: 100%;
     padding: 8px 12px;
-    border-radius: 8px;
+    border-radius: 9px;
     border: 1.5px solid var(--n-border, #cbd5e1);
     background: var(--n-card, #ffffff);
     color: var(--n-ink, #0f172a);
-    font-size: 0.85rem;
+    font-size: 0.875rem;
     font-family: inherit;
     outline: none;
     transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
     box-sizing: border-box;
+    min-height: 40px;
 }
 
 .nr-form-input:focus,
@@ -427,23 +435,67 @@
 
 .nr-form-textarea {
     resize: vertical;
+    min-height: 72px;
+    line-height: 1.45;
+}
+
+/* Desktop 3-column rows */
+.nr-form-row-datetime {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 12px;
+}
+
+.nr-form-row-triplet {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 12px;
+}
+
+/* Poin-Poin Section */
+.nr-poin-section {
+    border-top: 1px solid var(--n-border, #e2e8f0);
+    padding-top: 16px;
+    margin-top: 4px;
+}
+
+.nr-poin-section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.nr-poin-section-title {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--n-ink, #0f172a);
+    line-height: 1.3;
+}
+
+.nr-poin-section-desc {
+    margin: 2px 0 0;
+    font-size: 0.76rem;
+    color: var(--n-muted, #64748b);
+    line-height: 1.4;
 }
 
 .nr-poin-editor {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 12px;
     margin-top: 6px;
 }
 
 .nr-poin-input-row {
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    padding: 12px 14px;
+    gap: 10px;
+    padding: 14px;
     background: #f8fafc;
     border: 1px solid #e2e8f0;
-    border-radius: 10px;
+    border-radius: 12px;
     transition: background 0.15s ease, border-color 0.15s ease;
 }
 
@@ -458,7 +510,7 @@
     display: inline-flex;
     align-items: center;
     gap: 7px;
-    font-size: 0.8rem;
+    font-size: 0.82rem;
     font-weight: 700;
     color: var(--n-primary, #3083FF);
 }
@@ -485,8 +537,8 @@
     font-weight: 650;
     display: inline-flex;
     align-items: center;
-    gap: 4px;
-    padding: 3px 8px;
+    gap: 5px;
+    padding: 4px 10px;
     border-radius: 6px;
     transition: background 0.15s ease, color 0.15s ease;
 }
@@ -498,23 +550,47 @@
 
 .nr-poin-row-fields {
     display: grid;
-    grid-template-columns: 1fr 140px;
-    gap: 10px;
+    grid-template-columns: 1fr 150px;
+    gap: 12px;
     align-items: start;
+}
+
+.nr-poin-field-desc {
+    min-width: 0;
+}
+
+.nr-poin-field-status {
+    min-width: 0;
 }
 
 .nr-poin-row-subfields {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 10px;
+    gap: 12px;
+}
+
+.nr-poin-subfield {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    min-width: 0;
+}
+
+.nr-poin-sublabel {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--n-muted, #64748b);
+    display: flex;
+    align-items: center;
+    gap: 4px;
 }
 
 .nr-poin-empty {
     text-align: center;
-    padding: 20px 16px;
+    padding: 24px 16px;
     background: #f8fafc;
     border: 1.5px dashed #cbd5e1;
-    border-radius: 10px;
+    border-radius: 12px;
     color: #64748b;
     font-size: 0.84rem;
 }
@@ -537,6 +613,29 @@
 
 .nr-add-poin-btn:hover {
     background: rgba(48, 131, 255, 0.08);
+}
+
+.nr-add-poin-bottom-btn {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1.5px dashed var(--n-primary, #3083FF);
+    background: rgba(48, 131, 255, 0.04);
+    color: var(--n-primary, #3083FF);
+    border-radius: 10px;
+    font-size: 0.84rem;
+    font-weight: 650;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    margin-top: 4px;
+}
+
+.nr-add-poin-bottom-btn:hover {
+    background: rgba(48, 131, 255, 0.1);
+    border-color: #2563EB;
 }
 
 /* ── Pengaturan Akses Tab Styles ─────────────────────────────────────────── */
@@ -888,11 +987,56 @@
     .nr-stat-val {
         font-size: 1.2rem;
     }
+
+    /* ── Mobile Modal Form Adaptations ── */
+    .nr-modal-form-body {
+        gap: 12px;
+    }
+
+    /* Tanggal Rapat lebar penuh, Waktu Mulai & Waktu Selesai 2 kolom berdampingan */
+    .nr-form-row-datetime {
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+    }
+    .nr-form-row-datetime > .nr-form-group:first-child {
+        grid-column: 1 / -1;
+    }
+
+    /* Lokasi, Pimpinan, Notulis ditumpuk vertikal 1 kolom penuh agar teks tidak terpotong */
+    .nr-form-row-triplet {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+
+    .nr-poin-section-header {
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .nr-poin-input-row {
+        padding: 12px;
+        gap: 10px;
+    }
+
     .nr-poin-row-fields {
         grid-template-columns: 1fr;
+        gap: 8px;
     }
+
     .nr-poin-row-subfields {
         grid-template-columns: 1fr;
+        gap: 8px;
+    }
+
+    .nr-form-input,
+    .nr-form-textarea {
+        min-height: 42px;
+        font-size: var(--mdl-fs-control, 0.88rem);
+    }
+
+    .nr-poin-delete-btn {
+        min-height: 32px;
+        padding: 4px 10px;
     }
 }
 
@@ -1083,6 +1227,29 @@
 }
 
 .dark .nr-add-poin-btn:hover {
+    background: rgba(56, 189, 248, 0.15) !important;
+}
+
+.dark .nr-poin-section {
+    border-top-color: rgba(59, 130, 246, 0.3) !important;
+}
+
+.dark .nr-poin-section-title {
+    color: #f8fafc !important;
+}
+
+.dark .nr-poin-section-desc,
+.dark .nr-poin-sublabel {
+    color: #94a3b8 !important;
+}
+
+.dark .nr-add-poin-bottom-btn {
+    background: rgba(56, 189, 248, 0.06) !important;
+    border-color: rgba(56, 189, 248, 0.45) !important;
+    color: #38bdf8 !important;
+}
+
+.dark .nr-add-poin-bottom-btn:hover {
     background: rgba(56, 189, 248, 0.15) !important;
 }
 

@@ -148,7 +148,7 @@ export default function NotulensiModal({
         >
             <form onSubmit={handleSubmit}>
                 <ModalBody>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                    <div className="nr-modal-form-body">
                         {/* ── INFO UTAMA RAPAT ── */}
                         <div className="nr-form-group">
                             <label className="nr-form-label">
@@ -164,8 +164,8 @@ export default function NotulensiModal({
                             />
                         </div>
 
-                        {/* Baris Tanggal & Waktu */}
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
+                        {/* Baris Tanggal & Waktu: Responsif (Tanggal full-width di mobile, jam 2 kolom) */}
+                        <div className="nr-form-row-datetime">
                             <div className="nr-form-group">
                                 <label className="nr-form-label">
                                     Tanggal Rapat <span className="req">*</span>
@@ -173,7 +173,6 @@ export default function NotulensiModal({
                                 <DatePicker
                                     value={form.tanggal}
                                     onChange={val => setForm({ ...form, tanggal: val })}
-                                    style={{ height: '38px' }}
                                 />
                             </div>
                             <div className="nr-form-group">
@@ -185,7 +184,6 @@ export default function NotulensiModal({
                                     className="nr-form-input"
                                     value={form.waktu_mulai || ''}
                                     onChange={e => setForm({ ...form, waktu_mulai: e.target.value })}
-                                    style={{ height: '38px' }}
                                 />
                             </div>
                             <div className="nr-form-group">
@@ -197,13 +195,12 @@ export default function NotulensiModal({
                                     className="nr-form-input"
                                     value={form.waktu_selesai || ''}
                                     onChange={e => setForm({ ...form, waktu_selesai: e.target.value })}
-                                    style={{ height: '38px' }}
                                 />
                             </div>
                         </div>
 
-                        {/* Baris Lokasi, Pimpinan, Notulis */}
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
+                        {/* Baris Lokasi, Pimpinan, Notulis: Responsif (1 kolom di mobile agar teks tidak terpotong) */}
+                        <div className="nr-form-row-triplet">
                             <div className="nr-form-group">
                                 <label className="nr-form-label">
                                     Lokasi / Tempat
@@ -243,30 +240,27 @@ export default function NotulensiModal({
                         </div>
 
                         {/* Peserta rapat */}
-                        <div>
-                            <div className="nr-form-group">
-                                <label className="nr-form-label">
-                                    Peserta Rapat
-                                </label>
-                                <input
-                                    type="text"
-                                    className="nr-form-input"
-                                    placeholder="Seluruh Dewan Guru & Staf (35 orang)"
-                                    value={form.peserta || ''}
-                                    onChange={e => setForm({ ...form, peserta: e.target.value })}
-                                />
-                            </div>
-
+                        <div className="nr-form-group">
+                            <label className="nr-form-label">
+                                Peserta Rapat
+                            </label>
+                            <input
+                                type="text"
+                                className="nr-form-input"
+                                placeholder="Seluruh Dewan Guru & Staf (35 orang)"
+                                value={form.peserta || ''}
+                                onChange={e => setForm({ ...form, peserta: e.target.value })}
+                            />
                         </div>
 
                         {/* ── EDITOR POIN-POIN HASIL RAPAT ── */}
-                        <div style={{ borderTop: '1px solid var(--n-border, #e2e8f0)', paddingTop: '14px', marginTop: '4px' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+                        <div className="nr-poin-section">
+                            <div className="nr-poin-section-header">
                                 <div>
-                                    <span style={{ fontSize: '0.88rem', fontWeight: 700, color: 'var(--n-ink, #0f172a)' }}>
+                                    <span className="nr-poin-section-title">
                                         Poin-Poin Hasil Rapat &amp; Tindak Lanjut
                                     </span>
-                                    <p style={{ margin: '2px 0 0', fontSize: '0.76rem', color: 'var(--n-muted, #64748b)' }}>
+                                    <p className="nr-poin-section-desc">
                                         Catat setiap keputusan rapat dan tentukan status tindak lanjutnya (Belum, Proses, Selesai).
                                     </p>
                                 </div>
@@ -275,14 +269,15 @@ export default function NotulensiModal({
                                     onClick={handleAddPoin}
                                     className="nr-add-poin-btn"
                                 >
-                                    <i className="bi bi-plus-circle" /> Tambah
+                                    <i className="bi bi-plus-circle" /> Tambah Poin
                                 </button>
                             </div>
 
                             <div className="nr-poin-editor">
                                 {form.poin_poin.length === 0 ? (
                                     <div className="nr-poin-empty">
-                                        Belum ada poin hasil rapat. Klik <strong>Tambah</strong> di atas untuk menambahkan.
+                                        <i className="bi bi-journal-plus" style={{ fontSize: '1.6rem', display: 'block', marginBottom: '8px', opacity: 0.6 }} />
+                                        Belum ada poin hasil rapat. Klik <strong>Tambah Poin</strong> di atas untuk menambahkan.
                                     </div>
                                 ) : (
                                     form.poin_poin.map((p, idx) => (
@@ -305,15 +300,17 @@ export default function NotulensiModal({
                                             </div>
 
                                             <div className="nr-poin-row-fields">
-                                                <textarea
-                                                    rows={2}
-                                                    className="nr-form-textarea"
-                                                    placeholder="Uraian keputusan / poin pembahasan rapat..."
-                                                    value={p.teks}
-                                                    onChange={e => handleUpdatePoin(idx, 'teks', e.target.value)}
-                                                    required
-                                                />
-                                                <div>
+                                                <div className="nr-poin-field-desc">
+                                                    <textarea
+                                                        rows={2}
+                                                        className="nr-form-textarea"
+                                                        placeholder="Uraian keputusan / poin pembahasan rapat..."
+                                                        value={p.teks}
+                                                        onChange={e => handleUpdatePoin(idx, 'teks', e.target.value)}
+                                                        required
+                                                    />
+                                                </div>
+                                                <div className="nr-poin-field-status">
                                                     <label className="nr-form-label" style={{ fontSize: '0.74rem', marginBottom: '4px' }}>
                                                         Status Tindak Lanjut
                                                     </label>
@@ -322,31 +319,48 @@ export default function NotulensiModal({
                                                         onChange={val => handleUpdatePoin(idx, 'status', val as any)}
                                                         options={STATUS_POIN_OPTIONS}
                                                         minWidth="100%"
-                                                        height="36px"
+                                                        height="38px"
                                                     />
                                                 </div>
                                             </div>
 
                                             <div className="nr-poin-row-subfields">
-                                                <input
-                                                    type="text"
-                                                    className="nr-form-input"
-                                                    placeholder="PIC / Penanggung Jawab (opsional)"
-                                                    value={p.pic || ''}
-                                                    onChange={e => handleUpdatePoin(idx, 'pic', e.target.value)}
-                                                    style={{ padding: '6px 10px', fontSize: '0.8rem' }}
-                                                />
-                                                <input
-                                                    type="date"
-                                                    className="nr-form-input"
-                                                    placeholder="Tenggat Waktu / Deadline"
-                                                    value={p.tenggat || ''}
-                                                    onChange={e => handleUpdatePoin(idx, 'tenggat', e.target.value)}
-                                                    style={{ padding: '6px 10px', fontSize: '0.8rem' }}
-                                                />
+                                                <div className="nr-poin-subfield">
+                                                    <label className="nr-poin-sublabel">
+                                                        PIC / Penanggung Jawab
+                                                    </label>
+                                                    <input
+                                                        type="text"
+                                                        className="nr-form-input"
+                                                        placeholder="Nama PIC / penanggung jawab (opsional)"
+                                                        value={p.pic || ''}
+                                                        onChange={e => handleUpdatePoin(idx, 'pic', e.target.value)}
+                                                    />
+                                                </div>
+                                                <div className="nr-poin-subfield">
+                                                    <label className="nr-poin-sublabel">
+                                                        Tenggat Waktu / Deadline
+                                                    </label>
+                                                    <input
+                                                        type="date"
+                                                        className="nr-form-input"
+                                                        value={p.tenggat || ''}
+                                                        onChange={e => handleUpdatePoin(idx, 'tenggat', e.target.value)}
+                                                    />
+                                                </div>
                                             </div>
                                         </div>
                                     ))
+                                )}
+
+                                {form.poin_poin.length > 0 && (
+                                    <button
+                                        type="button"
+                                        onClick={handleAddPoin}
+                                        className="nr-add-poin-bottom-btn"
+                                    >
+                                        <i className="bi bi-plus-circle" /> Tambah Poin Rapat Baru
+                                    </button>
                                 )}
                             </div>
                         </div>
