@@ -28,6 +28,13 @@ function serializeBigInt(obj: any): any {
   return obj;
 }
 
+export function toLocalDateStr(d: any): string {
+  if (!d) return '';
+  const dateObj = d instanceof Date ? d : new Date(d);
+  if (isNaN(dateObj.getTime())) return '';
+  return dateObj.toLocaleDateString('en-CA', { timeZone: 'Asia/Makassar' });
+}
+
 @Injectable()
 export class WaliKelasService {
   constructor(private readonly prisma: PrismaService) {}
@@ -45,6 +52,7 @@ export class WaliKelasService {
 
   async getAbsensiAkumulasi(query: any, user: any) {
     const { isAdmin, nip: userNip } = this.resolveUser(user);
+    const userNips = [user?.nip, user?.username, userNip].map((s) => String(s || '').trim()).filter(Boolean);
     const nip = isAdmin && query.nip ? query.nip : userNip;
     const kelas = query.kelas;
     const tanggal = query.tanggal;
@@ -98,7 +106,7 @@ export class WaliKelasService {
         return { ok: true, kelas_list: [] };
       } else {
         const waliKelas = await this.prisma.wali_kelas.findMany({
-          where: { nip, tahun_ajaran: tahunAjaran, aktif: true },
+          where: { nip: { in: userNips }, tahun_ajaran: tahunAjaran, aktif: true },
           select: { nama_kelas: true },
           orderBy: { nama_kelas: 'asc' },
         });
@@ -131,7 +139,7 @@ export class WaliKelasService {
     if (!isAdmin) {
       const waliRow = await this.prisma.wali_kelas.findFirst({
         where: {
-          nip: userNip,
+          nip: { in: userNips },
           nama_kelas: kelas,
           tahun_ajaran: tahunAjaran,
           aktif: true,
@@ -155,8 +163,11 @@ export class WaliKelasService {
       const lastDay = new Date(y, m, 0).getDate();
       endDate = `${bulanParam}-${String(lastDay).padStart(2, '0')}`;
     } else {
-      startDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-      endDate = startDate;
+      // Default ke bulan berjalan penuh jika bulan dan tanggal tidak disertakan
+      const nowStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+      startDate = `${nowStr}-01`;
+      const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+      endDate = `${nowStr}-${String(lastDay).padStart(2, '0')}`;
     }
 
     // Cek snapshot yang terkunci
@@ -201,8 +212,8 @@ export class WaliKelasService {
   }) {
     const { kelas, tahunAjaran, semesterStr, semester, startDate, endDate, isDaily } = params;
 
-    const startD = new Date(startDate);
-    const endD = new Date(endDate);
+    const startD = new Date(`${startDate}T00:00:00+08:00`);
+    const endD = new Date(`${endDate}T23:59:59.999+08:00`);
 
     const [liburRows, kelasInfo, siswaList] = await Promise.all([
       this.prisma.libur.findMany({
@@ -293,17 +304,18 @@ export class WaliKelasService {
       });
     }
 
-    // Buat daftar tanggal rentang
+    // Buat daftar tanggal rentang (YYYY-MM-DD lokal)
     const daysInRange: string[] = [];
-    const curr = new Date(startD);
-    while (curr <= endD) {
-      daysInRange.push(curr.toISOString().split('T')[0]);
+    const curr = new Date(`${startDate}T12:00:00+08:00`);
+    const endLimit = new Date(`${endDate}T12:00:00+08:00`);
+    while (curr <= endLimit) {
+      daysInRange.push(toLocalDateStr(curr));
       curr.setDate(curr.getDate() + 1);
     }
 
-    const todayStr = new Date().toISOString().split('T')[0];
+    const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Makassar' });
     const holidayDates = new Set(
-      holidays.map((h) => h.tanggal.toISOString().split('T')[0]),
+      holidays.map((h) => toLocalDateStr(h.tanggal)),
     );
 
     const studentData = finalSiswaList.map((siswa) => {
@@ -324,19 +336,19 @@ export class WaliKelasService {
           status = '';
         } else {
           const isHoliday = holidayDates.has(dateStr);
-          const isWeekend = [0, 6].includes(new Date(dateStr).getDay());
+          const isWeekend = [0, 6].includes(new Date(`${dateStr}T12:00:00+08:00`).getDay());
 
           if (isHoliday || isWeekend) {
             status = isHoliday ? 'L' : 'W';
           } else {
-            const khHariIni = ketidakhadiranList.filter(
-              (k) =>
-                k.nisn === nisn &&
-                k.tgl_mulai.toISOString().split('T')[0] <= dateStr &&
-                k.tgl_selesai.toISOString().split('T')[0] >= dateStr,
-            );
+            const khHariIni = ketidakhadiranList.filter((k) => {
+              if (k.nisn !== nisn) return false;
+              const kStart = toLocalDateStr(k.tgl_mulai);
+              const kEnd = toLocalDateStr(k.tgl_selesai);
+              return kStart <= dateStr && kEnd >= dateStr;
+            });
             const daySessions = sesiList.filter(
-              (s) => s.tanggal.toISOString().split('T')[0] === dateStr,
+              (s) => toLocalDateStr(s.tanggal) === dateStr,
             );
             const dayDetails = detailList.filter(
               (d) =>
@@ -352,8 +364,8 @@ export class WaliKelasService {
             const minutes = calcDailyAttendanceMinutes(
               khHariIni.map((k) => ({
                 ...k,
-                tgl_mulai: k.tgl_mulai.toISOString().split('T')[0],
-                tgl_selesai: k.tgl_selesai.toISOString().split('T')[0],
+                tgl_mulai: toLocalDateStr(k.tgl_mulai),
+                tgl_selesai: toLocalDateStr(k.tgl_selesai),
               })),
               absensiDetailHariIni,
               dateStr,
@@ -366,14 +378,8 @@ export class WaliKelasService {
                 ? {
                     jenis: kt.jenis || status,
                     keterangan: kt.keterangan || '',
-                    tgl_mulai:
-                      kt.tgl_mulai instanceof Date
-                        ? kt.tgl_mulai.toISOString().split('T')[0]
-                        : String(kt.tgl_mulai).split('T')[0],
-                    tgl_selesai:
-                      kt.tgl_selesai instanceof Date
-                        ? kt.tgl_selesai.toISOString().split('T')[0]
-                        : String(kt.tgl_selesai).split('T')[0],
+                    tgl_mulai: toLocalDateStr(kt.tgl_mulai),
+                    tgl_selesai: toLocalDateStr(kt.tgl_selesai),
                   }
                 : {
                     jenis: status === 'I' ? 'Izin' : status === 'S' ? 'Sakit' : 'Alpha',

@@ -1,0 +1,90 @@
+/* Arabic typography shared with ACCA-CBT: Amiri (SIL Open Font License).
+ * Unicode-restricted Poppins faces form a composite family: existing page and
+ * mobile !important rules still select Amiri for Arabic glyphs, keeping Latin
+ * Poppins, numbers, icons, layout direction, and stored text unchanged.
+ * Match the exact Poppins weights loaded in layout.tsx; a weight range would
+ * lose to Google's exact-weight Latin faces during browser font matching.
+ * Italic remains browser-synthesized for this composite family, as with the
+ * existing Poppins setup, so introducing an Arabic face cannot change Latin.
+ */
+
+@font-face {
+  font-family: 'Amiri';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/amiri/amiri-arabic-normal-400.woff2') format('woff2');
+  unicode-range: U+0600-06FF, U+0750-077F, U+0870-089F, U+08A0-08FF, U+200C-200D, U+FB50-FDFF, U+FE70-FEFF, U+102E0-102FF, U+10E60-10E7F, U+10EC0-10EFF, U+1EE00-1EEFF;
+}
+
+@font-face {
+  font-family: 'Amiri';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/fonts/amiri/amiri-arabic-normal-700.woff2') format('woff2');
+  unicode-range: U+0600-06FF, U+0750-077F, U+0870-089F, U+08A0-08FF, U+200C-200D, U+FB50-FDFF, U+FE70-FEFF, U+102E0-102FF, U+10E60-10E7F, U+10EC0-10EFF, U+1EE00-1EEFF;
+}
+
+@font-face {
+  font-family: 'Poppins';
+  font-style: normal;
+  font-weight: 300;
+  font-display: swap;
+  src: url('/fonts/amiri/amiri-arabic-normal-400.woff2') format('woff2');
+  unicode-range: U+0600-06FF, U+0750-077F, U+0870-089F, U+08A0-08FF, U+200C-200D, U+FB50-FDFF, U+FE70-FEFF, U+102E0-102FF, U+10E60-10E7F, U+10EC0-10EFF, U+1EE00-1EEFF;
+}
+
+@font-face {
+  font-family: 'Poppins';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/amiri/amiri-arabic-normal-400.woff2') format('woff2');
+  unicode-range: U+0600-06FF, U+0750-077F, U+0870-089F, U+08A0-08FF, U+200C-200D, U+FB50-FDFF, U+FE70-FEFF, U+102E0-102FF, U+10E60-10E7F, U+10EC0-10EFF, U+1EE00-1EEFF;
+}
+
+@font-face {
+  font-family: 'Poppins';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('/fonts/amiri/amiri-arabic-normal-400.woff2') format('woff2');
+  unicode-range: U+0600-06FF, U+0750-077F, U+0870-089F, U+08A0-08FF, U+200C-200D, U+FB50-FDFF, U+FE70-FEFF, U+102E0-102FF, U+10E60-10E7F, U+10EC0-10EFF, U+1EE00-1EEFF;
+}
+
+@font-face {
+  font-family: 'Poppins';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('/fonts/amiri/amiri-arabic-normal-700.woff2') format('woff2');
+  unicode-range: U+0600-06FF, U+0750-077F, U+0870-089F, U+08A0-08FF, U+200C-200D, U+FB50-FDFF, U+FE70-FEFF, U+102E0-102FF, U+10E60-10E7F, U+10EC0-10EFF, U+1EE00-1EEFF;
+}
+
+@font-face {
+  font-family: 'Poppins';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/fonts/amiri/amiri-arabic-normal-700.woff2') format('woff2');
+  unicode-range: U+0600-06FF, U+0750-077F, U+0870-089F, U+08A0-08FF, U+200C-200D, U+FB50-FDFF, U+FE70-FEFF, U+102E0-102FF, U+10E60-10E7F, U+10EC0-10EFF, U+1EE00-1EEFF;
+}
+
+@font-face {
+  font-family: 'Poppins';
+  font-style: normal;
+  font-weight: 800;
+  font-display: swap;
+  src: url('/fonts/amiri/amiri-arabic-normal-700.woff2') format('woff2');
+  unicode-range: U+0600-06FF, U+0750-077F, U+0870-089F, U+08A0-08FF, U+200C-200D, U+FB50-FDFF, U+FE70-FEFF, U+102E0-102FF, U+10E60-10E7F, U+10EC0-10EFF, U+1EE00-1EEFF;
+}
+
+@font-face {
+  font-family: 'Poppins';
+  font-style: normal;
+  font-weight: 900;
+  font-display: swap;
+  src: url('/fonts/amiri/amiri-arabic-normal-700.woff2') format('woff2');
+  unicode-range: U+0600-06FF, U+0750-077F, U+0870-089F, U+08A0-08FF, U+200C-200D, U+FB50-FDFF, U+FE70-FEFF, U+102E0-102FF, U+10E60-10E7F, U+10EC0-10EFF, U+1EE00-1EEFF;
+}

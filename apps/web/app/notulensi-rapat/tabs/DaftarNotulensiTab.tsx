@@ -2,8 +2,9 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Spinner } from '@/components/ui/Spinner';
-import FilterToolbar, { FilterSearch, FilterSelect, FilterActions } from '@/components/ui/FilterToolbar';
+import FilterToolbar, { FilterSearch, FilterSelect } from '@/components/ui/FilterToolbar';
 import { Button } from '@/components/ui/Button';
+import { DesktopFab } from '@/components/ui/DesktopFab';
 import { ActionButton, ActionGroup } from '@/components/ui/ActionButtons';
 import { InlineSelect } from '@/components/ui/InlineSelect';
 import { swalSuccess, swalError, swalConfirm } from '@/lib/swal-premium';
@@ -33,19 +34,6 @@ export default function DaftarNotulensiTab({ bolehKelola, headerTabs }: DaftarNo
     const [editingItem, setEditingItem] = useState<NotulensiItem | null>(null);
     const [saving, setSaving] = useState(false);
     const [printItem, setPrintItem] = useState<NotulensiItem | null>(null);
-
-    // Active quick status dropdown row
-    const [activeDropdownId, setActiveDropdownId] = useState<string | null>(null);
-
-    useEffect(() => {
-        const handleClickOutside = (e: MouseEvent) => {
-            if (!(e.target as HTMLElement).closest('.nr-status-select-wrap')) {
-                setActiveDropdownId(null);
-            }
-        };
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, []);
 
     const fetchData = useCallback(async () => {
         setLoading(true);
@@ -124,24 +112,6 @@ export default function DaftarNotulensiTab({ bolehKelola, headerTabs }: DaftarNo
             fetchData();
         } catch (err: any) {
             swalError('Gagal', err.message || 'Gagal menghapus');
-        }
-    };
-
-    // Quick status toggle
-    const handleQuickChangeStatus = async (item: NotulensiItem, newStatus: string) => {
-        setActiveDropdownId(null);
-        if (!bolehKelola || !item.id) return;
-        try {
-            const res = await fetch(`/api/notulensi-rapat/${item.id}/status`, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ status: newStatus }),
-            });
-            const json = await res.json();
-            if (!res.ok || json.success === false) throw new Error(json.error || 'Gagal mengubah status');
-            fetchData();
-        } catch (err: any) {
-            swalError('Gagal', err.message);
         }
     };
 
@@ -267,20 +237,6 @@ export default function DaftarNotulensiTab({ bolehKelola, headerTabs }: DaftarNo
                     ]}
                     width="170px"
                 />
-                <FilterActions>
-                    {bolehKelola && (
-                        <Button
-                            variant="primary"
-                            onClick={() => {
-                                setEditingItem(null);
-                                setIsFormOpen(true);
-                            }}
-                            leftIcon={<i className="bi bi-plus-circle-fill" />}
-                        >
-                            Buat Notulen Baru
-                        </Button>
-                    )}
-                </FilterActions>
             </FilterToolbar>
 
             {/* ── DAFTAR NOTULENSI ── */}
@@ -295,20 +251,9 @@ export default function DaftarNotulensiTab({ bolehKelola, headerTabs }: DaftarNo
                         Belum ada data notulensi rapat.
                     </p>
                     <p style={{ fontSize: '0.82rem', color: 'var(--n-muted, #64748b)', margin: '4px 0 16px' }}>
-                        {filterStatus !== 'Semua' ? 'Tidak ada notulensi dengan filter status ini.' : 'Catat agenda rapat dan hasil tindak lanjut dengan menekan tombol Buat Notulen.'}
+                        {filterStatus !== 'Semua' ? 'Tidak ada notulensi dengan filter status ini.' : 'Catat agenda rapat dan hasil tindak lanjut dengan menekan tombol tambah (+).'}
                     </p>
-                    {bolehKelola && (
-                        <Button
-                            variant="secondary"
-                            onClick={() => {
-                                setEditingItem(null);
-                                setIsFormOpen(true);
-                            }}
-                            leftIcon={<i className="bi bi-plus-lg" />}
-                        >
-                            Buat Notulen Baru
-                        </Button>
-                    )}
+
                 </div>
             ) : (
                 <>
@@ -411,47 +356,10 @@ export default function DaftarNotulensiTab({ bolehKelola, headerTabs }: DaftarNo
                                                     )}
                                                 </td>
                                                 <td style={{ textAlign: 'center' }}>
-                                                    <div className="nr-status-select-wrap">
-                                                        <button
-                                                            type="button"
-                                                            className="nr-status-btn-compact"
-                                                            disabled={!bolehKelola}
-                                                            onClick={() => setActiveDropdownId(activeDropdownId === item.id ? null : item.id || null)}
-                                                            title={bolehKelola ? 'Klik untuk mengubah status tindak lanjut' : 'Status tindak lanjut'}
-                                                        >
-                                                            <span className={`nr-pill ${item.status.toLowerCase()}`}>
-                                                                <span className="nr-pill-dot" />
-                                                                <span>{item.status}</span>
-                                                                {bolehKelola && <i className="bi bi-caret-down-fill" style={{ fontSize: '0.65rem', marginLeft: '2px' }} />}
-                                                            </span>
-                                                        </button>
-
-                                                        {activeDropdownId === item.id && bolehKelola && (
-                                                            <div className="nr-status-dropdown">
-                                                                <button
-                                                                    type="button"
-                                                                    className="nr-status-opt"
-                                                                    onClick={() => handleQuickChangeStatus(item, 'Belum')}
-                                                                >
-                                                                    <span className="nr-pill belum" style={{ padding: '2px 6px' }}>Belum</span>
-                                                                </button>
-                                                                <button
-                                                                    type="button"
-                                                                    className="nr-status-opt"
-                                                                    onClick={() => handleQuickChangeStatus(item, 'Proses')}
-                                                                >
-                                                                    <span className="nr-pill proses" style={{ padding: '2px 6px' }}>Proses</span>
-                                                                </button>
-                                                                <button
-                                                                    type="button"
-                                                                    className="nr-status-opt"
-                                                                    onClick={() => handleQuickChangeStatus(item, 'Selesai')}
-                                                                >
-                                                                    <span className="nr-pill selesai" style={{ padding: '2px 6px' }}>Selesai</span>
-                                                                </button>
-                                                            </div>
-                                                        )}
-                                                    </div>
+                                                    <span className={`nr-pill ${item.status.toLowerCase()}`} title="Status otomatis mengikuti poin rapat">
+                                                        <span className="nr-pill-dot" />
+                                                        {item.status}
+                                                    </span>
                                                 </td>
                                                 <td style={{ textAlign: 'center' }}>
                                                     <ActionGroup>
@@ -645,6 +553,19 @@ export default function DaftarNotulensiTab({ bolehKelola, headerTabs }: DaftarNo
                         })}
                     </div>
                 </>
+            )}
+
+            {bolehKelola && !isFormOpen && !printItem && (
+                <DesktopFab
+                    label="Buat Notulen Baru"
+                    mobileLabel="Tambah"
+                    icon="plus-lg"
+                    title="Buat notulen baru"
+                    onClick={() => {
+                        setEditingItem(null);
+                        setIsFormOpen(true);
+                    }}
+                />
             )}
 
             {/* Modal Input/Edit */}

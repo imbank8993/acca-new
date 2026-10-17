@@ -180,15 +180,29 @@ export class JurnalService {
     return a !== '' && b !== '' && a === b;
   }
 
-  /** Kelas yang diwalikan pemanggil. */
+  /** Kelas yang diwalikan pemanggil (termasuk kelas peminatan murid di kelas perwaliannya). */
   private async kelasWali(nip: string): Promise<string[]> {
     const n = String(nip ?? '').trim();
     if (!n) return [];
     const rows = await this.prisma.wali_kelas.findMany({
-      where: { nip: n },
+      where: { nip: n, aktif: true },
       select: { nama_kelas: true },
     });
-    return rows.map((r) => r.nama_kelas).filter(Boolean) as string[];
+    const homeroomClasses = rows.map((r) => r.nama_kelas).filter(Boolean) as string[];
+    if (!homeroomClasses.length) return [];
+
+    const students = await this.prisma.siswa_kelas.findMany({
+      where: { kelas: { in: homeroomClasses }, aktif: true },
+      select: { nisn: true },
+    });
+    const nisns = [...new Set(students.map((s) => s.nisn).filter(Boolean))];
+    if (!nisns.length) return homeroomClasses;
+
+    const related = await this.prisma.siswa_kelas.findMany({
+      where: { nisn: { in: nisns }, aktif: true },
+      select: { kelas: true },
+    });
+    return [...new Set([...homeroomClasses, ...related.map((r) => r.kelas).filter(Boolean)])];
   }
 
   /**
@@ -787,31 +801,38 @@ export class JurnalService {
           lingkup.push({ nama_guru: { contains: namaUser, mode: 'insensitive' } });
           lingkup.push({ guru_pengganti: { contains: namaUser, mode: 'insensitive' } });
         }
-        if (!lingkup.length) return { ok: true, data: [], akses: { kelola } };
+        // Wali kelas berhak melihat semua jurnal di kelas perwaliannya (dan kelas peminatan muridnya)
+        const kelasDiwalikan = await this.kelasWali(nipUser);
+        if (kelasDiwalikan.length > 0) {
+          lingkup.push({ kelas: { in: kelasDiwalikan } });
+        }
+        if (!lingkup.length) return { ok: true, success: true, data: [], akses: { kelola } };
         where.AND = [{ OR: lingkup }];
       } else {
-        return { ok: true, data: [], akses: { kelola: false } };
+        return { ok: true, success: true, data: [], akses: { kelola: false } };
       }
     }
 
     if (nip && kelola) where.nip = String(nip).trim();
     if (kelas) {
-      const k = String(kelas).trim();
-      if (!kelola) {
-        const roles = rolesUser(apiUser);
-        const isSiswa = roles.includes('SISWA') || roles.includes('PENGURUS_KELAS') || roles.includes('PENGURUS KELAS');
-        if (isSiswa) {
-          const kelasSiswa = await this.kelasSiswa(apiUser);
-          if (kelasSiswa.includes(k)) {
-            where.kelas = k;
+      const kList = String(kelas).split(',').map((s) => s.trim()).filter(Boolean);
+      if (kList.length > 0) {
+        if (!kelola) {
+          const roles = rolesUser(apiUser);
+          const isSiswa = roles.includes('SISWA') || roles.includes('PENGURUS_KELAS') || roles.includes('PENGURUS KELAS');
+          if (isSiswa) {
+            const kelasSiswa = await this.kelasSiswa(apiUser);
+            const filteredK = kList.filter((k) => kelasSiswa.includes(k));
+            if (filteredK.length === 0) {
+              return { ok: true, success: true, data: [], akses: { kelola } };
+            }
+            where.kelas = filteredK.length === 1 ? filteredK[0] : { in: filteredK };
           } else {
-            return { ok: true, data: [], akses: { kelola } };
+            where.kelas = kList.length === 1 ? kList[0] : { in: kList };
           }
         } else {
-          where.kelas = k;
+          where.kelas = kList.length === 1 ? kList[0] : { in: kList };
         }
-      } else {
-        where.kelas = k;
       }
     }
     if (guru_nama && kelola) where.nama_guru = { contains: String(guru_nama).trim(), mode: 'insensitive' };
@@ -843,17 +864,18 @@ export class JurnalService {
       }
     }
 
+    const take = query?.limit ? Math.min(Math.max(1, parseInt(query.limit, 10)), 2000) : 2000;
     const data = await this.prisma.jurnal_guru.findMany({
       where,
       orderBy: [{ tanggal: 'desc' }, { jam_ke_id: 'asc' }],
-      take: 2000,
+      take,
     });
 
     // `akses` ikut dikirim supaya layar Jurnal tidak lagi menyimpulkan sendiri
     // siapa pengelola dari daftar peran. Sebelumnya UI memakai
     // `isAdmin || isOPJurnal` sementara API memakai Hak Akses Fitur — pengelola
     // yang ditunjuk lewat layar itu tidak akan pernah melihat tombolnya.
-    return { ok: true, data: serializeBigInt(data), akses: { kelola } };
+    return { ok: true, success: true, data: serializeBigInt(data), akses: { kelola } };
   }
 
   async findById(apiUser: any, id: number) {

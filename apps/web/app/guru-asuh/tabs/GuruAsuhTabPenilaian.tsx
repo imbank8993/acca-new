@@ -1,12 +1,14 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
-import { PageLoader } from '@/components/ui/Spinner';
-import { DetailHeader, DetailHeaderSelect } from '@/components/ui/DetailHeader';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { PageLoader, Spinner } from '@/components/ui/Spinner';
+import DetailHeader from '@/components/ui/DetailHeader';
 import { useTahunAjaranFilter } from '@/hooks/use-tahun-ajaran-filter';
 import { ActionButton } from '@/components/ui/ActionButtons';
-import { FilterToolbar, FilterSelect, FilterSearch } from '@/components/ui/FilterToolbar';
+import FilterToolbar, { FilterSelect, FilterSearch } from '@/components/ui/FilterToolbar';
 import { getProxiedImageUrl } from '@/lib/image-utils';
+import { getActiveTahunAjaranList, currentSemesterDefault } from '@/lib/tahun-ajaran-client';
+import '@/app/nilai-siswa/nilai-siswa.css';
 
 interface SiswaAsuh {
     nisn: string;
@@ -17,6 +19,10 @@ interface SiswaAsuh {
 }
 
 interface NilaiItem {
+    sumber?: 'guru' | 'cbt';
+    score_type?: string;
+    grading_status?: string;
+    periode_dari_tanggal?: boolean;
     id: string;
     nip: string;
     kelas: string;
@@ -32,13 +38,86 @@ interface NilaiItem {
     updated_at: string;
     nama_guru: string;
     topik?: string | null;
+    kkm?: number;
+}
+
+interface ApresiasiItem {
+    id: string;
+    mapel: string;
+    tahun_ajaran: string | null;
+    semester: number | null;
+    nama_guru: string | null;
+    judul: string;
+    topik: string | null;
+    tanggal: string | null;
+    poin_per_soal: number;
+    jumlah_menang: number;
+    total_poin: number;
+    catatan: string | null;
 }
 
 interface GroupedData {
+    cbt_linkage?: string;
     siswa: { nisn: string; nama_lengkap: string; foto_profil: string | null } | null;
     kelas: any[];
     grouped: Record<string, Record<string, NilaiItem[]>>;
     all: NilaiItem[];
+}
+
+function CbtGrades({ items, getBadge }: { items: NilaiItem[]; getBadge: (nilai: number | null | undefined, kkm?: number) => { cls: string; label: string } }) {
+    const scoreLabel = (item: NilaiItem) => item.score_type === 'classical' ? 'Klasikal'
+        : item.score_type?.replace('_', ' ').toUpperCase() || '-';
+    return (
+        <>
+            <div className="nilai-page__table-wrap">
+                <table className="nilai-page__table nilai-page__cbt-table">
+                    <thead>
+                        <tr>
+                            {['Nama Ujian', 'Pembuat', 'Jenis Nilai', 'Mapel', 'Nilai'].map((label, index) => (
+                                <th key={label} className={`nilai-page__th${index === 4 ? ' nilai-page__th--right' : ''}`}>{label}</th>
+                            ))}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {items.map(item => {
+                            const badge = getBadge(item.nilai, item.kkm);
+                            return (
+                                <tr key={item.id} className="nilai-page__tr">
+                                    <td className="nilai-page__td">{item.materi_tp}</td>
+                                    <td className="nilai-page__td nilai-page__td--muted">{item.nama_guru || '-'}</td>
+                                    <td className="nilai-page__td"><span className="nilai-page__source-badge">{scoreLabel(item)}</span></td>
+                                    <td className="nilai-page__td nilai-page__td--muted">{item.mapel}</td>
+                                    <td className="nilai-page__td nilai-page__td--right">
+                                        <span className={`nilai-page__nilai-badge ${badge.cls}`}>{badge.label}</span>
+                                        {item.catatan && <small className="nilai-page__score-type">{item.catatan}</small>}
+                                    </td>
+                                </tr>
+                            );
+                        })}
+                    </tbody>
+                </table>
+            </div>
+            <div className="nilai-page__mobile-cards" style={{ gap: '10px' }}>
+                {items.map(item => {
+                    const badge = getBadge(item.nilai, item.kkm);
+                    return (
+                        <div key={item.id} className="nilai-page__mobile-card">
+                            <div className="nilai-page__mobile-card-header">
+                                <span className="nilai-page__source-badge">{scoreLabel(item)}</span>
+                                <span className={`nilai-page__nilai-badge ${badge.cls}`}>{badge.label}</span>
+                            </div>
+                            <div className="nilai-page__mobile-card-topic">{item.materi_tp}</div>
+                            <dl className="nilai-page__cbt-meta">
+                                <div><dt>Pembuat</dt><dd>{item.nama_guru || '-'}</dd></div>
+                                <div><dt>Mapel</dt><dd>{item.mapel}</dd></div>
+                            </dl>
+                            {item.catatan && <p className="nilai-page__score-type">{item.catatan}</p>}
+                        </div>
+                    );
+                })}
+            </div>
+        </>
+    );
 }
 
 export default function GuruAsuhTabPenilaian({ user }: { user?: any }) {
@@ -59,11 +138,16 @@ export default function GuruAsuhTabPenilaian({ user }: { user?: any }) {
     const [selectedSiswa, setSelectedSiswa] = useState<SiswaAsuh | null>(null);
     const [nilaiData, setNilaiData] = useState<GroupedData | null>(null);
     const [nilaiLoading, setNilaiLoading] = useState(false);
+    const [apresiasi, setApresiasi] = useState<ApresiasiItem[]>([]);
     const [selectedTahunAjaran, setSelectedTahunAjaran] = useState('');
     const [selectedSemester, setSelectedSemester] = useState('');
+    const [selectedMapel, setSelectedMapel] = useState('');
+    const [selectedSumber, setSelectedSumber] = useState('all');
     const [availableTahunAjaran, setAvailableTahunAjaran] = useState<string[]>([]);
     const [availableSemesters, setAvailableSemesters] = useState<string[]>([]);
+    const [kkmMap, setKkmMap] = useState<Record<string, number>>({});
     const [searchQuery, setSearchQuery] = useState('');
+    const nilaiRequest = useRef(0);
 
     const loadData = useCallback(async () => {
         if (!nip) { setLoading(false); setError('NIP guru tidak ditemukan.'); return; }
@@ -84,32 +168,64 @@ export default function GuruAsuhTabPenilaian({ user }: { user?: any }) {
     useEffect(() => { loadData(); }, [loadData]);
 
     const fetchNilai = useCallback(async (nisn: string) => {
+        const requestId = ++nilaiRequest.current;
         setNilaiLoading(true);
+        setNilaiData(null);
+        setApresiasi([]);
         try {
-            const params = new URLSearchParams();
-            params.append('nisn', nisn);
-            // Jangan filter oleh guruNip - guru asuh harus lihat semua nilai untuk siswa nya
+            const params = new URLSearchParams({ nisn });
             const res = await fetch(`/api/nilai/siswa?${params.toString()}`);
             const json = await res.json();
+            if (requestId !== nilaiRequest.current) return;
             if (json.ok && json.data) {
                 setNilaiData(json.data);
+
+                // Ekstrak KKM konfigurasi guru jika ada
+                const kkmDict: Record<string, number> = {};
+                if (Array.isArray(json.bobot)) {
+                    json.bobot.forEach((b: any) => {
+                        const cfg = b.bobot_config;
+                        if (b.mapel && cfg && typeof cfg.kkm === 'number' && cfg.kkm > 0) {
+                            kkmDict[b.mapel] = Number(cfg.kkm);
+                        }
+                    });
+                }
+                if (Array.isArray(json.data?.all)) {
+                    json.data.all.forEach((item: any) => {
+                        if (item.mapel && item.kkm && !kkmDict[item.mapel]) {
+                            kkmDict[item.mapel] = Number(item.kkm);
+                        }
+                    });
+                }
+                setKkmMap(kkmDict);
+
                 if (json.data?.grouped) {
-                    const tahunList = Object.keys(json.data.grouped).sort((a: string, b: string) => b.localeCompare(a));
+                    const activeYears = await getActiveTahunAjaranList();
+                    if (requestId !== nilaiRequest.current) return;
+                    const dataYears = Object.keys(json.data.grouped);
+                    const tahunList = [...new Set<string>([...activeYears, ...dataYears])]
+                        .sort((a, b) => b.localeCompare(a));
                     setAvailableTahunAjaran(tahunList);
                     if (tahunList.length > 0) {
                         const defaultTa = (ta.selected && tahunList.includes(ta.selected)) ? ta.selected : tahunList[0];
                         setSelectedTahunAjaran(defaultTa);
-                        // Set semester based on available data
-                        const semesters = Object.keys(json.data.grouped[defaultTa] || {}).sort();
-                        setAvailableSemesters(semesters);
-                        if (semesters.length > 0) setSelectedSemester(semesters[0]);
                     }
                 }
-            } else {
-                console.log('[DEBUG] fetchNilai response:', json);
             }
-        } catch (e) { console.error(e); }
-        finally { setNilaiLoading(false); }
+
+            try {
+                const resApr = await fetch(`/api/nilai/siswa/apresiasi?nisn=${encodeURIComponent(nisn)}&tahun_ajaran=all`);
+                const jsonApr = await resApr.json();
+                if (requestId !== nilaiRequest.current) return;
+                setApresiasi(jsonApr?.ok ? (jsonApr.data || []) : []);
+            } catch {
+                if (requestId === nilaiRequest.current) setApresiasi([]);
+            }
+        } catch (e) {
+            if (requestId === nilaiRequest.current) console.error(e);
+        } finally {
+            if (requestId === nilaiRequest.current) setNilaiLoading(false);
+        }
     }, [ta.selected]);
 
     const allYearOptions: string[] = useMemo(() => {
@@ -130,18 +246,38 @@ export default function GuruAsuhTabPenilaian({ user }: { user?: any }) {
             tahun_ajaran: s.tahun_ajaran || '',
             foto_profil: s.foto_profil || null,
         });
+        setSelectedSumber('all');
+        setSelectedMapel('');
         setView('detail');
         fetchNilai(nisn);
     };
 
     const handleBack = () => {
+        nilaiRequest.current++;
         setView('list');
         setSelectedNisn('');
         setSelectedSiswa(null);
         setNilaiData(null);
+        setApresiasi([]);
         setSearchQuery('');
+        setSelectedSumber('all');
+        setSelectedMapel('');
         setAvailableSemesters([]);
+        setKkmMap({});
     };
+
+    useEffect(() => {
+        if (nilaiData?.grouped && selectedTahunAjaran) {
+            const allSemesters = ['1', '2'];
+            const monthDefault = currentSemesterDefault();
+            const withData = Object.keys(nilaiData.grouped[selectedTahunAjaran] || {});
+            setAvailableSemesters([...new Set([...allSemesters, ...withData])]);
+            setSelectedSemester(prev => {
+                if (prev && (withData.includes(prev) || allSemesters.includes(prev))) return prev;
+                return withData.includes(monthDefault) ? monthDefault : (withData[0] || monthDefault);
+            });
+        }
+    }, [nilaiData, selectedTahunAjaran]);
 
     const filteredStudents = useMemo(() => {
         if (!data?.siswa_list) return [];
@@ -156,9 +292,32 @@ export default function GuruAsuhTabPenilaian({ user }: { user?: any }) {
     }, [data?.siswa_list, searchQuery]);
 
     const currentItems = useMemo(() => {
-        if (!nilaiData?.grouped || !selectedTahunAjaran || !selectedSemester) return nilaiData?.all || [];
-        return nilaiData.grouped[selectedTahunAjaran]?.[selectedSemester] || [];
-    }, [nilaiData, selectedTahunAjaran, selectedSemester]);
+        let items: NilaiItem[] = [];
+        if (!nilaiData?.grouped || !selectedTahunAjaran || !selectedSemester) {
+            items = nilaiData?.all || [];
+        } else {
+            items = nilaiData.grouped[selectedTahunAjaran]?.[selectedSemester] || [];
+        }
+
+        // Filter out empty PAS rows as requested by user
+        return items.filter(i => {
+            if (selectedSumber !== 'all' && (i.sumber || 'guru') !== selectedSumber) return false;
+            if (i.jenis === 'PAS' && (i.nilai === null || i.nilai === undefined)) return false;
+            return true;
+        });
+    }, [nilaiData, selectedTahunAjaran, selectedSemester, selectedSumber]);
+
+    const currentApresiasi = useMemo(() => {
+        const parsed = parseInt(selectedSemester);
+        const semNum = isNaN(parsed) ? null : parsed;
+        return apresiasi.filter(a => {
+            if (selectedSumber === 'cbt') return false;
+            if (selectedTahunAjaran && a.tahun_ajaran && a.tahun_ajaran !== selectedTahunAjaran) return false;
+            if (semNum !== null && a.semester !== null && a.semester !== semNum) return false;
+            if (selectedMapel && a.mapel && a.mapel !== selectedMapel) return false;
+            return true;
+        });
+    }, [apresiasi, selectedTahunAjaran, selectedSemester, selectedMapel, selectedSumber]);
 
     const groupedByMapel = useMemo(() => {
         const grouped: Record<string, NilaiItem[]> = {};
@@ -170,44 +329,109 @@ export default function GuruAsuhTabPenilaian({ user }: { user?: any }) {
         return grouped;
     }, [currentItems]);
 
-    const formatDate = (dateStr: string): string => {
-        const d = new Date(dateStr);
-        return d.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
-    };
+    const availableMapel = useMemo(() => Object.keys(groupedByMapel).sort(), [groupedByMapel]);
 
-    const getNilaiBadge = (nilai: number | null) => {
-        if (nilai === null) return { cls: 'badge-none', label: '-' };
-        if (nilai >= 90) return { cls: 'badge-blue', label: String(nilai) };
-        if (nilai >= 80) return { cls: 'badge-blue-soft', label: String(nilai) };
-        if (nilai >= 70) return { cls: 'badge-amber', label: String(nilai) };
-        if (nilai >= 60) return { cls: 'badge-orange', label: String(nilai) };
-        return { cls: 'badge-rose', label: String(nilai) };
-    };
+    const displayedMapelList = useMemo(() => {
+        if (!selectedMapel) return availableMapel;
+        return availableMapel.filter(m => m === selectedMapel);
+    }, [availableMapel, selectedMapel]);
 
-    const getJenisBadge = (jenis: string) => {
-        const map: Record<string, string> = {
-            'PAS': 'jbadge-blue',
-            'UH': 'jbadge-blue',
-            'TUGAS': 'jbadge-emerald',
-            'KUIS': 'jbadge-amber',
-            'SUM': 'jbadge-rose',
+    const displayedItems = useMemo(() => {
+        if (!selectedMapel) return currentItems;
+        return currentItems.filter(i => (i.mapel || 'Lainnya') === selectedMapel);
+    }, [currentItems, selectedMapel]);
+
+    // Reset filter mapel jika mapel terpilih tidak ada pada data baru
+    useEffect(() => {
+        if (selectedMapel && !availableMapel.includes(selectedMapel)) {
+            setSelectedMapel('');
+        }
+    }, [availableMapel, selectedMapel]);
+
+    const displayedGradeGroups = useMemo(() => {
+        const groups = displayedMapelList.map(mapel => ({
+            key: `guru:${mapel}`,
+            title: mapel,
+            isCbt: false,
+            items: (groupedByMapel[mapel] || []).filter(item => item.sumber !== 'cbt'),
+        })).filter(group => group.items.length > 0);
+        const cbtItems = displayedItems.filter(item => item.sumber === 'cbt');
+        if (cbtItems.length) groups.push({ key: 'cbt', title: 'Nilai ACCA-CBT', isCbt: true, items: cbtItems });
+        return groups;
+    }, [displayedMapelList, groupedByMapel, displayedItems]);
+
+    const regularKelas = useMemo(() => {
+        const normalizeSemester = (value: string | number | null) => {
+            const normalized = String(value || '').trim().toLowerCase();
+            return normalized === 'ganjil' ? '1' : normalized === 'genap' ? '2' : normalized;
         };
-        return map[jenis] || 'jbadge-slate';
+        const kelasFromData = [...new Set((nilaiData?.kelas || []).filter((item: any) =>
+            (!selectedTahunAjaran || item.tahun_ajaran === selectedTahunAjaran) &&
+            (!selectedSemester || normalizeSemester(item.semester) === selectedSemester)
+        ).map((item: any) => item.kelas).filter(Boolean))].join(', ');
+        return kelasFromData || selectedSiswa?.kelas || '-';
+    }, [nilaiData?.kelas, selectedTahunAjaran, selectedSemester, selectedSiswa?.kelas]);
+
+    const stats = useMemo(() => {
+        const validItems = displayedItems.filter(i => i.nilai !== null);
+        const avg = validItems.length > 0
+            ? validItems.reduce((sum, i) => sum + (i.nilai || 0), 0) / validItems.length
+            : null;
+        return {
+            total: displayedItems.length,
+            mapel: displayedMapelList.length,
+            avg,
+            kelas: regularKelas,
+        };
+    }, [displayedItems, displayedMapelList, regularKelas]);
+
+    const getSemesterLabel = (sem: string | number) => {
+        const s = String(sem);
+        if (s === '1') return 'Ganjil';
+        if (s === '2') return 'Genap';
+        if (s === '0' || s === 'Unknown') return 'Belum ditentukan';
+        return s;
     };
 
-    const getJenisLabel = (jenis: string, tagihan?: string, materiTp?: string): string => {
+    const formatNumber = (val: number | null | undefined): string => {
+        if (val === null || val === undefined || isNaN(Number(val))) return '-';
+        return Number(Number(val).toFixed(2)).toString();
+    };
+
+    const getNilaiBadge = (nilai: number | null | undefined, kkm = 75) => {
+        if (nilai === null || nilai === undefined) return { cls: 'nilai-page__nilai-badge--none', label: '-' };
+        const num = Number(nilai);
+        if (isNaN(num)) return { cls: 'nilai-page__nilai-badge--none', label: '-' };
+        const val = Number(num.toFixed(2));
+        const highThreshold = Math.max(kkm + 10, 85);
+        const label = val.toString();
+        if (val < kkm) return { cls: 'nilai-page__nilai-badge--merah', label };
+        if (val < highThreshold) return { cls: 'nilai-page__nilai-badge--orange', label };
+        return { cls: 'nilai-page__nilai-badge--biru', label };
+    };
+
+    const getAvgBadgeCls = (avg: number | null | undefined, kkm = 75) => {
+        if (avg === null || avg === undefined) return 'nilai-page__avg-badge--none';
+        const val = Number(avg);
+        const highThreshold = Math.max(kkm + 10, 85);
+        if (val < kkm) return 'nilai-page__avg-badge--merah';
+        if (val < highThreshold) return 'nilai-page__avg-badge--orange';
+        return 'nilai-page__avg-badge--biru';
+    };
+
+    const getJenisLabel = (jenis: string, tagihan?: string, materiTp?: string) => {
         if (tagihan) {
-            const m = tagihan.match(/^(TUGAS|KUIS)[_\s]*(\d+)/i);
-            if (m) return `${m[1].toUpperCase()} ${m[2]}`;
+            const match = tagihan.match(/^(TUGAS|KUIS)[_\s]*(\d+)/i);
+            if (match) return `${match[1].toUpperCase()} ${match[2]}`;
         }
         if (materiTp) {
-            const m = materiTp.match(/^(TUGAS|KUIS)[_\s]*(\d+)/i);
-            if (m) return `${m[1].toUpperCase()} ${m[2]}`;
+            const match = materiTp.match(/^(TUGAS|KUIS)[_\s]*(\d+)/i);
+            if (match) return `${match[1].toUpperCase()} ${match[2]}`;
         }
         return jenis;
     };
 
-    const getTopikDisplay = (item: NilaiItem): string => {
+    const getTopikDisplay = (item: NilaiItem) => {
         const base = item.materi_tp || item.tagihan || '-';
         if (item.topik && item.topik !== '-' && item.topik.trim() !== '') {
             return `${base}: ${item.topik}`;
@@ -216,55 +440,31 @@ export default function GuruAsuhTabPenilaian({ user }: { user?: any }) {
     };
 
     const parseSumInfo = (item: NilaiItem) => {
+        if (item.sumber === 'cbt') return { sumGroup: '-', actualTopic: item.materi_tp, isSumType: false };
         const full = getTopikDisplay(item);
+
         const sumMatch = full.match(/^(SUM\s*\d+)(?:\s*[:\-]\s*(.*))?$/i);
         if (sumMatch) {
-            return { sumGroup: sumMatch[1].toUpperCase(), actualTopic: (sumMatch[2] || '').trim() || '-', isSumType: true };
+            return {
+                sumGroup: sumMatch[1].toUpperCase(),
+                actualTopic: (sumMatch[2] || '').trim() || '-',
+                isSumType: true
+            };
         }
+
         if (item.jenis === 'PAS' || full.toUpperCase().startsWith('PAS')) {
-            return { sumGroup: 'PAS', actualTopic: '-', isSumType: true };
+            return {
+                sumGroup: 'PAS',
+                actualTopic: '-',
+                isSumType: true
+            };
         }
-        return { sumGroup: '-', actualTopic: full, isSumType: false };
-    };
 
-    const buildTableRows = (items: NilaiItem[]) => {
-        const withInfo = items.map(i => ({ ...i, info: parseSumInfo(i) }));
-
-        withInfo.sort((a, b) => {
-            if (a.info.sumGroup !== b.info.sumGroup) {
-                if (a.info.sumGroup === '-') return 1;
-                if (b.info.sumGroup === '-') return -1;
-                if (a.info.sumGroup === 'PAS' && b.info.sumGroup.startsWith('SUM')) return 1;
-                if (a.info.sumGroup.startsWith('SUM') && b.info.sumGroup === 'PAS') return -1;
-                return a.info.sumGroup.localeCompare(b.info.sumGroup);
-            }
-            const pri = (j: string) => j === 'SUM' || j === 'PAS' ? 0 : j === 'KUIS' ? 10 : j === 'TUGAS' ? 20 : j === 'UH' ? 100 : 50;
-            const diff = pri(a.jenis) - pri(b.jenis);
-            if (diff !== 0) return diff;
-            return getJenisLabel(a.jenis, a.tagihan, a.materi_tp).localeCompare(getJenisLabel(b.jenis, b.tagihan, b.materi_tp), undefined, { numeric: true });
-        });
-
-        const rows: any[] = [];
-        let i = 0;
-        while (i < withInfo.length) {
-            const currentSum = withInfo[i].info.sumGroup;
-            if (currentSum !== '-') {
-                let j = i;
-                while (j < withInfo.length && withInfo[j].info.sumGroup === currentSum) j++;
-                const count = j - i;
-                const groupItems = withInfo.slice(i, j);
-                let groupTopic = '-';
-                const sumRow = groupItems.find(r => r.jenis === 'SUM' && r.info.actualTopic !== '-');
-                if (sumRow) groupTopic = sumRow.info.actualTopic;
-                else { const f = groupItems.find(r => r.info.actualTopic !== '-'); if (f) groupTopic = f.info.actualTopic; }
-                for (let k = i; k < j; k++) rows.push({ ...withInfo[k], rowSpan: k === i ? count : 0, groupTopic });
-                i = j;
-            } else {
-                rows.push({ ...withInfo[i], rowSpan: 1 });
-                i++;
-            }
-        }
-        return rows;
+        return {
+            sumGroup: '-',
+            actualTopic: full,
+            isSumType: false
+        };
     };
 
     if (loading) return <PageLoader minHeight="300px" />;
@@ -276,179 +476,440 @@ export default function GuruAsuhTabPenilaian({ user }: { user?: any }) {
         </div>
     );
 
-
     if (view === 'detail') {
         const studentPhoto = selectedSiswa?.foto_profil || nilaiData?.siswa?.foto_profil;
         return (
-            <div className="gan-detail">
-                <DetailHeader
-                    onBack={handleBack}
-                    backLabel="Kembali ke Daftar Siswa"
-                    name={selectedSiswa?.nama || (selectedSiswa as any)?.nama_siswa || '...'}
-                    meta={`NISN: ${selectedNisn} - ${selectedSiswa?.kelas || ''}`}
-                    avatarSrc={studentPhoto ? getProxiedImageUrl(studentPhoto) : undefined}
-                >
-                    <DetailHeaderSelect
-                        icon="mortarboard"
-                        value={selectedTahunAjaran}
-                        onChange={e => {
-                            setSelectedTahunAjaran(e.target.value);
-                            const semesters = Object.keys(nilaiData?.grouped?.[e.target.value] || {}).sort();
-                            setAvailableSemesters(semesters);
-                            if (semesters.length > 0) setSelectedSemester(semesters[0]);
-                        }}
-                    >
-                        {availableTahunAjaran.map(t => <option key={t} value={t}>{t}</option>)}
-                    </DetailHeaderSelect>
-                    <DetailHeaderSelect
-                        icon="clock-history"
-                        value={selectedSemester}
-                        onChange={e => setSelectedSemester(e.target.value)}
-                    >
-                        {availableSemesters.map(s => {
-                            const semVal = String(s);
-                            const label = semVal === '1' ? 'Ganjil' : 'Genap';
-                            return <option key={s} value={semVal}>{label}</option>;
-                        })}
-                    </DetailHeaderSelect>
-                </DetailHeader>
+            <div className="nilai-page">
+                <div className="nilai-page__inner">
+                    <DetailHeader
+                        onBack={handleBack}
+                        backLabel="Kembali ke Daftar Siswa"
+                        name={selectedSiswa?.nama || (selectedSiswa as any)?.nama_siswa || '...'}
+                        meta={`NISN ${selectedNisn}${regularKelas !== '-' ? ` - ${regularKelas}` : ''}`}
+                        avatarSrc={studentPhoto ? getProxiedImageUrl(studentPhoto) : undefined}
+                    />
 
-                {nilaiLoading ? (
-                    <PageLoader minHeight="240px" />
-                ) : (
-                    <div className="nilai-content">
-                        {Object.keys(groupedByMapel).length === 0 ? (
-                            <div className="empty-state">
-                                <i className="bi bi-clipboard-check" />
-                                <p>Belum ada data nilai pada periode ini</p>
-                            </div>
-                        ) : (
-                            Object.entries(groupedByMapel).map(([mapelName, items]) => {
-                                const validItems = items.filter(i => i.nilai !== null);
-                                const avg = validItems.length > 0 ? validItems.reduce((sum, i) => sum + (i.nilai || 0), 0) / validItems.length : 0;
-                                const tableRows = buildTableRows(items);
-                                return (
-                                    <div key={mapelName} className="mapel-section">
-                                        <div className="mapel-header">
-                                            <i className="bi bi-book" />
-                                            <span className="mapel-name">{mapelName}</span>
-                                            <span className={`avg-badge avg-badge--${avg >= 90 ? 'blue' : avg >= 80 ? 'blue-soft' : avg >= 70 ? 'amber' : avg >= 60 ? 'orange' : 'rose'}`}>{avg.toFixed(1)}</span>
+                    {nilaiLoading ? (
+                        <div className="nilai-page__spinner" style={{ padding: '60px 0', display: 'flex', justifyContent: 'center' }}>
+                            <Spinner variant="buble" size={32} />
+                        </div>
+                    ) : (
+                        <div className="nilai-page__content">
+                            {/* Filters Toolbar */}
+                            <FilterToolbar className="nilai-page__filter-toolbar">
+                                <FilterSelect
+                                    label="Sumber Nilai"
+                                    icon="funnel"
+                                    value={selectedSumber}
+                                    onChange={setSelectedSumber}
+                                    options={[
+                                        { value: 'all', label: 'Semua Sumber' },
+                                        { value: 'guru', label: 'Input Guru' },
+                                        { value: 'cbt', label: 'CBT' },
+                                    ]}
+                                />
+                                {availableTahunAjaran.length > 0 && (
+                                    <FilterSelect
+                                        label="Tahun Ajaran"
+                                        icon="mortarboard"
+                                        value={selectedTahunAjaran}
+                                        onChange={setSelectedTahunAjaran}
+                                        options={availableTahunAjaran.map((t) => ({ value: t, label: t }))}
+                                    />
+                                )}
+                                {availableSemesters.length > 0 && (
+                                    <FilterSelect
+                                        label="Semester"
+                                        icon="journal-bookmark"
+                                        value={selectedSemester}
+                                        onChange={setSelectedSemester}
+                                        options={availableSemesters.map((sem) => ({ value: sem, label: getSemesterLabel(sem) }))}
+                                    />
+                                )}
+                                {availableMapel.length > 0 && (
+                                    <FilterSelect
+                                        label="Mapel"
+                                        icon="book"
+                                        value={selectedMapel}
+                                        onChange={setSelectedMapel}
+                                        options={[
+                                            { value: '', label: 'Semua Mapel' },
+                                            ...availableMapel.map((m) => ({ value: m, label: m }))
+                                        ]}
+                                    />
+                                )}
+                            </FilterToolbar>
+
+                            {selectedSumber !== 'guru' && nilaiData?.cbt_linkage === 'ambiguous' && (
+                                <p className="nilai-page__source-note" role="status">Akun CBT belum dapat dicocokkan secara pasti. Hubungi administrator untuk memeriksa identitas akun.</p>
+                            )}
+                            {selectedSumber !== 'guru' && nilaiData?.cbt_linkage === 'unlinked' && (
+                                <p className="nilai-page__source-note" role="status">Belum ditemukan akun CBT yang terhubung dengan siswa ini.</p>
+                            )}
+
+                            {/* Stats Cards */}
+                            <div className="nilai-page__stats-grid">
+                                {[
+                                    { icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2', bg: 'nilai-page__stat--blue', color: 'nilai-page__stat-color--blue', label: 'Total Nilai', value: stats.total },
+                                    { icon: 'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253', bg: 'nilai-page__stat--blue', color: 'nilai-page__stat-color--blue', label: 'Mapel', value: stats.mapel },
+                                    { icon: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z', bg: 'nilai-page__stat--blue', color: 'nilai-page__stat-color--blue', label: 'Rata-rata', value: formatNumber(stats.avg) },
+                                    { icon: 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4', bg: 'nilai-page__stat--blue', color: 'nilai-page__stat-color--blue', label: 'Kelas', value: stats.kelas },
+                                ].map((stat, idx) => (
+                                    <div key={idx} className="nilai-page__stat-card">
+                                        <div className={`nilai-page__stat-icon ${stat.bg}`}>
+                                            <svg className={`nilai-page__stat-svg ${stat.color}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={stat.icon} />
+                                            </svg>
                                         </div>
-                                        <div className="nilai-table-wrap">
-                                            <table className="nilai-table">
-                                                <thead>
-                                                    <tr>
-                                                        <th className="th-sumatif">Sumatif</th>
-                                                        <th>Jenis</th>
-                                                        <th>Topik</th>
-                                                        <th className="th-right">Nilai</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    {tableRows.map((item, idx) => {
-                                                        const nilaiBadge = getNilaiBadge(item.nilai);
-                                                        const jenisCls = getJenisBadge(item.jenis);
-                                                        return (
-                                                            <tr key={item.id || idx}>
-                                                                {item.rowSpan > 0 && (
-                                                                    <td className="td-sumatif" rowSpan={item.rowSpan}>
-                                                                        <div className="sumatif-group">
-                                                                            <span className="sumatif-name">
-                                                                                {item.info.sumGroup === '-' ? '-' : item.info.sumGroup}
-                                                                            </span>
-                                                                            {item.info.sumGroup !== '-' && item.info.sumGroup !== 'PAS' && item.groupTopic !== '-' && (
-                                                                                <span className="sumatif-topic">{item.groupTopic}</span>
+                                        <div className="nilai-page__stat-body">
+                                            <p className="nilai-page__stat-label">{stat.label}</p>
+                                            <p className={`nilai-page__stat-value${stat.label === 'Kelas' ? ' nilai-page__stat-value--kelas' : ''}`}>{stat.value}</p>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+
+                            {/* Grades */}
+                            {displayedGradeGroups.length === 0 ? (
+                                <div className="nilai-page__card nilai-page__empty-state" style={{ padding: '48px', textAlign: 'center' }}>
+                                    <h3 className="nilai-page__empty-title">Belum ada data nilai pada periode ini</h3>
+                                </div>
+                            ) : (
+                                <div className="nilai-page__mapel-list">
+                                    {displayedGradeGroups.map(({ key, title: mapel, items, isCbt }) => {
+                                        const itemsWithInfo = items.map(i => ({
+                                            ...i,
+                                            info: parseSumInfo(i)
+                                        }));
+
+                                        // Sort by sumGroup then by type (SUM assessments first in group)
+                                        itemsWithInfo.sort((a, b) => {
+                                            if (a.info.sumGroup !== b.info.sumGroup) {
+                                                if (a.info.sumGroup === '-') return 1;
+                                                if (b.info.sumGroup === '-') return -1;
+                                                if (a.info.sumGroup === 'PAS' && b.info.sumGroup.startsWith('SUM')) return 1;
+                                                if (a.info.sumGroup.startsWith('SUM') && b.info.sumGroup === 'PAS') return -1;
+                                                return a.info.sumGroup.localeCompare(b.info.sumGroup);
+                                            }
+                                            const getPriority = (j: string) => {
+                                                if (j === 'SUM' || j === 'PAS') return 0;
+                                                if (j === 'UH') return 100;
+                                                if (j === 'KUIS') return 10;
+                                                if (j === 'TUGAS') return 20;
+                                                return 50;
+                                            };
+                                            const priA = getPriority(a.jenis);
+                                            const priB = getPriority(b.jenis);
+                                            if (priA !== priB) return priA - priB;
+                                            const labelA = getJenisLabel(a.jenis, a.tagihan, a.materi_tp);
+                                            const labelB = getJenisLabel(b.jenis, b.tagihan, b.materi_tp);
+                                            return labelA.localeCompare(labelB, undefined, { numeric: true });
+                                        });
+
+                                        // Calculate RowSpans
+                                        const tableRows: any[] = [];
+                                        let i = 0;
+                                        while (i < itemsWithInfo.length) {
+                                            let j = i;
+                                            const currentSum = itemsWithInfo[i].info.sumGroup;
+                                            if (currentSum !== '-') {
+                                                while (j < itemsWithInfo.length && itemsWithInfo[j].info.sumGroup === currentSum) {
+                                                    j++;
+                                                }
+                                                const count = j - i;
+                                                let groupTopic = '-';
+                                                const groupItems = itemsWithInfo.slice(i, j);
+                                                const sumAssessmentRow = groupItems.find(item => item.jenis === 'SUM' && item.info.actualTopic !== '-');
+                                                if (sumAssessmentRow) {
+                                                    groupTopic = sumAssessmentRow.info.actualTopic;
+                                                } else {
+                                                    const firstTopicRow = groupItems.find(item => item.info.actualTopic !== '-');
+                                                    if (firstTopicRow) groupTopic = firstTopicRow.info.actualTopic;
+                                                }
+
+                                                for (let k = i; k < j; k++) {
+                                                    tableRows.push({
+                                                        ...itemsWithInfo[k],
+                                                        rowSpan: k === i ? count : 0,
+                                                        groupTopic
+                                                    });
+                                                }
+                                                i = j;
+                                            } else {
+                                                tableRows.push({
+                                                    ...itemsWithInfo[i],
+                                                    rowSpan: 1
+                                                });
+                                                i++;
+                                            }
+                                        }
+
+                                        const mapelKkm = items.find(i => i.kkm)?.kkm || kkmMap[mapel] || 75;
+                                        const avg = items.filter(i => i.nilai !== null).length > 0
+                                            ? items.reduce((sum, i) => sum + (i.nilai || 0), 0) / items.filter(i => i.nilai !== null).length
+                                            : null;
+
+                                        return (
+                                            <div key={key} className="nilai-page__mapel-card">
+                                                <div className="nilai-page__mapel-header">
+                                                    <div className="nilai-page__mapel-header-left">
+                                                        <div className="nilai-page__mapel-icon">
+                                                            <svg className="nilai-page__mapel-icon-svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                                                            </svg>
+                                                        </div>
+                                                        <div className="nilai-page__mapel-info">
+                                                            <h3 className="nilai-page__mapel-title" style={{ fontWeight: 500 }}>{mapel}</h3>
+                                                            {!isCbt && <p className="nilai-page__mapel-guru" style={{ fontSize: '0.75rem', color: 'var(--n-muted)', marginTop: '2px', fontWeight: 500 }}>{Array.from(new Set(items.map(i => i.nama_guru).filter(Boolean))).join(', ')}</p>}
+                                                        </div>
+                                                    </div>
+                                                    {avg !== null && (
+                                                        <div className={`nilai-page__avg-badge ${getAvgBadgeCls(avg, mapelKkm)}`}>
+                                                            <svg className="nilai-page__avg-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                                                            </svg>
+                                                            {formatNumber(avg)}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                <div className="nilai-page__mapel-body">
+                                                    {isCbt ? (
+                                                        <CbtGrades items={items} getBadge={getNilaiBadge} />
+                                                    ) : (
+                                                        <>
+                                                            {/* Desktop Table */}
+                                                            <div className="nilai-page__table-wrap">
+                                                                <table className="nilai-page__table">
+                                                                    <thead>
+                                                                        <tr>
+                                                                            <th className="nilai-page__th">Sumatif</th>
+                                                                            <th className="nilai-page__th">Jenis</th>
+                                                                            <th className="nilai-page__th">Topik</th>
+                                                                            <th className="nilai-page__th nilai-page__th--right">Nilai</th>
+                                                                        </tr>
+                                                                    </thead>
+                                                                    <tbody>
+                                                                        {tableRows.map((item, idx) => {
+                                                                            const itemKkm = item.kkm || mapelKkm;
+                                                                            const nilai = getNilaiBadge(item.nilai, itemKkm);
+                                                                            return (
+                                                                                <tr key={item.id || idx} className="nilai-page__tr">
+                                                                                    {item.rowSpan > 0 && (
+                                                                                        <td className="nilai-page__td nilai-page__td--sumatif" rowSpan={item.rowSpan}>
+                                                                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                                                                                <span style={{ fontWeight: '800', fontSize: '0.875rem' }}>
+                                                                                                    {item.info.sumGroup === '-' ? '-' : item.info.sumGroup}
+                                                                                                </span>
+                                                                                                {item.info.sumGroup !== '-' && item.info.sumGroup !== 'PAS' && item.groupTopic !== '-' && (
+                                                                                                    <span style={{ fontSize: '0.75rem', fontWeight: '500', opacity: 0.75, lineHeight: '1.2' }}>
+                                                                                                        {item.groupTopic}
+                                                                                                    </span>
+                                                                                                )}
+                                                                                            </div>
+                                                                                        </td>
+                                                                                    )}
+                                                                                    <td className="nilai-page__td">
+                                                                                        {item.info.sumGroup !== 'PAS' ? (
+                                                                                            <span className={`nilai-page__jenis-badge nilai-page__jenis-badge--${item.jenis.toLowerCase()}`}>{getJenisLabel(item.jenis, item.tagihan, item.materi_tp)}</span>
+                                                                                        ) : (
+                                                                                            <span className="nilai-page__td--muted">-</span>
+                                                                                        )}
+                                                                                    </td>
+                                                                                    <td className="nilai-page__td nilai-page__td--muted">
+                                                                                        {item.info.sumGroup !== 'PAS' ? item.info.actualTopic : '-'}
+                                                                                    </td>
+                                                                                    <td className="nilai-page__td nilai-page__td--right">
+                                                                                        <span className={`nilai-page__nilai-badge ${nilai.cls}`}>{nilai.label}</span>
+                                                                                    </td>
+                                                                                </tr>
+                                                                            );
+                                                                        })}
+                                                                    </tbody>
+                                                                </table>
+                                                            </div>
+
+                                                            {/* Mobile Cards */}
+                                                            <div className="nilai-page__mobile-cards" style={{ gap: '10px' }}>
+                                                                {tableRows.map((item, idx) => {
+                                                                    const itemKkm = item.kkm || mapelKkm;
+                                                                    const nilai = getNilaiBadge(item.nilai, itemKkm);
+                                                                    const isSumGroup = item.info.sumGroup !== '-' && item.info.sumGroup !== 'PAS';
+
+                                                                    return (
+                                                                        <div key={(item.id || idx) + '_mobile_container'}>
+                                                                            {/* SUM Group Header */}
+                                                                            {isSumGroup && item.rowSpan > 0 && (
+                                                                                <div style={{
+                                                                                    marginBottom: '10px',
+                                                                                    padding: '6px 4px',
+                                                                                    display: 'flex',
+                                                                                    alignItems: 'center',
+                                                                                    gap: '10px',
+                                                                                    borderBottom: '2px solid #3b82f6',
+                                                                                    marginTop: idx > 0 ? '16px' : '0'
+                                                                                }}>
+                                                                                    <span style={{ fontSize: '0.75rem', fontWeight: 900, color: 'var(--n-primary)', background: 'rgba(59, 130, 246, 0.14)', padding: '2px 10px', borderRadius: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                                                                        {item.info.sumGroup}
+                                                                                    </span>
+                                                                                    {item.groupTopic && item.groupTopic !== '-' && (
+                                                                                        <span style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--n-text)' }}>
+                                                                                            {item.groupTopic}
+                                                                                        </span>
+                                                                                    )}
+                                                                                </div>
                                                                             )}
+
+                                                                            <div className="nilai-page__mobile-card" style={{
+                                                                                borderLeft: isSumGroup ? '4px solid #3b82f6' : '1px solid var(--n-border)',
+                                                                                paddingLeft: isSumGroup ? '12px' : '16px'
+                                                                            }}>
+                                                                                <div className="nilai-page__mobile-card-header">
+                                                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                                                                        <span className="nilai-page__source-badge">Input Guru</span>
+                                                                                        {item.info.sumGroup === 'PAS' && (
+                                                                                            <span style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--n-primary)', background: 'rgba(59, 130, 246, 0.14)', padding: '2px 8px', borderRadius: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                                                                                Penilaian Akhir Semester (PAS)
+                                                                                            </span>
+                                                                                        )}
+                                                                                        {item.info.sumGroup !== 'PAS' && (
+                                                                                            <span className={`nilai-page__jenis-badge nilai-page__jenis-badge--${item.jenis.toLowerCase()}`} style={{ width: 'fit-content' }}>
+                                                                                                {getJenisLabel(item.jenis, item.tagihan, item.materi_tp)}
+                                                                                            </span>
+                                                                                        )}
+                                                                                    </div>
+                                                                                    <span className={`nilai-page__nilai-badge ${nilai.cls}`}>
+                                                                                        {nilai.label}
+                                                                                    </span>
+                                                                                </div>
+
+                                                                                {item.info.sumGroup !== 'PAS' && (
+                                                                                    <div className="nilai-page__mobile-card-topic" style={{ margin: 0 }}>
+                                                                                        {item.info.actualTopic !== '-' ? item.info.actualTopic : <span style={{ color: 'var(--n-muted)', fontWeight: 400 }}>Tidak ada topik</span>}
+                                                                                    </div>
+                                                                                )}
+
+                                                                                {item.catatan && (
+                                                                                    <div style={{ marginTop: '10px', paddingTop: '8px', borderTop: '1px solid var(--n-border)', fontSize: '0.72rem', color: 'var(--n-muted)', fontStyle: 'italic', display: 'flex', gap: '6px' }}>
+                                                                                        <svg style={{ width: '12px', height: '12px', marginTop: '1px', flexShrink: 0 }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+                                                                                        </svg>
+                                                                                        <span>&ldquo;{item.catatan}&rdquo;</span>
+                                                                                    </div>
+                                                                                )}
+                                                                            </div>
                                                                         </div>
-                                                                    </td>
-                                                                )}
-                                                                <td className="td-jenis">
-                                                                    {item.info.sumGroup !== 'PAS' ? (
-                                                                        <span className={`jenis-badge ${jenisCls}`}>
-                                                                            {getJenisLabel(item.jenis, item.tagihan, item.materi_tp)}
-                                                                        </span>
-                                                                    ) : (
-                                                                        <span className="td-muted">-</span>
-                                                                    )}
+                                                                    );
+                                                                })}
+                                                            </div>
+                                                        </>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+
+                            {/* Nilai Apresiasi */}
+                            {currentApresiasi.length > 0 && (() => {
+                                const totalApresiasiPoin = Number(currentApresiasi.reduce((sum, a) => sum + Number(a.total_poin || 0), 0).toFixed(2));
+                                return (
+                                    <div className="nilai-page__mapel-card">
+                                        <div className="nilai-page__mapel-header">
+                                            <div className="nilai-page__mapel-header-left">
+                                                <div className="nilai-page__mapel-icon">
+                                                    <svg className="nilai-page__mapel-icon-svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                                                    </svg>
+                                                </div>
+                                                <div className="nilai-page__mapel-info">
+                                                    <h3 className="nilai-page__mapel-title">Nilai Apresiasi</h3>
+                                                    <p className="nilai-page__mapel-guru" style={{ fontSize: '0.85rem', color: 'var(--n-muted)', marginTop: '2px', fontWeight: 500 }}>
+                                                        Poin Kuis Rebutan (Cepat Tepat)
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <div className="nilai-page__avg-badge">
+                                                <svg className="nilai-page__avg-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                                                </svg>
+                                                +{formatNumber(totalApresiasiPoin)}
+                                            </div>
+                                        </div>
+                                        <div className="nilai-page__mapel-body">
+                                            <div className="nilai-page__table-wrap">
+                                                <table className="nilai-page__table">
+                                                    <thead>
+                                                        <tr>
+                                                            <th className="nilai-page__th">Sumatif / Mapel</th>
+                                                            <th className="nilai-page__th">Jenis</th>
+                                                            <th className="nilai-page__th">Topik</th>
+                                                            <th className="nilai-page__th nilai-page__th--right">Nilai / Poin</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {currentApresiasi.map((a) => (
+                                                            <tr key={a.id} className="nilai-page__tr">
+                                                                <td className="nilai-page__td nilai-page__td--sumatif">{a.mapel}</td>
+                                                                <td className="nilai-page__td">
+                                                                    <span className="nilai-page__jenis-badge nilai-page__jenis-badge--kuis">KUIS</span>
                                                                 </td>
-                                                                <td className="td-topik">
-                                                                    {item.info.sumGroup !== 'PAS' ? item.info.actualTopic : '-'}
-                                                                </td>
-                                                                <td className="td-right">
-                                                                    <span className={`nilai-badge ${nilaiBadge.cls}`}>{nilaiBadge.label}</span>
+                                                                <td className="nilai-page__td nilai-page__td--muted">{a.judul}{a.topik ? ` · ${a.topik}` : ''}</td>
+                                                                <td className="nilai-page__td nilai-page__td--right">
+                                                                    <span className="nilai-page__apresiasi-poin">+{formatNumber(a.total_poin)}</span>
                                                                 </td>
                                                             </tr>
-                                                        );
-                                                    })}
-                                                </tbody>
-                                            </table>
+                                                        ))}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                            <div className="nilai-page__mobile-cards" style={{ gap: '10px' }}>
+                                                {currentApresiasi.map((a) => (
+                                                    <div key={a.id} className="nilai-page__mobile-card">
+                                                        <div className="nilai-page__mobile-card-header">
+                                                            <span className="nilai-page__jenis-badge nilai-page__jenis-badge--kuis">{a.mapel}</span>
+                                                            <span className="nilai-page__apresiasi-poin">+{formatNumber(a.total_poin)}</span>
+                                                        </div>
+                                                        <div className="nilai-page__mobile-card-topic">
+                                                            {a.judul}{a.topik ? ` · ${a.topik}` : ''}
+                                                        </div>
+                                                        <div className="nilai-page__mobile-card-meta" style={{ marginTop: '4px' }}>
+                                                            {a.jumlah_menang}x jawaban benar{a.nama_guru ? ` · ${a.nama_guru}` : ''}
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
                                         </div>
                                     </div>
                                 );
-                            })
-                        )}
-                    </div>
-                )}
+                            })()}
 
-                <style jsx>{`
-                    .gan-detail { display: flex; flex-direction: column; gap: 20px; padding-bottom: 2rem; }
-                    .empty-state { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 48px; text-align: center; color: var(--n-muted); }
-                    .empty-state i { font-size: 3rem; }
-                    .nilai-content { display: flex; flex-direction: column; gap: 20px; }
-                    .mapel-section { background: var(--n-card); border-radius: 16px; overflow: hidden; border: 1px solid var(--n-border); }
-                    .mapel-header { display: flex; align-items: center; gap: 10px; padding: 14px 18px; background: var(--n-soft); border-bottom: 1px solid var(--n-border); }
-                    .mapel-header i { color: #3083FF; }
-                    .mapel-name { flex: 1; font-size: 0.95rem; font-weight: 800; color: var(--n-text); }
-                    /* avg-badge colors */
-                    .avg-badge { padding: 4px 12px; border-radius: 20px; font-size: 0.78rem; font-weight: 800; }
-                    .avg-badge--blue { background: #dbeafe; color: #1e40af; }
-                    .avg-badge--blue-soft { background: #e0f2fe; color: #1d4ed8; }
-                    .avg-badge--amber { background: #fef3c7; color: #92400e; }
-                    .avg-badge--orange { background: #ffedd5; color: #9a3412; }
-                    .avg-badge--rose { background: #ffe4e6; color: #9f1239; }
-                    /* Table */
-                    .nilai-table-wrap { overflow-x: auto; }
-                    .nilai-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
-                    .nilai-table thead tr { background: var(--n-soft); }
-                    .nilai-table th { padding: 10px 14px; text-align: left; font-weight: 700; color: var(--n-muted); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.04em; border-bottom: 2px solid var(--n-border); white-space: nowrap; }
-                    .th-sumatif { width: 140px; }
-                    .th-right { text-align: right; }
-                    .nilai-table tbody tr { border-bottom: 1px solid var(--n-border); transition: background 0.15s; }
-                    .nilai-table tbody tr:hover { background: #fafbff; }
-                    /* Hover dark mode: #fafbff bikin baris jadi putih & teks putih hilang.
-                       Harus didefinisikan di blok ini karena style block tampilan daftar
-                       tidak ikut ter-mount saat tampilan detail dirender. */
-                    :global(.dark) .nilai-table tbody tr:hover,
-                    :global(.dark) .nilai-table tbody tr:hover td { background: rgba(26, 115, 232, 0.12) !important; }
-                    :global(.dark) .nilai-table tbody tr:hover .td-sumatif { background: rgba(26, 115, 232, 0.2) !important; }
-                    .nilai-table td { padding: 10px 14px; color: var(--n-text); vertical-align: middle; }
-                    /* SUMATIF column */
-                    .td-sumatif { background: var(--n-soft); border-right: 1px solid #e2e8f0; vertical-align: middle; }
-                    .sumatif-group { display: flex; flex-direction: column; gap: 2px; }
-                    .sumatif-name { font-weight: 800; color: var(--n-text); font-size: 0.85rem; }
-                    .sumatif-topic { font-size: 0.72rem; color: var(--n-muted); font-weight: 500; line-height: 1.3; }
-                    /* JENIS column */
-                    .td-jenis { }
-                    .jenis-badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 0.72rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.02em; white-space: nowrap; }
-                    .jbadge-blue { background: #eff6ff; color: #1d4ed8; }
-                    .jbadge-blue { background: #dbeafe; color: #1d4ed8; }
-                    .jbadge-emerald { background: #d1fae5; color: #065f46; }
-                    .jbadge-amber { background: #fef3c7; color: #92400e; }
-                    .jbadge-rose { background: #ffe4e6; color: #9f1239; }
-                    .jbadge-slate { background: var(--n-soft); color: var(--n-muted); }
-                    /* TOPIK column */
-                    .td-topik { color: var(--n-muted); }
-                    .td-muted { color: var(--n-muted); }
-                    /* NILAI column */
-                    .td-right { text-align: right; }
-                    .nilai-badge { display: inline-block; padding: 4px 14px; border-radius: 20px; font-size: 0.85rem; font-weight: 800; min-width: 48px; text-align: center; }
-                    .badge-blue { background: #1d4ed8; color: white; }
-                    .badge-blue-soft { background: #3b82f6; color: white; }
-                    .badge-amber { background: #f59e0b; color: white; }
-                    .badge-orange { background: #f97316; color: white; }
-                    .badge-rose { background: #f43f5e; color: white; }
-                    .badge-none { background: var(--n-soft); color: var(--n-muted); }
-                `}</style>
+                            {/* Legend */}
+                            <div className="nilai-page__card nilai-page__legend">
+                                <h4 className="nilai-page__legend-title">
+                                    <svg className="nilai-page__legend-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                    Keterangan
+                                </h4>
+                                <div className="nilai-page__legend-grid">
+                                    {[
+                                        { label: 'PAS', desc: 'Penilaian Akhir Semester', cls: 'pas' },
+                                        { label: 'UH', desc: 'Ulangan Harian', cls: 'uh' },
+                                        { label: 'TUGAS', desc: 'Tugas', cls: 'tugas' },
+                                        { label: 'KUIS', desc: 'Kuis', cls: 'kuis' },
+                                        { label: 'SUM', desc: 'Sumatif', cls: 'sum' },
+                                    ].map((item) => (
+                                        <div key={item.label} className="nilai-page__legend-item">
+                                            <span className={`nilai-page__jenis-badge nilai-page__jenis-badge--${item.cls}`}>{item.label}</span>
+                                            <span className="nilai-page__legend-desc">{item.desc}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
             </div>
         );
     }
@@ -483,7 +944,7 @@ export default function GuruAsuhTabPenilaian({ user }: { user?: any }) {
                 <div className="gan__empty">
                     <div className="gan__empty-icon"><i className="bi bi-person-hearts" /></div>
                     <h3>Anda belum mengklaim anak asuh untuk tahun ajaran ini</h3>
-                    <p>Pilih tahun ajaran lain di atas atau buka tab "Klaim Anak Asuh" untuk mengklaim siswa yang akan menjadi anak asuh Anda.</p>
+                    <p>Pilih tahun ajaran lain di atas atau buka tab &quot;Klaim Anak Asuh&quot; untuk mengklaim siswa yang akan menjadi anak asuh Anda.</p>
                 </div>
             </div>
         );

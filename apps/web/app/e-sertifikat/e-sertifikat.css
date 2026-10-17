@@ -143,10 +143,13 @@
 .ec-empty-icon { width: 64px; height: 64px; border-radius: 20px; }
 .ec-manager .ec-empty h3 { margin: 4px 0 0; font-size: 1rem; }
 .ec-manager .ec-empty p { max-width: 420px; margin: 0; }
-.ec-manager .ec-detail-heading { justify-content: flex-start; padding: 18px 20px; background: var(--ec-surface); border: 1px solid var(--ec-border); border-radius: 16px; }
-.ec-detail-summary { flex: 1; min-width: 0; }
-.ec-manager .ec-detail-summary h2 { font-size: 1rem; line-height: 1.5; margin: 0 0 8px; overflow-wrap: anywhere; }
-.ec-detail-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; font-size: .74rem; color: var(--ec-muted); }
+.ec-manager .ec-detail-heading { justify-content: flex-start; align-items: center; gap: 12px; padding: 10px 12px; background: var(--ec-surface); border: 1px solid var(--ec-border); border-radius: 12px; }
+.ec-manager .ec-detail-back { min-height: 32px; height: 32px; padding: 0 12px; font-size: .76rem; box-shadow: none; }
+.ec-manager .ec-detail-back .ui-btn__label { gap: 6px; }
+.ec-detail-summary { display: flex; flex: 1; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 16px; min-width: 0; }
+.ec-manager .ec-detail-summary h2 { flex: 1 1 220px; font-size: .9rem; line-height: 1.4; margin: 0; overflow-wrap: anywhere; }
+.ec-detail-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; font-size: .72rem; color: var(--ec-muted); }
+.ec-detail-meta .ec-pill { padding: 3px 8px; font-size: .65rem; }
 .ec-manager .ec-section-title { padding-bottom: 18px; margin-bottom: 18px; border-bottom: 1px solid var(--ec-border); }
 .ec-manager .ec-section-title p { margin-bottom: 0; font-size: .78rem; }
 .ec-manager .ec-section-title h2 { font-size: 1rem; margin-bottom: 6px; }
@@ -164,9 +167,12 @@
   .ec-list-count { margin-left: 52px; }
   .ec-manager .ec-event-grid { grid-template-columns: minmax(0,1fr); gap: 14px; margin-top: 16px; }
   .ec-manager .ec-event-card { padding: 16px; }
-  .ec-manager .ec-detail-heading { padding: 16px; flex-wrap: wrap; gap: 14px; }
-  .ec-detail-summary { flex-basis: 100%; }
-  .ec-manager .ec-detail-summary h2 { font-size: .95rem; }
+  .ec-manager .ec-detail-heading { padding: 10px; flex-wrap: nowrap; align-items: flex-start; gap: 10px; }
+  .ec-manager .ec-detail-back { width: 32px; min-width: 32px; flex: 0 0 32px; padding: 0; }
+  .ec-detail-back-label { display: none; }
+  .ec-detail-summary { flex-direction: column; align-items: flex-start; gap: 5px; }
+  .ec-manager .ec-detail-summary h2 { flex: 0 1 auto; font-size: .85rem; }
+  .ec-detail-meta { gap: 5px 10px; font-size: .69rem; }
   .ec-manager .ec-section-title { gap: 14px; padding-bottom: 16px; margin-bottom: 16px; }
   .ec-manager .ec-actions { gap: 10px; }
 }

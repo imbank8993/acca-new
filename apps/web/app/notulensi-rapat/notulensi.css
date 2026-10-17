@@ -541,10 +541,12 @@
 
 /* ── Pengaturan Akses Tab Styles ─────────────────────────────────────────── */
 .nr-akses-container {
-    max-width: 860px;
+    width: 100%;
+    max-width: none;
+    min-width: 0;
     margin-top: 16px;
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: 16px;
 }
 
@@ -552,11 +554,11 @@
     display: flex;
     align-items: flex-start;
     gap: 16px;
-    padding: 20px 22px;
+    padding: 18px 20px;
     background: var(--n-card, #ffffff);
     border: 1px solid var(--n-border, #e2e8f0);
-    border-radius: 14px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+    border-radius: 12px;
+    box-shadow: none;
 }
 
 .nr-akses-hero-icon {
@@ -634,9 +636,9 @@
 .nr-akses-section {
     background: var(--n-card, #ffffff);
     border: 1px solid var(--n-border, #e2e8f0);
-    border-radius: 14px;
-    padding: 20px 22px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: none;
 }
 
 .nr-akses-section-head {
@@ -1142,3 +1144,75 @@
     color: #94a3b8 !important;
 }
 
+
+/* Access settings fill the content area, with two balanced columns on wide screens. */
+.nr-akses-hero,
+.nr-akses-section { min-width: 0; }
+.nr-akses-hero,
+.nr-akses-footer { grid-column: 1 / -1; }
+.nr-akses-hero { align-items: flex-start; gap: 12px; }
+.nr-akses-hero-icon { width: 36px; height: 36px; font-size: 1rem; border-radius: 10px; }
+.nr-akses-hero-title { font-size: 1rem; }
+.nr-akses-summary-pills { margin-top: 10px; gap: 6px; }
+.nr-akses-summary-badge { border: 0; font-weight: 600; padding: 3px 9px; }
+.nr-akses-summary-badge.admin-fixed { background: rgba(48, 131, 255, 0.08); color: var(--n-primary, #3083ff); }
+.nr-akses-admin-note { margin: 10px 0 0; color: var(--n-muted, #64748b); font-size: 0.76rem; line-height: 1.6; }
+.nr-akses-section-title { font-size: 0.9rem; }
+.nr-akses-section-desc { margin-bottom: 16px; line-height: 1.6; }
+.nr-akses-chip { max-width: 100%; background: var(--n-soft, #f8fafc); }
+.nr-akses-chip-name,
+.nr-akses-chip-meta { min-width: 0; overflow-wrap: anywhere; }
+.nr-akses-chip-remove { flex-shrink: 0; min-width: 28px; min-height: 28px; }
+.nr-akses-empty-state { margin-top: 14px; border: 0; background: transparent; padding: 0; line-height: 1.6; align-items: flex-start; }
+.nr-akses-footer { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--n-border, #e2e8f0); }
+@media (min-width: 1100px) {
+    .nr-akses-container { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
+}
+@media (max-width: 600px) {
+    .nr-akses-container { gap: 12px; }
+    .nr-akses-hero, .nr-akses-section { padding: 16px; }
+    .nr-akses-hero-icon { display: none; }
+    .nr-akses-footer { flex-wrap: wrap; }
+    .nr-akses-footer > button { flex: 1; }
+}
+.dark .nr-akses-hero,
+.dark .nr-akses-section { border-color: rgba(148, 163, 184, 0.2) !important; }
+.dark .nr-akses-admin-note { color: #94a3b8; }
+.dark .nr-akses-section .nr-akses-empty-state { background: transparent !important; }
+
+.nr-add-poin-btn { flex-shrink: 0; white-space: nowrap; }
+
+/* Selected access entries use full-width rows with an explicit remove action. */
+.nr-akses-list { list-style: none; margin: 14px 0 0; padding: 0; }
+.nr-akses-list-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--n-border, #e2e8f0);
+    min-width: 0;
+}
+.nr-akses-list-row:last-child { border-bottom: 0; padding-bottom: 0; }
+.nr-akses-list-person { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.nr-akses-list-name { font-size: 0.83rem; font-weight: 600; color: var(--n-ink, #18345b); overflow-wrap: anywhere; }
+.nr-akses-list-meta { font-size: 0.75rem; color: var(--n-muted, #64748b); overflow-wrap: anywhere; }
+.nr-akses-list-remove {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 36px;
+    height: 36px;
+    border: 0;
+    border-radius: 8px;
+    color: #dc2626;
+    background: transparent;
+    cursor: pointer;
+}
+.nr-akses-list-remove:hover { background: rgba(239, 68, 68, 0.08); }
+.nr-akses-list-remove:focus-visible { outline: 2px solid var(--n-primary, #3083ff); outline-offset: 2px; }
+.dark .nr-akses-list-row { border-color: rgba(148, 163, 184, 0.2); }
+.dark .nr-akses-list-name { color: #f1f5f9; }
+.dark .nr-akses-list-meta { color: #94a3b8; }
+.dark .nr-akses-list-remove { color: #f87171; }

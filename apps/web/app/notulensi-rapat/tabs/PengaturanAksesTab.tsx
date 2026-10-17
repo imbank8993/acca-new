@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/Button';
 import SearchableSelect, { type Option } from '@/components/ui/SearchableSelect';
 import { swalSuccess, swalError } from '@/lib/swal-premium';
 import { formatRoleDisplay } from '@/lib/auth';
+import { Trash2 } from 'lucide-react';
 
 interface UserAccessItem {
     id: string;
@@ -175,44 +176,6 @@ export default function PengaturanAksesTab({ headerTabs }: { headerTabs?: React.
             {headerTabs}
 
             <div className="nr-akses-container">
-                {/* ── HERO HEADER CARD ── */}
-                <div className="nr-akses-hero">
-                    <div className="nr-akses-hero-icon">
-                        <i className="bi bi-shield-lock-fill" />
-                    </div>
-                    <div className="nr-akses-hero-content">
-                        <h3 className="nr-akses-hero-title">
-                            Pengaturan Hak Akses Kelola (CRUD) Notulensi Rapat
-                        </h3>
-                        <p className="nr-akses-hero-desc">
-                            Tentukan siapa saja yang berwenang menambah, mengubah, mengedit status tindak lanjut, dan menghapus catatan notulensi rapat madrasah.
-                        </p>
-
-                        <div className="nr-akses-summary-pills">
-                            <span className="nr-akses-summary-badge admin-fixed">
-                                <i className="bi bi-shield-fill-check" />
-                                Admin &amp; Administrator: Akses Penuh (Permanen)
-                            </span>
-                            <span className="nr-akses-summary-badge">
-                                <i className="bi bi-people-fill" />
-                                {customRoles.length} Role Tambahan
-                            </span>
-                            <span className="nr-akses-summary-badge">
-                                <i className="bi bi-person-check-fill" />
-                                {config.allowedUsers.length} Staf Khusus
-                            </span>
-                        </div>
-                    </div>
-                </div>
-
-                {/* ── SECURITY NOTE ── */}
-                <div className="nr-akses-info-box">
-                    <i className="bi bi-info-circle-fill" style={{ color: 'var(--n-primary, #3083FF)', marginTop: '2px', flexShrink: 0 }} />
-                    <div style={{ lineHeight: '1.45' }}>
-                        <strong>Catatan Keamanan:</strong> Role <strong>ADMIN</strong> &amp; <strong>ADMINISTRATOR</strong> secara otomatis memiliki hak kelola penuh bawaan sistem. Seluruh dewan guru dan staf lainnya tetap dapat membaca dan mencetak hasil rapat demi transparansi madrasah.
-                    </div>
-                </div>
-
                 {/* ── SECTION 1: ROLE ACCESS ── */}
                 <div className="nr-akses-section">
                     <div className="nr-akses-section-head">
@@ -220,11 +183,11 @@ export default function PengaturanAksesTab({ headerTabs }: { headerTabs?: React.
                             <i className="bi bi-person-badge-fill" />
                         </span>
                         <h4 className="nr-akses-section-title">
-                            1. Hak Kelola Berdasarkan Role (Jabatan)
+                            Berdasarkan jabatan
                         </h4>
                     </div>
                     <p className="nr-akses-section-desc">
-                        Semua pengguna dengan role terpilih akan otomatis memiliki wewenang mengelola notulensi rapat.
+                        Semua pengguna dengan jabatan terpilih mendapat hak kelola.
                     </p>
 
                     <SearchableSelect
@@ -232,27 +195,29 @@ export default function PengaturanAksesTab({ headerTabs }: { headerTabs?: React.
                         options={roleOptions}
                         value={customRoles}
                         onChange={handleRoleChange}
-                        placeholder="Pilih role (misal: Kepala Madrasah, KTU, Wkm Akademik)..."
+                        placeholder="Pilih jabatan..."
                         itemLabel="role"
                     />
 
-                    {customRoles.length > 0 && (
-                        <div className="nr-akses-chips-wrap">
+                    {customRoles.length > 0 ? (
+                        <ul className="nr-akses-list" aria-label="Jabatan dengan hak kelola">
                             {customRoles.map(roleKey => (
-                                <div key={roleKey} className="nr-akses-chip">
-                                    <span className="nr-akses-chip-name">{formatRoleDisplay(roleKey)}</span>
-                                    <span className="nr-akses-chip-meta">({roleKey})</span>
+                                <li key={roleKey} className="nr-akses-list-row">
+                                    <span className="nr-akses-list-name">{formatRoleDisplay(roleKey)}</span>
                                     <button
                                         type="button"
-                                        className="nr-akses-chip-remove"
+                                        className="nr-akses-list-remove"
                                         onClick={() => handleRemoveRole(roleKey)}
-                                        title={`Hapus wewenang role ${roleKey}`}
+                                        title={`Hapus akses ${formatRoleDisplay(roleKey)}`}
+                                        aria-label={`Hapus akses jabatan ${formatRoleDisplay(roleKey)}`}
                                     >
-                                        <i className="bi bi-x-lg" />
+                                        <Trash2 size={16} aria-hidden="true" />
                                     </button>
-                                </div>
+                                </li>
                             ))}
-                        </div>
+                        </ul>
+                    ) : (
+                        <div className="nr-akses-empty-state">Belum ada jabatan tambahan yang diberi akses.</div>
                     )}
                 </div>
 
@@ -263,11 +228,11 @@ export default function PengaturanAksesTab({ headerTabs }: { headerTabs?: React.
                             <i className="bi bi-person-check-fill" />
                         </span>
                         <h4 className="nr-akses-section-title">
-                            2. Hak Kelola Pengguna Khusus / Perorangan (Guru / Staf)
+                            Pengguna tertentu
                         </h4>
                     </div>
                     <p className="nr-akses-section-desc">
-                        Tunjuk staf atau guru tertentu (misalnya notulis terpilih dewan guru) yang bukan admin tetapi diberi wewenang mencatat dan memperbarui notulensi rapat.
+                        Tambahkan guru atau staf sebagai pengelola tanpa mengubah akses seluruh jabatannya.
                     </p>
 
                     <SearchableSelect
@@ -280,52 +245,54 @@ export default function PengaturanAksesTab({ headerTabs }: { headerTabs?: React.
                     />
 
                     {config.allowedUsers.length > 0 ? (
-                        <div className="nr-akses-chips-wrap">
+                        <ul className="nr-akses-list" aria-label="Pengguna dengan hak kelola">
                             {config.allowedUsers.map(u => (
-                                <div key={u.id} className="nr-akses-chip">
-                                    <i className="bi bi-person-fill" style={{ color: 'var(--n-primary, #3083FF)' }} />
-                                    <span className="nr-akses-chip-name">{u.nama}</span>
-                                    {u.nip ? (
-                                        <span className="nr-akses-chip-meta">({u.nip})</span>
-                                    ) : u.role ? (
-                                        <span className="nr-akses-chip-meta">[{formatRoleDisplay(u.role)}]</span>
-                                    ) : null}
+                                <li key={u.id} className="nr-akses-list-row">
+                                    <div className="nr-akses-list-person">
+                                        <span className="nr-akses-list-name">{u.nama}</span>
+                                        {(u.nip || u.role) && (
+                                            <span className="nr-akses-list-meta">
+                                                {u.nip ? `NIP: ${u.nip}` : formatRoleDisplay(u.role || '')}
+                                            </span>
+                                        )}
+                                    </div>
                                     <button
                                         type="button"
-                                        className="nr-akses-chip-remove"
+                                        className="nr-akses-list-remove"
                                         onClick={() => handleRemoveUser(u.id)}
-                                        title={`Hapus wewenang ${u.nama}`}
+                                        title={`Hapus akses ${u.nama}`}
+                                        aria-label={`Hapus akses pengguna ${u.nama}`}
                                     >
-                                        <i className="bi bi-x-lg" />
+                                        <Trash2 size={16} aria-hidden="true" />
                                     </button>
-                                </div>
+                                </li>
                             ))}
-                        </div>
+                        </ul>
                     ) : (
                         <div className="nr-akses-empty-state">
                             <i className="bi bi-people" style={{ fontSize: '1.1rem' }} />
-                            <span>Belum ada staf perorangan yang ditunjuk khusus. Akses saat ini mengikuti konfigurasi role di atas.</span>
+                            <span>Belum ada pengguna khusus. Akses mengikuti jabatan yang dipilih.</span>
                         </div>
                     )}
-                </div>
 
-                {/* ── FOOTER ACTIONS ── */}
-                <div className="nr-akses-footer">
-                    <Button
-                        variant="secondary"
-                        onClick={fetchData}
-                        disabled={saving}
-                    >
-                        Batal
-                    </Button>
-                    <Button
-                        variant="primary"
-                        onClick={handleSave}
-                        isLoading={saving}
-                        leftIcon={<i className="bi bi-check-lg" />}
-                    >
-                        Simpan Pengaturan Akses
-                    </Button>
+                    {/* ── FOOTER ACTIONS ── */}
+                    <div className="nr-akses-footer">
+                        <Button
+                            variant="secondary"
+                            onClick={fetchData}
+                            disabled={saving}
+                        >
+                            Batal
+                        </Button>
+                        <Button
+                            variant="primary"
+                            onClick={handleSave}
+                            isLoading={saving}
+                            leftIcon={<i className="bi bi-check-lg" />}
+                        >
+                            Simpan pengaturan
+                        </Button>
+                    </div>
                 </div>
             </div>
         </div>

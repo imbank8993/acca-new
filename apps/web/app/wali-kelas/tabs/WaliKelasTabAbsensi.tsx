@@ -100,7 +100,8 @@ export default function WaliKelasTabAbsensi({ user }: WaliKelasTabProps) {
             if (today) {
                 const [, m] = today.split('-');
                 setTanggal(today);
-                setSelectedMonth(parseInt(m));
+                setSelectedMonth(parseInt(m, 10));
+                setBulan(today.slice(0, 7));
             }
         };
         init();
@@ -118,18 +119,21 @@ export default function WaliKelasTabAbsensi({ user }: WaliKelasTabProps) {
     const loadData = useCallback(async () => {
         if (!nip && !isAdmin) return;
         if (!selectedKelas) return;
+        if (periodeType === 'bulanan' && !bulan) return;
+        if (periodeType === 'harian' && !tanggal) return;
         setLoading(true);
         try {
             let params = new URLSearchParams();
             params.append('nip', nip || '');
             params.append('kelas', selectedKelas);
+            if (ta.selected) params.append('tahun_ajaran', ta.selected);
             if (periodeType === 'harian' && tanggal) params.append('tanggal', tanggal);
             else if (periodeType === 'bulanan' && bulan) params.append('bulan', bulan);
             const res = await fetch(`/api/wali-kelas/absensi-akumulasi?${params.toString()}`);
             const result = await res.json();
             if (res.ok && !result.error) setData(result);
         } catch (err) { console.error(err); } finally { setLoading(false); }
-    }, [nip, selectedKelas, periodeType, tanggal, bulan]);
+    }, [nip, isAdmin, selectedKelas, periodeType, tanggal, bulan, ta.selected]);
 
     const loadKelasList = useCallback(async () => {
         if (!nip && !isAdmin) return;
@@ -144,9 +148,7 @@ export default function WaliKelasTabAbsensi({ user }: WaliKelasTabProps) {
                 const uniqueKelas = Array.from(new Set(result.kelas_list)) as string[];
                 setKelasList(uniqueKelas);
                 if (uniqueKelas.length > 0) {
-                    if (!selectedKelas || !uniqueKelas.includes(selectedKelas)) {
-                        setSelectedKelas(uniqueKelas[0]);
-                    }
+                    setSelectedKelas(prev => (!prev || !uniqueKelas.includes(prev) ? uniqueKelas[0] : prev));
                 } else {
                     setSelectedKelas('');
                 }
@@ -155,7 +157,7 @@ export default function WaliKelasTabAbsensi({ user }: WaliKelasTabProps) {
                 setSelectedKelas('');
             }
         } catch (err) { console.error(err); }
-    }, [nip, isAdmin, selectedKelas, ta.selected]);
+    }, [nip, isAdmin, ta.selected]);
 
     useEffect(() => { loadKelasList(); }, [loadKelasList]);
     useEffect(() => { if (selectedKelas) loadData(); }, [selectedKelas, periodeType, tanggal, bulan, loadData]);

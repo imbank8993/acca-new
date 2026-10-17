@@ -4,6 +4,7 @@ import "bootstrap-icons/font/bootstrap-icons.css";
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
 import "./globals.css";
+import "./arabic-font.css";
 import { ModalBlurProvider } from "@/components/ModalBlurProvider";
 import { AppUpdateChecker } from "@/components/AppUpdateChecker";
 import { AlertProvider } from "@/components/ui/AlertProvider";

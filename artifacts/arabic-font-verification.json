@@ -1,0 +1,48 @@
+{
+  "widths": {
+    "320": {
+      "arabicFonts": [
+        "Amiri",
+        "Poppins"
+      ],
+      "latinUnchanged": true,
+      "overflow": false
+    },
+    "390": {
+      "arabicFonts": [
+        "Amiri",
+        "Poppins"
+      ],
+      "latinUnchanged": true,
+      "overflow": false
+    },
+    "768": {
+      "arabicFonts": [
+        "Amiri",
+        "Poppins"
+      ],
+      "latinUnchanged": true,
+      "overflow": false
+    },
+    "1280": {
+      "arabicFonts": [
+        "Amiri",
+        "Poppins"
+      ],
+      "latinUnchanged": true,
+      "overflow": false
+    }
+  },
+  "inputPreserved": true,
+  "dynamicArabicInput": true,
+  "lateLatinFontStylesheet": true,
+  "styles": [
+    "regular",
+    "bold",
+    "italic",
+    "bold-italic"
+  ],
+  "network": "Amiri served locally; external requests blocked",
+  "latinFont": "Poppins",
+  "arabicFont": "Amiri"
+}

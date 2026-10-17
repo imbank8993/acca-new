@@ -23,6 +23,14 @@ let _cachedUser: User | null = null;
 let _cacheTimestamp: number = 0;
 const CACHE_TTL_MS = 60_000; // 1 menit
 
+/** A failed availability check is different from an expired/invalid session. */
+class SessionCheckError extends Error {
+    constructor(readonly status: number) {
+        super('Sesi belum dapat diperiksa. Silakan coba lagi.');
+        this.name = 'SessionCheckError';
+    }
+}
+
 /** Retry only temporary failures; invalid sessions and denied access stop immediately. */
 async function fetchSession(): Promise<Response> {
     for (let attempt = 0; attempt < 3; attempt++) {
@@ -84,7 +92,7 @@ export async function getCurrentUser(options: { throwOnFailure?: boolean } = {})
         const res = await fetchSession();
 
         if (res.status === 401) { clearUserCache(); return null; }
-        if (!res.ok) throw new Error('Sesi belum dapat diperiksa. Silakan coba lagi.');
+        if (!res.ok) throw new SessionCheckError(res.status);
 
         const json = await res.json();
         if (!json.ok || !json.user) throw new Error('Respons pemeriksaan sesi tidak lengkap. Silakan coba lagi.');
@@ -106,7 +114,11 @@ export async function getCurrentUser(options: { throwOnFailure?: boolean } = {})
 
         return user;
     } catch (err: any) {
-        if (err?.name === 'TypeError' && err?.message === 'Failed to fetch') {
+        if (err instanceof SessionCheckError) {
+            console.warn('[auth-client] Pemeriksaan sesi gagal:', { status: err.status });
+        } else if (err?.name === 'TimeoutError' || err?.name === 'AbortError') {
+            console.warn('[auth-client] Pemeriksaan sesi melewati batas waktu.');
+        } else if (err?.name === 'TypeError' && err?.message === 'Failed to fetch') {
             console.debug('[auth-client] Network error while fetching /api/auth/me (offline or server recompiling)');
         } else {
             console.error('[auth-client] Failed to fetch /api/auth/me:', err);

@@ -1,3 +1,4 @@
+import { notulensiStatus } from '@acca/shared/notulensi-status.cjs';
 import { Injectable, BadRequestException, NotFoundException, ForbiddenException, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../common/audit.service';
@@ -57,6 +58,16 @@ function parsePoinPoin(raw: any): PoinHasilRapat[] {
     .filter(p => p.teks.length > 0);
 }
 
+// Derive legacy records during reads too, so filters and statistics remain consistent.
+const DERIVED_STATUS_SQL = `(SELECT CASE
+  WHEN COUNT(*) = 0 THEN 'Belum'
+  WHEN BOOL_AND(LOWER(BTRIM(COALESCE(point->>'status', ''))) = 'selesai') THEN 'Selesai'
+  WHEN BOOL_OR(LOWER(BTRIM(COALESCE(point->>'status', ''))) IN ('proses', 'selesai')) THEN 'Proses'
+  ELSE 'Belum' END
+  FROM jsonb_array_elements(CASE WHEN jsonb_typeof(poin_poin) = 'array' THEN poin_poin ELSE '[]'::jsonb END) AS point
+  WHERE jsonb_typeof(point) = 'object'
+    AND BTRIM(COALESCE(NULLIF(point->>'teks', ''), NULLIF(point->>'poin', ''), point->>'isi', '')) <> '')`;
+
 function formatRow(r: any) {
   let tgl = r.tanggal;
   if (tgl instanceof Date) {
@@ -76,7 +87,7 @@ function formatRow(r: any) {
     notulis: r.notulis || '',
     peserta: r.peserta || '',
     poin_poin: parsePoinPoin(r.poin_poin),
-    status: normalizeStatus(r.status),
+    status: notulensiStatus(parsePoinPoin(r.poin_poin)),
     catatan: r.catatan || '',
     agenda_id: r.agenda_id ? String(r.agenda_id) : null,
     created_by: r.created_by || '',
@@ -154,7 +165,7 @@ export class NotulensiService {
     let pIdx = 1;
 
     if (query.status && query.status.trim() && query.status !== 'Semua') {
-      conditions.push(`status = $${pIdx}`);
+      conditions.push(`${DERIVED_STATUS_SQL} = ${pIdx}`);
       params.push(normalizeStatus(query.status));
       pIdx++;
     }
@@ -190,9 +201,9 @@ export class NotulensiService {
     const statsSql = `
       SELECT 
         COUNT(*)::int as total,
-        COUNT(*) FILTER (WHERE status = 'Belum')::int as belum,
-        COUNT(*) FILTER (WHERE status = 'Proses')::int as proses,
-        COUNT(*) FILTER (WHERE status = 'Selesai')::int as selesai
+        COUNT(*) FILTER (WHERE ${DERIVED_STATUS_SQL} = 'Belum')::int as belum,
+        COUNT(*) FILTER (WHERE ${DERIVED_STATUS_SQL} = 'Proses')::int as proses,
+        COUNT(*) FILTER (WHERE ${DERIVED_STATUS_SQL} = 'Selesai')::int as selesai
       FROM public.notulensi_rapat
     `;
     const statsRows: any[] = await this.prisma.$queryRawUnsafe(statsSql);
@@ -271,15 +282,7 @@ export class NotulensiService {
 
     const poinPoin = parsePoinPoin(body.poin_poin);
 
-    // Hitung status otomatis bila belum ditentukan
-    let status = normalizeStatus(body.status);
-    if (!body.status && poinPoin.length > 0) {
-      const allSelesai = poinPoin.every(p => p.status === 'Selesai');
-      const anyProses = poinPoin.some(p => p.status === 'Proses');
-      if (allSelesai) status = 'Selesai';
-      else if (anyProses) status = 'Proses';
-      else status = 'Belum';
-    }
+    const status = notulensiStatus(poinPoin);
 
     const createdBy = user?.nama || user?.username || user?.nip || 'Admin';
 
@@ -349,7 +352,7 @@ export class NotulensiService {
     const agendaId = body.agenda_id ? this.parseBigIntId(body.agenda_id) : null;
 
     const poinPoin = parsePoinPoin(body.poin_poin);
-    let status = normalizeStatus(body.status);
+    const status = notulensiStatus(poinPoin);
 
     const updateSql = `
       UPDATE public.notulensi_rapat SET
@@ -408,65 +411,64 @@ export class NotulensiService {
   }
 
   /**
-   * Quick toggle status tindak lanjut (per rapat atau per poin)
+   * Update point progress; overall status always follows the points.
    */
   async updateStatus(id: string, body: { status?: string; poin_id?: string; poin_status?: string; keterangan?: string }, user: any, req?: any) {
     const cleanId = this.parseBigIntId(id);
 
-    const checkSql = `SELECT * FROM public.notulensi_rapat WHERE id = $1::bigint LIMIT 1`;
-    const existing: any[] = await this.prisma.$queryRawUnsafe(checkSql, cleanId);
-    if (!existing || existing.length === 0) {
-      throw new NotFoundException('Notulensi rapat tidak ditemukan');
-    }
-
-    const row = existing[0];
-    let poinPoin = parsePoinPoin(row.poin_poin);
-    let newStatus = row.status;
-
-    // Jika targetnya adalah update poin tertentu
-    if (body.poin_id && body.poin_status) {
-      const targetPoinId = String(body.poin_id).trim();
-      const nextPoinStatus = normalizeStatus(body.poin_status);
-
-      poinPoin = poinPoin.map(p => {
-        if (p.id === targetPoinId) {
-          return {
-            ...p,
-            status: nextPoinStatus,
-            keterangan: body.keterangan !== undefined ? String(body.keterangan).trim() : p.keterangan,
-          };
-        }
-        return p;
-      });
-
-      // Hitung ulang status keseluruhan bila semua selesai atau ada proses
-      if (poinPoin.length > 0) {
-        if (poinPoin.every(p => p.status === 'Selesai')) newStatus = 'Selesai';
-        else if (poinPoin.some(p => p.status === 'Proses' || p.status === 'Selesai')) newStatus = 'Proses';
-        else newStatus = 'Belum';
+    const result = await this.prisma.$transaction(async tx => {
+      const checkSql = `SELECT * FROM public.notulensi_rapat WHERE id = $1::bigint LIMIT 1 FOR UPDATE`;
+      const existing: any[] = await tx.$queryRawUnsafe(checkSql, cleanId);
+      if (!existing || existing.length === 0) {
+        throw new NotFoundException('Notulensi rapat tidak ditemukan');
       }
-    } else if (body.status) {
-      // Update status keseluruhan rapat
-      newStatus = normalizeStatus(body.status);
-    }
 
-    const updateSql = `
-      UPDATE public.notulensi_rapat SET
-        status = $1,
-        poin_poin = $2::jsonb,
-        updated_at = NOW()
-      WHERE id = $3::bigint
-      RETURNING *
-    `;
+      const row = existing[0];
+      let poinPoin = parsePoinPoin(row.poin_poin);
 
-    const updated: any[] = await this.prisma.$queryRawUnsafe(
-      updateSql,
-      newStatus,
-      JSON.stringify(poinPoin),
-      cleanId,
-    );
 
-    const result = formatRow(updated[0]);
+      // Jika targetnya adalah update poin tertentu
+      if (body.poin_id && body.poin_status) {
+        const targetPoinId = String(body.poin_id).trim();
+        if (!poinPoin.some(p => p.id === targetPoinId)) throw new NotFoundException('Poin rapat tidak ditemukan');
+        if (!VALID_STATUSES.includes(body.poin_status as StatusTindakLanjut)) throw new BadRequestException('Status poin tidak valid');
+        const nextPoinStatus = normalizeStatus(body.poin_status);
+
+        poinPoin = poinPoin.map(p => {
+          if (p.id === targetPoinId) {
+            return {
+              ...p,
+              status: nextPoinStatus,
+              keterangan: body.keterangan !== undefined ? String(body.keterangan).trim() : p.keterangan,
+            };
+          }
+          return p;
+        });
+
+      } else {
+        throw new BadRequestException('Ubah status pada poin rapat. Status keseluruhan dihitung otomatis.');
+      }
+      const newStatus = notulensiStatus(poinPoin);
+
+      const updateSql = `
+        UPDATE public.notulensi_rapat SET
+          status = $1,
+          poin_poin = $2::jsonb,
+          updated_at = NOW()
+        WHERE id = $3::bigint
+        RETURNING *
+      `;
+
+      const updated: any[] = await tx.$queryRawUnsafe(
+        updateSql,
+        newStatus,
+        JSON.stringify(poinPoin),
+        cleanId,
+      );
+
+      return formatRow(updated[0]);
+
+    });
 
     if (this.audit) {
       await this.audit.record({

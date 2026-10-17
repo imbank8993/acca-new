@@ -99,17 +99,26 @@ export default function WaliKelasTabJurnal({ user }: { user?: any }) {
                     } else {
                         setMyClass('');
                     }
-                } else if (user?.nip) {
-                    let waliRows: any[] | null = null;
-                    if (ta.selected) {
-                        const res = await fetch(`/api/settings/wali-kelas?nip=${user.nip}&tahun_ajaran=${encodeURIComponent(ta.selected)}`);
-                        const data = await res.json();
-                        if (data.ok && data.data?.length > 0) waliRows = data.data;
+                } else {
+                    const nipOrUser = user?.nip || user?.username || '';
+                    let waliClasses: string[] = [];
+                    if (nipOrUser && ta.selected) {
+                        try {
+                            const res = await fetch(`/api/settings/wali-kelas?nip=${encodeURIComponent(nipOrUser)}&tahun_ajaran=${encodeURIComponent(ta.selected)}`);
+                            const data = await res.json();
+                            if (data.ok && Array.isArray(data.data) && data.data.length > 0) {
+                                waliClasses = Array.from(new Set(data.data.map((w: any) => w.nama_kelas))) as string[];
+                            }
+                        } catch (e) {
+                            console.error('Gagal memuat wali_kelas', e);
+                        }
                     }
-                    if (waliRows && waliRows.length > 0) {
-                        const waliClasses = Array.from(new Set(waliRows.map((w: any) => w.nama_kelas))) as string[];
+                    if (waliClasses.length > 0) {
                         setAllKelas(waliClasses);
                         setMyClass(prev => (!prev || !waliClasses.includes(prev) ? waliClasses[0] : prev));
+                    } else if (classes.length > 0) {
+                        setAllKelas(classes);
+                        setMyClass(prev => (!prev || !classes.includes(prev) ? classes[0] : prev));
                     } else {
                         setAllKelas([]);
                         setMyClass('');
@@ -121,7 +130,7 @@ export default function WaliKelasTabJurnal({ user }: { user?: any }) {
             }
         } catch (e) { console.error(e); }
         finally { setLoading(false); }
-    }, [user?.nip, isAdmin, ta.selected]);
+    }, [user?.nip, user?.username, isAdmin, ta.selected]);
 
     const loadJurnal = useCallback(async () => {
         if (!myClass) return;
@@ -156,7 +165,7 @@ export default function WaliKelasTabJurnal({ user }: { user?: any }) {
 
             const res = await fetch(`/api/jurnal?kelas=${encodeURIComponent(kelasParam)}&startDate=${startDate}&endDate=${endDate}&limit=500`);
             const json = await res.json();
-            if (json.success) {
+            if (json.ok || json.success) {
                 setJurnals(json.data || []);
             }
         } catch (e) { console.error(e); }
@@ -365,7 +374,7 @@ export default function WaliKelasTabJurnal({ user }: { user?: any }) {
 
             const res = await fetch(`/api/jurnal?kelas=${encodeURIComponent(kelasParam)}&startDate=${startDate}&endDate=${endDate}&limit=5000`);
             const json = await res.json();
-            let rows: JurnalEntry[] = json.success ? (json.data || []) : [];
+            let rows: JurnalEntry[] = (json.ok || json.success) ? (json.data || []) : [];
 
             // Saring bulan (kosong = semua). Rentang di atas sudah membatasi ke tahun ajaran.
             if (months.length > 0) {

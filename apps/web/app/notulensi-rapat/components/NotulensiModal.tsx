@@ -1,5 +1,7 @@
 'use client';
 
+import { notulensiStatus } from '@acca/shared/notulensi-status.cjs';
+
 import React, { useState, useEffect } from 'react';
 import { Modal, ModalBody, ModalFooter } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
@@ -53,12 +55,6 @@ const EMPTY_FORM: NotulensiItem = {
     status: 'Belum',
     catatan: '',
 };
-
-const STATUS_KESELURUHAN_OPTIONS = [
-    { value: 'Belum', label: 'Belum Ditindaklanjuti' },
-    { value: 'Proses', label: 'Sedang Diproses' },
-    { value: 'Selesai', label: 'Selesai Ditindaklanjuti' },
-];
 
 const STATUS_POIN_OPTIONS = [
     { value: 'Belum', label: 'Belum' },
@@ -129,13 +125,7 @@ export default function NotulensiModal({
         // Filter poin yang memiliki isi
         const validPoin = form.poin_poin.filter(p => p.teks && p.teks.trim().length > 0);
 
-        // Hitung status keseluruhan
-        let finalStatus = form.status;
-        if (validPoin.length > 0) {
-            if (validPoin.every(p => p.status === 'Selesai')) finalStatus = 'Selesai';
-            else if (validPoin.some(p => p.status === 'Proses' || p.status === 'Selesai')) finalStatus = 'Proses';
-            else finalStatus = 'Belum';
-        }
+        const finalStatus = notulensiStatus(validPoin);
 
         await onSave({
             ...form,
@@ -252,8 +242,8 @@ export default function NotulensiModal({
                             </div>
                         </div>
 
-                        {/* Peserta & Status Keseluruhan */}
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                        {/* Peserta rapat */}
+                        <div>
                             <div className="nr-form-group">
                                 <label className="nr-form-label">
                                     Peserta Rapat
@@ -266,18 +256,7 @@ export default function NotulensiModal({
                                     onChange={e => setForm({ ...form, peserta: e.target.value })}
                                 />
                             </div>
-                            <div className="nr-form-group">
-                                <label className="nr-form-label">
-                                    Status Keseluruhan
-                                </label>
-                                <InlineSelect
-                                    value={form.status}
-                                    onChange={val => setForm({ ...form, status: val as any })}
-                                    options={STATUS_KESELURUHAN_OPTIONS}
-                                    minWidth="100%"
-                                    height="38px"
-                                />
-                            </div>
+
                         </div>
 
                         {/* ── EDITOR POIN-POIN HASIL RAPAT ── */}
@@ -296,14 +275,14 @@ export default function NotulensiModal({
                                     onClick={handleAddPoin}
                                     className="nr-add-poin-btn"
                                 >
-                                    <i className="bi bi-plus-circle" /> Tambah Poin
+                                    <i className="bi bi-plus-circle" /> Tambah
                                 </button>
                             </div>
 
                             <div className="nr-poin-editor">
                                 {form.poin_poin.length === 0 ? (
                                     <div className="nr-poin-empty">
-                                        Belum ada poin hasil rapat. Klik <strong>Tambah Poin</strong> di atas untuk menambahkan.
+                                        Belum ada poin hasil rapat. Klik <strong>Tambah</strong> di atas untuk menambahkan.
                                     </div>
                                 ) : (
                                     form.poin_poin.map((p, idx) => (

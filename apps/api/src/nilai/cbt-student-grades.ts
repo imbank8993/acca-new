@@ -89,7 +89,7 @@ export async function loadCbtStudentGrades(prisma: PrismaService, nisn: string, 
     return [{
       id: `cbt:${attempt.id}`, sumber: 'cbt', nisn, nip: '', kelas, mapel, semester,
       tahun_ajaran: tahunAjaran, jenis: 'CBT', materi_tp: exam.title, tagihan: '', topik: null,
-      nilai: published.score, score_type: published.type, grading_status: published.status,
+      nilai: published.score !== null && published.score !== undefined ? Number(Number(published.score).toFixed(2)) : null, score_type: published.type, grading_status: published.status,
       periode_dari_tanggal: !period, nama_guru: exam.cbt_profiles?.full_name || 'CBT',
       catatan: published.status === 'pending' ? 'Menunggu koreksi / finalisasi nilai CBT'
         : published.status === 'processing' ? 'Nilai CBT sedang diproses' : null,
