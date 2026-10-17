@@ -39,9 +39,11 @@ interface HolidayItem {
     target_kelas?: string[] | string | null;
 }
 
-/** Libur sehari penuh yang berlaku untuk seluruh madrasah. */
+/** Libur sehari penuh yang berlaku untuk seluruh madrasah (bukan sekadar PBM tidak efektif). */
 const isLiburPenuhSekolah = (h: HolidayItem) =>
-    normalizeJamKe(h.jam_ke) === JAM_SEMUA && normalizeLingkup(h) === 'semua';
+    normalizeJamKe(h.jam_ke) === JAM_SEMUA &&
+    normalizeLingkup(h) === 'semua' &&
+    !/tidak\s*efektif|non\s*[-_ ]?efektif|fakultatif/i.test(h.nama || '');
 
 const BULAN_LABELS = [
     "Januari", "Februari", "Maret", "April", "Mei", "Juni",

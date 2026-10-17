@@ -919,7 +919,7 @@
 
 .ag-cell:not(.is-empty):hover { background: var(--n-surface, #f8fafc); }
 .ag-day-number { font-size: 0.9rem; font-weight: 700; line-height: 1; z-index: 1; color: var(--n-text); transition: color 0.15s ease; }
-.is-partial-holiday .ag-day-number { color: #a9652a; }
+.is-partial-holiday:not(.is-selected) .ag-day-number { color: #cd7f32 !important; }
 .is-weekend .ag-day-number, .is-full-holiday .ag-day-number { color: #ef4444; }
 
 .is-today {
@@ -2522,7 +2522,7 @@ textarea.form-input {
 }
 
 .dark .ag-cell.is-selected .ag-day-number { color: #ffffff !important; }
-.dark .is-partial-holiday .ag-day-number { color: #d49b6a !important; }
+.dark .is-partial-holiday:not(.is-selected) .ag-day-number { color: #d49b6a !important; }
 .dark .is-weekend .ag-day-number,
 .dark .is-full-holiday .ag-day-number { color: #f87171 !important; }
 
