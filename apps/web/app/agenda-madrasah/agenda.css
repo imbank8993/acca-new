@@ -919,7 +919,7 @@
 
 .ag-cell:not(.is-empty):hover { background: var(--n-surface, #f8fafc); }
 .ag-day-number { font-size: 0.9rem; font-weight: 700; line-height: 1; z-index: 1; color: var(--n-text); transition: color 0.15s ease; }
-.is-partial-holiday .ag-day-number { color: #f97316; }
+.is-partial-holiday .ag-day-number { color: #a9652a; }
 .is-weekend .ag-day-number, .is-full-holiday .ag-day-number { color: #ef4444; }
 
 .is-today {
@@ -953,7 +953,7 @@
 .ag-legend-item { display: flex; align-items: center; gap: 8px; font-size: 0.75rem; color: var(--n-text-muted, #556479); font-weight: 700; line-height: 1; }
 .ag-legend-box { width: 12px; height: 12px; border-radius: 3.5px; flex-shrink: 0; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.05); }
 .is-active-box { background: #1e293b; }
-.is-partial-box { background: #f97316; }
+.is-partial-box { background: #cd7f32; }
 .is-holiday-box { background: #ef4444; }
 
 /* Calendar Details Pane */
@@ -2522,7 +2522,7 @@ textarea.form-input {
 }
 
 .dark .ag-cell.is-selected .ag-day-number { color: #ffffff !important; }
-.dark .is-partial-holiday .ag-day-number { color: #fb923c !important; }
+.dark .is-partial-holiday .ag-day-number { color: #d49b6a !important; }
 .dark .is-weekend .ag-day-number,
 .dark .is-full-holiday .ag-day-number { color: #f87171 !important; }
 
@@ -2532,7 +2532,7 @@ textarea.form-input {
 
 .dark .ag-legend-item { color: #94a3b8 !important; }
 .dark .is-active-box { background: #f1f5f9 !important; }
-.dark .is-partial-box { background: #fb923c !important; }
+.dark .is-partial-box { background: #d49b6a !important; }
 .dark .is-holiday-box { background: #ef4444 !important; }
 
 .dark .ag-details-header {
