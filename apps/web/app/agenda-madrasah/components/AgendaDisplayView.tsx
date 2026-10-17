@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/Button';
 import { Spinner } from '@/components/ui/Spinner';
 import { JAM_SEMUA, labelLingkup, normalizeJamKe, normalizeLingkup } from '@/lib/libur';
 import '../agenda.css';
-import { fetchAgendaList } from '@/lib/agenda';
+import { fetchAgendaList, formatWaktuAgenda } from '@/lib/agenda';
 import SasaranAgenda from './SasaranAgenda';
 
 interface AgendaItem {
@@ -401,7 +401,7 @@ export default function AgendaDisplayView({ headerTabs }: { headerTabs?: React.R
                                                 {eventMap[displayDay].map(ev => {
                                                     const isExpanded = expandedEventId === ev.id;
                                                     const subtitle = ev.waktu_mulai 
-                                                        ? `${ev.waktu_mulai.slice(0, 5)}${ev.waktu_selesai ? ' - ' + ev.waktu_selesai.slice(0, 5) : ''}`
+                                                        ? formatWaktuAgenda(ev.waktu_mulai, ev.waktu_selesai)
                                                         : formatDateRange(ev.tanggal_mulai, ev.tanggal_selesai);
                                                     return (
                                                         <div key={ev.id} className="ag-mini-event-wrapper" style={{ marginBottom: '8px' }}>
@@ -445,7 +445,7 @@ export default function AgendaDisplayView({ headerTabs }: { headerTabs?: React.R
                                                     const isExpanded = expandedEventId === ev.id;
                                                     const subtitle = ev.tanggal_selesai && ev.tanggal_selesai !== ev.tanggal_mulai
                                                         ? formatDateRange(ev.tanggal_mulai, ev.tanggal_selesai)
-                                                        : (ev.waktu_mulai ? `${ev.waktu_mulai.slice(0, 5)}${ev.waktu_selesai ? ' - ' + ev.waktu_selesai.slice(0, 5) : ''}` : formatDateRange(ev.tanggal_mulai, ev.tanggal_selesai));
+                                                        : (ev.waktu_mulai ? formatWaktuAgenda(ev.waktu_mulai, ev.waktu_selesai) : formatDateRange(ev.tanggal_mulai, ev.tanggal_selesai));
                                                     return (
                                                         <div key={ev.id} className="ag-mini-event-wrapper" style={{ marginBottom: '8px' }}>
                                                             <div 
@@ -562,7 +562,7 @@ function EventCard({ event }: { event: AgendaItem }) {
                 {event.waktu_mulai && (
                     <div className="ag-ev-meta">
                         <i className="bi bi-clock"></i>
-                        <span>{event.waktu_mulai.slice(0, 5)}</span>
+                        <span>{formatWaktuAgenda(event.waktu_mulai, event.waktu_selesai)}</span>
                     </div>
                 )}
                 {event.lokasi && (

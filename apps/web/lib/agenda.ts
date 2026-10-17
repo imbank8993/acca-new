@@ -10,6 +10,14 @@ export function sasaranAgenda(raw?: string[] | null): string[] {
   return selected.length ? selected : ['UMUM'];
 }
 
+export function formatWaktuAgenda(waktuMulai?: string | null, waktuSelesai?: string | null): string {
+  if (!waktuMulai || !waktuMulai.trim() || waktuMulai === 'null' || waktuMulai === 'undefined') return '';
+  const mulai = waktuMulai.trim().slice(0, 5);
+  const hasSelesai = Boolean(waktuSelesai && waktuSelesai.trim() && waktuSelesai !== 'null' && waktuSelesai !== 'undefined');
+  const selesai = hasSelesai ? waktuSelesai!.trim().slice(0, 5) : 'Selesai';
+  return `${mulai} - ${selesai}`;
+}
+
 export async function fetchAgendaList(allowPublic = false, signal?: AbortSignal) {
   const response = await fetch('/api/agenda-madrasah', { signal });
   if (allowPublic && [401, 403].includes(response.status)) {

@@ -15,7 +15,7 @@ import { swalSuccess, swalError, swalWarning, swalConfirm } from '@/lib/swal-pre
 import { useModalBlur } from '@/components/ModalBlurProvider';
 import type { User } from '@/lib/types';
 import { useTimezone } from '@/hooks/use-timezone';
-import { SASARAN_AGENDA, sasaranAgenda, fetchAgendaList } from '@/lib/agenda';
+import { SASARAN_AGENDA, sasaranAgenda, fetchAgendaList, formatWaktuAgenda } from '@/lib/agenda';
 import SasaranAgenda from '../components/SasaranAgenda';
 import { getCurrentAcademicYear, getAcademicYearFromDate, getSemesterFromDate } from '@/lib/date-utils';
 
@@ -107,11 +107,6 @@ function formatDateRange(startStr: string | null, endStr?: string | null) {
         return `${d1.getDate()} ${m1} – ${d2.getDate()} ${m2} ${y1}`;
     }
     return `${formatDate(startStr)} – ${formatDate(endStr)}`;
-}
-
-function formatWaktu(waktu: string | null) {
-    if (!waktu) return '';
-    return waktu.slice(0, 5);
 }
 
 const EMPTY_FORM = {
@@ -642,7 +637,7 @@ export default function KelolaAgendaTab({ user, onBack, headerTabs, canManage }:
                                                         <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginTop: '4px', flexWrap: 'wrap' }}>
                                                             {a.waktu_mulai && (
                                                                 <span className="ag-time-chip">
-                                                                    <i className="bi bi-clock" /> {formatWaktu(a.waktu_mulai)}{a.waktu_selesai ? ` - ${formatWaktu(a.waktu_selesai)}` : ''}
+                                                                    <i className="bi bi-clock" /> {formatWaktuAgenda(a.waktu_mulai, a.waktu_selesai)}
                                                                 </span>
                                                             )}
                                                             {startsToday && !isPast && (

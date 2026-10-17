@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useTimezone } from '@/hooks/use-timezone';
 import { getActivePeriods } from '@/lib/settings-client';
 import { getAcademicYearFromDate } from '@/lib/date-utils';
+import { formatWaktuAgenda } from '@/lib/agenda';
 import type { User } from '@/lib/types';
 import { getProxiedImageUrl } from '@/lib/image-utils';
 import DOMPurify from 'isomorphic-dompurify';
@@ -937,7 +938,7 @@ export default function DashboardContent({ user, headerExtra }: { user: User; he
                                                                 <div style={{ flex: 1, minWidth: 0 }}>
                                                                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', marginBottom: '2px' }}>
                                                                         <span className="db__agenda-item-datetime">
-                                                                            {formattedDate} {item.waktu_mulai ? `• ${item.waktu_mulai}` : ''}
+                                                                            {formattedDate} {item.waktu_mulai ? `• ${formatWaktuAgenda(item.waktu_mulai, item.waktu_selesai)}` : ''}
                                                                         </span>
                                                                         <span className="db__agenda-item-badge">
                                                                             {item.kategori || 'Umum'}
