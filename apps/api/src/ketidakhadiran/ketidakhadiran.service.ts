@@ -2,6 +2,7 @@ import { Injectable, Logger, NotFoundException, BadRequestException, ForbiddenEx
 import { randomUUID, createHash } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { resolveStudentNisn } from '../common/student-identity';
+import { uksRecommendationSigner } from '@acca/shared/medical-letter-signer.cjs';
 import { absenceJp, boundedInt, canManageJenis, medicalStatus, validDate, validatePeriod, validateQuery, validateStatus, validateText } from './ketidakhadiran-validation';
 
 export interface KetidakhadiranFilter {
@@ -2307,14 +2308,15 @@ export class KetidakhadiranService {
   async createAccaLetter(body: any, appOrigin: string, apiUser: any): Promise<any> {
     if (!this.inTransaction) return this.atomic(s => s.createAccaLetter(body, appOrigin, apiUser), apiUser, 'CREATE_LETTER');
     validateText(body);
-    const record = body.row?.id ? await this.prisma.ketidakhadiran.findUnique({ where: { id: String(body.row.id) } }) : null;
+    const record = body.row?.id ? await this.prisma.ketidakhadiran.findUnique({ where: { id: String(body.row.id) }, include: { rekam_medis_siswa: { select: { petugas_nama: true, petugas_nip: true } } } }) : null;
     if (!record?.aktif) throw new BadRequestException('Data ketidakhadiran tidak ditemukan');
+    if (['UKS', 'SAKIT', 'REKOMENDASI_KONTROL'].includes(body.letterType) && record.jenis !== 'SAKIT') throw new BadRequestException('Surat rekomendasi UKS memerlukan data sakit');
     canManageJenis(apiUser, record.jenis);
     if (body.letterType === 'UKS') canManageJenis(apiUser, 'SAKIT');
     let authoritativeRows = [record];
     if (body.rows) {
       if (!Array.isArray(body.rows) || !body.rows.length || body.rows.length > 500) throw new BadRequestException('Daftar siswa tidak valid');
-      authoritativeRows = await this.prisma.ketidakhadiran.findMany({ where: { id: { in: body.rows.map((r: any) => String(r.id)) }, aktif: true } });
+      authoritativeRows = await this.prisma.ketidakhadiran.findMany({ where: { id: { in: body.rows.map((r: any) => String(r.id)) }, aktif: true }, include: { rekam_medis_siswa: { select: { petugas_nama: true, petugas_nip: true } } } });
       if (authoritativeRows.length !== body.rows.length) throw new BadRequestException('Data kolektif tidak ditemukan');
       for (const r of authoritativeRows) { canManageJenis(apiUser, r.jenis); if (r.jenis !== record.jenis || toDateString(r.tgl_mulai) !== toDateString(record.tgl_mulai) || toDateString(r.tgl_selesai) !== toDateString(record.tgl_selesai)) throw new BadRequestException('Periode dan jenis surat kolektif berbeda'); }
     }
@@ -2389,7 +2391,13 @@ export class KetidakhadiranService {
     let pejabatNip = '-';
     let pejabatJabatan = bodyPejabatJabatan || '';
 
-    if (pejabatId) {
+    if (isUks) {
+      const signers = authoritativeRows.map(uksRecommendationSigner);
+      const signer = signers[0];
+      if (!signer || signers.some(item => !item)) throw new BadRequestException('Nama petugas UKS pada catatan pemeriksaan belum tersedia');
+      if (signers.some(item => item!.nama !== signer.nama)) throw new BadRequestException('Cetak rekomendasi secara terpisah untuk petugas UKS yang berbeda');
+      pejabatNama = signer.nama; pejabatNip = signer.nip; pejabatJabatan = signer.jabatan;
+    } else if (pejabatId) {
       const numericId = parseInt(pejabatId, 10);
       let guruData: any = null;
       if (!isNaN(numericId)) {

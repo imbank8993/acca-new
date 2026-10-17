@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import QRCode from 'qrcode';
 import { getPublicOrigin } from '@/lib/public-url';
+import { isUksRecommendation, uksRecommendationSigner } from '@acca/shared/medical-letter-signer.cjs';
 import { launchPuppeteerBrowser } from '@/lib/puppeteer-launcher';
 import {
   buildSingleHtml,
@@ -65,6 +66,20 @@ export async function GET(request: NextRequest) {
     const scanBase = getPublicOrigin(request.headers.get('x-forwarded-host') || request.headers.get('host'));
     const scanUrl = `${scanBase}/ketidakhadiran/verify/${letter.barcode}`;
     const backgroundUrl = await getTemplateBackgroundUrl(letter.jenis_izin);
+    // Existing letters keep their persisted signer. Never substitute an unrelated name.
+    let signerName = letter.penjabat_nama;
+    let signerTitle = letter.penjabat_jabatan;
+    let signerNip = '-';
+    if (isUksRecommendation(letter.jenis_izin, letter.nomor_surat)) {
+      signerTitle = signerTitle || 'Petugas UKS';
+      if (!signerName?.trim() && letter.ketidakhadiran_id) {
+        const source = await prisma.ketidakhadiran.findUnique({ where: { id: letter.ketidakhadiran_id }, include: { rekam_medis_siswa: { select: { petugas_nama: true, petugas_nip: true } } } });
+        const signer = uksRecommendationSigner(source);
+        if (!signer) return new NextResponse('Nama petugas UKS belum tersedia pada catatan pemeriksaan', { status: 409 });
+        signerName = signer.nama; signerTitle = signer.jabatan; signerNip = signer.nip;
+      }
+      if (!signerName?.trim()) return new NextResponse('Nama petugas UKS belum tersedia pada surat', { status: 409 });
+    }
 
     let qrCodeUrl: string | undefined;
     try {
@@ -169,9 +184,9 @@ export async function GET(request: NextRequest) {
         tglMulai: letter.tgl_mulai || '',
         tglSelesai: letter.tgl_selesai || '',
         keterangan: letter.keterangan || '-',
-        pejabatNama: letter.penjabat_nama || 'Imran, S.Si.',
-        pejabatJabatan: letter.penjabat_jabatan || 'WKM Keasramaan',
-        pejabatNip: '-',
+        pejabatNama: signerName || '-',
+        pejabatJabatan: signerTitle || 'WKM Keasramaan',
+        pejabatNip: signerNip,
         scanUrl,
         qrCodeUrl,
         backgroundUrl,
@@ -193,9 +208,9 @@ export async function GET(request: NextRequest) {
         tglMulai: letter.tgl_mulai || '',
         tglSelesai: letter.tgl_selesai || '',
         keterangan: letter.keterangan || '-',
-        pejabatNama: letter.penjabat_nama || 'Imran, S.Si.',
-        pejabatJabatan: letter.penjabat_jabatan || 'Petugas',
-        pejabatNip: '-',
+        pejabatNama: signerName || '-',
+        pejabatJabatan: signerTitle || 'Petugas',
+        pejabatNip: signerNip,
         scanUrl,
         qrCodeUrl,
         letterType: letter.jenis_izin,

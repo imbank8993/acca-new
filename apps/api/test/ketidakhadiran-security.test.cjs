@@ -11,9 +11,10 @@ function moduleOf(file, imports = {}, globals = {}) {
   const output = ts.transpileModule(read(file), { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS, experimentalDecorators: true } }).outputText;
   const module = { exports: {} };
   vm.runInNewContext(output, { module, exports: module.exports, console, Date, URL, Buffer, AbortSignal, process, ...globals,
-    require(name) { if (name in imports) return imports[name]; if (name === '@nestjs/common') return common; if (name.includes('prisma.service')) return {}; return require(name); } });
+    require(name) { if (name === '@acca/shared/medical-letter-signer.cjs') return medicalSigner; if (name in imports) return imports[name]; if (name === '@nestjs/common') return common; if (name.includes('prisma.service')) return {}; return require(name); } });
   return module.exports;
 }
+const medicalSigner = require('../../../packages/shared/medical-letter-signer.cjs');
 const validation = moduleOf('apps/api/src/ketidakhadiran/ketidakhadiran-validation.ts');
 const studentIdentity = moduleOf('apps/api/src/common/student-identity.ts');
 const { KetidakhadiranService: Service } = moduleOf('apps/api/src/ketidakhadiran/ketidakhadiran.service.ts', { './ketidakhadiran-validation': validation, '../common/student-identity': studentIdentity });
@@ -210,9 +211,9 @@ function letterRoute(f, actor = { id:'1',nama:'UKS Operator',nip:'uks',roles:['O
   const response={json:(body,options={})=>({body,status:options.status||200})};
   const { POST }=moduleOf('apps/web/app/api/ketidakhadiran/generate-letter/route.ts',{
     '@/lib/prisma':{prisma:f.db},'next/server':{NextResponse:response},qrcode:{default:{toDataURL:async()=> 'data:image/png;base64,test'}},
-    '@/lib/ketidakhadiran-security':{letterActor:async()=>actor,LETTER_TYPES:['REKAM_MEDIK','REKAPAN_SAKIT','MENINGGALKAN_ASRAMA'],mayManageLetter:(u,type,nomor='')=>u.roles.includes('ADMIN') || u.roles.includes(type==='SAKIT'||type==='REKAM_MEDIK'||type==='REKAPAN_SAKIT'||nomor.includes('/UKS/')?'OP_UKS':'OP_IZIN')},
+    '@/lib/ketidakhadiran-security':{letterActor:async()=>actor,LETTER_TYPES:['REKAM_MEDIK','REKAPAN_SAKIT','MENINGGALKAN_ASRAMA','REKOMENDASI_KONTROL','SAKIT','UKS'],mayManageLetter:(u,type,nomor='')=>u.roles.includes('ADMIN') || u.roles.includes(type==='REKOMENDASI_KONTROL'||type==='UKS'||type==='SAKIT'||type==='REKAM_MEDIK'||type==='REKAPAN_SAKIT'||nomor.includes('/UKS/')?'OP_UKS':'OP_IZIN')},
     '@/lib/public-url':{getPublicOrigin:()=> 'https://school.example'},'@/lib/surat-config':{getTemplateBackgroundUrl:async()=> '/images/background.png'},
-    '@/app/ketidakhadiran/utils/letter-html':{getMonthRoman:()=> 'X',buildSingleHtml:p=>{if(renderFail)throw Error('Render failed');return `<p>${p.siswaNama}</p>`;},buildCollectiveHtml:()=>'<p>collective</p>'},
+    '@/app/ketidakhadiran/utils/letter-html':{getMonthRoman:()=> 'X',buildSingleHtml:p=>{if(renderFail)throw Error('Render failed');return `<p>${p.siswaNama}</p><div class="sign-name">${p.pejabatNama}</div>`;},buildCollectiveHtml:()=>'<p>collective</p>'},
     '@/lib/print/rekam-medis-letter':{buildRekapPrintHtml:p=>{assert.equal(p.appBase,'https://school.example');if(renderFail)throw Error('Render failed');return '<p>rekap</p>';}},
     '@/app/ketidakhadiran/utils/rekap-letter-data':{getRekapLetterData:async()=>({rekamRows:[],penandatangan:['UKS']})},
   });
@@ -321,4 +322,48 @@ test('Siswa dengan username khusus membaca log NISN akun dan tetap ditolak untuk
   const result=await f.service.getLog({mode:'history'},user);
   assert.equal(result.rows.length,1);assert.equal(result.rows[0].nisn,'student');
   await assert.rejects(f.service.getLogSiswa('other',undefined,user),/sendiri/);
+});
+
+
+test('Rekomendasi UKS memakai petugas pemeriksaan, bukan pencetak admin atau nama dari klien', async () => {
+  const f=fixture({ketidakhadiran:[absence('a',{status:'Kontrol',petugas_nama:'Perawat UKS A',petugas_nip:'123'})]});
+  const result=await letterRoute(f,{id:'admin',nama:'Administrator',roles:['ADMIN']})({letterType:'REKOMENDASI_KONTROL',row:{id:'a',petugas_nama:'Nama palsu'},pejabatId:'Imran, S.Si.',pejabatJabatan:'Guru'});
+  assert.equal(result.status,200);assert.equal(result.body.data.pejabat.nama,'Perawat UKS A');assert.equal(result.body.data.pejabat.jabatan,'Petugas UKS');assert.equal(result.body.data.pejabat.nip,'123');
+  assert.equal(f.state.acca_letters[0].penjabat_nama,'Perawat UKS A');assert.equal(f.state.acca_letters[0].generated_by,'Administrator');assert(f.state.system_config[0].value.includes('Perawat UKS A'));assert(!f.state.system_config[0].value.includes('Imran'));
+});
+test('Petugas pada rekam medis terkait menjadi sumber penandatangan rekomendasi', async () => {
+  const f=fixture({ketidakhadiran:[absence('a',{status:'Kontrol',petugas_nama:'Penginput',rekam_medis_id:'rm'})],rekam_medis_siswa:[medical('rm',{petugas_nama:'Perawat Pemeriksa',petugas_nip:'456'})]});
+  const result=await letterRoute(f)({letterType:'REKOMENDASI_KONTROL',row:{id:'a'}});assert.equal(result.body.data.pejabat.nama,'Perawat Pemeriksa');assert.equal(result.body.data.pejabat.nip,'456');
+});
+test('Rekomendasi tanpa nama petugas ditolak tanpa menyimpan surat', async () => {
+  const f=fixture({ketidakhadiran:[absence('a',{status:'Kontrol'})]});const result=await letterRoute(f)({letterType:'REKOMENDASI_KONTROL',row:{id:'a'}});
+  assert.equal(result.status,400);assert.match(result.body.error,/petugas UKS/);assert.equal(f.state.acca_letters.length,0);
+});
+test('Jalur backend UKS memakai petugas catatan dan tidak menerima penandatangan palsu', async () => {
+  const f=fixture({ketidakhadiran:[absence('a',{status:'Kontrol',petugas_nama:'Perawat Backend',petugas_nip:'789'})]});
+  const result=await f.service.createAccaLetter({row:{id:'a'},letterType:'UKS',pejabatId:'Imran, S.Si.'},'https://school.example',uks);
+  assert.equal(result.data.pejabat.nama,'Perawat Backend');assert.equal(f.state.acca_letters[0].penjabat_jabatan,'Petugas UKS');
+});
+test('Jalur backend UKS menolak nama petugas kosong', async () => {
+  const f=fixture({ketidakhadiran:[absence('a',{status:'Kontrol'})]});await assert.rejects(f.service.createAccaLetter({row:{id:'a'},letterType:'UKS'},'https://school.example',uks),/petugas UKS/);assert.equal(f.state.acca_letters.length,0);
+});
+test('Perbaikan arsip hanya mengganti blok tanda tangan, menjaga nomor, QR, dan isi lain', () => {
+  const {repairSignatureHtml}=require('../../../scripts/lib/uks-letter-repair.cjs');
+  const html='<p>Imran, S.Si. pada isi surat</p><div class="sign-box"><div class="sign-place">Gowa, 1 Oktober</div><div>Guru</div><img src="data:QR"/><div class="sign-name">Imran, S.Si.</div><div class="barcode-id">ACCA-ORIGINAL</div><p>001/UKS/X/2026</p>';
+  const result=repairSignatureHtml(html,{nama:'Perawat & Pemeriksa',nip:'-'});assert(result.includes('<p>Imran, S.Si. pada isi surat</p>'));assert(result.includes('<div class="sign-name">Perawat &amp; Pemeriksa</div>'));assert(result.includes('<div>Petugas UKS</div>'));assert(result.includes('ACCA-ORIGINAL'));assert(result.includes('data:QR'));assert(result.includes('001/UKS/X/2026'));
+  assert.throws(()=>repairSignatureHtml('<p>Unexpected</p>',{nama:'Perawat',nip:'-'}),/structure/);
+});
+
+test('Jalur backend menggunakan petugas rekam medis terkait saat pencetak adalah admin', async () => {
+  const f=fixture({ketidakhadiran:[absence('a',{status:'Kontrol',petugas_nama:'Penginput',rekam_medis_id:'rm'})],rekam_medis_siswa:[medical('rm',{petugas_nama:'Perawat Rekam Medis',petugas_nip:'999'})]});
+  const result=await f.service.createAccaLetter({row:{id:'a'},letterType:'UKS'},'https://school.example',admin);assert.equal(result.data.pejabat.nama,'Perawat Rekam Medis');assert.equal(result.data.pejabat.nip,'999');
+});
+test('Rekomendasi kolektif dengan petugas berbeda ditolak tanpa write', async () => {
+  for(const target of ['backend','next']) {
+    const f=fixture({ketidakhadiran:[absence('a',{status:'Kontrol',petugas_nama:'Perawat A'}),absence('b',{status:'Kontrol',petugas_nama:'Perawat B'})]});
+    const body={row:{id:'a'},rows:[{id:'a'},{id:'b'}],letterType:target==='backend'?'UKS':'REKOMENDASI_KONTROL'};
+    if(target==='backend')await assert.rejects(f.service.createAccaLetter(body,'https://school.example',uks),/petugas UKS yang berbeda/);
+    else assert.equal((await letterRoute(f)(body)).status,400);
+    assert.equal(f.state.acca_letters.length,0);
+  }
 });

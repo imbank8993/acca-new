@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma';
 import { NextRequest, NextResponse } from 'next/server';
 import QRCode from 'qrcode';
 import { getPublicOrigin } from '@/lib/public-url';
+import { isUksRecommendation, uksRecommendationSigner } from '@acca/shared/medical-letter-signer.cjs';
 
 export const dynamic = 'force-dynamic';
 
@@ -75,7 +76,7 @@ export async function POST(request: NextRequest) {
     return await prisma.$transaction(async tx => {
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(424201)`;
     const authoritativeRow = async (input: any) => {
-      const record = input?.id ? await tx.ketidakhadiran.findUnique({ where: { id: String(input.id) } }) : null;
+      const record = input?.id ? await tx.ketidakhadiran.findUnique({ where: { id: String(input.id) }, include: { rekam_medis_siswa: { select: { petugas_nama: true, petugas_nip: true } } } }) : null;
       if (!record?.aktif) throw new LetterRequestError('Data ketidakhadiran tidak ditemukan');
       const asrama = ['MENINGGALKAN_ASRAMA', 'AKHIR_PEKAN'].includes(body.letterType);
       const asramaSakit = asrama && record.jenis === 'SAKIT' && ['Sedang', 'Berat', 'Kontrol'].includes(record.status);
@@ -245,7 +246,13 @@ export async function POST(request: NextRequest) {
         console.error('[generate-letter] QR Code generation error:', qrErr);
       }
 
-      const pejabat = await resolvePejabat(pejabatId, pejabatJabatan);
+      let pejabat;
+      if (isUksRecommendation(letterType)) {
+        const signers = (isCollective ? rows : [row]).map(uksRecommendationSigner);
+        if (signers.some((signer: ReturnType<typeof uksRecommendationSigner>) => !signer)) throw new LetterRequestError('Nama petugas UKS pada catatan pemeriksaan belum tersedia. Lengkapi data petugas sebelum mencetak rekomendasi.');
+        if (signers.some((signer: ReturnType<typeof uksRecommendationSigner>) => signer!.nama !== signers[0]!.nama)) throw new LetterRequestError('Cetak rekomendasi secara terpisah untuk petugas UKS yang berbeda.');
+        pejabat = signers[0]!;
+      } else pejabat = await resolvePejabat(pejabatId, pejabatJabatan);
       const backgroundUrl = await getTemplateBackgroundUrl(letterType);
 
       let letterHtml = '';
