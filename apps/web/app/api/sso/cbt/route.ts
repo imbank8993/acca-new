@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { SignJWT } from 'jose';
 import { cookies } from 'next/headers';
-import { verifyAppToken } from '@/lib/app-jwt';
+import { verifyAppSession } from '@/lib/app-jwt';
 import { fetchUserAccessByAuthId, fetchUserAccessByUsername } from '@/lib/nest-api';
 import { prisma } from '@/lib/prisma';
 
@@ -37,7 +37,7 @@ export async function GET(req: Request) {
             return NextResponse.redirect(new URL('/login?error=sso-no-session', req.url));
         }
 
-        const claims = await verifyAppToken(tokenStr);
+        const claims = await verifyAppSession(tokenStr);
         if (!claims || !claims.authId) {
             if (req.headers.get('accept')?.includes('application/json')) {
                 return NextResponse.json({ error: 'sso-no-session', details: 'No authUser' }, { status: 401 });

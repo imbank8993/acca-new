@@ -33,6 +33,23 @@ export async function verifyAppToken(token: string): Promise<AppJwtPayload | nul
     }
 }
 
+/** Server handlers must check current session state, not just the JWT signature. */
+export async function verifyAppSession(token: string): Promise<AppJwtPayload | null> {
+    const claims = await verifyAppToken(token);
+    if (!claims) return null;
+    const { nestFetchAsUser } = await import('./nest-api');
+    const { status, body } = await nestFetchAsUser('/access/me', token);
+    if (status !== 200 || !body?.user) return null;
+    return {
+        sub: String(body.user.id),
+        authId: body.user.auth_id || null,
+        email: body.user.email || null,
+        username: body.user.username || null,
+        role: body.user.role || null,
+        pageIds: body.access?.pageIds,
+    };
+}
+
 export function encodeSessionCookie(token: string): string {
     const b64 = typeof Buffer !== 'undefined'
         ? Buffer.from(token).toString('base64url')
@@ -91,8 +108,8 @@ export async function getAuthUserFromRequest(
     const token = extractRequestToken(request);
 
     if (!token) return null;
-    const claims = await verifyAppToken(token);
-    if (!claims || (!claims.authId && !claims.sub)) return null;
+    const claims = await verifyAppSession(token);
+    if (!claims) return null;
     return {
         id: claims.authId || claims.sub,
         email: claims.email,

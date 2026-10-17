@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { can, CAPABILITIES, CAPABILITY_KEYS, isKnownCapability, type CapabilityKey } from './capabilities';
-import { verifyAppToken, extractRequestToken } from './app-jwt';
+import { verifyAppSession, extractRequestToken } from './app-jwt';
 import { fetchMyAccess } from './nest-api';
 
 export interface ApiUser {
@@ -40,7 +40,7 @@ export async function getApiUser(request: NextRequest): Promise<ApiUser | null> 
     if (!token) return null;
 
     try {
-        const claims = await verifyAppToken(token);
+        const claims = await verifyAppSession(token);
         if (!claims || (!claims.authId && !claims.sub)) {
             console.warn('[api-auth] Token verify failed or missing sub/authId');
             return null;

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { SignJWT } from 'jose';
 import { cookies } from 'next/headers';
-import { verifyAppToken, decodeSessionCookie } from '@/lib/app-jwt';
+import { verifyAppSession, decodeSessionCookie } from '@/lib/app-jwt';
 
 // Shared secret with ACCA TOOLS (Flask). MUST match TOOLS_SSO_SECRET there.
 const SSO_SECRET = new TextEncoder().encode(process.env.TOOLS_SSO_SECRET || '');
@@ -17,7 +17,7 @@ async function getSessionUser() {
     if (!encodedToken) return null;
 
     const accessToken = decodeSessionCookie(encodedToken);
-    const claims = await verifyAppToken(accessToken);
+    const claims = await verifyAppSession(accessToken);
     if (!claims) return null;
 
     return {

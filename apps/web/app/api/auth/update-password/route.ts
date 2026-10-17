@@ -18,14 +18,14 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        const { password } = await request.json();
+        const { password, oldPassword } = await request.json();
         if (!password || password.length < 6) {
             return NextResponse.json({ ok: false, error: 'Password minimal 6 karakter' }, { status: 400 });
         }
 
         const { status, body } = await nestFetchAsUser('/users/me', token, {
             method: 'PUT',
-            body: JSON.stringify({ password }),
+            body: JSON.stringify({ password, oldPassword }),
         });
 
         if (status === 401) {
@@ -41,7 +41,12 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        return NextResponse.json({ ok: true, message: 'Password berhasil diperbarui' });
+        const response = NextResponse.json({ ok: true, message: 'Password berhasil diperbarui' });
+        response.cookies.set('acca_session', '', {
+            httpOnly: true, secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax', path: '/', maxAge: 0,
+        });
+        return response;
     } catch (error: any) {
         console.error('Update password error:', error);
         return NextResponse.json({ ok: false, error: error.message }, { status: 500 });

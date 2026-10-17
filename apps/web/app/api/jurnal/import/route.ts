@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { extractRequestToken, verifyAppToken } from '@/lib/app-jwt';
+import { extractRequestToken, verifyAppSession } from '@/lib/app-jwt';
 import { corsResponse, handleOptions } from '@/lib/cors';
 
 const DAYS = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
@@ -26,7 +26,7 @@ function parseDateString(val: any): string | null {
 export async function POST(request: NextRequest) {
     try {
         const token = extractRequestToken(request);
-        const user = await verifyAppToken(token);
+        const user = await verifyAppSession(token);
         if (!user) {
             return corsResponse(NextResponse.json({ error: 'Unauthorized' }, { status: 401 }));
         }

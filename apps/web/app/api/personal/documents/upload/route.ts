@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { verifyAppToken, extractRequestToken } from '@/lib/app-jwt';
+import { verifyAppSession, extractRequestToken } from '@/lib/app-jwt';
 import { nestFetchAsUser } from '@/lib/nest-api';
 
 export const dynamic = 'force-dynamic';
@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic';
 export async function POST(request: NextRequest) {
     try {
         const token = extractRequestToken(request);
-        const claims = token ? await verifyAppToken(token) : null;
+        const claims = token ? await verifyAppSession(token) : null;
 
         if (!claims?.sub) {
             return NextResponse.json({ ok: false, error: 'Unauthorized' }, { status: 401 });

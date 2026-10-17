@@ -1,5 +1,8 @@
+import type { Prisma } from '@prisma/client';
+import { lockAccountWrites, revokeSessions, countUsableAdmins } from '../auth/session-security';
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   Logger,
   NotFoundException,
@@ -45,6 +48,13 @@ export class UsersService {
     private orangtuaService: OrangtuaService,
   ) {}
 
+  private accountTransaction<T>(run: (tx: Prisma.TransactionClient) => Promise<T>): Promise<T> {
+    return this.prisma.$transaction(async tx => {
+      await lockAccountWrites(tx);
+      return run(tx);
+    }, { maxWait: 10000, timeout: 20000 });
+  }
+
   private loginEmail(username: string, email?: string | null): string {
     return email?.trim() || `${username.trim().toLowerCase()}@acca.local`;
   }
@@ -59,14 +69,14 @@ export class UsersService {
    * `public_users.password_hash` sengaja TIDAK diisi lagi: dulu diisi password
    * PLAINTEXT, dan kini tidak dipakai selama user punya auth_id.
    */
-  private async writeCredential(authId: string, password: string) {
-    await this.prisma.auth_users.update({
-      where: { id: authId },
-      data: {
-        encrypted_password: await bcrypt.hash(password, BCRYPT_ROUNDS),
-        updated_at: new Date(),
-      },
-    });
+  private async writeCredential(authId: string, password: string, tx: Prisma.TransactionClient) {
+    if (typeof password !== 'string' || password.length < 6) throw new BadRequestException('Password minimal 6 karakter');
+    const credential = await tx.auth_users.findUnique({ where: { id: authId }, select: { raw_app_meta_data: true } });
+    await tx.auth_users.update({ where: { id: authId }, data: {
+      encrypted_password: await bcrypt.hash(password, BCRYPT_ROUNDS),
+      raw_app_meta_data: revokeSessions(credential?.raw_app_meta_data),
+      recovery_token: null, recovery_sent_at: null, updated_at: new Date(),
+    } });
   }
 
   async list(filter: { aktif?: string; role?: string; search?: string }) {
@@ -95,6 +105,10 @@ export class UsersService {
   }
 
   async create(input: CreateUserInput) {
+    return this.accountTransaction(tx => this.createInTransaction(tx, input));
+  }
+
+  private async createInTransaction(tx: Prisma.TransactionClient, input: CreateUserInput) {
     const username = input.username?.trim();
     const nip = input.nip?.trim() || null;
     const emailInput = input.email?.trim() || null;
@@ -107,7 +121,7 @@ export class UsersService {
     if (nip) orConditions.push({ nip });
     if (emailInput) orConditions.push({ email: { equals: emailInput, mode: 'insensitive' } });
 
-    const existing = await this.prisma.public_users.findFirst({
+    const existing = await tx.public_users.findFirst({
       where: { OR: orConditions },
       select: { id: true, username: true, nip: true, email: true },
     });
@@ -124,7 +138,7 @@ export class UsersService {
       throw new BadRequestException('Username, NIP, atau Email sudah terdaftar');
     }
 
-    const role = await this.normalkanRole(input.role || 'GURU');
+    const role = await this.normalkanRole(input.role || 'GURU', tx);
     const normalizedEmail = emailInput ? emailInput.toLowerCase() : null;
     const email = this.loginEmail(username, normalizedEmail).toLowerCase();
     const authId = randomUUID();
@@ -137,7 +151,7 @@ export class UsersService {
 
     // auth_users dibuat lebih dulu supaya public_users.auth_id selalu menunjuk
     // ke baris kredensial yang valid — login bergantung pada pasangan ini.
-    await this.prisma.auth_users.create({
+    await tx.auth_users.create({
       data: {
         id: authId,
         aud: 'authenticated',
@@ -160,7 +174,7 @@ export class UsersService {
     });
 
     try {
-      const user = await this.prisma.public_users.create({
+      const user = await tx.public_users.create({
         data: {
           username,
           nip,
@@ -199,7 +213,7 @@ export class UsersService {
    * dari layar atau berkas tidak tersimpan apa adanya lalu luput dari pencocokan
    * yang peka huruf besar-kecil.
    */
-  private async normalkanRole(role: string): Promise<string> {
+  private async normalkanRole(role: string, db: Prisma.TransactionClient | PrismaService = this.prisma): Promise<string> {
     const diminta = String(role ?? '')
       .split(/[,|]/)
       .map((r) => r.trim().toUpperCase().replace(/\s+/g, '_'))
@@ -209,7 +223,7 @@ export class UsersService {
       throw new BadRequestException('Role wajib diisi');
     }
 
-    const daftar = await this.prisma.roles.findMany({ select: { name: true } });
+    const daftar = await db.roles.findMany({ select: { name: true } });
     const sah = new Set(daftar.map((r) => r.name.trim().toUpperCase()));
     const takDikenal = [...new Set(diminta)].filter((r) => !sah.has(r));
 
@@ -243,24 +257,19 @@ export class UsersService {
    *
    * `masihAdmin` = apakah setelah tindakan ini akun target masih Admin aktif.
    */
-  private async assertAdminTidakHabis(id: bigint, masihAdmin: boolean) {
-    const target = await this.prisma.public_users.findUnique({
+  private async assertAdminTidakHabis(id: bigint, masihAdmin: boolean, db: Prisma.TransactionClient | PrismaService = this.prisma) {
+    const target = await db.public_users.findUnique({
       where: { id },
-      select: { role: true, aktif: true },
+      select: { role: true, aktif: true, auth_id: true },
     });
     if (!target) return;
 
-    const targetAdminSekarang = this.punyaRoleAdmin(target.role) && target.aktif === true;
+    const targetAdminSekarang = this.punyaRoleAdmin(target.role) && target.aktif === true && Boolean(target.auth_id);
     if (!targetAdminSekarang || masihAdmin) return;
 
     // `contains` hanya mempersempit kandidat; kecocokannya ditentukan `punyaRoleAdmin`
     // supaya role seperti `ADMINISTRASI` tidak ikut terhitung sebagai Admin.
-    const kandidat = await this.prisma.public_users.findMany({
-      where: { aktif: true, role: { contains: 'ADMIN', mode: 'insensitive' } },
-      select: { role: true },
-    });
-    const jumlahAdmin = kandidat.filter((u) => this.punyaRoleAdmin(u.role)).length;
-
+    const jumlahAdmin = await countUsableAdmins(db as Prisma.TransactionClient);
     if (jumlahAdmin <= 1) {
       throw new BadRequestException(
         'Ini satu-satunya akun Admin yang aktif. Tunjuk Admin lain lebih dulu sebelum ' +
@@ -271,7 +280,11 @@ export class UsersService {
   }
 
   async update(id: string | bigint, input: UpdateUserInput) {
-    const user = await this.prisma.public_users.findUnique({
+    return this.accountTransaction(tx => this.updateInTransaction(tx, id, input));
+  }
+
+  private async updateInTransaction(tx: Prisma.TransactionClient, id: string | bigint, input: UpdateUserInput) {
+    const user = await tx.public_users.findUnique({
       where: { id: BigInt(id) },
     });
     if (!user) throw new NotFoundException('User tidak ditemukan');
@@ -282,13 +295,14 @@ export class UsersService {
       await this.assertAdminTidakHabis(
         BigInt(id),
         this.punyaRoleAdmin(roleSetelah) && aktifSetelah === true,
+        tx,
       );
     }
 
     // Divalidasi SEBELUM disusun ke `data`, supaya role di luar daftar tidak pernah
     // sampai ke basis data lewat jalur ini.
     const roleTernormal =
-      input.role !== undefined ? await this.normalkanRole(input.role) : undefined;
+      input.role !== undefined ? await this.normalkanRole(input.role, tx) : undefined;
 
     // Validasi duplikasi username, NIP, atau email sebelum update
     const usernameInput = input.username?.trim();
@@ -307,7 +321,7 @@ export class UsersService {
     }
 
     if (orConditions.length > 0) {
-      const existing = await this.prisma.public_users.findFirst({
+      const existing = await tx.public_users.findFirst({
         where: {
           OR: orConditions,
           NOT: { id: BigInt(id) },
@@ -350,7 +364,7 @@ export class UsersService {
     let updated = user;
     if (Object.keys(data).length > 0) {
       try {
-        updated = await this.prisma.public_users.update({ where: { id: BigInt(id) }, data });
+        updated = await tx.public_users.update({ where: { id: BigInt(id) }, data });
       } catch (e: any) {
         if (e?.code === 'P2002') {
           const target = e?.meta?.target;
@@ -381,7 +395,7 @@ export class UsersService {
       ) {
         const existingMeta =
           (
-            await this.prisma.auth_users.findUnique({
+            await tx.auth_users.findUnique({
               where: { id: user.auth_id },
               select: { raw_user_meta_data: true },
             })
@@ -397,20 +411,20 @@ export class UsersService {
         };
       }
 
-      await this.prisma.auth_users.update({
+      await tx.auth_users.update({
         where: { id: user.auth_id },
         data: authData,
       });
 
       if (input.password) {
-        await this.writeCredential(user.auth_id, input.password);
+        await this.writeCredential(user.auth_id, input.password, tx);
       }
     } else {
       // Jika user belum punya auth_id, buatkan dan tautkan
       const authId = randomUUID();
       const authEmail = this.loginEmail(updated.username || '', updated.email).toLowerCase();
       const rawPassword = input.password?.trim() || updated.nip || updated.username || 'acca123';
-      await this.prisma.auth_users.create({
+      await tx.auth_users.create({
         data: {
           id: authId,
           aud: 'authenticated',
@@ -430,7 +444,7 @@ export class UsersService {
           },
         },
       });
-      await this.prisma.public_users.update({
+      await tx.public_users.update({
         where: { id: user.id },
         data: { auth_id: authId },
       });
@@ -441,12 +455,16 @@ export class UsersService {
   }
 
   async updateStatus(id: string | bigint, aktif: boolean, actingUser: any) {
+    return this.accountTransaction(tx => this.updateStatusInTransaction(tx, id, aktif, actingUser));
+  }
+
+  private async updateStatusInTransaction(tx: Prisma.TransactionClient, id: string | bigint, aktif: boolean, actingUser: any) {
     if (actingUser && actingUser.id.toString() === id.toString() && !aktif) {
       throw new BadRequestException('Tidak bisa menonaktifkan akun sendiri');
     }
-    if (!aktif) await this.assertAdminTidakHabis(BigInt(id), false);
+    if (!aktif) await this.assertAdminTidakHabis(BigInt(id), false, tx);
 
-    const updated = await this.prisma.public_users.update({
+    const updated = await tx.public_users.update({
       where: { id: BigInt(id) },
       data: { aktif }
     });
@@ -607,7 +625,11 @@ export class UsersService {
   }
 
   async remove(id: string | bigint, requesterAuthId: string | null) {
-    const target = await this.prisma.public_users.findUnique({
+    return this.accountTransaction(tx => this.removeInTransaction(tx, id, requesterAuthId));
+  }
+
+  private async removeInTransaction(tx: Prisma.TransactionClient, id: string | bigint, requesterAuthId: string | null) {
+    const target = await tx.public_users.findUnique({
       where: { id: BigInt(id) },
       select: { id: true, auth_id: true, username: true, foto_profil: true },
     });
@@ -616,12 +638,12 @@ export class UsersService {
     if (target.auth_id && target.auth_id === requesterAuthId) {
       throw new BadRequestException('Tidak bisa menghapus akun sendiri');
     }
-    await this.assertAdminTidakHabis(BigInt(id), false);
+    await this.assertAdminTidakHabis(BigInt(id), false, tx);
 
     try {
-      await this.prisma.public_users.delete({ where: { id: BigInt(id) } });
+      await tx.public_users.delete({ where: { id: BigInt(id) } });
       if (target.auth_id) {
-        await this.prisma.auth_users.delete({ where: { id: target.auth_id } });
+        await tx.auth_users.delete({ where: { id: target.auth_id } });
       }
     } catch (e: any) {
       if (e?.code === 'P2003') {
@@ -635,50 +657,38 @@ export class UsersService {
     return { fotoProfil: target.foto_profil, username: target.username };
   }
 
-  /** Ganti password sendiri; `oldPassword` diverifikasi bila dikirim. */
-  async changeOwnPassword(user: any, password: string, oldPassword?: string) {
-    if (!password || password.length < 6) {
-      throw new BadRequestException('Password minimal 6 karakter');
-    }
-    if (!user.auth_id) {
-      throw new BadRequestException('Akun ini belum punya kredensial terkait');
-    }
-
-    if (oldPassword) {
-      const current = await this.prisma.auth_users.findUnique({
-        where: { id: user.auth_id },
-        select: { encrypted_password: true },
-      });
-      const valid =
-        !!current?.encrypted_password &&
-        (await bcrypt.compare(oldPassword, current.encrypted_password));
-      if (!valid) throw new BadRequestException('Password lama tidak sesuai');
-    }
-
-    await this.writeCredential(user.auth_id, password);
-    await this.hapusPenandaGantiPassword(user.auth_id);
+  async updateOwn(user: any, profile: UpdateUserInput, password?: string, oldPassword?: string) {
+    return this.accountTransaction(async tx => {
+      if (password !== undefined) await this.verifyOwnPassword(tx, user, password, oldPassword);
+      const result = await this.updateInTransaction(tx, user.id, profile);
+      if (password !== undefined) await this.changeOwnPasswordInTransaction(tx, user, password);
+      return result;
+    });
   }
 
-  /**
-   * Cabut penanda `must_change_password` setelah pemiliknya benar-benar mengganti
-   * password. Tanpa ini pemakai akan diminta mengganti password berulang-ulang
-   * setiap kali login, meski sudah melakukannya.
-   */
-  private async hapusPenandaGantiPassword(authId: string) {
-    const row = await this.prisma.auth_users.findUnique({
-      where: { id: authId },
-      select: { raw_user_meta_data: true },
+  async changeOwnPassword(user: any, password: string, oldPassword?: string) {
+    return this.accountTransaction(async tx => {
+      await this.verifyOwnPassword(tx, user, password, oldPassword);
+      await this.changeOwnPasswordInTransaction(tx, user, password);
     });
-    const meta = row?.raw_user_meta_data;
-    if (!meta || typeof meta !== 'object') return;
-    if ((meta as Record<string, unknown>).must_change_password !== true) return;
+  }
 
-    const bersih: Record<string, any> = { ...(meta as Record<string, any>) };
-    delete bersih.must_change_password;
-    await this.prisma.auth_users.update({
-      where: { id: authId },
-      data: { raw_user_meta_data: bersih, updated_at: new Date() },
-    });
+  private async verifyOwnPassword(tx: Prisma.TransactionClient, user: any, password: string, oldPassword?: string) {
+    if (typeof password !== 'string' || password.length < 6) throw new BadRequestException('Password minimal 6 karakter');
+    if (!user.auth_id) throw new BadRequestException('Akun belum memiliki kredensial');
+    if (typeof oldPassword !== 'string' || !oldPassword) throw new BadRequestException('Password saat ini wajib diisi');
+    const current = await tx.auth_users.findUnique({ where: { id: user.auth_id }, select: { encrypted_password: true } });
+    if (!current?.encrypted_password || !await bcrypt.compare(oldPassword, current.encrypted_password)) {
+      throw new BadRequestException('Password saat ini tidak sesuai');
+    }
+  }
+
+  private async changeOwnPasswordInTransaction(tx: Prisma.TransactionClient, user: any, password: string) {
+    await this.writeCredential(user.auth_id, password, tx);
+    const credential = await tx.auth_users.findUnique({ where: { id: user.auth_id }, select: { raw_user_meta_data: true } });
+    const metadata = credential?.raw_user_meta_data && typeof credential.raw_user_meta_data === 'object' ? { ...credential.raw_user_meta_data as Record<string, any> } : {};
+    delete metadata.must_change_password;
+    await tx.auth_users.update({ where: { id: user.auth_id }, data: { raw_user_meta_data: metadata } });
   }
 
   /**
@@ -1145,46 +1155,14 @@ export class UsersService {
    * adalah username login pegawai.
    */
   async linkAuth(authUser: any, input: { username?: string; nip?: string }) {
-    const username = String(input.username ?? '').trim();
-    const nip = String(input.nip ?? '').trim();
-    if (!username && !nip) throw new BadRequestException('username atau nip wajib diisi');
-
-    const authId = String(authUser?.auth_id ?? '').trim();
-    if (!authId) {
-      throw new BadRequestException('Sesi Anda tidak memiliki auth_id, penautan tidak bisa dilakukan.');
+    const own = await this.prisma.public_users.findUnique({ where: { id: BigInt(authUser.id) } });
+    const username = String(input.username || '').trim();
+    const nip = String(input.nip || '').trim();
+    if (!own || !own.auth_id || own.auth_id !== authUser.auth_id || (!username && !nip) ||
+        (username && username.toLowerCase() !== own.username?.toLowerCase()) || (nip && nip !== own.nip)) {
+      throw new ForbiddenException('Penautan akun lain hanya dapat dilakukan melalui pengelolaan akun oleh Admin.');
     }
-
-    const targetUser = username
-      ? await this.prisma.public_users.findFirst({
-          where: { username: { equals: username, mode: 'insensitive' } },
-          select: { id: true, username: true, nip: true, nama: true, auth_id: true }
-        })
-      : await this.prisma.public_users.findFirst({
-          where: { nip },
-          select: { id: true, username: true, nip: true, nama: true, auth_id: true }
-        });
-
-    if (targetUser?.auth_id === authId) {
-      return { message: 'Sudah tertaut', user: this.serialize(targetUser) };
-    }
-
-    // Satu pesan untuk "tidak ada" maupun "sudah tertaut ke akun lain", supaya
-    // endpoint ini tidak memberi tahu username/NIP mana yang benar.
-    if (!targetUser || targetUser.auth_id) {
-      throw new BadRequestException(
-        'Akun itu tidak bisa ditautkan. Periksa kembali username atau NIP-nya, atau hubungi Admin.',
-      );
-    }
-
-    const updated = await this.prisma.public_users.update({
-      where: { id: targetUser.id },
-      data: { auth_id: authId }
-    });
-
-    return {
-      message: `Berhasil menautkan ${targetUser.username} ke akun Anda`,
-      user: this.serialize(updated)
-    };
+    return { message: 'Sudah tertaut', user: this.serialize(own) };
   }
 
   private getUserWhereClause(user: any) {

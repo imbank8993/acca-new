@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUploadConfig } from '@/lib/file-storage';
-import { verifyAppToken, extractRequestToken } from '@/lib/app-jwt';
+import { verifyAppSession, extractRequestToken } from '@/lib/app-jwt';
 
 export async function GET(request: NextRequest) {
     try {
@@ -8,7 +8,7 @@ export async function GET(request: NextRequest) {
         const folderName = searchParams.get('folder_name') || 'others';
 
         const token = extractRequestToken(request);
-        const claims = token ? await verifyAppToken(token) : null;
+        const claims = token ? await verifyAppSession(token) : null;
 
         if (!claims?.sub) {
             return NextResponse.json({ ok: false, error: 'Unauthorized' }, { status: 401 });

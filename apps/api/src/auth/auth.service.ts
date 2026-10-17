@@ -1,3 +1,4 @@
+import { lockAccountWrites, revokeSessions, sessionVersion } from './session-security';
 import {
   BadRequestException,
   Injectable,
@@ -75,41 +76,23 @@ export class AuthService {
      * Satu-satunya tempat kredensial: `auth_users.encrypted_password` (bcrypt).
      */
     let isValidPassword = false;
+    let verifiedSessionVersion = '';
 
     if (user.auth_id) {
       const authUser = await this.prismaService.auth_users.findUnique({
         where: { id: user.auth_id },
-        select: { encrypted_password: true },
+        select: { encrypted_password: true, raw_app_meta_data: true },
       });
 
       if (authUser?.encrypted_password) {
+        verifiedSessionVersion = sessionVersion(authUser.raw_app_meta_data);
         isValidPassword = await bcrypt.compare(
           password,
           authUser.encrypted_password,
         );
       }
     } else {
-      // Auto-repair: Jika akun lama belum punya auth_id, buatkan dan tautkan
-      const newAuthId = crypto.randomUUID();
-      const authEmail = (user.email || `${user.username || 'user'}@acca.local`).toLowerCase();
-      const encryptedPassword = await bcrypt.hash(password, 10);
-      await this.prismaService.auth_users.create({
-        data: {
-          id: newAuthId,
-          email: authEmail,
-          encrypted_password: encryptedPassword,
-          aud: 'authenticated',
-          role: 'authenticated',
-          created_at: new Date(),
-          updated_at: new Date(),
-        },
-      });
-      await this.prismaService.public_users.update({
-        where: { id: user.id },
-        data: { auth_id: newAuthId },
-      });
-      user.auth_id = newAuthId;
-      isValidPassword = true;
+      throw new UnauthorizedException('Akun belum memiliki kredensial. Hubungi Admin untuk mengaktifkan akses login.');
     }
 
     if (!isValidPassword) {
@@ -132,6 +115,7 @@ export class AuthService {
     const payload = {
       sub: userIdStr,
       authId: user.auth_id,
+      sessionVersion: verifiedSessionVersion,
       email: user.email,
       username: user.username,
       role: user.role,
@@ -174,90 +158,95 @@ export class AuthService {
   }
 
   async register(registerDto: RegisterDto) {
-    const { email, username, name, password, role } = registerDto;
+    return this.prismaService.$transaction(async tx => {
+      await lockAccountWrites(tx);
 
-    // Check if email or username exists
-    const existingUser = await this.prismaService.public_users.findFirst({
-      where: {
-        OR: [
-          { email: email.toLowerCase() },
-          { username: username.toLowerCase() },
-        ],
-      },
-    });
+      const { email, username, name, password, role } = registerDto;
 
-    if (existingUser) {
-      throw new BadRequestException('Email atau Username sudah terdaftar');
-    }
+      // Check if email or username exists
+      const existingUser = await tx.public_users.findFirst({
+        where: {
+          OR: [
+            { email: email.toLowerCase() },
+            { username: username.toLowerCase() },
+          ],
+        },
+      });
 
-    /**
-     * Kredensial ditulis ke `auth_users.encrypted_password` — tempat yang sama
-     * yang diperiksa saat login. Sebelumnya disimpan di
-     * `public_users.password_hash` sementara akun barunya tidak pernah diberi
-     * `auth_id`; itu hanya berfungsi selama login masih punya cabang cadangan
-     * ke kolom tersebut. Cabang itu sudah dicabut dan kolomnya sedang dihapus,
-     * jadi tanpa perubahan ini akun hasil registrasi tidak akan bisa login.
-     */
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const authId = crypto.randomUUID();
+      if (existingUser) {
+        throw new BadRequestException('Email atau Username sudah terdaftar');
+      }
 
-    await this.prismaService.auth_users.create({
-      data: {
-        id: authId,
-        email: email.toLowerCase(),
-        encrypted_password: hashedPassword,
-        aud: 'authenticated',
-        role: 'authenticated',
-        created_at: new Date(),
-        updated_at: new Date(),
-      },
-    });
+      /**
+       * Kredensial ditulis ke `auth_users.encrypted_password` — tempat yang sama
+       * yang diperiksa saat login. Sebelumnya disimpan di
+       * `public_users.password_hash` sementara akun barunya tidak pernah diberi
+       * `auth_id`; itu hanya berfungsi selama login masih punya cabang cadangan
+       * ke kolom tersebut. Cabang itu sudah dicabut dan kolomnya sedang dihapus,
+       * jadi tanpa perubahan ini akun hasil registrasi tidak akan bisa login.
+       */
+      const hashedPassword = await bcrypt.hash(password, 10);
+      const authId = crypto.randomUUID();
 
-    // Create user in PostgreSQL VPS
-    const newUser = await this.prismaService.public_users.create({
-      data: {
-        email: email.toLowerCase(),
-        username: username.toLowerCase(),
-        nama: name,
-        nama_lengkap: name,
-        auth_id: authId,
-        role: role || 'user',
-        aktif: true,
-      },
-    });
+      await tx.auth_users.create({
+        data: {
+          id: authId,
+          email: email.toLowerCase(),
+          encrypted_password: hashedPassword,
+          aud: 'authenticated',
+          role: 'authenticated',
+          created_at: new Date(),
+          updated_at: new Date(),
+        },
+      });
 
-    const newUserIdStr = newUser.id.toString();
+      // Create user in PostgreSQL VPS
+      const newUser = await tx.public_users.create({
+        data: {
+          email: email.toLowerCase(),
+          username: username.toLowerCase(),
+          nama: name,
+          nama_lengkap: name,
+          auth_id: authId,
+          role: role || 'user',
+          aktif: true,
+        },
+      });
 
-    let pageIds: string[] | undefined = undefined;
-    try {
-      const access = await this.accessService.resolveUserAccess(newUser);
-      pageIds = access?.pageIds;
-    } catch (err) {
-      this.logger.warn(`Gagal resolveUserAccess saat register: ${(err as Error).message}`);
-    }
+      const newUserIdStr = newUser.id.toString();
 
-    // Generate JWT token
-    const payload = {
-      sub: newUserIdStr,
-      email: newUser.email,
-      username: newUser.username,
-      role: newUser.role,
-      ...(pageIds ? { pageIds } : {}),
-    };
+      let pageIds: string[] | undefined = undefined;
+      try {
+        const access = await this.accessService.resolveUserAccess(newUser);
+        pageIds = access?.pageIds;
+      } catch (err) {
+        this.logger.warn(`Gagal resolveUserAccess saat register: ${(err as Error).message}`);
+      }
 
-    const token = this.jwtService.sign(payload);
-
-    return {
-      message: 'Registrasi berhasil',
-      access_token: token,
-      user: {
-        id: newUserIdStr,
+      // Generate JWT token
+      const payload = {
+        sub: newUserIdStr,
         email: newUser.email,
         username: newUser.username,
-        name: newUser.nama_lengkap || newUser.nama,
         role: newUser.role,
-      },
-    };
+        ...(pageIds ? { pageIds } : {}),
+      };
+
+      const token = this.jwtService.sign(payload);
+
+      return {
+        message: 'Registrasi berhasil',
+        access_token: token,
+        user: {
+          id: newUserIdStr,
+          email: newUser.email,
+          username: newUser.username,
+          name: newUser.nama_lengkap || newUser.nama,
+          role: newUser.role,
+        },
+      };
+
+    }, { maxWait: 10000, timeout: 20000 });
   }
 
   async getProfile(userId: string) {
@@ -523,49 +512,57 @@ export class AuthService {
    * menentukan passwordnya sendiri.
    */
   async resetPasswordDenganToken(token: string, passwordBaru: string) {
-    const tokenBersih = String(token ?? '').trim().toLowerCase();
-    const password = String(passwordBaru ?? '');
+    return this.prismaService.$transaction(async tx => {
+      await lockAccountWrites(tx);
 
-    if (!tokenBersih || !/^[a-f0-9]{64}$/i.test(tokenBersih)) {
-      throw new BadRequestException('Tautan tidak sah atau format token salah.');
-    }
-    if (password.length < 6) {
-      throw new BadRequestException('Password minimal 6 karakter');
-    }
+      const tokenBersih = String(token ?? '').trim().toLowerCase();
+      const password = String(passwordBaru ?? '');
 
-    const baris = await this.prismaService.auth_users.findFirst({
-      where: { recovery_token: this.hashToken(tokenBersih) },
-      select: { id: true, recovery_sent_at: true, raw_user_meta_data: true },
-    });
+      if (!tokenBersih || !/^[a-f0-9]{64}$/i.test(tokenBersih)) {
+        throw new BadRequestException('Tautan tidak sah atau format token salah.');
+      }
+      if (password.length < 6) {
+        throw new BadRequestException('Password minimal 6 karakter');
+      }
 
-    const tidakSah = () =>
-      new BadRequestException(
-        'Tautan pemulihan tidak sah atau sudah kedaluwarsa. Jika Anda sempat meminta tautan baru, pastikan membuka tautan dari email yang paling baru diterima.',
-      );
+      const baris = await tx.auth_users.findFirst({
+        where: { recovery_token: this.hashToken(tokenBersih) },
+        select: { id: true, recovery_sent_at: true, raw_user_meta_data: true, raw_app_meta_data: true },
+      });
 
-    if (!baris || !baris.recovery_sent_at) throw tidakSah();
+      const tidakSah = () =>
+        new BadRequestException(
+          'Tautan pemulihan tidak sah atau sudah kedaluwarsa. Jika Anda sempat meminta tautan baru, pastikan membuka tautan dari email yang paling baru diterima.',
+        );
 
-    const umurMenit = (Date.now() - baris.recovery_sent_at.getTime()) / 60000;
-    if (umurMenit > AuthService.MENIT_BERLAKU_TOKEN) throw tidakSah();
+      if (!baris || !baris.recovery_sent_at) throw tidakSah();
 
-    const meta =
-      baris.raw_user_meta_data && typeof baris.raw_user_meta_data === 'object'
-        ? { ...(baris.raw_user_meta_data as Record<string, any>) }
-        : {};
-    delete meta.must_change_password;
+      const umurMenit = (Date.now() - baris.recovery_sent_at.getTime()) / 60000;
+      if (umurMenit > AuthService.MENIT_BERLAKU_TOKEN) throw tidakSah();
 
-    await this.prismaService.auth_users.update({
-      where: { id: baris.id },
-      data: {
-        encrypted_password: await bcrypt.hash(password, 10),
-        recovery_token: null,
-        recovery_sent_at: null,
-        raw_user_meta_data: meta,
-        updated_at: new Date(),
-      },
-    });
+      const meta =
+        baris.raw_user_meta_data && typeof baris.raw_user_meta_data === 'object'
+          ? { ...(baris.raw_user_meta_data as Record<string, any>) }
+          : {};
+      delete meta.must_change_password;
 
-    return { ok: true, message: 'Password berhasil diperbarui. Silakan masuk dengan password baru Anda.' };
+      const changed = await tx.auth_users.updateMany({
+        where: { id: baris.id, recovery_token: this.hashToken(tokenBersih) },
+        data: {
+          encrypted_password: await bcrypt.hash(password, 10),
+          raw_app_meta_data: revokeSessions(baris.raw_app_meta_data),
+          recovery_token: null,
+          recovery_sent_at: null,
+          raw_user_meta_data: meta,
+          updated_at: new Date(),
+        },
+      });
+
+      if (changed.count !== 1) throw tidakSah();
+
+      return { ok: true, message: 'Password berhasil diperbarui. Silakan masuk dengan password baru Anda.' };
+
+    }, { maxWait: 10000, timeout: 20000 });
   }
 
   /**
@@ -602,95 +599,103 @@ export class AuthService {
     targetUserId: string | number,
     newPassword?: string,
   ) {
-    // 1. Verify caller is admin
-    const caller = await this.prismaService.public_users.findUnique({
-      where: { id: BigInt(callerUserId) },
-      select: { role: true },
-    });
-    const roles = (caller?.role || '')
-      .split(/[,|]/)
-      .map((r) => r.trim().toUpperCase())
-      .filter(Boolean);
-    if (!roles.includes('ADMIN') && !roles.includes('ADMINISTRATOR')) {
-      throw new ForbiddenException('Hanya admin yang bisa mereset password');
-    }
+    return this.prismaService.$transaction(async tx => {
+      await lockAccountWrites(tx);
 
-    // 2. Find target user
-    const targetUser = await this.prismaService.public_users.findUnique({
-      where: { id: BigInt(targetUserId) },
-    });
-    if (!targetUser) {
-      throw new NotFoundException('User tidak ditemukan');
-    }
-
-    // Admin boleh menentukan sendiri; kalau tidak, dibuatkan yang acak per akun.
-    const passwordToSet =
-      newPassword && newPassword.trim() ? newPassword.trim() : this.buatPasswordSementara();
-    const encryptedPassword = await bcrypt.hash(passwordToSet, 10);
-
-    let authId = targetUser.auth_id;
-    if (!authId) {
-      authId = crypto.randomUUID();
-      await this.prismaService.public_users.update({
-        where: { id: targetUser.id },
-        data: { auth_id: authId },
+      // 1. Verify caller is admin
+      const caller = await tx.public_users.findUnique({
+        where: { id: BigInt(callerUserId) },
+        select: { role: true },
       });
-    }
+      const roles = (caller?.role || '')
+        .split(/[,|]/)
+        .map((r) => r.trim().toUpperCase())
+        .filter(Boolean);
+      if (!roles.includes('ADMIN') && !roles.includes('ADMINISTRATOR')) {
+        throw new ForbiddenException('Hanya admin yang bisa mereset password');
+      }
 
-    // 3. Upsert to auth_users in PostgreSQL VPS
-    const existingAuth = await this.prismaService.auth_users.findUnique({
-      where: { id: authId },
-    });
+      // 2. Find target user
+      const targetUser = await tx.public_users.findUnique({
+        where: { id: BigInt(targetUserId) },
+      });
+      if (!targetUser) {
+        throw new NotFoundException('User tidak ditemukan');
+      }
 
-    // Penanda disimpan di `raw_user_meta_data` yang sudah bertipe Json, jadi tidak
-    // perlu kolom baru — `JwtStrategy` dan `login()` membacanya untuk memaksa
-    // penggantian sebelum akunnya bisa dipakai.
-    const metaLama =
-      existingAuth?.raw_user_meta_data && typeof existingAuth.raw_user_meta_data === 'object'
-        ? (existingAuth.raw_user_meta_data as Record<string, unknown>)
-        : {};
-    const metaBaru = { ...metaLama, must_change_password: true };
+      // Admin boleh menentukan sendiri; kalau tidak, dibuatkan yang acak per akun.
+      const passwordToSet =
+        newPassword && newPassword.trim() ? newPassword.trim() : this.buatPasswordSementara();
+      if (passwordToSet.length < 6) throw new BadRequestException('Password minimal 6 karakter');
+      const encryptedPassword = await bcrypt.hash(passwordToSet, 10);
 
-    if (existingAuth) {
-      await this.prismaService.auth_users.update({
+      let authId = targetUser.auth_id;
+      if (!authId) {
+        authId = crypto.randomUUID();
+        await tx.public_users.update({
+          where: { id: targetUser.id },
+          data: { auth_id: authId },
+        });
+      }
+
+      // 3. Upsert to auth_users in PostgreSQL VPS
+      const existingAuth = await tx.auth_users.findUnique({
         where: { id: authId },
-        data: {
-          encrypted_password: encryptedPassword,
-          raw_user_meta_data: metaBaru,
-          updated_at: new Date(),
-        },
       });
-    } else {
-      await this.prismaService.auth_users.create({
-        data: {
-          id: authId,
-          email: targetUser.email || `${targetUser.username}@icgowa.sch.id`,
-          encrypted_password: encryptedPassword,
-          aud: 'authenticated',
-          role: 'authenticated',
-          created_at: new Date(),
-          updated_at: new Date(),
-          raw_user_meta_data: metaBaru,
-        },
-      });
-    }
 
-    // Tidak ada lagi salinan ke `public_users.password_hash`: kolom itu sedang
-    // dihapus, dan menyalin kredensial ke dua tempat hanya memperbanyak
-    // permukaan yang harus dijaga.
+      // Penanda disimpan di `raw_user_meta_data` yang sudah bertipe Json, jadi tidak
+      // perlu kolom baru — `JwtStrategy` dan `login()` membacanya untuk memaksa
+      // penggantian sebelum akunnya bisa dipakai.
+      const metaLama =
+        existingAuth?.raw_user_meta_data && typeof existingAuth.raw_user_meta_data === 'object'
+          ? (existingAuth.raw_user_meta_data as Record<string, unknown>)
+          : {};
+      const metaBaru = { ...metaLama, must_change_password: true };
 
-    const namaTarget =
-      targetUser.nama_lengkap || targetUser.nama || targetUser.username;
+      if (existingAuth) {
+        await tx.auth_users.update({
+          where: { id: authId },
+          data: {
+            encrypted_password: encryptedPassword,
+            raw_user_meta_data: metaBaru,
+            raw_app_meta_data: revokeSessions(existingAuth?.raw_app_meta_data),
+            recovery_token: null, recovery_sent_at: null,
+            updated_at: new Date(),
+          },
+        });
+      } else {
+        await tx.auth_users.create({
+          data: {
+            id: authId,
+            email: targetUser.email || `${targetUser.username}@icgowa.sch.id`,
+            encrypted_password: encryptedPassword,
+            aud: 'authenticated',
+            role: 'authenticated',
+            created_at: new Date(),
+            updated_at: new Date(),
+            raw_user_meta_data: metaBaru,
+          },
+        });
+      }
 
-    return {
-      ok: true,
-      // Nilainya dikembalikan supaya admin bisa menyampaikannya; ini satu-satunya
-      // kesempatan melihatnya, karena yang tersimpan hanyalah hash-nya.
-      password: passwordToSet,
-      harusGanti: true,
-      message:
-        `Password untuk ${namaTarget} berhasil direset. ` +
-        `Pemiliknya akan diminta menggantinya saat login berikutnya.`,
-    };
+      // Tidak ada lagi salinan ke `public_users.password_hash`: kolom itu sedang
+      // dihapus, dan menyalin kredensial ke dua tempat hanya memperbanyak
+      // permukaan yang harus dijaga.
+
+      const namaTarget =
+        targetUser.nama_lengkap || targetUser.nama || targetUser.username;
+
+      return {
+        ok: true,
+        // Nilainya dikembalikan supaya admin bisa menyampaikannya; ini satu-satunya
+        // kesempatan melihatnya, karena yang tersimpan hanyalah hash-nya.
+        password: passwordToSet,
+        harusGanti: true,
+        message:
+          `Password untuk ${namaTarget} berhasil direset. ` +
+          `Pemiliknya akan diminta menggantinya saat login berikutnya.`,
+      };
+
+    }, { maxWait: 10000, timeout: 20000 });
   }
 }

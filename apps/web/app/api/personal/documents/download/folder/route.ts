@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import JSZip from 'jszip';
-import { extractRequestToken, verifyAppToken } from '@/lib/app-jwt';
+import { extractRequestToken, verifyAppSession } from '@/lib/app-jwt';
 import { nestFetchAsUser } from '@/lib/nest-api';
 
 export async function GET(request: NextRequest) {
@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
         }
 
         const token = extractRequestToken(request);
-        const claims = token ? await verifyAppToken(token) : null;
+        const claims = token ? await verifyAppSession(token) : null;
         if (!claims?.sub) {
             return NextResponse.json({ ok: false, error: 'Unauthorized' }, { status: 401 });
         }

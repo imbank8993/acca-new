@@ -1,3 +1,4 @@
+import { lockAccountWrites, countUsableAdmins } from '../auth/session-security';
 import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -702,11 +703,11 @@ export class AccessService {
 
   async createRole(name: string, description?: string) {
     const normalizedName = name.toUpperCase().replace(/\s+/g, '_');
-    
+
     const existing = await this.prisma.roles.findUnique({
       where: { name: normalizedName },
     });
-    
+
     if (existing) {
       throw new Error(`Role "${normalizedName}" sudah ada. Gunakan nama lain.`);
     }
@@ -868,54 +869,62 @@ export class AccessService {
   }
 
   async updateUserRoles(userId: string | number, role: string, action?: string) {
-    const idTeks = String(userId ?? '').trim();
-    if (!/^\d+$/.test(idTeks)) {
-      throw new BadRequestException('ID pengguna tidak valid');
-    }
-    const existingUser = await this.prisma.public_users.findUnique({ where: { id: BigInt(idTeks) } });
-    if (!existingUser) {
-      throw new NotFoundException('User not found');
-    }
+    return this.prisma.$transaction(async tx => {
+      await lockAccountWrites(tx);
 
-    const currentRoles = parseRoles(existingUser.role || '');
-    let finalRoles = [...currentRoles];
-    const targetRole = role.trim().toUpperCase();
-
-    if (action === 'add') {
-      if (!finalRoles.includes(targetRole)) {
-        finalRoles.push(targetRole);
+      const idTeks = String(userId ?? '').trim();
+      if (!/^\d+$/.test(idTeks)) {
+        throw new BadRequestException('ID pengguna tidak valid');
       }
-    } else if (action === 'remove') {
-      finalRoles = finalRoles.filter((r) => r !== targetRole);
-    } else {
-      finalRoles = parseRoles(role);
-    }
+      if (typeof role !== 'string' || !role.trim()) throw new BadRequestException('Role wajib diisi');
+      if (action !== undefined && !['add', 'remove', 'replace'].includes(action)) throw new BadRequestException('Aksi role tidak valid');
+      const requested = parseRoles(role);
+      if (!requested.length || ((action === 'add' || action === 'remove') && requested.length !== 1)) throw new BadRequestException('Role tidak valid');
+      const catalog = await tx.roles.findMany({ select: { name: true } });
+      const valid = new Set(catalog.map(item => item.name.trim().toUpperCase()));
+      if (requested.some(item => !valid.has(item))) throw new BadRequestException('Role tidak terdaftar');
+      const existingUser = await tx.public_users.findUnique({ where: { id: BigInt(idTeks) } });
+      if (!existingUser) {
+        throw new NotFoundException('User not found');
+      }
 
-    const finalRoleString = finalRoles.join(',');
+      const currentRoles = parseRoles(existingUser.role || '');
+      let finalRoles = [...currentRoles];
+      const targetRole = requested[0];
 
-    const kehilanganAdmin =
-      this.punyaRoleAdmin(existingUser.role) &&
-      existingUser.aktif === true &&
-      !this.punyaRoleAdmin(finalRoleString);
-    if (kehilanganAdmin) {
-      const kandidat = await this.prisma.public_users.findMany({
-        where: { aktif: true, role: { contains: 'ADMIN', mode: 'insensitive' } },
-        select: { role: true },
+      if (action === 'add') {
+        if (!finalRoles.includes(targetRole)) {
+          finalRoles.push(targetRole);
+        }
+      } else if (action === 'remove') {
+        finalRoles = finalRoles.filter((r) => r !== targetRole);
+      } else {
+        finalRoles = parseRoles(role);
+      }
+
+      if (!finalRoles.length) throw new BadRequestException('Pengguna harus memiliki setidaknya satu role');
+      const finalRoleString = finalRoles.join(',');
+
+      const kehilanganAdmin =
+        this.punyaRoleAdmin(existingUser.role) &&
+        existingUser.aktif === true &&
+        !this.punyaRoleAdmin(finalRoleString);
+      if (kehilanganAdmin) {
+        if (await countUsableAdmins(tx) <= 1) {
+          throw new BadRequestException(
+            'Ini satu-satunya akun Admin yang aktif. Tunjuk Admin lain lebih dulu sebelum ' +
+              'mencabut role ADMIN dari akun ini.',
+          );
+        }
+      }
+
+      const updated = await tx.public_users.update({
+        where: { id: BigInt(idTeks) },
+        data: { role: finalRoleString },
       });
-      // `contains` hanya mempersempit kandidat; `ADMINISTRASI` tidak ikut terhitung.
-      if (kandidat.filter((u) => this.punyaRoleAdmin(u.role)).length <= 1) {
-        throw new BadRequestException(
-          'Ini satu-satunya akun Admin yang aktif. Tunjuk Admin lain lebih dulu sebelum ' +
-            'mencabut role ADMIN dari akun ini.',
-        );
-      }
-    }
 
-    const updated = await this.prisma.public_users.update({
-      where: { id: BigInt(idTeks) },
-      data: { role: finalRoleString },
-    });
-    
-    return updated;
+      return updated;
+
+    }, { maxWait: 10000, timeout: 20000 });
   }
 }

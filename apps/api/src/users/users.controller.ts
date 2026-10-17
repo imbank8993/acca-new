@@ -46,8 +46,8 @@ export class UsersController {
    * memindahkannya tanpa terlihat.
    */
   private async assertCanManageUsers(req: any) {
-    const access = await this.accessService.resolveUserAccess(req.user);
-    if (!access.roles.some((r) => r === 'ADMIN' || r === 'ADMINISTRATOR')) {
+    const roles = String(req.user?.role || '').split(/[,|]/).map(role => role.trim().toUpperCase());
+    if (!roles.some(role => role === 'ADMIN' || role === 'ADMINISTRATOR')) {
       throw new ForbiddenException('Hanya Admin yang dapat mengelola pengguna');
     }
   }
@@ -102,11 +102,7 @@ export class UsersController {
   ) {
     const { password, oldPassword, role, aktif, nip, ...profil } = body;
 
-    const data = await this.usersService.update(req.user.id, profil);
-
-    if (password) {
-      await this.usersService.changeOwnPassword(req.user, password, oldPassword);
-    }
+    const data = await this.usersService.updateOwn(req.user, profil, password, oldPassword);
 
     return { ok: true, data };
   }

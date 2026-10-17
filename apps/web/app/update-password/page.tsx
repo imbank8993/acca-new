@@ -2,6 +2,7 @@
 
 import { useState, FormEvent, Suspense, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { clearUserCache } from '@/lib/auth-client'
 
 export default function UpdatePasswordPage() {
   return (
@@ -18,6 +19,7 @@ export default function UpdatePasswordPage() {
 function UpdatePasswordContent() {
   const router = useRouter()
   const [password, setPassword] = useState('')
+  const [oldPassword, setOldPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -84,7 +86,7 @@ function UpdatePasswordContent() {
       const res = await fetch('/api/auth/update-password', {
         method: 'POST',
         headers,
-        body: JSON.stringify({ password })
+        body: JSON.stringify({ password, oldPassword })
       });
 
       const data = await res.json();
@@ -95,6 +97,7 @@ function UpdatePasswordContent() {
         return;
       }
 
+      clearUserCache();
       setSuccess(true);
 
       // Redirect ke login setelah 3 detik
@@ -135,6 +138,10 @@ function UpdatePasswordContent() {
         </div>
 
         <form className="up-form" onSubmit={handleUpdate}>
+          <div className="up-field">
+            <label htmlFor="currentPassword">Password Saat Ini</label>
+            <input id="currentPassword" type="password" autoComplete="current-password" placeholder="Password yang digunakan saat login" value={oldPassword} onChange={e => setOldPassword(e.target.value)} disabled={loading} required />
+          </div>
           <div className="up-field">
             <label htmlFor="password">Password Baru</label>
             <div className="up-input-wrap">

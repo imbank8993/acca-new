@@ -1,5 +1,5 @@
 import { cookies } from 'next/headers';
-import { verifyAppToken, decodeSessionCookie } from '@/lib/app-jwt';
+import { verifyAppSession, decodeSessionCookie } from '@/lib/app-jwt';
 import { prisma } from './prisma';
 
 export interface ServerUser {
@@ -19,7 +19,7 @@ export async function getAuthenticatedUser(request: Request): Promise<ServerUser
             token = decodeSessionCookie(encodedToken);
         }
 
-        const claims = token ? await verifyAppToken(token) : null;
+        const claims = token ? await verifyAppSession(token) : null;
         if (!claims) {
             return null;
         }
