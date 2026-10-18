@@ -1,5 +1,5 @@
 import { Injectable, BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
-import { PtspPrismaService } from './ptsp-prisma.service';
+import { PrismaService } from '../prisma/prisma.service';
 
 export const PTSP_TABLES: Record<string, string> = {
   ptsp_buku_tamu: 'Buku Tamu',
@@ -13,6 +13,12 @@ export const PTSP_TABLES: Record<string, string> = {
   ptsp_peminjaman_sarana: 'Peminjaman Sarana',
   ptsp_izin_penelitian: 'Izin Penelitian',
   ptsp_pengaduan: 'Pengaduan',
+};
+
+const DEFAULT_CONFIG = {
+  enabledServices: ['buku-tamu', 'sosialisasi', 'izin-siswa', 'peminjaman-sarana', 'izin-penelitian', 'legalisir', 'ganti-ijazah', 'izin-magang', 'mutasi-siswa', 'pengaduan'],
+  waEnabled: true,
+  waMessageTemplate: 'Halo {nama}, permohonan {layanan} Anda berhasil diterima. Kode lacak: {kode_lacak}. Gunakan kode tersebut untuk memantau status permohonan.',
 };
 
 const TRACKING_COLS = [
@@ -44,7 +50,38 @@ const SEARCH_COLS: Record<string, string[]> = {
 
 @Injectable()
 export class PtspService {
-  constructor(private readonly prisma: PtspPrismaService) {}
+  constructor(private readonly prisma: PrismaService) {}
+
+  async getConfig() {
+    const row = await this.prisma.site_settings.findUnique({ where: { key: 'ptsp_service_config' } });
+    if (!row?.value) return DEFAULT_CONFIG;
+    try {
+      const parsed = JSON.parse(row.value);
+      return {
+        enabledServices: Array.isArray(parsed.enabledServices) ? parsed.enabledServices.filter((id: string) => DEFAULT_CONFIG.enabledServices.includes(id)) : DEFAULT_CONFIG.enabledServices,
+        waEnabled: parsed.waEnabled !== false,
+        waMessageTemplate: typeof parsed.waMessageTemplate === 'string' ? parsed.waMessageTemplate.slice(0, 1000) : DEFAULT_CONFIG.waMessageTemplate,
+      };
+    } catch { return DEFAULT_CONFIG; }
+  }
+
+  async saveConfig(user: any, input: any) {
+    if (!this.canManage(user?.roles || [])) throw new ForbiddenException('Akses ditolak. Peran tidak memiliki izin PTSP.');
+    const enabledServices = Array.isArray(input?.enabledServices)
+      ? [...new Set(input.enabledServices.filter((id: string) => DEFAULT_CONFIG.enabledServices.includes(id)))]
+      : DEFAULT_CONFIG.enabledServices;
+    if (enabledServices.length === 0) throw new BadRequestException('Pilih minimal satu menu layanan.');
+    const value = JSON.stringify({
+      enabledServices,
+      waEnabled: input?.waEnabled === true,
+      waMessageTemplate: typeof input?.waMessageTemplate === 'string' ? input.waMessageTemplate.trim().slice(0, 1000) : DEFAULT_CONFIG.waMessageTemplate,
+    });
+    return this.prisma.site_settings.upsert({
+      where: { key: 'ptsp_service_config' },
+      create: { key: 'ptsp_service_config', label: 'Konfigurasi Layanan PTSP', description: 'Pengaturan menu dan pesan WhatsApp PTSP', value, is_active: true },
+      update: { value, label: 'Konfigurasi Layanan PTSP', description: 'Pengaturan menu dan pesan WhatsApp PTSP' },
+    }).then(() => this.getConfig());
+  }
 
   private canManage(roles: string[] = []): boolean {
     const upper = roles.map((r) => r.toUpperCase());

@@ -1,13 +1,12 @@
-// Prisma schema for the dedicated PTSP database.
+// Legacy PTSP schema snapshot kept for reference only.
+// Runtime and Docker builds use the main schema.prisma and DATABASE_URL (acca_db).
 generator client {
   provider = "prisma-client-js"
-  output   = "../generated/ptsp-client"
 }
 
 datasource db {
   provider = "postgresql"
-  url      = env("PTSP_DATABASE_URL")
-  directUrl = env("PTSP_DIRECT_URL")
+  url      = env("DATABASE_URL")
 }
 
 

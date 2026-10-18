@@ -10,6 +10,12 @@ import { PtspService } from './ptsp.service';
 export class PtspController {
   constructor(private readonly ptspService: PtspService) {}
 
+  @Get('config')
+  async getConfig() { return { ok: true, data: await this.ptspService.getConfig() }; }
+
+  @Post('config')
+  async saveConfig(@Request() req: any, @Body() body: any) { return { ok: true, data: await this.ptspService.saveConfig(req.user, body) }; }
+
   @Get()
   @ApiOperation({ summary: 'Ambil data tabel PTSP dengan paginasi dan filter pencarian' })
   async getTable(
