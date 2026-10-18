@@ -1,5 +1,5 @@
 import { Injectable, BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
+import { PtspPrismaService } from './ptsp-prisma.service';
 
 export const PTSP_TABLES: Record<string, string> = {
   ptsp_buku_tamu: 'Buku Tamu',
@@ -44,7 +44,7 @@ const SEARCH_COLS: Record<string, string[]> = {
 
 @Injectable()
 export class PtspService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PtspPrismaService) {}
 
   private canManage(roles: string[] = []): boolean {
     const upper = roles.map((r) => r.toUpperCase());
@@ -151,10 +151,10 @@ export class PtspService {
     }
 
     const updatePayload: any = {
-      is_edited: true,
-      edit_count: (existing.edit_count || 0) + 1,
       updated_at: new Date(),
     };
+    if ('is_edited' in existing) updatePayload.is_edited = true;
+    if ('edit_count' in existing) updatePayload.edit_count = (existing.edit_count || 0) + 1;
 
     if ('status' in data && data.status !== undefined) {
       updatePayload.status = Number(data.status);
@@ -168,26 +168,55 @@ export class PtspService {
       data: updatePayload,
     });
 
-    // Bidirectional sync
+    // Keep the related row in the dedicated PTSP database in sync.
     const statusVal = updatePayload.status !== undefined ? updatePayload.status : null;
     const catatanVal = updatePayload.catatan_admin !== undefined ? updatePayload.catatan_admin : null;
 
     try {
       if (!isTracking) {
         if (existing.tracking_token) {
-          await this.prisma.$executeRaw`SELECT ptsp_sync_child_to_master(
-            ${table}::text,
-            ${BigInt(id)}::bigint,
-            ${statusVal !== null ? Number(statusVal) : null}::integer,
-            ${catatanVal}::text
-          )`;
+          const master = await this.prisma.ptsp_master_tracking.findFirst({
+            where: {
+              OR: [
+                { id: existing.tracking_token },
+                { tracking_token: existing.tracking_token },
+              ],
+            },
+          });
+          if (master) {
+            await this.prisma.ptsp_master_tracking.update({
+              where: { id: master.id },
+              data: {
+                ...(statusVal !== null ? { status: Number(statusVal) } : {}),
+                ...(catatanVal !== null ? { catatan_admin: catatanVal } : {}),
+                updated_at: new Date(),
+              },
+            });
+          }
         }
       } else {
-        await this.prisma.$executeRaw`SELECT ptsp_sync_master_to_child(
-          ${String(id)}::uuid,
-          ${statusVal !== null ? Number(statusVal) : null}::integer,
-          ${catatanVal}::text
-        )`;
+        const childName = String(existing.table_name || '').replace(/^ptsp_/, '');
+        const childTable = Object.keys(PTSP_TABLES).find(
+          (candidate) => candidate !== 'ptsp_master_tracking'
+            && (candidate === existing.table_name || candidate === `ptsp_${childName}`),
+        );
+        if (childTable && childTable !== 'ptsp_master_tracking') {
+          const childDelegate = (this.prisma as any)[childTable];
+          const trackingTokens = [String(existing.id), String(existing.tracking_token)].filter(Boolean);
+          const child = await childDelegate.findFirst({
+            where: { tracking_token: { in: trackingTokens } },
+          });
+          if (child) {
+            await childDelegate.update({
+              where: { id: child.id },
+              data: {
+                ...(statusVal !== null ? { status: Number(statusVal) } : {}),
+                ...(catatanVal !== null ? { catatan_admin: catatanVal } : {}),
+                updated_at: new Date(),
+              },
+            });
+          }
+        }
       }
     } catch (syncErr) {
       console.error('[PTSP sync error]', syncErr);

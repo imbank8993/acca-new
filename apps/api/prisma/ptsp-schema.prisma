@@ -1,0 +1,265 @@
+// Prisma schema for the dedicated PTSP database.
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/ptsp-client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("PTSP_DATABASE_URL")
+  directUrl = env("PTSP_DIRECT_URL")
+}
+
+
+model ptsp_buku_tamu {
+  id             BigInt    @id @default(autoincrement())
+  nama           String
+  wa             String?
+  instansi       String?
+  tujuan         String
+  bertemu_dengan String?
+  created_at     DateTime  @default(dbgenerated("timezone('utc'::text, now())")) @db.Timestamptz(6)
+  tracking_token String?   @db.Uuid
+  status         Int       @default(1)
+  updated_at     DateTime? @default(dbgenerated("timezone('utc'::text, now())")) @db.Timestamptz(6)
+  is_edited      Boolean?  @default(false)
+  edit_count     Int?      @default(0)
+  catatan_admin  String?
+}
+
+enum alasan_izin {
+  Sakit
+  Izin
+  Lainnya
+}
+
+model ptsp_izin_magang {
+  id                   BigInt   @id @default(autoincrement())
+  nama                 String
+  wa                   String
+  sekolah_kampus       String
+  jurusan              String
+  tanggal_mulai        DateTime @db.Date
+  tanggal_selesai      DateTime @db.Date
+  file_surat_pengantar String?
+  status               Int      @default(1)
+  updated_at           DateTime @default(dbgenerated("timezone('utc'::text, now())")) @db.Timestamptz(6)
+  is_edited            Boolean? @default(false)
+  edit_count           Int?     @default(0)
+  catatan_admin        String?
+  tracking_token       String?  @unique @db.Uuid
+  created_at           DateTime @default(dbgenerated("timezone('utc'::text, now())")) @db.Timestamptz(6)
+
+}
+model ptsp_izin_penelitian {
+  id                 BigInt   @id @default(autoincrement())
+  nama               String
+  wa                 String
+  instansi_sekolah   String?  @default("")
+  judul_penelitian   String
+  tanggal_mulai      DateTime @db.Date
+  tanggal_selesai    DateTime @db.Date
+  file_proposal      String?
+  status             Int      @default(1)
+  updated_at         DateTime @default(dbgenerated("timezone('utc'::text, now())")) @db.Timestamptz(6)
+  is_edited          Boolean? @default(false)
+  edit_count         Int?     @default(0)
+  catatan_admin      String?
+  tracking_token     String?  @unique
+  created_at         DateTime @default(dbgenerated("timezone('utc'::text, now())")) @db.Timestamptz(6)
+  instansi           String?
+  file_proposal_size BigInt?
+  storage_type       String?  @default("supabase") @db.VarChar(20)
+
+}
+model ptsp_izin_siswa {
+  id              BigInt      @id @default(autoincrement())
+  nama            String
+  kelas           String
+  tanggal_mulai   DateTime    @db.Date
+  tanggal_selesai DateTime    @db.Date
+  alasan          alasan_izin
+  keterangan      String?
+  status          Int         @default(1)
+  updated_at      DateTime    @default(dbgenerated("timezone('utc'::text, now())")) @db.Timestamptz(6)
+  is_edited       Boolean?    @default(false)
+  edit_count      Int?        @default(0)
+  catatan_admin   String?
+  tracking_token  String?     @unique @db.Uuid
+  created_at      DateTime    @default(dbgenerated("timezone('utc'::text, now())")) @db.Timestamptz(6)
+  alasan_lainnya  String?
+  wa              String?
+
+}
+model ptsp_legalisir {
+  id             BigInt   @id @default(autoincrement())
+  nama           String
+  wa             String
+  jenis_dokumen  String
+  jumlah_lembar  Int?     @default(1)
+  file_dokumen   String
+  status         Int      @default(1)
+  updated_at     DateTime @default(dbgenerated("timezone('utc'::text, now())")) @db.Timestamptz(6)
+  is_edited      Boolean? @default(false)
+  edit_count     Int?     @default(0)
+  catatan_admin  String?
+  tracking_token String?  @unique @db.Uuid
+  created_at     DateTime @default(dbgenerated("timezone('utc'::text, now())")) @db.Timestamptz(6)
+
+}
+model ptsp_master_tracking {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tracking_token String   @unique
+  short_code     String   @unique
+  no_wa          String
+  service_type   String
+  table_name     String
+  status         Int      @default(1)
+  created_at     DateTime @default(dbgenerated("timezone('utc'::text, now())")) @db.Timestamptz(6)
+  updated_at     DateTime @default(dbgenerated("timezone('utc'::text, now())")) @db.Timestamptz(6)
+  is_edited      Boolean? @default(false)
+  edit_count     Int?     @default(0)
+  catatan_admin  String?
+
+  @@index([short_code], map: "idx_ptsp_master_tracking_short_code")
+}
+model ptsp_mutasi_siswa {
+  id                      BigInt   @id @default(autoincrement())
+  nama_siswa              String
+  tempat_lahir            String
+  tanggal_lahir           DateTime @db.Date
+  jenis_kelamin           String
+  nisn                    String
+  kelas                   String
+  nama_ibu                String
+  alasan_pindah           String
+  file_permohonan_ortu    String?
+  file_rekomendasi_tujuan String?
+  status                  Int      @default(1)
+  updated_at              DateTime @default(dbgenerated("timezone('utc'::text, now())")) @db.Timestamptz(6)
+  is_edited               Boolean? @default(false)
+  edit_count              Int?     @default(0)
+  catatan_admin           String?
+  tracking_token          String?  @unique @db.Uuid
+  created_at              DateTime @default(dbgenerated("timezone('utc'::text, now())")) @db.Timestamptz(6)
+  wa                      String?
+
+}
+model ptsp_notes {
+  id         BigInt   @id @default(autoincrement())
+  title      String?
+  content    String?
+  created_at DateTime @default(dbgenerated("timezone('utc'::text, now())")) @db.Timestamptz(6)
+
+}
+model ptsp_peminjaman_sarana {
+  id                 BigInt    @id @default(autoincrement())
+  nama               String
+  wa                 String
+  alamat             String
+  file_proposal      String
+  status             Int       @default(1)
+  updated_at         DateTime  @default(dbgenerated("timezone('utc'::text, now())")) @db.Timestamptz(6)
+  is_edited          Boolean?  @default(false)
+  edit_count         Int?      @default(0)
+  catatan_admin      String?
+  tracking_token     String?   @unique
+  created_at         DateTime  @default(dbgenerated("timezone('utc'::text, now())")) @db.Timestamptz(6)
+  tanggal_mulai      DateTime? @db.Timestamptz(6)
+  tanggal_selesai    DateTime? @db.Timestamptz(6)
+  file_proposal_size BigInt?
+  storage_type       String?   @default("supabase") @db.VarChar(20)
+
+}
+model ptsp_pengaduan {
+  id              BigInt   @id @default(autoincrement())
+  nama            String?  @default("Anonim")
+  wa              String?
+  jenis_laporan   String?  @default("")
+  isi_laporan     String
+  file_bukti      String?
+  status          Int      @default(1)
+  updated_at      DateTime @default(dbgenerated("timezone('utc'::text, now())")) @db.Timestamptz(6)
+  is_edited       Boolean? @default(false)
+  edit_count      Int?     @default(0)
+  catatan_admin   String?
+  tracking_token  String?  @unique
+  created_at      DateTime @default(dbgenerated("timezone('utc'::text, now())")) @db.Timestamptz(6)
+  jenis_lainnya   String?
+  jenis           String?
+  file_bukti_size BigInt?
+  storage_type    String?  @default("supabase") @db.VarChar(20)
+
+}
+model ptsp_pengganti_ijazah {
+  id                    BigInt   @id @default(autoincrement())
+  nama_siswa            String
+  tempat_lahir          String
+  tanggal_lahir         DateTime @db.Date
+  alamat                String
+  nisn                  String
+  file_copy_ijazah      String?
+  file_copy_ktp         String?
+  file_pas_foto         String?
+  file_surat_kehilangan String?
+  status                Int      @default(1)
+  updated_at            DateTime @default(dbgenerated("timezone('utc'::text, now())")) @db.Timestamptz(6)
+  is_edited             Boolean? @default(false)
+  edit_count            Int?     @default(0)
+  catatan_admin         String?
+  tracking_token        String?  @unique @db.Uuid
+  created_at            DateTime @default(dbgenerated("timezone('utc'::text, now())")) @db.Timestamptz(6)
+  wa                    String?
+
+}
+model ptsp_sosialisasi {
+  id              BigInt    @id @default(autoincrement())
+  nama            String
+  wa              String
+  instansi        String
+  jenis           String
+  tujuan          String
+  target          String
+  jumlah_tim      String
+  rencana_waktu   DateTime? @db.Timestamptz(6)
+  file_url        String?
+  status          Int       @default(1)
+  updated_at      DateTime  @default(dbgenerated("timezone('utc'::text, now())")) @db.Timestamptz(6)
+  is_edited       Boolean?  @default(false)
+  edit_count      Int?      @default(0)
+  catatan_admin   String?
+  tracking_token  String?   @unique @db.Uuid
+  created_at      DateTime  @default(dbgenerated("timezone('utc'::text, now())")) @db.Timestamptz(6)
+  jenis_lainnya   String?
+  tanggal_mulai   DateTime? @db.Timestamptz(6)
+  tanggal_selesai DateTime? @db.Timestamptz(6)
+  file_size       BigInt?
+  storage_type    String?   @default("supabase") @db.VarChar(20)
+
+}
+model ptsp_system_logs {
+  id               BigInt   @id @default(autoincrement())
+  level            String   @default("error")
+  form_type        String?
+  error_message    String
+  payload_snapshot Json?
+  user_agent       String?
+  created_at       DateTime @default(dbgenerated("timezone('utc'::text, now())")) @db.Timestamptz(6)
+
+}
+model ptsp_wa_log {
+  id             BigInt    @id @default(autoincrement())
+  tracking_id    String    @db.Uuid
+  short_code     String    @db.VarChar(50)
+  no_wa          String    @db.VarChar(30)
+  service_type   String?   @db.VarChar(100)
+  status_changed Int
+  catatan_admin  String?
+  message_sent   String?
+  wa_sent        Boolean?  @default(false)
+  wa_sent_at     DateTime? @db.Timestamptz(6)
+  wa_response    String?
+  retry_count    Int?      @default(0)
+  created_at     DateTime? @default(now()) @db.Timestamptz(6)
+
+}

@@ -53,6 +53,13 @@ jobs:
             echo "🐳 Build Docker..."
             docker compose build
 
+            echo "🔐 Periksa konfigurasi koneksi database PTSP..."
+            if ! docker compose run --rm --no-deps --entrypoint sh acca-api -c 'test -n "$PTSP_DATABASE_URL" && test -n "$PTSP_DIRECT_URL"'; then
+              echo "PTSP_DATABASE_URL dan PTSP_DIRECT_URL harus diisi di .env server sebelum deploy."
+              exit 1
+            fi
+            docker compose run --rm --no-deps acca-api node apps/api/prisma/verify-ptsp-db.cjs
+
             echo "🗄️ Siapkan migrasi database sebelum aplikasi baru aktif..."
             docker compose run --rm --no-deps acca-api node node_modules/prisma/build/index.js db execute --schema apps/api/prisma/schema.prisma --file apps/api/prisma/sql/20261013_agenda_sasaran.sql
             docker compose run --rm --no-deps acca-api node node_modules/prisma/build/index.js db execute --schema apps/api/prisma/schema.prisma --file apps/api/prisma/sql/20261016_e_sertifikat.sql

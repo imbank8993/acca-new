@@ -25,6 +25,7 @@ build/
 
 # nest.js (hasil build backend)
 dist/
+apps/api/generated/
 
 # misc
 .DS_Store

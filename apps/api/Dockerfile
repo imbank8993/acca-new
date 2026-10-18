@@ -31,7 +31,10 @@ RUN npm ci --legacy-peer-deps --ignore-scripts
 # Copy Prisma schema and generate client explicitly
 COPY apps/api/prisma ./apps/api/prisma
 ENV DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy?schema=public"
+ENV PTSP_DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy?pgbouncer=true"
+ENV PTSP_DIRECT_URL="postgresql://dummy:dummy@localhost:5432/dummy"
 RUN npx prisma generate --schema=./apps/api/prisma/schema.prisma
+RUN npx prisma generate --schema=./apps/api/prisma/ptsp-schema.prisma
 
 # Copy source code
 COPY packages/shared ./packages/shared
@@ -40,6 +43,7 @@ COPY apps/api ./apps/api
 # Build NestJS API
 RUN npm run build --workspace=apps/api
 RUN if [ -f apps/api/dist/src/main.js ] && [ ! -f apps/api/dist/main.js ]; then cp -f apps/api/dist/src/main.js apps/api/dist/main.js; fi
+RUN mkdir -p apps/api/dist/generated && cp -a apps/api/generated/ptsp-client apps/api/dist/generated/
 
 # ── 3. Production Runner Stage ────────────────────────────────────────────────
 FROM base AS runner
