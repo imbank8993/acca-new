@@ -12,8 +12,12 @@ async function main() {
   try {
     const missing = [];
     for (const table of REQUIRED_TABLES) {
-      const rows = await prisma.$queryRawUnsafe('SELECT to_regclass($1) AS table_name', `public.${table}`);
-      if (!rows[0]?.table_name) missing.push(table);
+      // Return a boolean instead of regclass, which Prisma cannot deserialize.
+      const rows = await prisma.$queryRawUnsafe(
+        'SELECT to_regclass($1) IS NOT NULL AS exists',
+        `public.${table}`,
+      );
+      if (!rows[0]?.exists) missing.push(table);
     }
     if (missing.length) throw new Error(`Tabel acca_db belum tersedia: ${missing.join(', ')}`);
     console.log(`Verified ${REQUIRED_TABLES.length} PTSP tables in acca_db.`);
