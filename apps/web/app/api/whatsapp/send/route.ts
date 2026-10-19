@@ -67,27 +67,51 @@ export async function POST(request: NextRequest) {
         let token = user.isAdmin ? tokenOverride : undefined
         let target = user.isAdmin ? targetOverride : undefined
         let provider = 'fonnte'
+        let accountId = 'default'
+        let hasCentralConfig = false
 
         if (feature) {
-            const tokenKey = `wa_token_${feature}`
-            const targetKey = `wa_target_${feature}`
-
-            if (!token) token = await getSetting(tokenKey)
-            if (!target) target = await getSetting(targetKey)
+            const accountsRaw = await getSetting('wa_accounts_v3')
+            const assignmentsRaw = await getSetting('wa_feature_account_map')
+            if (accountsRaw) {
+                hasCentralConfig = true
+                try {
+                    const accounts = JSON.parse(accountsRaw)
+                    const assignments = JSON.parse(assignmentsRaw || '{}')
+                    const selected = Array.isArray(accounts) ? accounts.find((item: any) => item.id === assignments[feature]) : null
+                    if (selected && selected.enabled !== false) {
+                        accountId = selected.id
+                        provider = selected.provider || 'fonnte'
+                        if (!token) token = selected.token || ''
+                        const featureTargets = selected.targetsByFeature?.[feature]
+                        const configuredTargets = Array.isArray(featureTargets) ? featureTargets : selected.targets
+                        const firstTarget = Array.isArray(configuredTargets) ? configuredTargets.find((item: any) => item.isSelected !== false && item.code?.trim()) : null
+                        if (!target) target = firstTarget?.code || ''
+                    } else if (!tokenOverride && !targetOverride) {
+                        return NextResponse.json({ ok: false, error: `Belum ada akun WhatsApp yang ditugaskan ke ${feature}` }, { status: 400 })
+                    }
+                } catch {
+                    return NextResponse.json({ ok: false, error: 'Pengaturan akun WhatsApp tidak valid' }, { status: 500 })
+                }
+            } else {
+                const tokenKey = `wa_token_${feature}`
+                const targetKey = `wa_target_${feature}`
+                if (!token) token = await getSetting(tokenKey)
+                if (!target) target = await getSetting(targetKey)
+                provider = await getSetting(`wa_provider_${feature}`) || await getSetting('wa_provider') || 'fonnte'
+            }
         }
 
         // Fallback ke config default jika tidak ada override
-        if (!token) token = await getSetting('wa_api_token')
-        if (!target) {
+        if (!hasCentralConfig && !token) token = await getSetting('wa_api_token')
+        if (!hasCentralConfig && !target) {
             target = await getSetting('wa_target_piket') ||
                     await getSetting('wa_target_ketidakhadiran') ||
                     await getSetting('wa_target_ptsp')
         }
 
-        // Dapatkan provider dari settings
-        if (feature) {
-             provider = await getSetting(`wa_provider_${feature}`) || await getSetting('wa_provider') || 'fonnte'
-        } else {
+        // Legacy provider global hanya berlaku untuk pemanggil tanpa fitur.
+        if (!feature) {
              provider = await getSetting('wa_provider') || 'fonnte'
         }
 
@@ -124,7 +148,7 @@ export async function POST(request: NextRequest) {
         } else if (provider === 'baileys') {
              // Langsung gunakan library internal Baileys
              const { baileysSendText } = await import('@/lib/baileys')
-             const r = await baileysSendText(normalizeTarget(target), message)
+             const r = await baileysSendText(normalizeTarget(target), message, undefined, accountId)
              isSuccess = r.ok
              detail = r.ok ? 'Sent via Baileys' : (r.error || 'Baileys failed')
         } else {

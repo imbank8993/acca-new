@@ -36,11 +36,11 @@ function sampleHtml(feature: string): string {
     )
 }
 
-async function sendMedia(provider: string, token: string, target: string, imageUrl: string, caption: string): Promise<{ ok: boolean; raw: any }> {
+async function sendMedia(provider: string, token: string, target: string, imageUrl: string, caption: string, accountId?: string): Promise<{ ok: boolean; raw: any }> {
     try {
         if (provider === 'baileys') {
             const { baileysSendImage } = await import('@/lib/baileys')
-            const r = await baileysSendImage(target, imageUrl, caption)
+            const r = await baileysSendImage(target, imageUrl, caption, undefined, accountId || 'default')
             return { ok: r.ok, raw: r.ok ? { detail: 'terkirim via Baileys' } : { error: r.error } }
         }
         if (provider === 'watzap') {
@@ -79,7 +79,7 @@ async function sendMedia(provider: string, token: string, target: string, imageU
 export async function POST(request: NextRequest) {
     try {
         const body = await request.json()
-        const { feature = 'piket', token, targets, provider = 'fonnte' } = body
+        const { feature = 'piket', token, targets, provider = 'fonnte', accountId } = body
 
         if ((provider !== 'baileys' && !token) || !Array.isArray(targets) || targets.length === 0) {
             return NextResponse.json({ ok: false, error: 'Token dan minimal satu target wajib diisi' }, { status: 400 })
@@ -107,7 +107,7 @@ export async function POST(request: NextRequest) {
         const caption = `🧪 Test Laporan Gambar (${feature}) — Sistem ACCA`
         const results: Array<{ target: string; ok: boolean; raw: any }> = []
         for (const target of targets) {
-            const r = await sendMedia(provider, token, String(target), uploaded.file_url, caption)
+            const r = await sendMedia(provider, token, String(target), uploaded.file_url, caption, accountId)
             results.push({ target: String(target), ...r })
         }
 

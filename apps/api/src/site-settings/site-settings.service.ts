@@ -83,6 +83,21 @@ export class SiteSettingsService {
     return resultData;
   }
 
+  async updateSettingsBatch(items: Array<{ key: string; value: unknown }>) {
+    return this.prisma.$transaction(async (tx) => {
+      const results = [];
+      for (const { key, value } of items) {
+        const autoLabel = key.replace(/^maintenance_/, '').replace(/_/g, ' ').replace(/\\b\\w/g, c => c.toUpperCase());
+        results.push(await tx.site_settings.upsert({
+          where: { key },
+          update: { value: String(value ?? '') },
+          create: { key, value: String(value ?? ''), label: autoLabel, description: '', is_active: true },
+        }));
+      }
+      return results;
+    });
+  }
+
   // Profil Sekolah
   async getProfilSekolah(id?: number | string) {
     if (id) {

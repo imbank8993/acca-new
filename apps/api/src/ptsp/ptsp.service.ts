@@ -19,6 +19,7 @@ const DEFAULT_CONFIG = {
   enabledServices: ['buku-tamu', 'sosialisasi', 'izin-siswa', 'peminjaman-sarana', 'izin-penelitian', 'legalisir', 'ganti-ijazah', 'izin-magang', 'mutasi-siswa', 'pengaduan'],
   waEnabled: true,
   waMessageTemplate: 'Halo {nama}, permohonan {layanan} Anda berhasil diterima. Kode lacak: {kode_lacak}. Gunakan kode tersebut untuk memantau status permohonan.',
+  waNotificationsEnabled: true,
 };
 
 const TRACKING_COLS = [
@@ -53,14 +54,18 @@ export class PtspService {
   constructor(private readonly prisma: PrismaService) {}
 
   async getConfig() {
-    const row = await this.prisma.site_settings.findUnique({ where: { key: 'ptsp_service_config' } });
-    if (!row?.value) return DEFAULT_CONFIG;
+    const [row, notificationsRow] = await Promise.all([
+      this.prisma.site_settings.findUnique({ where: { key: 'ptsp_service_config' } }),
+      this.prisma.site_settings.findUnique({ where: { key: 'notif_wa_ptsp' } }),
+    ]);
+    let legacy: any = {};
+    try { if (row?.value) legacy = JSON.parse(row.value); } catch { /* Use safe defaults for malformed saved config. */ }
     try {
-      const parsed = JSON.parse(row.value);
       return {
-        enabledServices: Array.isArray(parsed.enabledServices) ? parsed.enabledServices.filter((id: string) => DEFAULT_CONFIG.enabledServices.includes(id)) : DEFAULT_CONFIG.enabledServices,
-        waEnabled: parsed.waEnabled !== false,
-        waMessageTemplate: typeof parsed.waMessageTemplate === 'string' ? parsed.waMessageTemplate.slice(0, 1000) : DEFAULT_CONFIG.waMessageTemplate,
+        enabledServices: Array.isArray(legacy.enabledServices) ? legacy.enabledServices.filter((id: string) => DEFAULT_CONFIG.enabledServices.includes(id)) : DEFAULT_CONFIG.enabledServices,
+        waEnabled: legacy.waEnabled !== false,
+        waMessageTemplate: typeof legacy.waMessageTemplate === 'string' ? legacy.waMessageTemplate.slice(0, 1000) : DEFAULT_CONFIG.waMessageTemplate,
+        waNotificationsEnabled: notificationsRow?.value !== 'false',
       };
     } catch { return DEFAULT_CONFIG; }
   }
@@ -76,11 +81,17 @@ export class PtspService {
       waEnabled: input?.waEnabled === true,
       waMessageTemplate: typeof input?.waMessageTemplate === 'string' ? input.waMessageTemplate.trim().slice(0, 1000) : DEFAULT_CONFIG.waMessageTemplate,
     });
-    return this.prisma.site_settings.upsert({
+    await this.prisma.site_settings.upsert({
       where: { key: 'ptsp_service_config' },
       create: { key: 'ptsp_service_config', label: 'Konfigurasi Layanan PTSP', description: 'Pengaturan menu dan pesan WhatsApp PTSP', value, is_active: true },
       update: { value, label: 'Konfigurasi Layanan PTSP', description: 'Pengaturan menu dan pesan WhatsApp PTSP' },
-    }).then(() => this.getConfig());
+    });
+    await this.prisma.site_settings.upsert({
+      where: { key: 'notif_wa_ptsp' },
+      create: { key: 'notif_wa_ptsp', label: 'Notifikasi WhatsApp PTSP', description: 'Aktif/nonaktif notifikasi perubahan status PTSP', value: String(input?.waNotificationsEnabled === true), is_active: true },
+      update: { value: String(input?.waNotificationsEnabled === true), label: 'Notifikasi WhatsApp PTSP' },
+    });
+    return this.getConfig();
   }
 
   private canManage(roles: string[] = []): boolean {

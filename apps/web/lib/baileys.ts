@@ -3,8 +3,8 @@
  * Manajer koneksi WhatsApp gratis (self-host) via Baileys (WhatsApp Web socket).
  *
  * Berbeda dari Fonnte/Watzap/UltraMsg yang berbasis HTTP:
- * - Baileys menjaga SATU koneksi socket ke WhatsApp Web (satu nomor yang di-pairing via QR).
- * - Sesi (kredensial) disimpan ke disk agar bertahan saat restart (useMultiFileAuthState).
+ * - Setiap akun Baileys menjaga koneksi dan sesi WhatsApp Web sendiri.
+ * - Sesi (kredensial) disimpan ke folder akun agar bertahan saat restart.
  * - HANYA jalan pada proses Node yang hidup lama (VPS `next start`), TIDAK di serverless/edge.
  *   Jika di-deploy multi-worker (PM2 cluster), pastikan hanya satu worker yang memegang socket.
  *
@@ -30,11 +30,18 @@ interface BaileysState {
     lastError: string | null
 }
 
-// Simpan singleton di globalThis agar bertahan lintas reload modul (dev HMR / instansi route).
-const g = globalThis as unknown as { __baileys?: BaileysState }
-function store(): BaileysState {
-    if (!g.__baileys) {
-        g.__baileys = {
+// Map di globalThis menjaga tiap akun bertahan lintas reload modul (dev HMR).
+const g = globalThis as unknown as { __baileysInstances?: Record<string, BaileysState> }
+function normalizeAccountId(accountId = 'default'): string {
+    const id = String(accountId || 'default')
+    if (!/^[a-zA-Z0-9_-]{1,80}$/.test(id)) throw new Error('ID akun WhatsApp tidak valid')
+    return id
+}
+function store(accountId = 'default'): BaileysState {
+    const id = normalizeAccountId(accountId)
+    if (!g.__baileysInstances) g.__baileysInstances = {}
+    if (!g.__baileysInstances[id]) {
+        g.__baileysInstances[id] = {
             sock: null,
             starting: false,
             connection: 'close',
@@ -44,7 +51,7 @@ function store(): BaileysState {
             lastError: null,
         }
     }
-    return g.__baileys
+    return g.__baileysInstances[id]
 }
 
 // Logger minimal agar tidak perlu dependency pino.
@@ -54,19 +61,25 @@ const silentLogger: any = {
     child() { return silentLogger },
 }
 
-function authDir(): string {
-    return process.env.BAILEYS_AUTH_DIR || path.join(process.cwd(), '.baileys_auth')
+function authDir(accountId = 'default'): string {
+    const root = process.env.BAILEYS_AUTH_DIR || path.join(process.cwd(), '.baileys_auth')
+    const id = normalizeAccountId(accountId)
+    return id === 'default' ? root : path.join(root, id)
 }
 
 /** Hapus semua isi folder sesi tanpa menghapus mount point volume Docker itu sendiri */
-async function clearAuthDir(): Promise<void> {
+async function clearAuthDir(accountId = 'default'): Promise<void> {
     try {
         const fs = await import('fs')
-        const dir = authDir()
+        const dir = authDir(accountId)
         if (fs.existsSync(dir)) {
             const entries = fs.readdirSync(dir)
             for (const entry of entries) {
-                fs.rmSync(path.join(dir, entry), { recursive: true, force: true })
+                const entryPath = path.join(dir, entry)
+                // Folder root lama adalah sesi akun `default`; jangan hapus
+                // subfolder sesi akun Baileys lain saat akun lama diputuskan.
+                if (normalizeAccountId(accountId) === 'default' && fs.statSync(entryPath).isDirectory()) continue
+                fs.rmSync(entryPath, { recursive: true, force: true })
             }
             console.log('[Baileys] Folder sesi dibersihkan.')
         }
@@ -86,8 +99,9 @@ export function toJid(target: string): string {
 }
 
 /** Mulai / pastikan koneksi berjalan. Idempoten. */
-export async function startBaileys(): Promise<void> {
-    const s = store()
+export async function startBaileys(accountId = 'default'): Promise<void> {
+    const id = normalizeAccountId(accountId)
+    const s = store(id)
     if (s.sock || s.starting) return
     s.starting = true
     s.lastError = null
@@ -97,7 +111,7 @@ export async function startBaileys(): Promise<void> {
         const makeWASocket = (typeof mod.default === 'function' ? mod.default : mod.makeWASocket)
         const { useMultiFileAuthState, fetchLatestBaileysVersion, DisconnectReason, Browsers } = mod
 
-        const { state, saveCreds } = await useMultiFileAuthState(authDir())
+        const { state, saveCreds } = await useMultiFileAuthState(authDir(id))
         let version: any
         try { ({ version } = await fetchLatestBaileysVersion()) } catch { version = undefined }
 
@@ -130,7 +144,7 @@ export async function startBaileys(): Promise<void> {
                 s.qrDataUrl = null
                 s.user = sock.user ? { id: sock.user.id, name: sock.user.name || sock.user.verifiedName } : null
                 s.lastError = null
-                console.log('[Baileys] Connected as', s.user?.id)
+                console.log(`[Baileys:${id}] Connected as`, s.user?.id)
             }
 
             if (connection === 'close') {
@@ -140,16 +154,16 @@ export async function startBaileys(): Promise<void> {
                 s.starting = false
                 s.user = null
                 s.lastError = lastDisconnect?.error?.message || null
-                console.warn('[Baileys] Connection closed. loggedOut=', loggedOut, 'code=', statusCode)
+                console.warn(`[Baileys:${id}] Connection closed. loggedOut=`, loggedOut, 'code=', statusCode)
                 if (!loggedOut) {
                     // Reconnect otomatis (kecuali memang logout).
-                    setTimeout(() => { startBaileys().catch(() => {}) }, 3000)
+                    setTimeout(() => { startBaileys(id).catch(() => {}) }, 3000)
                 } else {
                     // Sesi dicabut (401): kredensial di disk sudah mati. Bila dibiarkan,
                     // start berikutnya akan terus login→401 tanpa pernah memunculkan QR.
                     // Hapus agar start berikutnya (lazy-start dari polling status) masuk mode pairing QR.
-                    await clearAuthDir()
-                    console.warn('[Baileys] Sesi dicabut — isi folder auth dibersihkan, silakan scan QR ulang di pengaturan.')
+                    await clearAuthDir(id)
+                    console.warn(`[Baileys:${id}] Sesi dicabut — folder akun dibersihkan, silakan scan QR ulang.`)
                     s.lastError = 'Sesi WhatsApp dicabut. Silakan scan QR ulang di pengaturan.'
                 }
             }
@@ -163,17 +177,18 @@ export async function startBaileys(): Promise<void> {
 }
 
 /** Status koneksi untuk UI (termasuk QR bila menunggu pairing). */
-export async function getBaileysStatus(): Promise<{
+export async function getBaileysStatus(accountId = 'default'): Promise<{
     connection: string
     connected: boolean
     qr: string | null
     user: { id: string; name?: string } | null
     error: string | null
 }> {
-    const s = store()
+    const id = normalizeAccountId(accountId)
+    const s = store(id)
     // Lazy start bila belum ada socket dan belum tersambung.
     if (!s.sock && !s.starting) {
-        await startBaileys()
+        await startBaileys(id)
     }
     return {
         connection: s.connection,
@@ -185,8 +200,9 @@ export async function getBaileysStatus(): Promise<{
 }
 
 /** Putuskan & hapus sesi (perlu scan QR ulang untuk pakai lagi). */
-export async function logoutBaileys(): Promise<void> {
-    const s = store()
+export async function logoutBaileys(accountId = 'default'): Promise<void> {
+    const id = normalizeAccountId(accountId)
+    const s = store(id)
     try {
         if (s.sock) {
             try { await s.sock.logout() } catch { /* ignore */ }
@@ -199,31 +215,32 @@ export async function logoutBaileys(): Promise<void> {
         s.qr = null
         s.qrDataUrl = null
         // Hapus isi folder sesi agar benar-benar bersih.
-        await clearAuthDir()
+        await clearAuthDir(id)
     }
 }
 
-async function waitForOpen(timeoutMs = 12000): Promise<boolean> {
-    const s = store()
+async function waitForOpen(accountId = 'default', timeoutMs = 12000): Promise<boolean> {
+    const id = normalizeAccountId(accountId)
+    const s = store(id)
     if (s.connection === 'open' && s.sock) return true
     if (s.qrDataUrl || s.qr) return false
-    await startBaileys()
-    if (store().qrDataUrl || store().qr) return false
+    await startBaileys(id)
+    if (store(id).qrDataUrl || store(id).qr) return false
     const deadline = Date.now() + timeoutMs
     while (Date.now() < deadline) {
-        if (store().connection === 'open' && store().sock) return true
-        if (store().qrDataUrl || store().qr) return false
+        if (store(id).connection === 'open' && store(id).sock) return true
+        if (store(id).qrDataUrl || store(id).qr) return false
         await new Promise(r => setTimeout(r, 400))
     }
-    return store().connection === 'open' && !!store().sock
+    return store(id).connection === 'open' && !!store(id).sock
 }
 
 /** Kirim teks ke satu target. */
-export async function baileysSendText(target: string, text: string, mentions?: string[]): Promise<{ ok: boolean; error?: string }> {
-    const ok = await waitForOpen()
-    if (!ok) return { ok: false, error: store().lastError || 'Baileys belum tersambung (scan QR di pengaturan)' }
+export async function baileysSendText(target: string, text: string, mentions?: string[], accountId = 'default'): Promise<{ ok: boolean; error?: string }> {
+    const ok = await waitForOpen(accountId)
+    if (!ok) return { ok: false, error: store(accountId).lastError || 'Baileys belum tersambung (scan QR di pengaturan)' }
     try {
-        await store().sock.sendMessage(toJid(target), { text, mentions })
+        await store(accountId).sock.sendMessage(toJid(target), { text, mentions })
         return { ok: true }
     } catch (err: any) {
         return { ok: false, error: err?.message || String(err) }
@@ -231,11 +248,11 @@ export async function baileysSendText(target: string, text: string, mentions?: s
 }
 
 /** Kirim gambar (dari URL) + caption ke satu target. */
-export async function baileysSendImage(target: string, imageUrl: string, caption: string, mentions?: string[]): Promise<{ ok: boolean; error?: string }> {
-    const ok = await waitForOpen()
-    if (!ok) return { ok: false, error: store().lastError || 'Baileys belum tersambung (scan QR di pengaturan)' }
+export async function baileysSendImage(target: string, imageUrl: string, caption: string, mentions?: string[], accountId = 'default'): Promise<{ ok: boolean; error?: string }> {
+    const ok = await waitForOpen(accountId)
+    if (!ok) return { ok: false, error: store(accountId).lastError || 'Baileys belum tersambung (scan QR di pengaturan)' }
     try {
-        await store().sock.sendMessage(toJid(target), { image: { url: imageUrl }, caption, mentions })
+        await store(accountId).sock.sendMessage(toJid(target), { image: { url: imageUrl }, caption, mentions })
         return { ok: true }
     } catch (err: any) {
         return { ok: false, error: err?.message || String(err) }
@@ -245,8 +262,7 @@ export async function baileysSendImage(target: string, imageUrl: string, caption
 // Graceful shutdown: tutup koneksi socket secara rapi saat container dihentikan
 if (typeof process !== 'undefined' && typeof process.once === 'function') {
     const handleShutdown = () => {
-        const s = store()
-        if (s.sock) {
+        for (const s of Object.values(g.__baileysInstances || {})) if (s.sock) {
             try {
                 console.log('[Baileys] Menutup koneksi socket secara rapi (shutdown)...')
                 s.sock.end(undefined)

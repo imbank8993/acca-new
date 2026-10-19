@@ -21,7 +21,8 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["./*"],
-      "@acca/shared": ["../../packages/shared/src/index.ts"]
+      "@acca/shared": ["../../packages/shared/src/index.ts"],
+      "@acca/shared/*": ["../../packages/shared/*"]
     }
   },
   "include": [

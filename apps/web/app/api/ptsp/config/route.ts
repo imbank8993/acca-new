@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { extractRequestToken } from '@/lib/app-jwt';
 import { nestFetchAsUser } from '@/lib/nest-api';
+import { clearWAConfigCache } from '@/lib/wa-sender';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,5 +18,6 @@ export async function POST(request: NextRequest) {
     method: 'POST',
     body: JSON.stringify(body),
   });
+  if (status === 200 || status === 201) clearWAConfigCache();
   return NextResponse.json(result, { status });
 }

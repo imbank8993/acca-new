@@ -1,4 +1,3 @@
-import { notulensiStatus } from '@acca/shared/notulensi-status.cjs';
 import { Injectable, BadRequestException, NotFoundException, ForbiddenException, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../common/audit.service';
@@ -23,6 +22,13 @@ export interface PoinHasilRapat {
 
 const VALID_STATUSES = ['Belum', 'Proses', 'Selesai'] as const;
 type StatusTindakLanjut = (typeof VALID_STATUSES)[number];
+
+function notulensiStatus(points: ReadonlyArray<{ status: StatusTindakLanjut }>): StatusTindakLanjut {
+  if (!points.length) return 'Belum';
+  if (points.every(point => point.status === 'Selesai')) return 'Selesai';
+  if (points.every(point => point.status === 'Belum')) return 'Belum';
+  return 'Proses';
+}
 
 function normalizeStatus(st?: string): StatusTindakLanjut {
   if (!st) return 'Belum';

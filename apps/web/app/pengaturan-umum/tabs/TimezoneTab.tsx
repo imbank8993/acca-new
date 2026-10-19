@@ -215,13 +215,13 @@ export default function TimezoneTab({ user }: { user?: any }) {
                 }
 
                 .tz-badge {
-                    background: linear-gradient(135deg, var(--n-primary, #3083ff) 0%, #c2185b 100%);
+                    background: var(--n-primary, #3083ff);
                     color: white;
                     padding: 4px 12px;
                     border-radius: 8px;
                     font-size: 0.82rem;
                     font-weight: 700;
-                    box-shadow: 0 2px 8px rgba(194, 24, 91, 0.2);
+                    box-shadow: 0 2px 8px rgba(48, 131, 255, 0.2);
                 }
 
                 .tz-time {

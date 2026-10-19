@@ -11,8 +11,10 @@ import FilterToolbar, { FilterSearch } from '@/components/ui/FilterToolbar'
 import ActionButton, { ActionGroup } from '@/components/ui/ActionButtons'
 import { Button } from '@/components/ui/Button'
 import Spinner from '@/components/ui/Spinner'
-import { Settings, X, Save } from 'lucide-react'
+import { Settings, Save } from 'lucide-react'
+import { DesktopFab } from '@/components/ui/DesktopFab'
 import Modal, { ModalHeader, ModalBody, ModalFooter, ModalDetailGrid, ModalDetailField } from '@/components/ui/Modal'
+import './ptsp-settings.css'
 
 /* ──────────────────────────────────────────────────────────
    CONSTANTS & TYPES
@@ -76,7 +78,7 @@ const PTSP_SERVICE_OPTIONS = [
     { id: 'ganti-ijazah', label: 'Pengganti Ijazah' }, { id: 'izin-magang', label: 'Permohonan Magang' },
     { id: 'mutasi-siswa', label: 'Mutasi Siswa' }, { id: 'pengaduan', label: 'Pengaduan Masyarakat' },
 ];
-const DEFAULT_PTSP_CONFIG = { enabledServices: PTSP_SERVICE_OPTIONS.map(x => x.id), waEnabled: true, waMessageTemplate: 'Halo {nama}, permohonan {layanan} Anda berhasil diterima. Kode lacak: {kode_lacak}. Gunakan kode tersebut untuk memantau status permohonan.' };
+const DEFAULT_PTSP_CONFIG = { enabledServices: PTSP_SERVICE_OPTIONS.map(x => x.id), waEnabled: true, waMessageTemplate: 'Halo {nama}, permohonan {layanan} Anda berhasil diterima. Kode lacak: {kode_lacak}. Gunakan kode tersebut untuk memantau status permohonan.', waNotificationsEnabled: true };
 
 function getStatusBadgeClass(pct: number): string {
     if (pct === 0) return 'ptsp-badge-danger';
@@ -161,7 +163,7 @@ export default function PTSPClient({ user }: { user: any }) {
         fetch('/api/ptsp/config', { cache: 'no-store' }).then(r => r.json()).then(json => {
             if (json?.ok && json.data) setConfig({ ...DEFAULT_PTSP_CONFIG, ...json.data })
         }).catch(() => {})
-    }, [])
+    }, [canEdit])
 
     const saveConfig = async () => {
         setConfigSaving(true)
@@ -350,24 +352,31 @@ export default function PTSPClient({ user }: { user: any }) {
 
     return (
         <>
-            {canEdit && <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '0.5rem' }}>
-                <Button type="button" variant="secondary" size="sm" leftIcon={<Settings size={16} />} onClick={() => setSettingsOpen(true)}>Pengaturan Layanan</Button>
-            </div>}
-            {settingsOpen && <div role="dialog" aria-modal="true" aria-labelledby="ptsp-settings-title" style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(15,23,42,.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-                <div style={{ width: 'min(640px, 100%)', maxHeight: '90vh', overflow: 'auto', background: 'var(--n-card, #fff)', borderRadius: 18, padding: 24, boxShadow: '0 24px 80px rgba(0,0,0,.25)' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}><h2 id="ptsp-settings-title" style={{ margin: 0, fontSize: 20, fontWeight: 800 }}>Pengaturan Layanan PTSP</h2><Button type="button" aria-label="Tutup" title="Tutup" variant="ghost" size="sm" leftIcon={<X size={18} />} onClick={() => setSettingsOpen(false)} /></div>
+            {canEdit && <>
+                <DesktopFab label="Pengaturan PTSP" icon={<Settings size={20} />} mobileIcon="gear-fill" onClick={() => setSettingsOpen(true)} title="Pengaturan layanan dan WhatsApp PTSP" />
+            </>}
+            <Modal open={settingsOpen} size="lg" className="ptsp-settings-modal" onClose={() => setSettingsOpen(false)} title="Pengaturan Layanan PTSP" icon={<Settings size={20} />} labelledBy="ptsp-settings-title">
+                <ModalBody>
                     <h3 style={{ fontSize: 14, fontWeight: 700, margin: '0 0 10px' }}>Menu yang ditampilkan di aplikasi PTSP</h3>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(210px,1fr))', gap: 8, marginBottom: 20 }}>
-                        {PTSP_SERVICE_OPTIONS.map(option => <label key={option.id} style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '9px 11px', border: '1px solid var(--n-border,#e2e8f0)', borderRadius: 10, cursor: 'pointer' }}><input type="checkbox" checked={config.enabledServices.includes(option.id)} onChange={e => setConfig(old => ({ ...old, enabledServices: e.target.checked ? [...old.enabledServices, option.id] : old.enabledServices.filter(id => id !== option.id) }))} />{option.label}</label>)}
+                    <div className="ptsp-settings-services">
+                        {PTSP_SERVICE_OPTIONS.map(option => <label key={option.id} className="ptsp-settings-service"><input type="checkbox" checked={config.enabledServices.includes(option.id)} onChange={e => setConfig(old => ({ ...old, enabledServices: e.target.checked ? [...old.enabledServices, option.id] : old.enabledServices.filter(id => id !== option.id) }))} /><span>{option.label}</span></label>)}
                     </div>
                     <div style={{ borderTop: '1px solid var(--n-border,#e2e8f0)', paddingTop: 18 }}>
-                        <label style={{ display: 'flex', alignItems: 'center', gap: 9, fontWeight: 700, marginBottom: 10 }}><input type="checkbox" checked={config.waEnabled} onChange={e => setConfig(old => ({ ...old, waEnabled: e.target.checked }))} />Kirim konfirmasi otomatis melalui WhatsApp</label>
+                        <label className="ptsp-settings-section-toggle"><input type="checkbox" checked={config.waEnabled} onChange={e => setConfig(old => ({ ...old, waEnabled: e.target.checked }))} /><span>Kirim konfirmasi otomatis melalui WhatsApp</span></label>
                         <textarea value={config.waMessageTemplate} onChange={e => setConfig(old => ({ ...old, waMessageTemplate: e.target.value }))} rows={4} maxLength={1000} style={{ width: '100%', resize: 'vertical', padding: 11, border: '1px solid var(--n-border,#cbd5e1)', borderRadius: 10, font: 'inherit' }} />
-                        <small style={{ display: 'block', color: 'var(--n-muted,#64748b)', marginTop: 6 }}>Gunakan {'{nama}'}, {'{layanan}'}, dan {'{kode_lacak}'}. Kredensial pengirim memakai konfigurasi WhatsApp PTSP di Pengaturan Umum.</small>
+                        <small style={{ display: 'block', color: 'var(--n-muted,#64748b)', marginTop: 6 }}>Gunakan {'{nama}'}, {'{layanan}'}, dan {'{kode_lacak}'}.</small>
                     </div>
-                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}><Button type="button" variant="secondary" onClick={() => setSettingsOpen(false)}>Batal</Button><Button type="button" variant="primary" isLoading={configSaving} leftIcon={<Save size={15} />} onClick={saveConfig}>Simpan Pengaturan</Button></div>
-                </div>
-            </div>}
+                    <div style={{ borderTop: '1px solid var(--n-border,#e2e8f0)', paddingTop: 18, marginTop: 18 }}>
+                        <h3 style={{ fontSize: 14, fontWeight: 700, margin: '0 0 10px' }}>Notifikasi status PTSP</h3>
+                        <label className="ptsp-settings-section-toggle"><input type="checkbox" checked={config.waNotificationsEnabled} onChange={e => setConfig(old => ({ ...old, waNotificationsEnabled: e.target.checked }))} /><span>Aktifkan notifikasi status melalui WhatsApp</span></label>
+                        <small style={{ display: 'block', color: 'var(--n-muted,#64748b)', marginTop: 6 }}>Pilih provider, nomor tujuan, dan akun PTSP di Pengaturan Umum → WhatsApp.</small>
+                    </div>
+                </ModalBody>
+                <ModalFooter>
+                    <Button type="button" variant="cancel" onClick={() => setSettingsOpen(false)}>Batal</Button>
+                    <Button type="button" variant="primary" isLoading={configSaving} leftIcon={<Save size={15} />} onClick={saveConfig}>Simpan Pengaturan</Button>
+                </ModalFooter>
+            </Modal>
             <div className="ptsp-main-shell">
                 {/* 2. Tab Component */}
                 <Tab

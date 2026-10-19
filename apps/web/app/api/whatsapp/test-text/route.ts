@@ -6,11 +6,11 @@
  */
 import { NextRequest, NextResponse } from 'next/server'
 
-async function sendText(provider: string, token: string, target: string, message: string): Promise<{ ok: boolean; raw: any }> {
+async function sendText(provider: string, token: string, target: string, message: string, accountId?: string): Promise<{ ok: boolean; raw: any }> {
     try {
         if (provider === 'baileys') {
             const { baileysSendText } = await import('@/lib/baileys')
-            const r = await baileysSendText(target, message)
+            const r = await baileysSendText(target, message, undefined, accountId || 'default')
             return { ok: r.ok, raw: r.ok ? { detail: 'terkirim via Baileys' } : { error: r.error } }
         }
         if (provider === 'watzap') {
@@ -49,7 +49,7 @@ async function sendText(provider: string, token: string, target: string, message
 export async function POST(request: NextRequest) {
     try {
         const body = await request.json()
-        const { label = 'WA', token, targets, provider = 'fonnte' } = body
+        const { label = 'WA', token, targets, provider = 'fonnte', accountId } = body
 
         if ((provider !== 'baileys' && !token) || !Array.isArray(targets) || targets.length === 0) {
             return NextResponse.json({ ok: false, error: 'Token dan minimal satu target wajib diisi' }, { status: 400 })
@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
 
         const results: Array<{ target: string; ok: boolean; raw: any }> = []
         for (const target of targets) {
-            const r = await sendText(provider, token, String(target), message)
+            const r = await sendText(provider, token, String(target), message, accountId)
             results.push({ target: String(target), ...r })
         }
 

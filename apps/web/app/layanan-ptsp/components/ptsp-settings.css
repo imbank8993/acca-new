@@ -1,0 +1,60 @@
+.ptsp-settings-modal,
+.ptsp-settings-modal :is(h1, h2, h3, h4, p, label, input, textarea, button, small) {
+  font-family: 'Poppins', sans-serif !important;
+}
+
+.ptsp-settings-modal .ptsp-settings-services {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 190px), 1fr));
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.ptsp-settings-modal .ptsp-settings-service {
+  display: flex;
+  min-height: 48px;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 11px;
+  border: 1px solid var(--n-border, #e2e8f0);
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.4;
+}
+
+.ptsp-settings-modal .ptsp-settings-service input {
+  flex: 0 0 auto;
+  margin: 0;
+}
+
+.ptsp-settings-modal .ptsp-settings-service span {
+  min-width: 0;
+}
+
+.ptsp-settings-modal .ptsp-settings-section-toggle {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.ptsp-settings-modal .ptsp-settings-section-toggle input {
+  flex: 0 0 auto;
+  margin: 0;
+}
+
+.ptsp-settings-modal textarea {
+  font-size: 14px !important;
+  line-height: 1.5;
+}
+
+@media (max-width: 520px) {
+  .ptsp-settings-modal .ptsp-settings-services {
+    grid-template-columns: 1fr;
+  }
+}

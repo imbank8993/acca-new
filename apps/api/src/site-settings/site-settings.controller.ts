@@ -115,6 +115,17 @@ export class SiteSettingsController {
     return { ok: true, data, message: 'Setting updated' };
   }
 
+  @UseGuards(JwtAuthGuard)
+  @Put('site-settings/bulk')
+  async updateSiteSettingsBulk(@Req() req: any, @Body() body: any) {
+    this.assertAdmin(req);
+    if (!Array.isArray(body.items) || body.items.length === 0 || body.items.some((item: any) => !item?.key)) {
+      throw new BadRequestException('items must be a non-empty array of settings');
+    }
+    const data = await this.siteSettingsService.updateSettingsBatch(body.items);
+    return { ok: true, data, message: 'Settings updated' };
+  }
+
   /**
    * Memindai direktori `web/app` dan mengembalikan seluruh rute yang ditemukan.
    *

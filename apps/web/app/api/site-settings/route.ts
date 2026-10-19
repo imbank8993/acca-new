@@ -30,3 +30,17 @@ export async function PUT(request: NextRequest) {
 
     return NextResponse.json(body, { status });
 }
+
+export async function PATCH(request: NextRequest) {
+    const token = extractRequestToken(request);
+    const payload = await request.json();
+    const { status, body } = await nestFetchAsUser(`/site-settings/bulk`, token, {
+        method: 'PUT',
+        body: JSON.stringify(payload),
+    });
+    if (status === 200 || status === 201) {
+        clearWAConfigCache();
+        clearFileStorageConfigCache();
+    }
+    return NextResponse.json(body, { status });
+}

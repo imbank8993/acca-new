@@ -2,8 +2,14 @@ import { Injectable, Logger, NotFoundException, BadRequestException, ForbiddenEx
 import { randomUUID, createHash } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { resolveStudentNisn } from '../common/student-identity';
-import { uksRecommendationSigner } from '@acca/shared/medical-letter-signer.cjs';
 import { absenceJp, boundedInt, canManageJenis, medicalStatus, validDate, validatePeriod, validateQuery, validateStatus, validateText } from './ketidakhadiran-validation';
+
+function uksRecommendationSigner(record: any): { nama: string; nip: string; jabatan: string } | null {
+  const source = record?.rekam_medis_siswa?.petugas_nama?.trim() ? record.rekam_medis_siswa : record;
+  const nama = source?.petugas_nama?.trim();
+  if (!nama || /^(?:-|petugas(?: uks)?|admin uks)$/i.test(nama)) return null;
+  return { nama, nip: source?.petugas_nip?.trim() || '-', jabatan: 'Petugas UKS' };
+}
 
 export interface KetidakhadiranFilter {
   kelas?: string;

@@ -32,12 +32,14 @@ interface WATarget {
     id: string
     name: string
     code: string
+    isSelected?: boolean
 }
 
 interface WAConfig {
     provider: 'fonnte' | 'watzap' | 'ultramsg' | 'baileys'
     token: string
     targets: WATarget[]
+    accountId?: string
     template?: string
     detailsRowTemplate?: string
 }
@@ -118,22 +120,38 @@ async function getWAConfig(feature: string): Promise<WAConfig | null> {
         return null
     }
 
-    // Provider per-fitur (wa_provider_<feature>), fallback ke global (wa_provider), lalu provider piket/fonnte.
-    const provider = settings[`wa_provider_${feature}`] || settings.wa_provider || settings.wa_provider_piket || 'fonnte'
-    const token = settings[config.tokenKey] || settings.wa_token || settings.wa_token_piket || settings.wa_token_ptsp || ''
+    // Konfigurasi akun terpusat: satu akun dapat dipakai banyak fitur, tiap fitur
+    // memilih akun sendiri. Jika belum dimigrasi, tetap baca format lama.
+    let accountId: string | undefined
+    let provider: string
+    let token: string
+    let targets: WATarget[] = []
+    if (settings.wa_accounts_v3) {
+        try {
+            const accounts = JSON.parse(settings.wa_accounts_v3)
+            const assignments = JSON.parse(settings.wa_feature_account_map || '{}')
+            accountId = assignments[feature]
+            const account = Array.isArray(accounts) ? accounts.find((item: any) => item.id === accountId) : null
+            if (!account || account.enabled === false) return null
+            provider = account.provider
+            token = account.token || ''
+            const featureTargets = account.targetsByFeature?.[feature]
+            const configuredTargets = Array.isArray(featureTargets) ? featureTargets : account.targets
+            targets = Array.isArray(configuredTargets) ? configuredTargets.filter((item: WATarget) => item.isSelected !== false) : []
+        } catch {
+            console.warn('[WA] Failed to parse centralized account settings')
+            return null
+        }
+    } else {
+        provider = settings[`wa_provider_${feature}`] || settings.wa_provider || settings.wa_provider_piket || 'fonnte'
+        token = settings[config.tokenKey] || settings.wa_token || settings.wa_token_piket || settings.wa_token_ptsp || ''
+        try {
+            const targetsRaw = settings[config.targetsKey]
+            if (targetsRaw) targets = JSON.parse(targetsRaw)
+        } catch { console.warn(`[WA] Failed to parse targets for ${feature}`) }
+    }
     const template = settings[`wa_template_${feature}`]
     const detailsRowTemplate = settings[`wa_details_row_template_${feature}`]
-
-    // Parse targets from JSON
-    let targets: WATarget[] = []
-    try {
-        const targetsRaw = settings[config.targetsKey]
-        if (targetsRaw) {
-            targets = JSON.parse(targetsRaw)
-        }
-    } catch (e) {
-        console.warn(`[WA] Failed to parse targets for ${feature}`)
-    }
 
     // Baileys tak butuh token (pakai sesi WhatsApp Web); provider lain wajib token.
     if (!provider || (provider !== 'baileys' && !token)) {
@@ -141,7 +159,7 @@ async function getWAConfig(feature: string): Promise<WAConfig | null> {
         return null
     }
 
-    return { provider: provider as WAConfig['provider'], token, targets, template, detailsRowTemplate }
+    return { provider: provider as WAConfig['provider'], token, targets, accountId, template, detailsRowTemplate }
 }
 
 async function getWATemplate(feature: string, status?: string): Promise<string | null> {
@@ -263,10 +281,10 @@ async function sendUltramsg(token: string, target: string, message: string): Pro
     }
 }
 
-async function sendBaileysText(target: string, message: string, mentions?: string[]): Promise<SendResult> {
+async function sendBaileysText(target: string, message: string, mentions?: string[], accountId?: string): Promise<SendResult> {
     try {
         const { baileysSendText } = await import('./baileys')
-        const r = await baileysSendText(target, message, mentions)
+        const r = await baileysSendText(target, message, mentions, accountId || 'default')
         if (!r.ok) {
             console.error('[WA/Baileys] Error:', r.error)
             return { ok: false, error: `Baileys: ${r.error || 'unknown'}` }
@@ -335,10 +353,10 @@ async function sendUltramsgMedia(token: string, target: string, imageUrl: string
     }
 }
 
-async function sendBaileysMedia(target: string, imageUrl: string, caption: string, mentions?: string[]): Promise<SendResult> {
+async function sendBaileysMedia(target: string, imageUrl: string, caption: string, mentions?: string[], accountId?: string): Promise<SendResult> {
     try {
         const { baileysSendImage } = await import('./baileys')
-        const r = await baileysSendImage(target, imageUrl, caption, mentions)
+        const r = await baileysSendImage(target, imageUrl, caption, mentions, accountId || 'default')
         if (!r.ok) {
             console.error('[WA/Baileys:media] Error:', r.error)
             return { ok: false, error: `Baileys: ${r.error || 'unknown'}` }
@@ -393,7 +411,7 @@ export async function sendWhatsAppImage(
                 result = await sendUltramsgMedia(config.token, target.code, imageUrl, caption)
                 break
             case 'baileys':
-                result = await sendBaileysMedia(target.code, imageUrl, caption, mentions)
+                result = await sendBaileysMedia(target.code, imageUrl, caption, mentions, config.accountId)
                 break
         }
         if (result.ok) successCount++
@@ -482,7 +500,7 @@ async function dispatchText(
                 result = await sendUltramsg(config.token, target.code, finalMessage)
                 break
             case 'baileys':
-                result = await sendBaileysText(target.code, finalMessage, mentions)
+                result = await sendBaileysText(target.code, finalMessage, mentions, config.accountId)
                 break
         }
 
