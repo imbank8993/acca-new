@@ -939,14 +939,14 @@
 
 .ag-event-dots { 
     position: absolute;
-    bottom: 5px;
+    bottom: 5.5px;
     left: 50%;
     transform: translateX(-50%);
     display: flex; 
-    gap: 3px;
+    gap: 2.5px;
     pointer-events: none;
 }
-.ag-dot { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
+.ag-dot { width: 4px; height: 4px; border-radius: 50%; flex-shrink: 0; }
 
 .ag-calendar-footer { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--n-border, #f1f5f9); }
 .ag-legend { display: flex; gap: 18px; justify-content: center; flex-wrap: wrap; }
@@ -2856,8 +2856,8 @@ textarea.form-input {
     .ag-grid { gap: 2px; width: 100%; }
     .ag-cell { border-radius: 8px; min-width: 0; padding: 2px; }
     .ag-day-number { font-size: 0.8rem; line-height: 1; }
-    .ag-event-dots { bottom: 3px; gap: 2px; }
-    .ag-dot { width: 4px; height: 4px; }
+    .ag-event-dots { bottom: 3.5px; gap: 2px; }
+    .ag-dot { width: 3px; height: 3px; }
     .ag-weekday { padding-bottom: 6px; }
     .ag-date-display { gap: 12px; }
     .ag-big-day { font-size: 2.2rem; }

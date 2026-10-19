@@ -7,6 +7,8 @@ import { Modal, ModalBody, ModalFooter } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { InlineSelect } from '@/components/ui/InlineSelect';
 import DatePicker from '@/components/ui/DatePicker';
+import SearchableSelect, { type Option } from '@/components/ui/SearchableSelect';
+import PesertaRapatSelect from './PesertaRapatSelect';
 import { swalWarning } from '@/lib/swal-premium';
 
 export interface PoinHasilRapat {
@@ -70,6 +72,53 @@ export default function NotulensiModal({
     saving = false,
 }: NotulensiModalProps) {
     const [form, setForm] = useState<NotulensiItem>({ ...EMPTY_FORM });
+
+    const [guruOptions, setGuruOptions] = useState<Option[]>([]);
+    const [stafOptions, setStafOptions] = useState<Option[]>([]);
+    const [pegawaiOptions, setPegawaiOptions] = useState<Option[]>([]);
+    const [siswaOptions, setSiswaOptions] = useState<Option[]>([]);
+
+    useEffect(() => {
+        let mounted = true;
+        async function loadOptions() {
+            try {
+                const res = await fetch('/api/notulensi-rapat/peserta-options');
+                const json = await res.json();
+                if (!mounted) return;
+                if (json.success && json.data) {
+                    const gList: Option[] = (json.data.guru || []).map((g: any) => ({
+                        value: g.nama,
+                        label: g.nama,
+                        subLabel: `Guru • NIP: ${g.nip || '-'}`,
+                    }));
+                    const sList: Option[] = (json.data.staf || []).map((s: any) => ({
+                        value: s.nama,
+                        label: s.nama,
+                        subLabel: `Staf / Tendik • NIP: ${s.nip || '-'}`,
+                    }));
+                    const sisList: Option[] = (json.data.siswa || []).map((sis: any) => ({
+                        value: sis.nama,
+                        label: sis.nama,
+                        subLabel: `Siswa • NISN: ${sis.nisn || '-'}`,
+                    }));
+
+                    setGuruOptions(gList);
+                    setStafOptions(sList);
+                    setPegawaiOptions([...gList, ...sList]);
+                    setSiswaOptions(sisList);
+                }
+            } catch (err) {
+                console.error('Failed to load peserta options:', err);
+            }
+        }
+
+        if (isOpen) {
+            loadOptions();
+        }
+        return () => {
+            mounted = false;
+        };
+    }, [isOpen]);
 
     useEffect(() => {
         if (initialData) {
@@ -173,6 +222,8 @@ export default function NotulensiModal({
                                 <DatePicker
                                     value={form.tanggal}
                                     onChange={val => setForm({ ...form, tanggal: val })}
+                                    placeholder="Pilih tanggal rapat"
+                                    required
                                 />
                             </div>
                             <div className="nr-form-group">
@@ -217,24 +268,24 @@ export default function NotulensiModal({
                                 <label className="nr-form-label">
                                     Pimpinan Rapat
                                 </label>
-                                <input
-                                    type="text"
-                                    className="nr-form-input"
-                                    placeholder="Nama Pimpinan Rapat"
+                                <SearchableSelect
+                                    options={pegawaiOptions}
                                     value={form.pimpinan_rapat || ''}
-                                    onChange={e => setForm({ ...form, pimpinan_rapat: e.target.value })}
+                                    onChange={val => setForm({ ...form, pimpinan_rapat: String(val) })}
+                                    placeholder="Pilih dari guru/staf atau ketik manual..."
+                                    creatable
                                 />
                             </div>
                             <div className="nr-form-group">
                                 <label className="nr-form-label">
                                     Notulis
                                 </label>
-                                <input
-                                    type="text"
-                                    className="nr-form-input"
-                                    placeholder="Nama Pencatat Notulen"
+                                <SearchableSelect
+                                    options={pegawaiOptions}
                                     value={form.notulis || ''}
-                                    onChange={e => setForm({ ...form, notulis: e.target.value })}
+                                    onChange={val => setForm({ ...form, notulis: String(val) })}
+                                    placeholder="Pilih dari guru/staf atau ketik manual..."
+                                    creatable
                                 />
                             </div>
                         </div>
@@ -244,12 +295,12 @@ export default function NotulensiModal({
                             <label className="nr-form-label">
                                 Peserta Rapat
                             </label>
-                            <input
-                                type="text"
-                                className="nr-form-input"
-                                placeholder="Seluruh Dewan Guru & Staf (35 orang)"
+                            <PesertaRapatSelect
                                 value={form.peserta || ''}
-                                onChange={e => setForm({ ...form, peserta: e.target.value })}
+                                onChange={val => setForm({ ...form, peserta: val })}
+                                guruOptions={guruOptions}
+                                stafOptions={stafOptions}
+                                siswaOptions={siswaOptions}
                             />
                         </div>
 
@@ -319,23 +370,22 @@ export default function NotulensiModal({
                                                     <label className="nr-poin-sublabel">
                                                         PIC / Penanggung Jawab
                                                     </label>
-                                                    <input
-                                                        type="text"
-                                                        className="nr-form-input"
-                                                        placeholder="Nama PIC / penanggung jawab (opsional)"
+                                                    <SearchableSelect
+                                                        options={pegawaiOptions}
                                                         value={p.pic || ''}
-                                                        onChange={e => handleUpdatePoin(idx, 'pic', e.target.value)}
+                                                        onChange={val => handleUpdatePoin(idx, 'pic', String(val))}
+                                                        placeholder="Pilih PIC atau ketik manual..."
+                                                        creatable
                                                     />
                                                 </div>
                                                 <div className="nr-poin-subfield">
                                                     <label className="nr-poin-sublabel">
                                                         Tenggat Waktu / Deadline
                                                     </label>
-                                                    <input
-                                                        type="date"
-                                                        className="nr-form-input"
+                                                    <DatePicker
                                                         value={p.tenggat || ''}
-                                                        onChange={e => handleUpdatePoin(idx, 'tenggat', e.target.value)}
+                                                        onChange={val => handleUpdatePoin(idx, 'tenggat', val)}
+                                                        placeholder="Pilih tenggat..."
                                                     />
                                                 </div>
                                             </div>

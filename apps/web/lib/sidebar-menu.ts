@@ -27,9 +27,11 @@ export interface BuiltGroup {
 // tombol, bukan menu). Tetap terdaftar di grup agar bisa di-grant di "Akses per
 // Role", tapi tidak dirender sebagai item menu maupun masuk grup "Lainnya".
 // - 'cbt-app'         → dibuka via tombol CBT khusus di sidebar
+// - 'tools-app'       → dibuka via tombol TOOLS khusus di sidebar
+// - 'wordpress-app'   → dibuka via tombol WordPress SSO khusus di dashboard/sidebar
 // - 'pengumuman'      → dikelola di tab Kelola Pengumuman di halaman Informasi (/informasi/kelola)
 const INTEGRATED_PAGES = new Set(['pengumuman'])
-const EXCLUDED_PAGES = new Set(['cbt-app', 'tools-app', 'jurnal-banding', 'surat-daftar', ...INTEGRATED_PAGES])
+const EXCLUDED_PAGES = new Set(['cbt-app', 'tools-app', 'wordpress-app', 'jurnal-banding', 'surat-daftar', ...INTEGRATED_PAGES])
 
 /** Integrated pages retain access metadata, but are arranged through their parent page. */
 export function canArrangeMenuPage(id: string): boolean {
@@ -101,7 +103,7 @@ export const MENU_GROUPS: MenuGroupDef[] = [
     key: 'external-apps',
     label: 'Aplikasi Eksternal',
     icon: 'fa-arrow-up-right-from-square',
-    pages: ['cbt-app', 'tools-app'],
+    pages: ['cbt-app', 'tools-app', 'wordpress-app'],
   },
 ]
 
@@ -160,6 +162,7 @@ export const PAGE_LABELS: Record<string, string> = {
   'audit-log': 'Log Audit Sistem',
   'cbt-app': 'Aplikasi CBT',
   'tools-app': 'ACCA Tools',
+  'wordpress-app': 'Website WordPress',
   'sanggar-kurikulum': 'Registrasi Sanggar',
   'observasi-kelas': 'Observasi Kelas',
 }

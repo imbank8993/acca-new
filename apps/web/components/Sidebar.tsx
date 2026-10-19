@@ -22,6 +22,17 @@ interface PageConfig {
   color: string
 }
 
+interface SsoItem {
+  id: 'cbt' | 'tools' | 'wp'
+  label: string
+  fullName: string
+  icon: string
+  href?: string
+  onClick?: () => void
+  disabled?: boolean
+  title: string
+}
+
 // Default labels/icons used to resolve a page's display label/icon
 const DEFAULT_PAGE_CONFIG: Record<string, PageConfig> = {
   'dashboard': { id: 'dashboard', label: 'Dashboard', icon: 'bi-house', color: '#3b82f6' },
@@ -241,8 +252,46 @@ export default function Sidebar({
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const isAnyModalOpen = useDetectModalOpen()
 
+  const [wpLoading, setWpLoading] = useState(false)
+  const [ssoMenuOpen, setSsoMenuOpen] = useState(false)
+  const ssoMenuRef = useRef<HTMLDivElement | null>(null)
+
+  // Tutup menu dropdown SSO saat klik di luar atau tekan tombol Escape
+  useEffect(() => {
+    if (!ssoMenuOpen) return
+    const handleClickOutside = (e: MouseEvent) => {
+      if (ssoMenuRef.current && !ssoMenuRef.current.contains(e.target as Node)) {
+        setSsoMenuOpen(false)
+      }
+    }
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setSsoMenuOpen(false)
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [ssoMenuOpen])
+
+  // Otomatis tutup dropdown saat sidebar dilipat/dibuka atau navigasi halaman
+  useEffect(() => {
+    setSsoMenuOpen(false)
+  }, [isCollapsed, currentPage])
+  const userRolesList = useMemo(() => [
+    ...(Array.isArray(user?.roles) ? user.roles : []),
+    ...(typeof user?.role === 'string' ? user.role.split(/[,|]/) : [])
+  ].map(r => String(r).trim().toUpperCase()), [user])
+
   const hasCbtAccess = user.pagesArray?.includes('cbt-app') || user.roles?.includes('ADMIN')
   const hasToolsAccess = user.pagesArray?.includes('tools-app') || user.roles?.includes('ADMIN')
+  const hasWpAccess = useMemo(() => {
+    if (userRolesList.includes('SISWA')) return false
+    if (user.roles?.includes('ADMIN') || user.pagesArray?.includes('wordpress-app')) return true
+    const allowed = ['ADMIN', 'SUPERADMIN', 'HUMAS', 'EDITOR', 'GURU', 'PEMBINA', 'STAF', 'STAFF', 'ADMINISTRATOR']
+    return userRolesList.some(r => allowed.includes(r))
+  }, [userRolesList, user.pagesArray, user.roles])
 
   // ── Load persisted UI state ──
   useEffect(() => {
@@ -477,6 +526,112 @@ export default function Sidebar({
     }
   }
 
+  const openWordPress = async () => {
+    if (wpLoading) return
+    setWpLoading(true)
+    const win = window.open('about:blank', '_blank')
+    if (win) {
+      try { win.opener = null } catch { /* ignore cross-origin */ }
+    }
+
+    try {
+      const res = await fetch('/api/sso/wordpress', {
+        headers: { 'Accept': 'application/json' },
+      })
+      const data = await res.json().catch(() => null)
+
+      if (res.ok && data?.sso_url) {
+        if (win) win.location.href = data.sso_url
+        else window.open(data.sso_url, '_blank')
+      } else {
+        win?.close()
+        const errMsg = data?.error || data?.message || 'Gagal membuat sesi SSO WordPress.'
+        swalError('Gagal Membuka WordPress', errMsg)
+      }
+    } catch (err) {
+      console.error('[WordPress SSO] Error:', err)
+      win?.close()
+      swalError('Gagal Membuka WordPress', 'Terjadi kesalahan saat menghubungi server SSO.')
+    } finally {
+      setWpLoading(false)
+    }
+  }
+
+  // Daftar tombol SSO yang diizinkan untuk user
+  // CBT diatur agar selalu muncul di posisi paling kiri (index 0)
+  const ssoItems = useMemo<SsoItem[]>(() => {
+    const list: SsoItem[] = []
+    if (hasCbtAccess) {
+      list.push({
+        id: 'cbt',
+        label: 'CBT',
+        fullName: 'Aplikasi CBT',
+        icon: cbtLoading ? 'fa-spinner fa-spin' : 'fa-file-waveform',
+        onClick: openCbt,
+        disabled: cbtLoading,
+        title: 'Buka Aplikasi CBT',
+      })
+    }
+    if (hasToolsAccess) {
+      list.push({
+        id: 'tools',
+        label: 'TOOLS',
+        fullName: 'ACCA TOOLS',
+        icon: 'fa-toolbox',
+        href: '/api/sso/tools',
+        title: 'Buka ACCA TOOLS',
+      })
+    }
+    if (hasWpAccess) {
+      list.push({
+        id: 'wp',
+        label: 'WP',
+        fullName: 'WordPress',
+        icon: wpLoading ? 'fa-spinner fa-spin' : 'fa-globe',
+        onClick: openWordPress,
+        disabled: wpLoading,
+        title: 'Buka WordPress (/wp-admin/)',
+      })
+    }
+    return list
+  }, [hasCbtAccess, hasToolsAccess, hasWpAccess, cbtLoading, wpLoading])
+
+  const renderSsoButton = (item: SsoItem) => {
+    if (item.href) {
+      return (
+        <a
+          key={item.id}
+          href={item.href}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="sso-cbt-btn"
+          title={item.title}
+        >
+          <i className={`fa-solid ${item.icon} btn-icon`}></i>
+          {!isCollapsed && <span className="btn-label">{item.label}</span>}
+        </a>
+      )
+    }
+    return (
+      <button
+        key={item.id}
+        type="button"
+        onClick={item.onClick}
+        disabled={item.disabled}
+        className="sso-cbt-btn"
+        title={item.title}
+        aria-busy={item.disabled}
+      >
+        <i className={`fa-solid ${item.icon} btn-icon`}></i>
+        {!isCollapsed && (
+          <span className="btn-label">
+            {item.disabled ? 'Membuka…' : item.label}
+          </span>
+        )}
+      </button>
+    )
+  }
+
   return (
     <>
       <div className={`sidebar-overlay ${isOpen ? 'show' : ''}`} onClick={onToggle}></div>
@@ -512,33 +667,91 @@ export default function Sidebar({
           </div>
         </div>
 
-        {/* SSO App Links — CBT + ACCA TOOLS side by side (only if user has access to at least one) */}
-        {(hasCbtAccess || hasToolsAccess) && (
+        {/* SSO App Links — CBT + ACCA TOOLS + WordPress (Maksimal 2 kotak, CBT paling kiri) */}
+        {ssoItems.length > 0 && (
           <div className="sidebar-nav-fixed">
-            <div className="sso-cbt-container">
-              {hasCbtAccess && (
-                <button
-                  onClick={openCbt}
-                  disabled={cbtLoading}
-                  className="sso-cbt-btn"
-                  title="Buka Aplikasi CBT"
-                  aria-busy={cbtLoading}
-                >
-                  <i className={`fa-solid ${cbtLoading ? 'fa-spinner fa-spin' : 'fa-file-waveform'} btn-icon`}></i>
-                  {!isCollapsed && <span className="btn-label">{cbtLoading ? 'Membuka…' : 'CBT'}</span>}
-                </button>
+            <div className={`sso-cbt-container ${ssoItems.length === 1 ? 'sso-single-item' : ''}`}>
+              {/* Jika hanya 1 opsi: 1 tombol diatur di tengah */}
+              {ssoItems.length === 1 && renderSsoButton(ssoItems[0])}
+
+              {/* Jika hanya 2 opsi: 2 tombol asli berdampingan */}
+              {ssoItems.length === 2 && (
+                <>
+                  {renderSsoButton(ssoItems[0])}
+                  {renderSsoButton(ssoItems[1])}
+                </>
               )}
-              {hasToolsAccess && (
-                <a
-                  href="/api/sso/tools"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="sso-cbt-btn"
-                  title="Buka ACCA TOOLS"
-                >
-                  <i className="fa-solid fa-toolbox btn-icon"></i>
-                  {!isCollapsed && <span className="btn-label">TOOLS</span>}
-                </a>
+
+              {/* Jika 3 opsi: kotak 1 CBT (paling kiri), kotak 2 berupa icon 3 titik horisontal (...) */}
+              {ssoItems.length >= 3 && (
+                <>
+                  {renderSsoButton(ssoItems[0])}
+                  <div className="sso-more-wrapper" ref={ssoMenuRef}>
+                    <button
+                      type="button"
+                      className={`sso-cbt-btn sso-more-btn ${ssoMenuOpen ? 'active' : ''}`}
+                      onClick={() => setSsoMenuOpen(prev => !prev)}
+                      title="Aplikasi Lainnya"
+                      aria-expanded={ssoMenuOpen}
+                      aria-haspopup="true"
+                    >
+                      <i className="fa-solid fa-ellipsis btn-icon"></i>
+                    </button>
+
+                    {ssoMenuOpen && (
+                      <div className="sso-more-dropdown" role="menu">
+                        {ssoItems.slice(1).map(item => {
+                          if (item.href) {
+                            return (
+                              <a
+                                key={item.id}
+                                href={item.href}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="sso-more-item"
+                                role="menuitem"
+                                onClick={() => setSsoMenuOpen(false)}
+                              >
+                                <span className="sso-more-item-icon">
+                                  <i className={`fa-solid ${item.icon}`}></i>
+                                </span>
+                                <div className="sso-more-item-text">
+                                  <span className="sso-more-item-title">{item.fullName}</span>
+                                  <span className="sso-more-item-sub">Buka di tab baru</span>
+                                </div>
+                                <i className="fa-solid fa-arrow-up-right-from-square sso-more-item-arrow"></i>
+                              </a>
+                            )
+                          }
+                          return (
+                            <button
+                              key={item.id}
+                              type="button"
+                              className="sso-more-item"
+                              role="menuitem"
+                              disabled={item.disabled}
+                              onClick={() => {
+                                setSsoMenuOpen(false)
+                                item.onClick?.()
+                              }}
+                            >
+                              <span className="sso-more-item-icon">
+                                <i className={`fa-solid ${item.icon}`}></i>
+                              </span>
+                              <div className="sso-more-item-text">
+                                <span className="sso-more-item-title">{item.fullName}</span>
+                                <span className="sso-more-item-sub">
+                                  {item.id === 'wp' ? 'Portal WordPress' : 'Buka di tab baru'}
+                                </span>
+                              </div>
+                              <i className="fa-solid fa-arrow-up-right-from-square sso-more-item-arrow"></i>
+                            </button>
+                          )
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </>
               )}
             </div>
           </div>

@@ -1,6 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { JadwalService } from '../jadwal/jadwal.service';
+import {
+  KINERJA_GURU_CETAK_REKAP_KEY,
+  aksesDiizinkan,
+  parseKonfigurasiAkses,
+} from '../auth/feature-access.guard';
 
 interface TeacherStats {
   nip: string;
@@ -26,6 +31,14 @@ export class KinerjaGuruService {
     private readonly jadwalService: JadwalService,
   ) {}
 
+  async aksesCetakRekap(user: any): Promise<boolean> {
+    const row = await this.prisma.site_settings.findUnique({
+      where: { key: KINERJA_GURU_CETAK_REKAP_KEY },
+      select: { value: true },
+    });
+    return aksesDiizinkan(user, parseKonfigurasiAkses(row?.value ?? null));
+  }
+
   async getDashboardSummary(startMonth?: string, endMonth?: string) {
     const result = await this.getStats(startMonth, endMonth);
     const summarize = (items: { nama: string }[]) =>
@@ -42,7 +55,7 @@ export class KinerjaGuruService {
     };
   }
 
-  async getStats(startMonth?: string, endMonth?: string) {
+  async getStats(startMonth?: string, endMonth?: string, apiUser?: any) {
     const now = new Date();
     const currentYear = now.getFullYear();
     const currentMonth = String(now.getMonth() + 1).padStart(2, '0');
@@ -562,6 +575,8 @@ export class KinerjaGuruService {
 
     const addTotalJP = (arr: any[]) => arr.map((s) => ({ ...s, total_jp: s.total_jp || 0 }));
 
+    const canCetak = apiUser ? await this.aksesCetakRekap(apiUser) : false;
+
     return {
       success: true,
       totalRaw: allJurnals.length,
@@ -588,6 +603,9 @@ export class KinerjaGuruService {
         ),
         piket: addTotalJP(wrap([...allStats], 'piket')),
         daring: [] as any[],
+      },
+      akses: {
+        cetakRekap: canCetak,
       },
     };
   }

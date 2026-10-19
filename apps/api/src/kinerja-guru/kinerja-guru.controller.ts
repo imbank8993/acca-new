@@ -1,7 +1,8 @@
-import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Query, Req, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PageAccessGuard, RequiresPage } from '../auth/page-access.guard';
+import { rolesUser } from '../auth/feature-access.guard';
 import { KinerjaGuruService } from './kinerja-guru.service';
 
 @ApiTags('Kinerja Guru')
@@ -28,9 +29,15 @@ export class KinerjaGuruController {
   @Get()
   @ApiOperation({ summary: 'Statistik dan Metrik Kinerja Guru' })
   async getStats(
+    @Req() req: any,
     @Query('start_month') start_month?: string,
     @Query('end_month') end_month?: string,
   ) {
-    return await this.kinerjaGuruService.getStats(start_month, end_month);
+    const apiUser = {
+      id: req?.user?.id,
+      roles: rolesUser(req?.user),
+      nip: req?.user?.nip || '',
+    };
+    return await this.kinerjaGuruService.getStats(start_month, end_month, apiUser);
   }
 }

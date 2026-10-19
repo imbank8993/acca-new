@@ -2,11 +2,12 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Spinner } from '@/components/ui/Spinner';
-import FilterToolbar, { FilterSearch, FilterSelect } from '@/components/ui/FilterToolbar';
+import FilterToolbar, { FilterSearch, FilterSelect, FilterField } from '@/components/ui/FilterToolbar';
 import { Button } from '@/components/ui/Button';
 import { DesktopFab } from '@/components/ui/DesktopFab';
 import { ActionButton, ActionGroup } from '@/components/ui/ActionButtons';
 import { InlineSelect } from '@/components/ui/InlineSelect';
+import DatePicker from '@/components/ui/DatePicker';
 import { swalSuccess, swalError, swalConfirm } from '@/lib/swal-premium';
 import NotulensiModal, { type NotulensiItem, type PoinHasilRapat } from '../components/NotulensiModal';
 import NotulensiPrintModal from '../components/NotulensiPrintModal';
@@ -24,6 +25,7 @@ export default function DaftarNotulensiTab({ bolehKelola, headerTabs }: DaftarNo
     // Filters
     const [searchQuery, setSearchQuery] = useState('');
     const [filterStatus, setFilterStatus] = useState<string>('Semua');
+    const [filterTanggal, setFilterTanggal] = useState<string>('');
     const [filterBulan, setFilterBulan] = useState<string>('');
 
     // Expandable rows in desktop
@@ -40,6 +42,7 @@ export default function DaftarNotulensiTab({ bolehKelola, headerTabs }: DaftarNo
         try {
             const params = new URLSearchParams();
             if (filterStatus && filterStatus !== 'Semua') params.set('status', filterStatus);
+            if (filterTanggal) params.set('tanggal', filterTanggal);
             if (filterBulan) params.set('bulan', filterBulan);
             if (searchQuery.trim()) params.set('search', searchQuery.trim());
 
@@ -57,7 +60,7 @@ export default function DaftarNotulensiTab({ bolehKelola, headerTabs }: DaftarNo
         } finally {
             setLoading(false);
         }
-    }, [filterStatus, filterBulan, searchQuery]);
+    }, [filterStatus, filterTanggal, filterBulan, searchQuery]);
 
     useEffect(() => {
         fetchData();
@@ -224,6 +227,13 @@ export default function DaftarNotulensiTab({ bolehKelola, headerTabs }: DaftarNo
                     onChange={setSearchQuery}
                     placeholder="Cari agenda rapat, pimpinan, notulis, poin..."
                 />
+                <FilterField label="Tanggal Rapat" width="180px" bare>
+                    <DatePicker
+                        value={filterTanggal}
+                        onChange={val => setFilterTanggal(val)}
+                        placeholder="Semua Tanggal"
+                    />
+                </FilterField>
                 <FilterSelect
                     label="Status"
                     icon="flag"
@@ -364,9 +374,9 @@ export default function DaftarNotulensiTab({ bolehKelola, headerTabs }: DaftarNo
                                                 <td style={{ textAlign: 'center' }}>
                                                     <ActionGroup>
                                                         <ActionButton
-                                                            action="view"
+                                                            action="print"
                                                             onClick={() => setPrintItem(item)}
-                                                            title="Pratinjau & Cetak Notulensi"
+                                                            title="Pratinjau, Cetak & PDF Notulensi"
                                                         />
                                                         {bolehKelola && (
                                                             <>
@@ -519,9 +529,9 @@ export default function DaftarNotulensiTab({ bolehKelola, headerTabs }: DaftarNo
                                             size="sm"
                                             variant="secondary"
                                             onClick={() => setPrintItem(item)}
-                                            leftIcon={<i className="bi bi-printer" />}
+                                            leftIcon={<i className="bi bi-file-earmark-pdf" />}
                                         >
-                                            Cetak
+                                            PDF &amp; Cetak
                                         </Button>
 
                                         {bolehKelola && (

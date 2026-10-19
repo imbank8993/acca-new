@@ -165,18 +165,22 @@ export class NotulensiService {
   /**
    * Mengambil daftar notulensi dengan filter
    */
-  async getList(query: { search?: string; status?: string; bulan?: string; tahun?: string; limit?: string; offset?: string }) {
+  async getList(query: { search?: string; status?: string; bulan?: string; tahun?: string; tanggal?: string; limit?: string; offset?: string }) {
     const conditions: string[] = ['1=1'];
     const params: any[] = [];
     let pIdx = 1;
 
     if (query.status && query.status.trim() && query.status !== 'Semua') {
-      conditions.push(`${DERIVED_STATUS_SQL} = ${pIdx}`);
+      conditions.push(`${DERIVED_STATUS_SQL} = $${pIdx}`);
       params.push(normalizeStatus(query.status));
       pIdx++;
     }
 
-    if (query.bulan && /^\d{4}-\d{2}$/.test(query.bulan.trim())) {
+    if (query.tanggal && /^\d{4}-\d{2}-\d{2}$/.test(query.tanggal.trim())) {
+      conditions.push(`TO_CHAR(tanggal, 'YYYY-MM-DD') = $${pIdx}`);
+      params.push(query.tanggal.trim());
+      pIdx++;
+    } else if (query.bulan && /^\d{4}-\d{2}$/.test(query.bulan.trim())) {
       const ym = query.bulan.trim();
       conditions.push(`TO_CHAR(tanggal, 'YYYY-MM') = $${pIdx}`);
       params.push(ym);
@@ -581,4 +585,66 @@ export class NotulensiService {
       data: payloadValue,
     };
   }
+
+  /**
+   * Mengambil daftar master guru & staf (serta siswa) untuk pilihan peserta, pimpinan, notulis, dan PIC.
+   */
+  async getPesertaOptions() {
+    const [pegawai, siswa] = await Promise.all([
+      this.prisma.master_guru.findMany({
+        where: { aktif: true },
+        select: {
+          nip: true,
+          nama_lengkap: true,
+          jenis_pegawai: true,
+        },
+        orderBy: {
+          nama_lengkap: 'asc',
+        },
+      }),
+      this.prisma.master_siswa.findMany({
+        where: { aktif: true },
+        select: {
+          nisn: true,
+          nama_lengkap: true,
+        },
+        orderBy: {
+          nama_lengkap: 'asc',
+        },
+      }),
+    ]);
+
+    const guruList = pegawai
+      .filter(p => !p.jenis_pegawai || p.jenis_pegawai.toUpperCase() !== 'TENDIK')
+      .map(p => ({
+        nip: p.nip,
+        nama: p.nama_lengkap,
+        jenis: 'Guru' as const,
+      }));
+
+    const stafList = pegawai
+      .filter(p => p.jenis_pegawai && p.jenis_pegawai.toUpperCase() === 'TENDIK')
+      .map(p => ({
+        nip: p.nip,
+        nama: p.nama_lengkap,
+        jenis: 'Tendik / Staf' as const,
+      }));
+
+    const siswaList = siswa.map(s => ({
+      nisn: s.nisn,
+      nama: s.nama_lengkap,
+      jenis: 'Siswa' as const,
+    }));
+
+    return {
+      success: true,
+      data: {
+        guru: guruList,
+        staf: stafList,
+        semuaPegawai: [...guruList, ...stafList],
+        siswa: siswaList,
+      },
+    };
+  }
 }
+

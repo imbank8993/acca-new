@@ -186,6 +186,14 @@ const MODUL: ModulItem[] = [
             + 'memverifikasi Dinas Luar. CATATAN: dulu melekat pada OP_IZINGURU.',
         grup: 'Izin Guru',
     },
+    // ─── KINERJA GURU ───────────────────────────────────────────────────
+    {
+        settingKey: 'kinerja_guru_cetak_rekap_access_config',
+        judul: 'Cetak Rekap 10 Besar',
+        ikon: 'bi-printer-fill',
+        keterangan: 'Mencetak rekapan 10 besar kinerja guru secara detail (memuat rincian insiden dan status izin/sakit guru).',
+        grup: 'Kinerja Guru',
+    },
     // ─── ABSENSI ────────────────────────────────────────────────────────
     {
         settingKey: 'absensi_access_config',

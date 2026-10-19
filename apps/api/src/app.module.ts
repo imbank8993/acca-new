@@ -55,6 +55,7 @@ import { KinerjaGuruModule } from './kinerja-guru/kinerja-guru.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { BankDataModule } from './bank-data/bank-data.module';
 import { AuditModule } from './audit/audit.module';
+import { SsoModule } from './sso/sso.module';
 
 @Module({
   imports: [
@@ -112,6 +113,7 @@ import { AuditModule } from './audit/audit.module';
     NotificationsModule,
     BankDataModule,
     AuditModule,
+    SsoModule,
     ThrottlerModule.forRoot([{
       ttl: 60000,
       limit: 120,

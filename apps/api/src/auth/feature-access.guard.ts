@@ -66,6 +66,9 @@ export const IZIN_GURU_KELOLA_KEY = 'izin_guru_kelola_access_config';
 export const IZIN_GURU_APPROVAL_KEY = 'izin_guru_approval_access_config';
 export const IZIN_GURU_DINAS_KEY = 'izin_guru_dinas_access_config';
 
+/** Kunci site_settings untuk hak cetak rekap 10 besar Kinerja Guru. */
+export const KINERJA_GURU_CETAK_REKAP_KEY = 'kinerja_guru_cetak_rekap_access_config';
+
 /** Kunci site_settings untuk hak kelola Informasi & Layanan (semua kategori). */
 export const INFORMASI_KELOLA_KEY = 'informasi_access_config';
 

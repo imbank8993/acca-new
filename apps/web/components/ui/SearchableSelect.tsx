@@ -21,6 +21,7 @@ export interface SearchableSelectProps {
   placement?: 'top' | 'bottom'
   itemLabel?: string
   showQuickActions?: boolean
+  creatable?: boolean
 }
 
 export default function SearchableSelect({
@@ -34,7 +35,8 @@ export default function SearchableSelect({
   multiple = false,
   placement = 'bottom',
   itemLabel = 'item',
-  showQuickActions = true
+  showQuickActions = true,
+  creatable = false
 }: SearchableSelectProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [search, setSearch] = useState('')
@@ -65,12 +67,24 @@ export default function SearchableSelect({
   const selectedOptions = useMemo(() => {
     if (multiple) {
       const values = Array.isArray(value) ? value : []
-      return options.filter((opt) => values.includes(opt.value))
+      const matched = options.filter((opt) => values.includes(opt.value))
+      if (creatable) {
+        const matchedVals = new Set(matched.map(m => m.value))
+        const custom = values
+          .filter(v => v !== '' && v !== null && v !== undefined && !matchedVals.has(v))
+          .map(v => ({ value: v, label: String(v), subLabel: '(Ketik manual)' }))
+        return [...matched, ...custom]
+      }
+      return matched
     } else {
       const found = options.find((opt) => opt.value === value)
-      return found ? [found] : []
+      if (found) return [found]
+      if (creatable && value !== '' && value !== null && value !== undefined) {
+        return [{ value, label: String(value), subLabel: '(Ketik manual)' }]
+      }
+      return []
     }
-  }, [options, value, multiple])
+  }, [options, value, multiple, creatable])
 
   const filteredOptions = useMemo(() => {
     const q = search.trim().toLowerCase()
@@ -78,6 +92,14 @@ export default function SearchableSelect({
     return options.filter(
       (opt) =>
         opt.label.toLowerCase().includes(q) || (opt.subLabel && opt.subLabel.toLowerCase().includes(q))
+    )
+  }, [options, search])
+
+  const isExactMatch = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    if (!q) return false
+    return options.some(
+      opt => opt.label.toLowerCase() === q || String(opt.value).toLowerCase() === q
     )
   }, [options, search])
 
@@ -110,6 +132,23 @@ export default function SearchableSelect({
       inputRef.current?.focus()
     } else {
       onChange(opt.value)
+      setSearch('')
+      setIsOpen(false)
+    }
+  }
+
+  const pickCustom = (customText: string) => {
+    const clean = customText.trim()
+    if (!clean) return
+    if (multiple) {
+      const current = Array.isArray(value) ? value : []
+      if (!current.includes(clean)) {
+        onChange([...current, clean])
+      }
+      setSearch('')
+      inputRef.current?.focus()
+    } else {
+      onChange(clean)
       setSearch('')
       setIsOpen(false)
     }
@@ -168,10 +207,21 @@ export default function SearchableSelect({
           onFocus={() => {
             if (!isOpen) setIsOpen(true)
           }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              if (creatable && search.trim()) {
+                e.preventDefault()
+                pickCustom(search.trim())
+              } else if (filteredOptions.length > 0) {
+                e.preventDefault()
+                pick(filteredOptions[0])
+              }
+            }
+          }}
         />
 
         <div className="ss__triggerActions">
-          {search && (
+          {search ? (
             <button
               type="button"
               className="ss__clearBtn"
@@ -184,7 +234,20 @@ export default function SearchableSelect({
             >
               <i className="bi bi-x-circle-fill" />
             </button>
-          )}
+          ) : !multiple && value && !disabled ? (
+            <button
+              type="button"
+              className="ss__clearBtn ss__clearBtn--value"
+              title="Kosongkan pilihan"
+              onClick={(e) => {
+                e.stopPropagation()
+                onChange('')
+                setSearch('')
+              }}
+            >
+              <i className="bi bi-x" style={{ fontSize: '1.15rem' }} />
+            </button>
+          ) : null}
 
           <RiArrowDropDownFill
             size={20}
@@ -218,7 +281,30 @@ export default function SearchableSelect({
           )}
 
           <div className="ss__list">
-            {filteredOptions.length === 0 ? (
+            {creatable && search.trim() && !isExactMatch && (
+              <button
+                type="button"
+                className="ss__item ss__item--creatable"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  pickCustom(search.trim())
+                }}
+              >
+                <div className="ss__itemContent" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <i className="bi bi-pencil-square" style={{ color: '#2563eb', fontSize: '1.05rem', flexShrink: 0 }} />
+                  <div>
+                    <div className="ss__itemMain" style={{ color: '#2563eb', fontWeight: 600 }}>
+                      Gunakan: "{search.trim()}"
+                    </div>
+                    <div className="ss__itemSub" style={{ color: '#64748b', fontSize: '0.72rem' }}>
+                      Tekan Enter atau klik untuk memilih teks ini
+                    </div>
+                  </div>
+                </div>
+              </button>
+            )}
+
+            {filteredOptions.length === 0 && (!creatable || !search.trim()) ? (
               <div className="ss__empty">
                 <i className="bi bi-inbox" />
                 <span>Tidak ada data yang cocok</span>
@@ -472,6 +558,26 @@ export default function SearchableSelect({
 
         .ss__item.is-active {
           background: rgba(59, 130, 246, 0.10);
+        }
+
+        .ss__item--creatable {
+          background: rgba(37, 99, 235, 0.05);
+          border-bottom: 1.5px dashed rgba(37, 99, 235, 0.25);
+        }
+        .ss__item--creatable:hover {
+          background: rgba(37, 99, 235, 0.12);
+        }
+
+        .ss__clearBtn--value {
+          color: #94a3b8;
+          opacity: 0.7;
+          border-radius: 50%;
+          transition: all 0.15s ease;
+        }
+        .ss__clearBtn--value:hover {
+          opacity: 1;
+          color: #ef4444;
+          background: rgba(239, 68, 68, 0.1);
         }
 
         .ss__checkbox {

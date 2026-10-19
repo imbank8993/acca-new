@@ -33,6 +33,16 @@ const nextConfig: NextConfig = {
         permanent: false,
       })),
       {
+        source: '/wordpress',
+        destination: '/api/sso/wordpress',
+        permanent: false,
+      },
+      {
+        source: '/wordpress-app',
+        destination: '/api/sso/wordpress',
+        permanent: false,
+      },
+      {
         source: '/personal-documents',
         destination: '/dokumen?tab=pribadi',
         permanent: true,

@@ -5,10 +5,14 @@ import { useTabParam } from '@/hooks/useTabParam';
 import { Spinner } from '@/components/ui/Spinner';
 import Tab from '@/components/ui/Tab';
 import { FilterToolbar, FilterSelect, FilterInput, FilterSearch } from '@/components/ui/FilterToolbar';
-import { Button } from '@/components/ui/Button';
+import { DesktopFab } from '@/components/ui/DesktopFab';
+import { MobileFab } from '@/components/mobile';
 import { ActionButton, ActionGroup } from '@/components/ui/ActionButtons';
 import MaintenanceBanner from '@/components/MaintenanceBanner';
 import KinerjaGuruDetailModal from './components/KinerjaGuruDetailModal';
+import HtmlPreviewModal from '@/components/ui/HtmlPreviewModal';
+import { generateRekapKinerjaHtml } from '@/lib/kinerja-guru/rekap-kinerja-report';
+import type { ProfilSekolah } from '@/lib/lckh/print-shared';
 import { useModalBlur } from '@/components/ModalBlurProvider';
 import './kinerja-guru.css';
 
@@ -77,6 +81,11 @@ export default function KinerjaGuruPage() {
     const [data, setData] = useState<KinerjaGuruData>({ jamKosong: [], penugasanTanpa: [], penugasanDengan: [], digabung: [], terlambat: [], daring: [], mengambilIstirahat: [], keluarSebelumWaktu: [], piket: [] });
     const [loading, setLoading] = useState(true);
     const [isAdmin, setIsAdmin] = useState(false);
+    const [canCetakRekap, setCanCetakRekap] = useState(false);
+    const [userName, setUserName] = useState('Petugas Kepegawaian');
+    const [userNip, setUserNip] = useState('');
+    const [previewHtml, setPreviewHtml] = useState<string | null>(null);
+    const [profil, setProfil] = useState<ProfilSekolah | null>(null);
 
     // Filter toolbar state
     const [searchQuery, setSearchQuery] = useState('');
@@ -159,11 +168,29 @@ export default function KinerjaGuruPage() {
                 const normalizedRoles = roles.map((r: string) => r.toUpperCase().trim());
                 const isAdminUser = normalizedRoles.includes('ADMIN') || normalizedRoles.includes('ADMINISTRATOR') || !!(userData as any).isAdmin;
                 setIsAdmin(isAdminUser);
+                if (isAdminUser) {
+                    setCanCetakRekap(true);
+                }
+                const displayName = (userData as any).nama_lengkap || userData.nama || (userData as any).name;
+                if (displayName) setUserName(displayName);
+                if (userData.nip) setUserNip(userData.nip);
             }
         } catch (e) {
             console.error('Failed to fetch admin status:', e);
         }
     };
+
+    useEffect(() => {
+        fetch('/api/profil-sekolah')
+            .then(res => res.json())
+            .then(json => {
+                const p = json?.data || json;
+                if (p && (p.nama_sekolah || p.namaSekolah)) {
+                    setProfil(p);
+                }
+            })
+            .catch(() => {});
+    }, []);
 
     const fetchData = async () => {
         setLoading(true);
@@ -175,6 +202,9 @@ export default function KinerjaGuruPage() {
             const result = await res.json();
             if (result.success) {
                 setData(result.data);
+                if (result.akses?.cetakRekap !== undefined) {
+                    setCanCetakRekap(Boolean(result.akses.cetakRekap));
+                }
             }
         } catch (err) {
             console.error('Failed to fetch kinerja guru data', err);
@@ -238,6 +268,30 @@ export default function KinerjaGuruPage() {
     const currentList = getCurrentList();
     const top10 = currentList.slice(0, 10);
     const allTeachersCount = getAllTeachersCount();
+
+    const periodeLabel = useMemo(() => {
+        if (filterMode === 'Bulan') {
+            const monthObj = MONTH_OPTIONS.find(m => m.value === selectedMonthVal);
+            return `Bulan ${monthObj ? monthObj.label : selectedMonthVal} ${selectedYearVal}`;
+        } else {
+            const semStr = selectedSemester ? `Semester ${selectedSemester}` : 'Semua Semester';
+            return `Tahun Ajaran ${selectedTa} (${semStr})`;
+        }
+    }, [filterMode, selectedMonthVal, selectedYearVal, selectedTa, selectedSemester]);
+
+    const handleCetakRekap = () => {
+        const html = generateRekapKinerjaHtml({
+            top10,
+            kategoriLabel: getTabLabel(),
+            kategoriKey: activeTab,
+            periodeLabel,
+            profil,
+            pembuatNama: userName,
+            pembuatNip: userNip,
+            allTeachersCount,
+        });
+        setPreviewHtml(html);
+    };
 
     const [selectedTeacher, setSelectedTeacher] = useState<Winner | null>(null);
     const { registerModal } = useModalBlur();
@@ -350,6 +404,33 @@ export default function KinerjaGuruPage() {
                     details={selectedTeacher?.details || []}
                     category={activeTab}
                 />
+
+                {previewHtml && (
+                    <HtmlPreviewModal
+                        html={previewHtml}
+                        title={`Rekap 10 Besar Kinerja Guru - ${getTabLabel()}`}
+                        onClose={() => setPreviewHtml(null)}
+                    />
+                )}
+
+                {canCetakRekap && (
+                    <>
+                        <DesktopFab
+                            label="Cetak Rekap"
+                            icon="printer-fill"
+                            onClick={handleCetakRekap}
+                            title="Cetak Rekap 10 Besar"
+                            mobileLabel="Cetak"
+                            mobileIcon="printer-fill"
+                        />
+                        <MobileFab
+                            label="Cetak Rekap"
+                            mobileLabel="Cetak"
+                            icon="printer-fill"
+                            onClick={handleCetakRekap}
+                        />
+                    </>
+                )}
 
                 
 

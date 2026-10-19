@@ -67,6 +67,7 @@ const ROLE_FUNCTION_DESCRIPTIONS: Record<string, Record<string, { action?: Actio
     'klinik': { action: 'edit', desc: 'Membuka slot bimbingan materi klinik dan input laporan perkembangan siswa.' },
     'dokumen': { action: 'edit', desc: 'Pusat Dokumen: Mengunggah berkas akademis/sekolah, penyimpanan dokumen pribadi, serta kelola dokumen per kelas.' },
     'permintaan-surat': { action: 'view', desc: 'Mengajukan permohonan surat tugas / surat pengantar kedinasan.' },
+    'wordpress-app': { action: 'view', desc: 'Akses Single Sign-On (SSO) ke panel admin website resmi WordPress MAN IC Gowa.' },
   },
   WALI_KELAS: {
     'wali-kelas': { action: 'manage', desc: 'Dashboard wali kelas: Rekapitulasi perkembangan kelas binaan, catatan khusus, dan data siswa.' },
@@ -124,6 +125,7 @@ const ROLE_FUNCTION_DESCRIPTIONS: Record<string, Record<string, { action?: Actio
   WKM_HUMAS: {
     'pengumuman': { action: 'manage', desc: 'Publikasi siaran pers, pengumuman madrasah, dan informasi ke publik.' },
     'layanan-ptsp': { action: 'view', desc: 'Memantau arus permohonan layanan publik dan kepuasan masyarakat.' },
+    'wordpress-app': { action: 'edit', desc: 'Pengelolaan rilis berita dan publikasi artikel di website resmi madrasah.' },
   },
   BK: {
     'bimbingan-konseling': { action: 'manage', desc: 'Pencatatan sesi konseling, penanganan kasus siswa, bimbingan karir, & home visit.' },

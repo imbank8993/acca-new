@@ -53,10 +53,19 @@ export class NotulensiController {
     @Query('status') status?: string,
     @Query('bulan') bulan?: string,
     @Query('tahun') tahun?: string,
+    @Query('tanggal') tanggal?: string,
     @Query('limit') limit?: string,
     @Query('offset') offset?: string,
   ) {
-    return this.notulensiService.getList({ search, status, bulan, tahun, limit, offset });
+    return this.notulensiService.getList({ search, status, bulan, tahun, tanggal, limit, offset });
+  }
+
+  /**
+   * Mengambil opsi guru, staf, dan siswa untuk dropdown peserta, pimpinan, notulis, dan PIC
+   */
+  @Get('peserta-options')
+  async getPesertaOptions() {
+    return this.notulensiService.getPesertaOptions();
   }
 
   /**
