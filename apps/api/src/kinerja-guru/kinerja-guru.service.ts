@@ -187,6 +187,81 @@ export class KinerjaGuruService {
       if (!nameToNipMap[baseName]) nameToNipMap[baseName] = t.nip;
     });
 
+    // 6. Izin Guru
+    const allIzinGuru = await this.prisma.izin_guru.findMany({
+      where: {
+        tanggal_mulai: { lte: endQueryDate },
+        tanggal_selesai: { gte: startQueryDate },
+      },
+      select: {
+        id: true,
+        nip: true,
+        nama_guru: true,
+        jenis: true,
+        status: true,
+        tanggal_mulai: true,
+        tanggal_selesai: true,
+        keterangan: true,
+        instansi_tujuan: true,
+      },
+    });
+
+    const preparedIzinList = allIzinGuru.map((i) => {
+      const mulaiStr = i.tanggal_mulai instanceof Date
+        ? i.tanggal_mulai.toISOString().split('T')[0]
+        : String(i.tanggal_mulai || '').split('T')[0];
+      const selesaiStr = i.tanggal_selesai instanceof Date
+        ? i.tanggal_selesai.toISOString().split('T')[0]
+        : String(i.tanggal_selesai || '').split('T')[0];
+      const normNip = (i.nip || '').trim();
+      const normName = (i.nama_guru || '').trim().toLowerCase();
+      const baseName = normName.split(',')[0].trim();
+      return {
+        id: i.id,
+        nip: normNip,
+        nama: normName,
+        baseName,
+        jenis: i.jenis,
+        status: i.status,
+        keterangan: i.keterangan,
+        instansi_tujuan: i.instansi_tujuan,
+        mulaiStr,
+        selesaiStr,
+      };
+    });
+
+    const findIzin = (teacherNip: string, teacherNama: string, dateStr: string) => {
+      if (!dateStr) return null;
+      const tNip = (teacherNip || '').trim();
+      const tName = (teacherNama || '').trim().toLowerCase();
+      const tBase = tName.split(',')[0].trim();
+
+      const matches = preparedIzinList.filter((iz) => {
+        if (dateStr < iz.mulaiStr || dateStr > iz.selesaiStr) return false;
+        if (tNip && iz.nip && tNip === iz.nip) return true;
+        if (tName && iz.nama && (tName === iz.nama || tBase === iz.baseName)) return true;
+        return false;
+      });
+
+      if (!matches.length) return null;
+
+      matches.sort((a, b) => {
+        const score = (st: string) => (st === 'disetujui' ? 2 : st === 'pending' ? 1 : 0);
+        return score(b.status) - score(a.status);
+      });
+
+      const best = matches[0];
+      return {
+        id: best.id,
+        jenis: best.jenis,
+        status: best.status,
+        keterangan: best.keterangan || (best.jenis === 'dinas_luar' ? best.instansi_tujuan : null),
+        instansi_tujuan: best.instansi_tujuan || null,
+        tanggal_mulai: best.mulaiStr,
+        tanggal_selesai: best.selesaiStr,
+      };
+    };
+
     const stats: Record<string, TeacherStats> = {};
 
     const ensureKey = (nama: string, nipInput?: string) => {
@@ -302,6 +377,7 @@ export class KinerjaGuruService {
                       keterangan: 'Tidak Piket',
                       jam_ke: Array.from(missedJams).sort((a, b) => a - b).join(', '),
                       kelas: Array.from(missedKelas).join(', '),
+                      izin: findIzin(nip, slots[0].nama_guru || '', dateStr),
                     });
                   }
                 });
@@ -392,6 +468,7 @@ export class KinerjaGuruService {
         waktu,
         durasi: undefined as number | undefined,
         keterangan: '' as string,
+        izin: findIzin(targetNip, targetNama, tglStr),
       });
 
       const durasiTerlambat = parseInt(j.durasi_terlambat, 10) || 0;

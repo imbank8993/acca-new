@@ -2,6 +2,16 @@ import React from 'react';
 import { Modal, ModalHeader, ModalBody, ModalFooter } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 
+interface IncidentIzin {
+    id?: string;
+    jenis: 'izin' | 'sakit' | 'dinas_luar' | string;
+    status: 'disetujui' | 'pending' | 'ditolak' | string;
+    keterangan?: string | null;
+    instansi_tujuan?: string | null;
+    tanggal_mulai?: string;
+    tanggal_selesai?: string;
+}
+
 interface IncidentDetail {
     type: string;
     tanggal: string;
@@ -12,6 +22,7 @@ interface IncidentDetail {
     waktu: string;
     keterangan: string;
     hari?: string;
+    izin?: IncidentIzin | null;
 }
 
 interface KinerjaGuruDetailModalProps {
@@ -54,9 +65,8 @@ export default function KinerjaGuruDetailModal({ isOpen, onClose, teacherName, d
     };
 
     return (
-        <Modal onClose={onClose} size="lg">
-            <div className="kg-modal">
-                <ModalHeader
+        <Modal onClose={onClose} size="xl" className="kg-incident-modal kg-modal">
+            <ModalHeader
                     title={`Detail Insiden — ${teacherName}`}
                     subtitle={`${getCategoryLabel()} • ${filteredDetails.length} Insiden`}
                     onClose={onClose}
@@ -71,9 +81,8 @@ export default function KinerjaGuruDetailModal({ isOpen, onClose, teacherName, d
                     ) : (
                         <>
                             {/* Desktop View Table */}
-                            <div className="desktop-only">
-                                <div className="table-wrapper">
-                                    <table>
+                            <div className="table-wrapper desktop-only">
+                                <table>
                                         <thead>
                                             <tr>
                                                 <th className="no-cell">No</th>
@@ -81,6 +90,7 @@ export default function KinerjaGuruDetailModal({ isOpen, onClose, teacherName, d
                                                 <th>Mata Pelajaran</th>
                                                 <th>Kelas</th>
                                                 <th className="waktu-cell">Jam / Waktu</th>
+                                                <th className="izin-cell">Izin / Sakit</th>
                                                 <th>Keterangan</th>
                                             </tr>
                                         </thead>
@@ -101,6 +111,33 @@ export default function KinerjaGuruDetailModal({ isOpen, onClose, teacherName, d
                                                         <div>Jam ke-{det.jam_ke}</div>
                                                         <div style={{ fontSize: '0.7rem', color: 'var(--n-muted)' }}>{det.waktu}</div>
                                                     </td>
+                                                    <td className="izin-cell">
+                                                        {det.izin ? (
+                                                            <div className="kg-izin-cell-content">
+                                                                <div className="kg-izin-badge-line">
+                                                                    <span className={`kg-izin-badge ${det.izin.jenis === 'dinas_luar' ? 'dinas' : det.izin.jenis}`}>
+                                                                        {det.izin.jenis === 'dinas_luar' ? 'Dinas Luar' : det.izin.jenis === 'sakit' ? 'Sakit' : 'Izin'}
+                                                                    </span>
+                                                                    <span className={`kg-izin-status ${det.izin.status}`}>
+                                                                        {det.izin.status === 'disetujui' ? (
+                                                                            <><i className="bi bi-check2"></i> Disetujui</>
+                                                                        ) : det.izin.status === 'pending' ? (
+                                                                            <><i className="bi bi-clock"></i> Menunggu</>
+                                                                        ) : (
+                                                                            <><i className="bi bi-x"></i> Ditolak</>
+                                                                        )}
+                                                                    </span>
+                                                                </div>
+                                                                {det.izin.keterangan && (
+                                                                    <div className="kg-izin-desc" title={det.izin.keterangan}>
+                                                                        {det.izin.keterangan}
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        ) : (
+                                                            <span className="kg-izin-empty">-</span>
+                                                        )}
+                                                    </td>
                                                     <td className="keterangan-cell" title={det.keterangan}>
                                                         {det.keterangan || '-'}
                                                     </td>
@@ -109,7 +146,6 @@ export default function KinerjaGuruDetailModal({ isOpen, onClose, teacherName, d
                                         </tbody>
                                     </table>
                                 </div>
-                            </div>
 
                             {/* Mobile View Cards */}
                             <div className="mobile-only">
@@ -127,6 +163,19 @@ export default function KinerjaGuruDetailModal({ isOpen, onClose, teacherName, d
                                                 {det.mapel || '-'}
                                             </div>
                                             <div className="card-time">Waktu: {det.waktu}</div>
+                                            {det.izin && (
+                                                <div className="card-izin-row">
+                                                    <span className={`kg-izin-badge ${det.izin.jenis === 'dinas_luar' ? 'dinas' : det.izin.jenis}`}>
+                                                        {det.izin.jenis === 'dinas_luar' ? 'Dinas Luar' : det.izin.jenis === 'sakit' ? 'Sakit' : 'Izin'}
+                                                    </span>
+                                                    <span className={`kg-izin-status ${det.izin.status}`}>
+                                                        {det.izin.status === 'disetujui' ? 'Disetujui' : det.izin.status === 'pending' ? 'Menunggu' : 'Ditolak'}
+                                                    </span>
+                                                    {det.izin.keterangan && (
+                                                        <span className="card-izin-desc">• {det.izin.keterangan}</span>
+                                                    )}
+                                                </div>
+                                            )}
                                             {det.keterangan && (
                                                 <div className="info-note">
                                                     <strong>Ket:</strong> {det.keterangan}
@@ -142,7 +191,6 @@ export default function KinerjaGuruDetailModal({ isOpen, onClose, teacherName, d
                 <ModalFooter>
                     <Button variant="cancel" onClick={onClose}>Tutup</Button>
                 </ModalFooter>
-            </div>
         </Modal>
     );
 }

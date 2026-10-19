@@ -523,12 +523,13 @@ export default function KinerjaGuruPage() {
                                 <thead>
                                     <tr>
                                         <th style={{ textAlign: 'center', width: '90px' }}>Peringkat</th>
-                                        <th style={{ width: '32%' }}>Nama Guru</th>
-                                        <th style={{ width: '170px' }}>
+                                        <th style={{ width: '30%' }}>Nama Guru</th>
+                                        <th style={{ width: '160px' }}>
                                             {activeTab === 'terlambat' || activeTab === 'keluarSebelumWaktu' ? 'Total Durasi' : 'Jumlah Kejadian'}
                                         </th>
-                                        {activeTab !== 'piket' && <th style={{ width: '160px' }}>Total JP</th>}
-                                        {activeTab !== 'piket' && <th style={{ width: '28%' }}>Persentase</th>}
+                                        {activeTab !== 'piket' && <th style={{ width: '150px' }}>Total JP</th>}
+                                        <th style={{ textAlign: 'center', width: '130px' }}>Izin / Sakit</th>
+                                        {activeTab !== 'piket' && <th style={{ width: '25%' }}>Persentase</th>}
                                         <th style={{ textAlign: 'center', width: '90px' }}>Aksi</th>
                                     </tr>
                                 </thead>
@@ -543,6 +544,20 @@ export default function KinerjaGuruPage() {
                                             : '0.0';
                                         const percentageNum = parseFloat(percentage);
                                         const pctColor = percentageNum > 50 ? '#ef4444' : percentageNum > 25 ? '#f59e0b' : '#10b981';
+
+                                        const categoryDetails = (item.details || []).filter((d: any) => {
+                                            if (activeTab === 'jamKosong') return d.type === 'Jam Kosong';
+                                            if (activeTab === 'penugasanTanpa') return d.type === 'Tanpa Pendampingan';
+                                            if (activeTab === 'penugasanDengan') return d.type === 'Dengan Pendampingan';
+                                            if (activeTab === 'digabung') return d.type === 'Digabung';
+                                            if (activeTab === 'terlambat') return d.type === 'Terlambat';
+                                            if (activeTab === 'mengambilIstirahat') return d.type === 'Mengambil Waktu Istirahat';
+                                            if (activeTab === 'keluarSebelumWaktu') return d.type === 'Keluar Sebelum Waktunya';
+                                            if (activeTab === 'piket') return d.type === 'Tidak Piket';
+                                            return true;
+                                        });
+                                        const berizinCount = categoryDetails.filter((d: any) => d.izin && d.izin.status === 'disetujui').length;
+
                                         return (
                                             <tr key={`${item.nip}-${item.nama}-${index}`}>
                                                 <td style={{ textAlign: 'center' }}>
@@ -565,6 +580,15 @@ export default function KinerjaGuruPage() {
                                                         </span>
                                                     </td>
                                                 )}
+                                                <td style={{ textAlign: 'center' }}>
+                                                    {berizinCount > 0 ? (
+                                                        <span className="kg-main-izin-badge" title={`${berizinCount} insiden memiliki izin resmi (disetujui)`}>
+                                                            <i className="bi bi-file-earmark-check"></i> {berizinCount} Berizin
+                                                        </span>
+                                                    ) : (
+                                                        <span style={{ color: 'var(--n-muted)', fontWeight: 600 }}>-</span>
+                                                    )}
+                                                </td>
                                                 {activeTab !== 'piket' && (
                                                     <td className="percentage-cell">
                                                         <div className="percentage-bar-container">
@@ -601,6 +625,20 @@ export default function KinerjaGuruPage() {
                                         : '0.0';
                                     const percentageNum = parseFloat(percentage);
                                     const pctColor = percentageNum > 50 ? '#ef4444' : percentageNum > 25 ? '#f59e0b' : '#10b981';
+
+                                    const categoryDetails = (item.details || []).filter((d: any) => {
+                                        if (activeTab === 'jamKosong') return d.type === 'Jam Kosong';
+                                        if (activeTab === 'penugasanTanpa') return d.type === 'Tanpa Pendampingan';
+                                        if (activeTab === 'penugasanDengan') return d.type === 'Dengan Pendampingan';
+                                        if (activeTab === 'digabung') return d.type === 'Digabung';
+                                        if (activeTab === 'terlambat') return d.type === 'Terlambat';
+                                        if (activeTab === 'mengambilIstirahat') return d.type === 'Mengambil Waktu Istirahat';
+                                        if (activeTab === 'keluarSebelumWaktu') return d.type === 'Keluar Sebelum Waktunya';
+                                        if (activeTab === 'piket') return d.type === 'Tidak Piket';
+                                        return true;
+                                    });
+                                    const berizinCount = categoryDetails.filter((d: any) => d.izin && d.izin.status === 'disetujui').length;
+
                                     return (
                                         <div className="card-item" key={`${item.nip}-${item.nama}-${index}`}>
                                             <div className={`card-rank ${index === 0 ? 'gold' : index === 1 ? 'silver' : index === 2 ? 'bronze' : 'default'}`}>
@@ -611,6 +649,7 @@ export default function KinerjaGuruPage() {
                                                 <div className="card-meta">
                                                     {activeTab === 'terlambat' ? 'Total Durasi' : 'Jumlah'}: {count}{activeTab === 'terlambat' || activeTab === 'keluarSebelumWaktu' ? ' Menit' : 'x'}
                                                     {activeTab !== 'piket' && ` • ${activeTab === 'terlambat' || activeTab === 'keluarSebelumWaktu' ? `${totalJP * 40} Mnt (${totalJP} JP)` : `${totalJP} JP`}`}
+                                                    {berizinCount > 0 && <span style={{ color: '#10b981', fontWeight: 600 }}> • {berizinCount} Berizin</span>}
                                                 </div>
                                                 {activeTab !== 'piket' && (
                                                     <div className="card-pct" style={{ color: pctColor }}>{percentage}%</div>

@@ -278,7 +278,8 @@
     flex-shrink: 0;
 }
 
-.desktop-only { display: table; width: 100%; }
+table.desktop-only { display: table; width: 100%; }
+div.desktop-only, .table-wrapper.desktop-only { display: block; width: 100%; }
 .mobile-only { display: none; }
 
 @media (max-width: 768px) {
@@ -335,21 +336,31 @@
     margin-bottom: 12px;
 }
 
+.kg-incident-modal {
+    width: min(1080px, 96vw) !important;
+    max-width: 1080px !important;
+}
+
 .kg-modal .table-wrapper {
     background: var(--n-card);
     border: 1px solid var(--n-border);
     border-radius: 12px;
-    overflow: hidden;
+    overflow: auto;
+    max-height: min(65vh, 580px);
     box-shadow: 0 1px 3px rgba(0,0,0,0.02);
 }
 
 .kg-modal table {
     width: 100%;
+    min-width: 820px;
     border-collapse: collapse;
 }
 
 .kg-modal th {
-    background: var(--n-soft);
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    background: var(--n-soft, #f8fafc);
     padding: 11px 14px;
     text-align: left;
     color: var(--n-muted);
@@ -358,6 +369,7 @@
     text-transform: uppercase;
     letter-spacing: 0.5px;
     border-bottom: 2px solid var(--n-border);
+    white-space: nowrap;
 }
 
 .kg-modal td {
@@ -384,10 +396,126 @@
     white-space: nowrap;
 }
 
+.kg-modal .izin-cell {
+    min-width: 160px;
+    vertical-align: middle;
+}
+
+.kg-izin-cell-content {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.kg-izin-badge-line {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.kg-izin-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 7px;
+    border-radius: 6px;
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: capitalize;
+}
+
+.kg-izin-badge.sakit {
+    background: #ffedd5;
+    color: #c2410c;
+    border: 1px solid #fed7aa;
+}
+
+.kg-izin-badge.izin {
+    background: #eff6ff;
+    color: #1d4ed8;
+    border: 1px solid #bfdbfe;
+}
+
+.kg-izin-badge.dinas,
+.kg-izin-badge.dinas_luar {
+    background: #f3e8ff;
+    color: #7e22ce;
+    border: 1px solid #e9d5ff;
+}
+
+.kg-izin-status {
+    font-size: 0.68rem;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+}
+
+.kg-izin-status.approved,
+.kg-izin-status.disetujui {
+    color: #15803d;
+}
+
+.kg-izin-status.pending {
+    color: #b45309;
+}
+
+.kg-izin-status.rejected,
+.kg-izin-status.ditolak {
+    color: #b91c1c;
+}
+
+.kg-izin-desc {
+    font-size: 0.72rem;
+    color: var(--n-muted);
+    max-width: 240px;
+    word-break: break-word;
+    white-space: normal;
+    line-height: 1.35;
+    margin-top: 2px;
+}
+
+.kg-izin-empty {
+    color: var(--n-muted);
+    font-weight: 600;
+}
+
+/* Card view in modal */
+.card-izin-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 6px;
+    flex-wrap: wrap;
+    font-size: 0.72rem;
+}
+
+.card-izin-desc {
+    color: var(--n-muted);
+    font-size: 0.72rem;
+}
+
+/* Main rankings table badge */
+.kg-main-izin-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 8px;
+    border-radius: 8px;
+    background: rgba(16, 185, 129, 0.1);
+    color: #059669;
+    font-size: 0.76rem;
+    font-weight: 700;
+    border: 1px solid rgba(16, 185, 129, 0.25);
+    white-space: nowrap;
+}
+
 .kg-modal .keterangan-cell {
-    max-width: 200px;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    min-width: 160px;
+    max-width: 280px;
+    word-break: break-word;
+    white-space: normal;
+    line-height: 1.35;
 }
 
 .modal-card-list {
@@ -502,7 +630,7 @@
 }
 
 .dark .kg-modal th {
-    background: linear-gradient(135deg, rgba(26, 115, 232, 0.15), rgba(0, 40, 122, 0.25)) !important;
+    background: #0b1329 !important;
     border-bottom: 1.5px solid rgba(26, 115, 232, 0.4) !important;
     color: #94a3b8 !important;
 }
@@ -521,3 +649,44 @@
 .dark .card-day,
 .dark .card-time,
 .dark .info-note { color: #94a3b8 !important; }
+
+/* Dark mode overrides for Izin */
+.dark .kg-izin-badge.sakit {
+    background: rgba(234, 88, 12, 0.2) !important;
+    color: #fb923c !important;
+    border-color: rgba(234, 88, 12, 0.4) !important;
+}
+
+.dark .kg-izin-badge.izin {
+    background: rgba(37, 99, 235, 0.2) !important;
+    color: #60a5fa !important;
+    border-color: rgba(37, 99, 235, 0.4) !important;
+}
+
+.dark .kg-izin-badge.dinas,
+.dark .kg-izin-badge.dinas_luar {
+    background: rgba(147, 51, 234, 0.2) !important;
+    color: #c084fc !important;
+    border-color: rgba(147, 51, 234, 0.4) !important;
+}
+
+.dark .kg-izin-status.approved,
+.dark .kg-izin-status.disetujui {
+    color: #4ade80 !important;
+}
+
+.dark .kg-izin-status.pending {
+    color: #facc15 !important;
+}
+
+.dark .kg-izin-status.rejected,
+.dark .kg-izin-status.ditolak {
+    color: #f87171 !important;
+}
+
+.dark .kg-main-izin-badge {
+    background: rgba(16, 185, 129, 0.15) !important;
+    color: #34d399 !important;
+    border-color: rgba(16, 185, 129, 0.35) !important;
+}
+
