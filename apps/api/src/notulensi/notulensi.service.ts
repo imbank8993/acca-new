@@ -1,6 +1,7 @@
-import { Injectable, BadRequestException, NotFoundException, ForbiddenException, Logger } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException, ForbiddenException, ConflictException, InternalServerErrorException, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../common/audit.service';
+import { notulensiDirectory, NotulensiDirectory } from './notulensi-access';
 import {
   NOTULENSI_KELOLA_KEY,
   FeatureAccessGuard,
@@ -16,6 +17,7 @@ export interface PoinHasilRapat {
   teks: string;
   status: 'Belum' | 'Proses' | 'Selesai';
   pic?: string;
+  pic_user_id?: string;
   tenggat?: string;
   keterangan?: string;
 }
@@ -30,9 +32,9 @@ function notulensiStatus(points: ReadonlyArray<{ status: StatusTindakLanjut }>):
   return 'Proses';
 }
 
-function normalizeStatus(st?: string): StatusTindakLanjut {
+function normalizeStatus(st?: unknown): StatusTindakLanjut {
   if (!st) return 'Belum';
-  const clean = st.trim();
+  const clean = String(st).trim();
   const found = VALID_STATUSES.find(s => s.toLowerCase() === clean.toLowerCase());
   return found || 'Belum';
 }
@@ -54,25 +56,16 @@ function parsePoinPoin(raw: any): PoinHasilRapat[] {
   return arr
     .filter(p => p && typeof p === 'object')
     .map((p, idx) => ({
-      id: String(p.id || `p-${idx + 1}-${Date.now().toString(36)}`),
+      id: String(p.id || `legacy-p-${idx + 1}`),
       teks: String(p.teks || p.poin || p.isi || '').trim(),
       status: normalizeStatus(p.status),
       pic: p.pic ? String(p.pic).trim() : undefined,
+      pic_user_id: p.pic_user_id ? String(p.pic_user_id).trim() : undefined,
       tenggat: p.tenggat ? String(p.tenggat).trim() : undefined,
       keterangan: p.keterangan ? String(p.keterangan).trim() : undefined,
     }))
     .filter(p => p.teks.length > 0);
 }
-
-// Derive legacy records during reads too, so filters and statistics remain consistent.
-const DERIVED_STATUS_SQL = `(SELECT CASE
-  WHEN COUNT(*) = 0 THEN 'Belum'
-  WHEN BOOL_AND(LOWER(BTRIM(COALESCE(point->>'status', ''))) = 'selesai') THEN 'Selesai'
-  WHEN BOOL_OR(LOWER(BTRIM(COALESCE(point->>'status', ''))) IN ('proses', 'selesai')) THEN 'Proses'
-  ELSE 'Belum' END
-  FROM jsonb_array_elements(CASE WHEN jsonb_typeof(poin_poin) = 'array' THEN poin_poin ELSE '[]'::jsonb END) AS point
-  WHERE jsonb_typeof(point) = 'object'
-    AND BTRIM(COALESCE(NULLIF(point->>'teks', ''), NULLIF(point->>'poin', ''), point->>'isi', '')) <> '')`;
 
 function formatRow(r: any) {
   let tgl = r.tanggal;
@@ -99,6 +92,7 @@ function formatRow(r: any) {
     created_by: r.created_by || '',
     created_at: r.created_at ? new Date(r.created_at).toISOString() : null,
     updated_at: r.updated_at ? new Date(r.updated_at).toISOString() : null,
+    revision: r.revision ?? null,
   };
 }
 
@@ -112,6 +106,84 @@ export class NotulensiService {
     private readonly audit?: AuditService,
   ) {}
 
+  private async directory() {
+    const [users, staff] = await Promise.all([
+      this.prisma.public_users.findMany({ select: { id: true, nama: true, nama_lengkap: true, username: true, nip: true } }),
+      this.prisma.master_guru.findMany({ select: { nip: true, nama_lengkap: true } }),
+    ]);
+    // Pin old textual identities once. Later profile/name changes must never
+    // transfer ownership or PIC access to a different account.
+    const key = 'notulensi_legacy_identity_v1';
+    let snapshot = await this.prisma.site_settings.findUnique({ where: { key } });
+    if (!snapshot) {
+      snapshot = await this.prisma.site_settings.upsert({
+        where: { key }, update: {},
+        create: {
+          key, label: 'Pemetaan identitas notulensi',
+          description: 'Ikatan identitas untuk notulen yang sebelumnya hanya menyimpan nama',
+          value: JSON.stringify({ version: 1, bindings: notulensiDirectory(users, staff).legacyBindings }),
+        },
+      });
+    }
+    let saved: any;
+    try { saved = JSON.parse(snapshot.value || ''); } catch { /* Deny access if the saved mapping is malformed. */ }
+    if (saved?.version !== 1 || !saved.bindings || typeof saved.bindings !== 'object' || Array.isArray(saved.bindings)) {
+      throw new InternalServerErrorException('Pemetaan identitas notulensi tidak valid.');
+    }
+    return notulensiDirectory(users, staff, saved.bindings);
+  }
+
+  private isOwner(row: any, user: any, directory: NotulensiDirectory) {
+    return !!user?.id && directory.ownerId(row.created_by) === String(user.id);
+  }
+
+  private assertOwner(row: any, user: any, directory: NotulensiDirectory) {
+    if (!this.isOwner(row, user, directory)) {
+      throw new ForbiddenException('Hanya pembuat notulen yang dapat mengubah atau menghapus notulen ini.');
+    }
+  }
+
+  private projectRow(row: any, user: any, directory: NotulensiDirectory) {
+    const full = formatRow(row);
+    full.poin_poin = full.poin_poin.map(point => ({ ...point, pic_user_id: point.pic_user_id || directory.picId(point) || undefined }));
+    if (this.isOwner(row, user, directory)) {
+      const owner = directory.byId.get(String(user.id));
+      return { ...full, created_by: owner?.nama || owner?.nama_lengkap || owner?.username || '', visibility: 'owner', can_edit: true, can_print: true };
+    }
+    const points = user?.id ? full.poin_poin.filter(point => directory.picId(point) === String(user.id)) : [];
+    return {
+      id: full.id, agenda: full.agenda, poin_poin: points,
+      status: points.length ? notulensiStatus(points) : null,
+      visibility: points.length ? 'pic' : 'title', can_edit: false, can_print: false,
+    };
+  }
+
+  private async rawDetail(id: string) {
+    const cleanId = this.parseBigIntId(id);
+    const rows: any[] = await this.prisma.$queryRawUnsafe(
+      'SELECT *, updated_at::text AS revision FROM public.notulensi_rapat WHERE id = $1::bigint LIMIT 1', cleanId,
+    );
+    if (!rows.length) throw new NotFoundException('Notulensi rapat tidak ditemukan');
+    return rows[0];
+  }
+
+  private pointsForWrite(raw: any, directory: NotulensiDirectory) {
+    if (!Array.isArray(raw) || raw.length > 500) throw new BadRequestException('Poin rapat harus berupa daftar maksimal 500 poin.');
+    if (raw.some(point => point && point.status && !VALID_STATUSES.includes(point.status))) throw new BadRequestException('Status poin tidak valid.');
+    const points = parsePoinPoin(raw);
+    if (new Set(points.map(point => point.id)).size !== points.length) throw new BadRequestException('ID poin rapat tidak boleh berulang.');
+    for (const point of points) {
+      const id = directory.picId(point);
+      if (point.pic_user_id && !id) throw new BadRequestException('Akun PIC tidak ditemukan. Pilih kembali penanggung jawab.');
+      if (id) {
+        const person = directory.byId.get(id)!;
+        point.pic_user_id = id;
+        point.pic = person.nama_lengkap || person.nama || person.username || point.pic;
+      }
+    }
+    return points;
+  }
+
   /**
    * Helper parsing ID numerik
    */
@@ -120,7 +192,7 @@ export class NotulensiService {
       throw new BadRequestException(`${label} wajib diisi`);
     }
     const s = String(id).trim();
-    if (!/^\d+$/.test(s)) {
+    if (!/^[1-9]\d*$/.test(s) || BigInt(s) > 9223372036854775807n) {
       throw new BadRequestException(`${label} harus berupa angka valid`);
     }
     return s;
@@ -131,8 +203,8 @@ export class NotulensiService {
    */
   private parseDateOnly(d: any, label = 'Tanggal'): string {
     if (!d || typeof d !== 'string') throw new BadRequestException(`${label} wajib diisi`);
-    const date = new Date(d);
-    if (isNaN(date.getTime())) {
+    const date = new Date(`${d}T00:00:00.000Z`);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(d) || isNaN(date.getTime()) || date.toISOString().slice(0, 10) !== d) {
       throw new BadRequestException(`Format ${label} tidak valid: ${d}`);
     }
     return d.slice(0, 10);
@@ -165,120 +237,65 @@ export class NotulensiService {
   /**
    * Mengambil daftar notulensi dengan filter
    */
-  async getList(query: { search?: string; status?: string; bulan?: string; tahun?: string; tanggal?: string; limit?: string; offset?: string }) {
-    const conditions: string[] = ['1=1'];
-    const params: any[] = [];
-    let pIdx = 1;
-
-    if (query.status && query.status.trim() && query.status !== 'Semua') {
-      conditions.push(`${DERIVED_STATUS_SQL} = $${pIdx}`);
-      params.push(normalizeStatus(query.status));
-      pIdx++;
-    }
-
-    if (query.tanggal && /^\d{4}-\d{2}-\d{2}$/.test(query.tanggal.trim())) {
-      conditions.push(`TO_CHAR(tanggal, 'YYYY-MM-DD') = $${pIdx}`);
-      params.push(query.tanggal.trim());
-      pIdx++;
-    } else if (query.bulan && /^\d{4}-\d{2}$/.test(query.bulan.trim())) {
-      const ym = query.bulan.trim();
-      conditions.push(`TO_CHAR(tanggal, 'YYYY-MM') = $${pIdx}`);
-      params.push(ym);
-      pIdx++;
-    } else if (query.tahun && /^\d{4}$/.test(query.tahun.trim())) {
-      conditions.push(`TO_CHAR(tanggal, 'YYYY') = $${pIdx}`);
-      params.push(query.tahun.trim());
-      pIdx++;
-    }
-
-    if (query.search && query.search.trim()) {
-      const q = `%${query.search.trim().toLowerCase()}%`;
-      conditions.push(`(
-        LOWER(agenda) LIKE $${pIdx} OR 
-        LOWER(COALESCE(pimpinan_rapat, '')) LIKE $${pIdx} OR 
-        LOWER(COALESCE(notulis, '')) LIKE $${pIdx} OR 
-        LOWER(COALESCE(lokasi, '')) LIKE $${pIdx} OR
-        LOWER(COALESCE(catatan, '')) LIKE $${pIdx} OR
-        LOWER(poin_poin::text) LIKE $${pIdx}
-      )`);
-      params.push(q);
-      pIdx++;
-    }
-
-    const whereClause = conditions.join(' AND ');
-
-    // Hitung statistik keseluruhan (agregat)
-    const statsSql = `
-      SELECT 
-        COUNT(*)::int as total,
-        COUNT(*) FILTER (WHERE ${DERIVED_STATUS_SQL} = 'Belum')::int as belum,
-        COUNT(*) FILTER (WHERE ${DERIVED_STATUS_SQL} = 'Proses')::int as proses,
-        COUNT(*) FILTER (WHERE ${DERIVED_STATUS_SQL} = 'Selesai')::int as selesai
-      FROM public.notulensi_rapat
-    `;
-    const statsRows: any[] = await this.prisma.$queryRawUnsafe(statsSql);
-    const stats = statsRows[0] || { total: 0, belum: 0, proses: 0, selesai: 0 };
-
-    // Query data dengan pagination
-    const limit = Math.min(Math.max(Number.parseInt(query.limit || '100', 10), 1), 500);
-    const offset = Math.max(Number.parseInt(query.offset || '0', 10), 0);
-
-    const listSql = `
-      SELECT 
-        id, agenda, tanggal, waktu_mulai, waktu_selesai, lokasi, 
-        pimpinan_rapat, notulis, peserta, poin_poin, status, catatan, 
-        agenda_id, created_by, created_at, updated_at
-      FROM public.notulensi_rapat
-      WHERE ${whereClause}
-      ORDER BY tanggal DESC, id DESC
-      LIMIT ${limit} OFFSET ${offset}
-    `;
-
-    const rows: any[] = await this.prisma.$queryRawUnsafe(listSql, ...params);
-    const data = rows.map(formatRow);
-
-    return {
-      success: true,
-      data,
-      stats: {
-        total: stats.total || 0,
-        belum: stats.belum || 0,
-        proses: stats.proses || 0,
-        selesai: stats.selesai || 0,
-      },
+  async getList(query: { search?: string; status?: string; bulan?: string; tahun?: string; tanggal?: string; limit?: string; offset?: string }, user: any) {
+    const boundedInteger = (value: string | undefined, fallback: number, min: number, max: number) => {
+      if (value === undefined || value === '') return fallback;
+      if (!/^\d+$/.test(value) || !Number.isSafeInteger(Number(value))) throw new BadRequestException('Pagination tidak valid');
+      return Math.min(Math.max(Number(value), min), max);
     };
+    const limit = boundedInteger(query.limit, 100, 1, 500);
+    const offset = boundedInteger(query.offset, 0, 0, Number.MAX_SAFE_INTEGER);
+    if (query.status && query.status !== 'Semua' && !VALID_STATUSES.includes(query.status as StatusTindakLanjut)) throw new BadRequestException('Status tidak valid');
+    if (query.tanggal) this.parseDateOnly(query.tanggal);
+    if (query.bulan && !/^\d{4}-(0[1-9]|1[0-2])$/.test(query.bulan)) throw new BadRequestException('Bulan tidak valid');
+    if (query.tahun && !/^\d{4}$/.test(query.tahun)) throw new BadRequestException('Tahun tidak valid');
+
+    const directory = await this.directory();
+    const rows: any[] = await this.prisma.$queryRawUnsafe(
+      'SELECT *, updated_at::text AS revision FROM public.notulensi_rapat ORDER BY tanggal DESC, id DESC',
+    );
+    // Search, statistics, filtering and pagination operate only on permitted data.
+    // Hidden points must not be discoverable through search matches or status counts.
+    const projected = rows.map(row => this.projectRow(row, user, directory));
+    const stats = {
+      total: projected.length,
+      belum: projected.filter(row => row.status === 'Belum').length,
+      proses: projected.filter(row => row.status === 'Proses').length,
+      selesai: projected.filter(row => row.status === 'Selesai').length,
+    };
+    const search = String(query.search || '').trim().toLowerCase();
+    const filtered = projected.filter(row => {
+      const date = 'tanggal' in row ? row.tanggal || '' : '';
+      if (query.tanggal && date !== query.tanggal) return false;
+      if (!query.tanggal && query.bulan && !date.startsWith(query.bulan)) return false;
+      if (!query.tanggal && !query.bulan && query.tahun && !date.startsWith(query.tahun)) return false;
+      if (query.status && query.status !== 'Semua' && row.status !== query.status) return false;
+      if (search) {
+        const permittedText = [row.agenda, ...row.poin_poin.flatMap(point => [point.teks, point.pic, point.keterangan])];
+        if ('lokasi' in row) permittedText.push(row.lokasi, row.pimpinan_rapat, row.notulis, row.catatan);
+        if (!permittedText.some(value => String(value || '').toLowerCase().includes(search))) return false;
+      }
+      return true;
+    });
+    return { success: true, data: filtered.slice(offset, offset + limit), stats, total: filtered.length, limit, offset };
   }
 
-  /**
-   * Detail satu notulensi
-   */
-  async getDetail(id: string) {
-    const cleanId = this.parseBigIntId(id);
-    const sql = `
-      SELECT 
-        id, agenda, tanggal, waktu_mulai, waktu_selesai, lokasi, 
-        pimpinan_rapat, notulis, peserta, poin_poin, status, catatan, 
-        agenda_id, created_by, created_at, updated_at
-      FROM public.notulensi_rapat
-      WHERE id = $1::bigint
-      LIMIT 1
-    `;
-    const rows: any[] = await this.prisma.$queryRawUnsafe(sql, cleanId);
-    if (!rows || rows.length === 0) {
-      throw new NotFoundException('Notulensi rapat tidak ditemukan');
-    }
-    return {
-      success: true,
-      data: formatRow(rows[0]),
-    };
+  /** Only the creator receives the full note; PICs receive their own points. */
+  async getDetail(id: string, user: any) {
+    const [row, directory] = await Promise.all([this.rawDetail(id), this.directory()]);
+    return { success: true, data: this.projectRow(row, user, directory) };
   }
 
   /**
    * Tambah notulensi baru
    */
   async create(body: any, user: any, req?: any) {
+    if (!body || typeof body !== 'object' || Array.isArray(body)) throw new BadRequestException('Data notulen tidak valid.');
+    if (!await this.bolehKelola(user)) throw new ForbiddenException('Anda tidak berwenang membuat notulen.');
+    const directory = await this.directory();
+    if (!user?.id || !directory.byId.has(String(user.id))) throw new ForbiddenException('Identitas pembuat notulen tidak valid.');
     const agenda = String(body.agenda || '').trim();
-    if (!agenda) throw new BadRequestException('Agenda / Judul Rapat wajib diisi');
+    if (!agenda || agenda.length > 255) throw new BadRequestException('Judul rapat wajib diisi, maksimal 255 karakter.');
 
     const tanggal = this.parseDateOnly(body.tanggal, 'Tanggal Rapat');
     const waktuMulai = body.waktu_mulai ? String(body.waktu_mulai).trim().slice(0, 20) : null;
@@ -290,11 +307,11 @@ export class NotulensiService {
     const catatan = body.catatan ? String(body.catatan).trim() : null;
     const agendaId = body.agenda_id ? this.parseBigIntId(body.agenda_id) : null;
 
-    const poinPoin = parsePoinPoin(body.poin_poin);
+    const poinPoin = this.pointsForWrite(body.poin_poin ?? [], directory);
 
     const status = notulensiStatus(poinPoin);
 
-    const createdBy = user?.nama || user?.username || user?.nip || 'Admin';
+    const createdBy = `user:${user.id}`;
 
     const insertSql = `
       INSERT INTO public.notulensi_rapat (
@@ -306,7 +323,7 @@ export class NotulensiService {
         $6, $7, $8, $9::jsonb, $10,
         $11, $12::bigint, $13, NOW(), NOW()
       )
-      RETURNING *
+      RETURNING *, updated_at::text AS revision
     `;
 
     const inserted: any[] = await this.prisma.$queryRawUnsafe(
@@ -326,7 +343,7 @@ export class NotulensiService {
       createdBy,
     );
 
-    const result = formatRow(inserted[0]);
+    const result = this.projectRow(inserted[0], user, directory);
 
     if (this.audit) {
       await this.audit.record({
@@ -335,7 +352,7 @@ export class NotulensiService {
         action: 'CREATE_NOTULENSI_RAPAT',
         entity: 'notulensi_rapat',
         entityId: result.id,
-        details: { agenda: result.agenda, tanggal: result.tanggal, status: result.status, jumlah_poin: poinPoin.length },
+        details: { agenda: result.agenda, tanggal, status: result.status, jumlah_poin: poinPoin.length },
       });
     }
 
@@ -346,10 +363,16 @@ export class NotulensiService {
    * Perbarui notulensi rapat
    */
   async update(id: string, body: any, user: any, req?: any) {
+    if (!body || typeof body !== 'object' || Array.isArray(body)) throw new BadRequestException('Data notulen tidak valid.');
     const cleanId = this.parseBigIntId(id);
+    const [existing, directory] = await Promise.all([this.rawDetail(cleanId), this.directory()]);
+    this.assertOwner(existing, user, directory);
+    if (!Object.prototype.hasOwnProperty.call(body, 'revision') || body.revision !== existing.revision) {
+      throw new ConflictException('Notulen sudah berubah. Muat ulang sebelum menyimpan.');
+    }
 
     const agenda = String(body.agenda || '').trim();
-    if (!agenda) throw new BadRequestException('Agenda / Judul Rapat wajib diisi');
+    if (!agenda || agenda.length > 255) throw new BadRequestException('Judul rapat wajib diisi, maksimal 255 karakter.');
 
     const tanggal = this.parseDateOnly(body.tanggal, 'Tanggal Rapat');
     const waktuMulai = body.waktu_mulai ? String(body.waktu_mulai).trim().slice(0, 20) : null;
@@ -361,7 +384,7 @@ export class NotulensiService {
     const catatan = body.catatan ? String(body.catatan).trim() : null;
     const agendaId = body.agenda_id ? this.parseBigIntId(body.agenda_id) : null;
 
-    const poinPoin = parsePoinPoin(body.poin_poin);
+    const poinPoin = this.pointsForWrite(body.poin_poin ?? [], directory);
     const status = notulensiStatus(poinPoin);
 
     const updateSql = `
@@ -378,9 +401,12 @@ export class NotulensiService {
         status = $10,
         catatan = $11,
         agenda_id = $12::bigint,
+        created_by = $15,
         updated_at = NOW()
       WHERE id = $13::bigint
-      RETURNING *
+        AND updated_at::text IS NOT DISTINCT FROM $14
+        AND created_by IS NOT DISTINCT FROM $16
+      RETURNING *, updated_at::text AS revision
     `;
 
     const updated: any[] = await this.prisma.$queryRawUnsafe(
@@ -398,13 +424,16 @@ export class NotulensiService {
       catatan,
       agendaId,
       cleanId,
+      existing.revision,
+      `user:${user.id}`,
+      existing.created_by,
     );
 
     if (!updated || updated.length === 0) {
-      throw new NotFoundException('Notulensi rapat tidak ditemukan');
+      throw new ConflictException('Notulen sudah berubah. Muat ulang sebelum menyimpan.');
     }
 
-    const result = formatRow(updated[0]);
+    const result = this.projectRow(updated[0], user, directory);
 
     if (this.audit) {
       await this.audit.record({
@@ -413,7 +442,7 @@ export class NotulensiService {
         action: 'UPDATE_NOTULENSI_RAPAT',
         entity: 'notulensi_rapat',
         entityId: result.id,
-        details: { agenda: result.agenda, tanggal: result.tanggal, status: result.status },
+        details: { agenda: result.agenda, tanggal, status: result.status },
       });
     }
 
@@ -424,7 +453,9 @@ export class NotulensiService {
    * Update point progress; overall status always follows the points.
    */
   async updateStatus(id: string, body: { status?: string; poin_id?: string; poin_status?: string; keterangan?: string }, user: any, req?: any) {
+    if (!body || typeof body !== 'object' || Array.isArray(body)) throw new BadRequestException('Data perubahan poin tidak valid.');
     const cleanId = this.parseBigIntId(id);
+    const directory = await this.directory();
 
     const result = await this.prisma.$transaction(async tx => {
       const checkSql = `SELECT * FROM public.notulensi_rapat WHERE id = $1::bigint LIMIT 1 FOR UPDATE`;
@@ -434,13 +465,14 @@ export class NotulensiService {
       }
 
       const row = existing[0];
+      this.assertOwner(row, user, directory);
       let poinPoin = parsePoinPoin(row.poin_poin);
 
 
       // Jika targetnya adalah update poin tertentu
       if (body.poin_id && body.poin_status) {
         const targetPoinId = String(body.poin_id).trim();
-        if (!poinPoin.some(p => p.id === targetPoinId)) throw new NotFoundException('Poin rapat tidak ditemukan');
+        if (poinPoin.filter(p => p.id === targetPoinId).length !== 1) throw new NotFoundException('Poin rapat tidak ditemukan atau ID poin berulang');
         if (!VALID_STATUSES.includes(body.poin_status as StatusTindakLanjut)) throw new BadRequestException('Status poin tidak valid');
         const nextPoinStatus = normalizeStatus(body.poin_status);
 
@@ -466,7 +498,7 @@ export class NotulensiService {
           poin_poin = $2::jsonb,
           updated_at = NOW()
         WHERE id = $3::bigint
-        RETURNING *
+        RETURNING *, updated_at::text AS revision
       `;
 
       const updated: any[] = await tx.$queryRawUnsafe(
@@ -476,7 +508,7 @@ export class NotulensiService {
         cleanId,
       );
 
-      return formatRow(updated[0]);
+      return this.projectRow(updated[0], user, directory);
 
     });
 
@@ -499,15 +531,12 @@ export class NotulensiService {
    */
   async delete(id: string, user: any, req?: any) {
     const cleanId = this.parseBigIntId(id);
-
-    const checkSql = `SELECT id, agenda FROM public.notulensi_rapat WHERE id = $1::bigint LIMIT 1`;
-    const existing: any[] = await this.prisma.$queryRawUnsafe(checkSql, cleanId);
-    if (!existing || existing.length === 0) {
-      throw new NotFoundException('Notulensi rapat tidak ditemukan');
-    }
-
-    const deleteSql = `DELETE FROM public.notulensi_rapat WHERE id = $1::bigint`;
-    await this.prisma.$executeRawUnsafe(deleteSql, cleanId);
+    const [existing, directory] = await Promise.all([this.rawDetail(cleanId), this.directory()]);
+    this.assertOwner(existing, user, directory);
+    const deleted = await this.prisma.$executeRawUnsafe(
+      'DELETE FROM public.notulensi_rapat WHERE id = $1::bigint AND created_by IS NOT DISTINCT FROM $2', cleanId, existing.created_by,
+    );
+    if (!deleted) throw new ConflictException('Notulen sudah berubah. Muat ulang sebelum menghapus.');
 
     if (this.audit) {
       await this.audit.record({
@@ -516,7 +545,7 @@ export class NotulensiService {
         action: 'DELETE_NOTULENSI_RAPAT',
         entity: 'notulensi_rapat',
         entityId: cleanId,
-        details: { agenda: existing[0].agenda },
+        details: { agenda: existing.agenda },
       });
     }
 
@@ -526,7 +555,8 @@ export class NotulensiService {
   /**
    * Ambil konfigurasi hak akses dari site_settings
    */
-  async getPengaturan() {
+  async getPengaturan(user: any) {
+    if (!rolesUser(user).some(role => ROLE_ADMIN.includes(role))) throw new ForbiddenException('Hanya Administrator yang dapat melihat pengaturan hak akses.');
     const konfig = await this.featureAccess.bacaKonfigurasi(NOTULENSI_KELOLA_KEY);
     return {
       success: true,
@@ -589,8 +619,13 @@ export class NotulensiService {
   /**
    * Mengambil daftar master guru & staf (serta siswa) untuk pilihan peserta, pimpinan, notulis, dan PIC.
    */
-  async getPesertaOptions() {
-    const [pegawai, siswa] = await Promise.all([
+  async getPesertaOptions(user: any) {
+    if (!await this.bolehKelola(user)) {
+      const directory = await this.directory();
+      const rows: any[] = await this.prisma.$queryRawUnsafe('SELECT created_by FROM public.notulensi_rapat');
+      if (!rows.some(row => this.isOwner(row, user, directory))) throw new ForbiddenException('Pilihan peserta hanya untuk pembuat notulen.');
+    }
+    const [pegawai, siswa, picUsers] = await Promise.all([
       this.prisma.master_guru.findMany({
         where: { aktif: true },
         select: {
@@ -611,6 +646,11 @@ export class NotulensiService {
         orderBy: {
           nama_lengkap: 'asc',
         },
+      }),
+      this.prisma.public_users.findMany({
+        where: { aktif: true },
+        select: { id: true, nama: true, nama_lengkap: true, username: true, nip: true },
+        orderBy: { nama: 'asc' },
       }),
     ]);
 
@@ -643,6 +683,7 @@ export class NotulensiService {
         staf: stafList,
         semuaPegawai: [...guruList, ...stafList],
         siswa: siswaList,
+        picUsers: picUsers.map(person => ({ id: String(person.id), nama: person.nama_lengkap || person.nama || person.username || '', nip: person.nip })),
       },
     };
   }

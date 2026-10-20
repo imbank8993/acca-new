@@ -1,15 +1,48 @@
-const {test}=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),ts=require('typescript');
-const {notulensiStatus}=require('../../../packages/shared/notulensi-status.cjs');
-const source=fs.readFileSync('apps/api/src/notulensi/notulensi.service.ts','utf8');
-const compiled=ts.transpileModule(source+'\nexport { DERIVED_STATUS_SQL };',{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,experimentalDecorators:true}}).outputText;
-const mod={exports:{}};
-vm.runInNewContext(compiled,{module:mod,exports:mod.exports,Date,console,require:name=>name==='@acca/shared/notulensi-status.cjs'?{notulensiStatus}:name==='@nestjs/common'?{Injectable:()=>v=>v,Logger:class{},BadRequestException:class extends Error{},NotFoundException:class extends Error{}}:{}});
-const {NotulensiService,DERIVED_STATUS_SQL}=mod.exports;
-const points=statuses=>statuses.map((status,i)=>({id:String(i),teks:'Keputusan '+i,status}));
-function fixture(initial){let row={id:1,agenda:'Rapat',tanggal:'2026-10-17',poin_poin:[],status:'Selesai',...initial};const queries=[];const db={async $transaction(fn){return fn(db)},async $queryRawUnsafe(sql,...args){queries.push({sql,args});if(sql.includes('INSERT INTO')||sql.includes('agenda = $1')){row={...row,poin_poin:JSON.parse(args[8]),status:args[9]};return[row]}if(sql.includes('UPDATE public')){row={...row,status:args[0],poin_poin:JSON.parse(args[1])};return[row]}return[row]}};return{service:new NotulensiService(db,{}),queries,get row(){return row}}}
-test('overall status covers every combination of up to four points',()=>{for(let length=0;length<=4;length++){for(let value=0;value<3**length;value++){let n=value;const statuses=Array.from({length},()=>{const s=['Belum','Proses','Selesai'][n%3];n=Math.floor(n/3);return s});const expected=statuses.length&&statuses.every(s=>s==='Selesai')?'Selesai':statuses.every(s=>s==='Belum')?'Belum':'Proses';assert.equal(notulensiStatus(points(statuses)),expected)}}});
-test('create/update ignore manual overall status and derive mixed, complete and empty states',async()=>{for(const method of ['create','update'])for(const statuses of [[],['Belum','Belum'],['Selesai','Selesai'],['Belum','Selesai'],['Proses']]){const f=fixture();const body={agenda:'Rapat',tanggal:'2026-10-17',poin_poin:points(statuses),status:'Selesai'};const res=method==='create'?await f.service.create(body,{}):await f.service.update('1',body,{});assert.equal(res.data.status,notulensiStatus(body.poin_poin));assert.equal(f.row.status,res.data.status)}});
-test('each point update recomputes overall progress under a row lock',async()=>{const f=fixture({poin_poin:points(['Belum','Belum'])});const set=async(id,status)=>f.service.updateStatus('1',{poin_id:id,poin_status:status},{ });assert.equal((await set('0','Selesai')).data.status,'Proses');assert.equal((await set('1','Selesai')).data.status,'Selesai');assert.equal((await set('0','Belum')).data.status,'Proses');assert.equal((await set('1','Belum')).data.status,'Belum');assert(f.queries.some(q=>q.sql.includes('FOR UPDATE')))});
-test('manual overall edits, unknown points and invalid point statuses are rejected without writing',async()=>{for(const body of [{status:'Selesai'},{poin_id:'missing',poin_status:'Selesai'},{poin_id:'0',poin_status:'wrong'}]){const f=fixture({poin_poin:points(['Belum'])});await assert.rejects(f.service.updateStatus('1',body,{}));assert.equal(f.queries.some(q=>q.sql.includes('UPDATE public')),false)}});
-test('legacy detail status follows points even when saved status disagrees',async()=>{const f=fixture({poin_poin:points(['Belum','Selesai']),status:'Belum'});assert.equal((await f.service.getDetail('1')).data.status,'Proses')});
-module.exports={DERIVED_STATUS_SQL,points};
+const { test } = require('node:test');
+const assert = require('node:assert/strict');
+const { notulensiStatus } = require('../../../packages/shared/notulensi-status.cjs');
+const { fixture, owner, points } = require('./notulensi-fixture.cjs');
+
+test('overall status covers every combination of up to four points', () => {
+  for (let length = 0; length <= 4; length++) for (let value = 0; value < 3 ** length; value++) {
+    let n = value;
+    const statuses = Array.from({ length }, () => {
+      const status = ['Belum', 'Proses', 'Selesai'][n % 3]; n = Math.floor(n / 3); return status;
+    });
+    const expected = statuses.length && statuses.every(s => s === 'Selesai') ? 'Selesai' : statuses.every(s => s === 'Belum') ? 'Belum' : 'Proses';
+    assert.equal(notulensiStatus(points(statuses)), expected);
+  }
+});
+
+test('create/update derive status from points and ignore manual overall status', async () => {
+  for (const method of ['create', 'update']) for (const statuses of [[], ['Belum', 'Belum'], ['Selesai', 'Selesai'], ['Belum', 'Selesai'], ['Proses']]) {
+    const f = fixture();
+    const body = { agenda: 'Rapat', tanggal: '2026-10-20', poin_poin: points(statuses), status: 'Selesai', revision: f.row.revision };
+    const result = method === 'create' ? await f.service.create(body, owner) : await f.service.update('1', body, owner);
+    assert.equal(result.data.status, notulensiStatus(body.poin_poin));
+    assert.equal(f.row.status, result.data.status);
+  }
+});
+
+test('point updates recompute overall progress under a row lock', async () => {
+  const f = fixture({ poin_poin: points(['Belum', 'Belum']) });
+  const set = async (id, status) => f.service.updateStatus('1', { poin_id: id, poin_status: status }, owner);
+  assert.equal((await set('0', 'Selesai')).data.status, 'Proses');
+  assert.equal((await set('1', 'Selesai')).data.status, 'Selesai');
+  assert.equal((await set('0', 'Belum')).data.status, 'Proses');
+  assert.equal((await set('1', 'Belum')).data.status, 'Belum');
+  assert(f.queries.some(q => q.sql.includes('FOR UPDATE')));
+});
+
+test('manual overall edits, missing points and invalid point statuses cannot write', async () => {
+  for (const body of [{ status: 'Selesai' }, { poin_id: 'missing', poin_status: 'Selesai' }, { poin_id: '0', poin_status: 'wrong' }]) {
+    const f = fixture({ poin_poin: points(['Belum']) });
+    await assert.rejects(f.service.updateStatus('1', body, owner));
+    assert.equal(f.queries.some(q => q.sql.includes('UPDATE public')), false);
+  }
+});
+
+test('legacy detail status follows points even if the saved status disagrees', async () => {
+  const f = fixture({ poin_poin: points(['Belum', 'Selesai']), status: 'Belum' });
+  assert.equal((await f.service.getDetail('1', owner)).data.status, 'Proses');
+});

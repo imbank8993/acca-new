@@ -367,3 +367,20 @@ test('Rekomendasi kolektif dengan petugas berbeda ditolak tanpa write', async ()
     assert.equal(f.state.acca_letters.length,0);
   }
 });
+
+
+test('Pemegang halaman dapat membaca log dan kehadiran tanpa role operator', async () => {
+  const f = fixture({ ketidakhadiran: [absence('a'), absence('b', { nisn: 'other' })] });
+  const reader = { id: '7', roles: ['TAMU'], canReadPage: true };
+  const log = await f.service.getLog({ mode: 'history' }, reader);
+  assert.equal(log.rows.length, 2);
+  const detail = await f.service.getLogSiswa('student', undefined, reader);
+  assert.equal(detail.ok, true);
+  assert.equal(detail.data.riwayat[0].keterangan, 'Sakit');
+  await assert.rejects(f.service.getAccaLetters({}, reader), /operator/);
+  await assert.rejects(f.service.createBulk(reader, { jenis: 'IZIN', status: 'MADRASAH', nisList: ['student'] }), /hak akses/);
+});
+
+test('Tanpa izin halaman role umum tetap ditolak membaca log', async () => {
+  await assert.rejects(fixture().service.getLog({ mode: 'history' }, { roles: ['TAMU'] }), /Akses ditolak/);
+});

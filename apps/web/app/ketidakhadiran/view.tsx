@@ -91,13 +91,13 @@ export default function KetidakhadiranPage(props: { user?: any }) {
             {mainTab === 'daftar' && canManageData ? (
                 <DaftarSuratTab />
             ) : mainTab === 'presensi' ? (
-                <KehadiranSiswaTab />
+                <KehadiranSiswaTab pageAccess />
             ) : mainTab === 'log' ? (
                 <KetidakhadiranLogTab user={user} />
             ) : canManageData ? (
                 <InputDataTab />
             ) : (
-                <KehadiranSiswaTab />
+                <KehadiranSiswaTab pageAccess />
             )}
         </div>
     );

@@ -114,6 +114,7 @@ export class KetidakhadiranService {
 
   private async readScope(user: any): Promise<any> {
     if (!user) throw new ForbiddenException('Sesi tidak dikenali');
+    if (user.canReadPage) return {};
     const roles = user.roles || [];
     if (user.isAdmin || roles.some((r: string) => ['ADMIN', 'ADMINISTRATOR', 'OP_IZIN', 'OP_UKS'].includes(r))) return {};
     if (roles.includes('SISWA')) return { nisn: await resolveStudentNisn(this.prisma, user) || '__none__' };
@@ -1292,14 +1293,22 @@ export class KetidakhadiranService {
   // ----------------------------------------------------
   // LOG SISWA SPESIFIK (by NISN)
   // ----------------------------------------------------
+  async getPageStudents() {
+    return { data: await this.prisma.siswa_kelas.findMany({
+      where: { aktif: true },
+      select: { nisn: true, nama_siswa: true, kelas: true, tahun_ajaran: true },
+      orderBy: { tahun_ajaran: 'desc' },
+    }) };
+  }
+
   async getLogSiswa(nisn: string, tahunAjaran?: string, apiUser?: any) {
     const scope = await this.readScope(apiUser);
     if (!nisn) {
       throw new BadRequestException('NISN wajib diisi');
     }
 
-    // IDOR Protection
-    if (apiUser && !apiUser.isAdmin) {
+    // Page readers may inspect attendance; other callers retain their personal scope.
+    if (apiUser && !apiUser.isAdmin && !apiUser.canReadPage) {
       const roles: string[] = Array.isArray(apiUser.roles)
         ? apiUser.roles.map((r: string) => String(r).toUpperCase().replace(/\s+/g, '_'))
         : [];

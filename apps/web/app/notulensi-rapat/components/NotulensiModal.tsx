@@ -16,6 +16,7 @@ export interface PoinHasilRapat {
     teks: string;
     status: 'Belum' | 'Proses' | 'Selesai';
     pic?: string;
+    pic_user_id?: string;
     tenggat?: string;
     keterangan?: string;
 }
@@ -23,7 +24,7 @@ export interface PoinHasilRapat {
 export interface NotulensiItem {
     id?: string;
     agenda: string;
-    tanggal: string;
+    tanggal?: string;
     waktu_mulai?: string;
     waktu_selesai?: string;
     lokasi?: string;
@@ -31,9 +32,13 @@ export interface NotulensiItem {
     notulis?: string;
     peserta?: string;
     poin_poin: PoinHasilRapat[];
-    status: 'Belum' | 'Proses' | 'Selesai';
+    status: 'Belum' | 'Proses' | 'Selesai' | null;
     catatan?: string;
     agenda_id?: string | null;
+    revision?: string | null;
+    visibility?: 'owner' | 'pic' | 'title';
+    can_edit?: boolean;
+    can_print?: boolean;
 }
 
 interface NotulensiModalProps {
@@ -77,6 +82,7 @@ export default function NotulensiModal({
     const [stafOptions, setStafOptions] = useState<Option[]>([]);
     const [pegawaiOptions, setPegawaiOptions] = useState<Option[]>([]);
     const [siswaOptions, setSiswaOptions] = useState<Option[]>([]);
+    const [picOptions, setPicOptions] = useState<Option[]>([]);
 
     useEffect(() => {
         let mounted = true;
@@ -106,6 +112,10 @@ export default function NotulensiModal({
                     setStafOptions(sList);
                     setPegawaiOptions([...gList, ...sList]);
                     setSiswaOptions(sisList);
+                    setPicOptions((json.data.picUsers || []).map((person: any) => ({
+                        value: String(person.id), label: person.nama,
+                        subLabel: person.nip ? `NIP / NISN: ${person.nip}` : 'Akun pengguna',
+                    })));
                 }
             } catch (err) {
                 console.error('Failed to load peserta options:', err);
@@ -220,7 +230,7 @@ export default function NotulensiModal({
                                     Tanggal Rapat <span className="req">*</span>
                                 </label>
                                 <DatePicker
-                                    value={form.tanggal}
+                                    value={form.tanggal || ''}
                                     onChange={val => setForm({ ...form, tanggal: val })}
                                     placeholder="Pilih tanggal rapat"
                                     required
@@ -371,11 +381,13 @@ export default function NotulensiModal({
                                                         PIC / Penanggung Jawab
                                                     </label>
                                                     <SearchableSelect
-                                                        options={pegawaiOptions}
-                                                        value={p.pic || ''}
-                                                        onChange={val => handleUpdatePoin(idx, 'pic', String(val))}
-                                                        placeholder="Pilih PIC atau ketik manual..."
-                                                        creatable
+                                                        options={p.pic && !p.pic_user_id ? [{ value: `unlinked:${p.pic}`, label: p.pic, subLabel: 'Pilih akun agar PIC dapat melihat poin' }, ...picOptions] : picOptions}
+                                                        value={p.pic_user_id || (p.pic ? `unlinked:${p.pic}` : '')}
+                                                        onChange={val => {
+                                                            const selected = picOptions.find(option => option.value === String(val));
+                                                            setForm(previous => ({ ...previous, poin_poin: previous.poin_poin.map((point, pointIndex) => pointIndex === idx ? { ...point, pic: selected?.label || '', pic_user_id: selected ? String(selected.value) : undefined } : point) }));
+                                                        }}
+                                                        placeholder="Pilih akun penanggung jawab..."
                                                     />
                                                 </div>
                                                 <div className="nr-poin-subfield">

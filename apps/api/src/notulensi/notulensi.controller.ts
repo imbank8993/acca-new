@@ -32,8 +32,8 @@ export class NotulensiController {
    * Mengambil pengaturan hak akses CRUD (role & user yang ditunjuk)
    */
   @Get('pengaturan')
-  async getPengaturan() {
-    return this.notulensiService.getPengaturan();
+  async getPengaturan(@Req() req: any) {
+    return this.notulensiService.getPengaturan(req.user);
   }
 
   /**
@@ -49,6 +49,7 @@ export class NotulensiController {
    */
   @Get()
   async getList(
+    @Req() req: any,
     @Query('search') search?: string,
     @Query('status') status?: string,
     @Query('bulan') bulan?: string,
@@ -57,23 +58,23 @@ export class NotulensiController {
     @Query('limit') limit?: string,
     @Query('offset') offset?: string,
   ) {
-    return this.notulensiService.getList({ search, status, bulan, tahun, tanggal, limit, offset });
+    return this.notulensiService.getList({ search, status, bulan, tahun, tanggal, limit, offset }, req.user);
   }
 
   /**
    * Mengambil opsi guru, staf, dan siswa untuk dropdown peserta, pimpinan, notulis, dan PIC
    */
   @Get('peserta-options')
-  async getPesertaOptions() {
-    return this.notulensiService.getPesertaOptions();
+  async getPesertaOptions(@Req() req: any) {
+    return this.notulensiService.getPesertaOptions(req.user);
   }
 
   /**
    * Detail notulensi rapat
    */
   @Get(':id')
-  async getDetail(@Param('id') id: string) {
-    return this.notulensiService.getDetail(id);
+  async getDetail(@Param('id') id: string, @Req() req: any) {
+    return this.notulensiService.getDetail(id, req.user);
   }
 
   /**
@@ -87,21 +88,17 @@ export class NotulensiController {
   }
 
   /**
-   * Perbarui notulensi rapat (dibatasi oleh FeatureAccessGuard)
+   * Perbarui notulensi milik pembuatnya sendiri (ditegakkan service).
    */
   @Put(':id')
-  @UseGuards(FeatureAccessGuard)
-  @FeatureAccess(NOTULENSI_KELOLA_KEY)
   async update(@Param('id') id: string, @Body() body: any, @Req() req: any) {
     return this.notulensiService.update(id, body, req.user, req);
   }
 
   /**
-   * Pembaruan cepat status tindak lanjut (dibatasi oleh FeatureAccessGuard)
+   * Pembaruan cepat status tindak lanjut oleh pembuat notulen.
    */
   @Patch(':id/status')
-  @UseGuards(FeatureAccessGuard)
-  @FeatureAccess(NOTULENSI_KELOLA_KEY)
   async updateStatus(
     @Param('id') id: string,
     @Body() body: { status?: string; poin_id?: string; poin_status?: string; keterangan?: string },
@@ -111,11 +108,9 @@ export class NotulensiController {
   }
 
   /**
-   * Hapus notulensi rapat (dibatasi oleh FeatureAccessGuard)
+   * Hapus notulensi milik pembuatnya sendiri.
    */
   @Delete(':id')
-  @UseGuards(FeatureAccessGuard)
-  @FeatureAccess(NOTULENSI_KELOLA_KEY)
   async delete(@Param('id') id: string, @Req() req: any) {
     return this.notulensiService.delete(id, req.user, req);
   }

@@ -16,6 +16,7 @@ import {
 import { KetidakhadiranService } from './ketidakhadiran.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PageAccessGuard, RequiresPage } from '../auth/page-access.guard';
+import { AccessService } from '../access/access.service';
 import { PegawaiGuard } from '../auth/pegawai.guard';
 
 /** Halaman yang isinya memang mengelola data ketidakhadiran. */
@@ -42,7 +43,21 @@ const PAGE_DAFTAR_SURAT = ['ketidakhadiran-daftar'] as const;
 @Controller('ketidakhadiran')
 @UseGuards(JwtAuthGuard, PageAccessGuard)
 export class KetidakhadiranController {
-  constructor(private readonly ketidakhadiranService: KetidakhadiranService) {}
+  constructor(
+    private readonly ketidakhadiranService: KetidakhadiranService,
+    private readonly accessService: AccessService,
+  ) {}
+
+  private async getPageReader(reqUser: any) {
+    const access = await this.accessService.resolveUserAccess(reqUser);
+    return { ...this.getApiUser(reqUser), canReadPage: access.pageIds.includes('ketidakhadiran') };
+  }
+
+  @Get('siswa')
+  @RequiresPage('ketidakhadiran')
+  async getStudents() {
+    return this.ketidakhadiranService.getPageStudents();
+  }
 
   private getApiUser(reqUser: any) {
     // `roles` hasil JwtStrategy sudah termasuk duty role (wali kelas, guru asuh,
@@ -87,8 +102,7 @@ export class KetidakhadiranController {
   // --- LOG ROUTES ---
   @Get('log')
   async getLog(@Req() req: any, @Query() query: any) {
-    const apiUser = this.getApiUser(req.user);
-    return this.ketidakhadiranService.getLog(query, apiUser);
+    return this.ketidakhadiranService.getLog(query, await this.getPageReader(req.user));
   }
 
   @Get('log/guru-asuh')
@@ -120,8 +134,7 @@ export class KetidakhadiranController {
     @Param('nisn') nisn: string,
     @Query('tahun_ajaran') tahunAjaran?: string,
   ) {
-    const apiUser = this.getApiUser(req.user);
-    return this.ketidakhadiranService.getLogSiswa(nisn, tahunAjaran, apiUser);
+    return this.ketidakhadiranService.getLogSiswa(nisn, tahunAjaran, await this.getPageReader(req.user));
   }
 
   // --- ABSENSI & REKAP ---
@@ -138,10 +151,9 @@ export class KetidakhadiranController {
   }
 
   @Get('rekap')
-  @UseGuards(PegawaiGuard)
   @RequiresPage(...PAGE_KELOLA)
   async getRekap(@Req() req: any, @Query() query: any) {
-    return this.ketidakhadiranService.getRekap(query, this.getApiUser(req.user));
+    return this.ketidakhadiranService.getRekap(query, await this.getPageReader(req.user));
   }
 
   /* --- REKAM MEDIS SISWA (UKS) ---

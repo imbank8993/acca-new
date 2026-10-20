@@ -2202,4 +2202,27 @@
     border-color: rgba(16, 185, 129, 0.4);
 }
 
+.nr-pagination {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin-top: 16px;
+    font-size: 12px;
+    color: var(--n-muted, #64748b);
+}
+
+.nr-points-toggle {
+    align-self: flex-start;
+    padding: 4px 0;
+    border: 0;
+    background: transparent;
+    color: var(--n-primary, #3083ff);
+    font: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
 

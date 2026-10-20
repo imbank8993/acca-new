@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Spinner } from '@/components/ui/Spinner';
 import FilterToolbar, { FilterSearch, FilterSelect, FilterField } from '@/components/ui/FilterToolbar';
 import { Button } from '@/components/ui/Button';
@@ -21,6 +21,10 @@ export default function DaftarNotulensiTab({ bolehKelola, headerTabs }: DaftarNo
     const [items, setItems] = useState<NotulensiItem[]>([]);
     const [stats, setStats] = useState({ total: 0, belum: 0, proses: 0, selesai: 0 });
     const [loading, setLoading] = useState(true);
+    const requestId = useRef(0);
+    const [offset, setOffset] = useState(0);
+    const [total, setTotal] = useState(0);
+    const pageSize = 50;
 
     // Filters
     const [searchQuery, setSearchQuery] = useState('');
@@ -38,35 +42,45 @@ export default function DaftarNotulensiTab({ bolehKelola, headerTabs }: DaftarNo
     const [printItem, setPrintItem] = useState<NotulensiItem | null>(null);
 
     const fetchData = useCallback(async () => {
+        const currentRequest = ++requestId.current;
         setLoading(true);
         try {
             const params = new URLSearchParams();
+            params.set('limit', String(pageSize));
+            params.set('offset', String(offset));
             if (filterStatus && filterStatus !== 'Semua') params.set('status', filterStatus);
             if (filterTanggal) params.set('tanggal', filterTanggal);
             if (filterBulan) params.set('bulan', filterBulan);
             if (searchQuery.trim()) params.set('search', searchQuery.trim());
 
-            const res = await fetch(`/api/notulensi-rapat?${params.toString()}`);
+            const res = await fetch(`/api/notulensi-rapat?${params.toString()}`, { cache: 'no-store' });
             const json = await res.json();
-            if (json.success) {
+            if (currentRequest !== requestId.current) return;
+            if (res.ok && json.success) {
                 setItems(json.data || []);
+                setTotal(json.total || 0);
                 if (json.stats) setStats(json.stats);
             } else {
                 throw new Error(json.error || 'Gagal memuat notulensi rapat');
             }
         } catch (err: any) {
+            if (currentRequest !== requestId.current) return;
+            setItems([]);
+            setStats({ total: 0, belum: 0, proses: 0, selesai: 0 });
+            setTotal(0);
             console.error('Fetch error:', err);
             swalError('Error', err.message || 'Gagal memuat data');
         } finally {
-            setLoading(false);
+            if (currentRequest === requestId.current) setLoading(false);
         }
-    }, [filterStatus, filterTanggal, filterBulan, searchQuery]);
+    }, [filterStatus, filterTanggal, filterBulan, searchQuery, offset]);
 
     useEffect(() => {
         fetchData();
     }, [fetchData]);
 
     const handleSave = async (data: NotulensiItem) => {
+        if (data.id && !items.find(item => item.id === data.id)?.can_edit) return;
         setSaving(true);
         try {
             const isEdit = !!data.id;
@@ -95,7 +109,7 @@ export default function DaftarNotulensiTab({ bolehKelola, headerTabs }: DaftarNo
     };
 
     const handleDelete = async (item: NotulensiItem) => {
-        if (!item.id) return;
+        if (!item.id || !item.can_edit) return;
         const confirm = await swalConfirm({
             title: 'Hapus Notulensi Rapat?',
             text: `Yakin ingin menghapus notulensi "${item.agenda}"? Data tidak dapat dikembalikan.`,
@@ -120,7 +134,7 @@ export default function DaftarNotulensiTab({ bolehKelola, headerTabs }: DaftarNo
 
     // Toggle status individual poin
     const handleTogglePoinStatus = async (itemId: string, poin: PoinHasilRapat, nextStatus: string) => {
-        if (!bolehKelola) return;
+        if (!items.find(item => item.id === itemId)?.can_edit) return;
         try {
             const res = await fetch(`/api/notulensi-rapat/${itemId}/status`, {
                 method: 'PATCH',
@@ -165,7 +179,7 @@ export default function DaftarNotulensiTab({ bolehKelola, headerTabs }: DaftarNo
             <div className="nr-stats-grid">
                 <div
                     className={`nr-stat-card ${filterStatus === 'Semua' ? 'active' : ''}`}
-                    onClick={() => setFilterStatus('Semua')}
+                    onClick={() => { setFilterStatus('Semua'); setOffset(0); }}
                     title="Klik untuk melihat semua notulensi"
                 >
                     <div className="nr-stat-icon total">
@@ -179,7 +193,7 @@ export default function DaftarNotulensiTab({ bolehKelola, headerTabs }: DaftarNo
 
                 <div
                     className={`nr-stat-card ${filterStatus === 'Belum' ? 'active' : ''}`}
-                    onClick={() => setFilterStatus('Belum')}
+                    onClick={() => { setFilterStatus('Belum'); setOffset(0); }}
                     title="Klik untuk filter rapat belum ditindaklanjuti"
                 >
                     <div className="nr-stat-icon belum">
@@ -193,7 +207,7 @@ export default function DaftarNotulensiTab({ bolehKelola, headerTabs }: DaftarNo
 
                 <div
                     className={`nr-stat-card ${filterStatus === 'Proses' ? 'active' : ''}`}
-                    onClick={() => setFilterStatus('Proses')}
+                    onClick={() => { setFilterStatus('Proses'); setOffset(0); }}
                     title="Klik untuk filter rapat sedang diproses"
                 >
                     <div className="nr-stat-icon proses">
@@ -207,7 +221,7 @@ export default function DaftarNotulensiTab({ bolehKelola, headerTabs }: DaftarNo
 
                 <div
                     className={`nr-stat-card ${filterStatus === 'Selesai' ? 'active' : ''}`}
-                    onClick={() => setFilterStatus('Selesai')}
+                    onClick={() => { setFilterStatus('Selesai'); setOffset(0); }}
                     title="Klik untuk filter rapat selesai ditindaklanjuti"
                 >
                     <div className="nr-stat-icon selesai">
@@ -224,13 +238,13 @@ export default function DaftarNotulensiTab({ bolehKelola, headerTabs }: DaftarNo
             <FilterToolbar>
                 <FilterSearch
                     value={searchQuery}
-                    onChange={setSearchQuery}
-                    placeholder="Cari agenda rapat, pimpinan, notulis, poin..."
+                    onChange={value => { setSearchQuery(value); setOffset(0); }}
+                    placeholder="Cari judul atau poin yang dapat Anda lihat..."
                 />
                 <FilterField label="Tanggal Rapat" width="180px" bare>
                     <DatePicker
                         value={filterTanggal}
-                        onChange={val => setFilterTanggal(val)}
+                        onChange={val => { setFilterTanggal(val); setOffset(0); }}
                         placeholder="Semua Tanggal"
                     />
                 </FilterField>
@@ -238,7 +252,7 @@ export default function DaftarNotulensiTab({ bolehKelola, headerTabs }: DaftarNo
                     label="Status"
                     icon="flag"
                     value={filterStatus}
-                    onChange={val => setFilterStatus(String(val))}
+                    onChange={val => { setFilterStatus(String(val)); setOffset(0); }}
                     options={[
                         { value: 'Semua', label: 'Semua Status' },
                         { value: 'Belum', label: 'Belum Ditindaklanjuti' },
@@ -288,6 +302,11 @@ export default function DaftarNotulensiTab({ bolehKelola, headerTabs }: DaftarNo
                                     const poinList = item.poin_poin || [];
                                     const poinDone = poinList.filter(p => p.status === 'Selesai').length;
 
+                                    if (item.visibility === 'title') return <tr key={item.id || idx} className="nr-row">
+                                        <td /><td style={{ textAlign: 'center', color: 'var(--n-muted)' }}>{offset + idx + 1}</td>
+                                        <td colSpan={6}><div className="nr-card-title">{item.agenda}</div></td>
+                                    </tr>;
+
                                     return (
                                         <React.Fragment key={item.id || idx}>
                                             <tr className="nr-row">
@@ -304,11 +323,11 @@ export default function DaftarNotulensiTab({ bolehKelola, headerTabs }: DaftarNo
                                                     )}
                                                 </td>
                                                 <td style={{ textAlign: 'center', color: 'var(--n-muted)', fontWeight: 600 }}>
-                                                    {idx + 1}
+                                                    {offset + idx + 1}
                                                 </td>
                                                 <td>
                                                     <div style={{ fontWeight: 650, fontSize: '0.84rem' }}>
-                                                        {formatDateShort(item.tanggal)}
+                                                        {item.tanggal ? formatDateShort(item.tanggal) : ''}
                                                     </div>
                                                     {item.waktu_mulai && (
                                                         <div style={{ fontSize: '0.74rem', color: 'var(--n-muted)', marginTop: '2px' }}>
@@ -321,6 +340,7 @@ export default function DaftarNotulensiTab({ bolehKelola, headerTabs }: DaftarNo
                                                     <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--n-ink)' }}>
                                                         {item.agenda}
                                                     </div>
+                                                    {item.visibility === 'pic' && <small style={{ color: 'var(--n-muted)' }}>Poin yang ditugaskan kepada Anda</small>}
                                                     {item.lokasi && (
                                                         <div style={{ fontSize: '0.76rem', color: 'var(--n-muted)', marginTop: '2px' }}>
                                                             <i className="bi bi-geo-alt-fill" style={{ marginRight: '4px' }} />
@@ -366,19 +386,19 @@ export default function DaftarNotulensiTab({ bolehKelola, headerTabs }: DaftarNo
                                                     )}
                                                 </td>
                                                 <td style={{ textAlign: 'center' }}>
-                                                    <span className={`nr-pill ${item.status.toLowerCase()}`} title="Status otomatis mengikuti poin rapat">
+                                                    {item.status && <span className={`nr-pill ${item.status.toLowerCase()}`} title={item.visibility === 'pic' ? 'Status poin yang ditugaskan kepada Anda' : 'Status otomatis mengikuti poin rapat'}>
                                                         <span className="nr-pill-dot" />
                                                         {item.status}
-                                                    </span>
+                                                    </span>}
                                                 </td>
                                                 <td style={{ textAlign: 'center' }}>
                                                     <ActionGroup>
-                                                        <ActionButton
+                                                        {item.can_print && <ActionButton
                                                             action="print"
                                                             onClick={() => setPrintItem(item)}
                                                             title="Pratinjau, Cetak & PDF Notulensi"
-                                                        />
-                                                        {bolehKelola && (
+                                                        />}
+                                                        {item.can_edit && (
                                                             <>
                                                                 <ActionButton
                                                                     action="edit"
@@ -432,7 +452,7 @@ export default function DaftarNotulensiTab({ bolehKelola, headerTabs }: DaftarNo
                                                                                 <i className="bi bi-calendar-event" /> {p.tenggat}
                                                                             </span>
                                                                         )}
-                                                                        {bolehKelola ? (
+                                                                        {item.can_edit ? (
                                                                             <InlineSelect
                                                                                 value={p.status}
                                                                                 onChange={val => handleTogglePoinStatus(item.id || '', p, val)}
@@ -470,21 +490,24 @@ export default function DaftarNotulensiTab({ bolehKelola, headerTabs }: DaftarNo
                             const poinList = item.poin_poin || [];
                             const poinDone = poinList.filter(p => p.status === 'Selesai').length;
 
+                            if (item.visibility === 'title') return <div key={item.id} className="nr-card"><div className="nr-card-title">{item.agenda}</div></div>;
+
                             return (
                                 <div key={item.id} className="nr-card">
                                     <div className="nr-card-header">
                                         <div className="nr-card-title">{item.agenda}</div>
-                                        <span className={`nr-pill ${item.status.toLowerCase()}`}>
+                                        {item.status && <span className={`nr-pill ${item.status.toLowerCase()}`}>
                                             <span className="nr-pill-dot" />
                                             {item.status}
-                                        </span>
+                                        </span>}
                                     </div>
+                                    {item.visibility === 'pic' && <small style={{ color: 'var(--n-muted)' }}>Poin yang ditugaskan kepada Anda</small>}
 
                                     <div className="nr-card-meta-list">
-                                        <div className="nr-meta-row">
+                                        {item.tanggal && <div className="nr-meta-row">
                                             <i className="bi bi-calendar3" />
                                             <span>{formatDateShort(item.tanggal)} {item.waktu_mulai ? `· ${item.waktu_mulai}` : ''}</span>
-                                        </div>
+                                        </div>}
                                         {item.lokasi && (
                                             <div className="nr-meta-row">
                                                 <i className="bi bi-geo-alt-fill" />
@@ -505,36 +528,36 @@ export default function DaftarNotulensiTab({ bolehKelola, headerTabs }: DaftarNo
                                                 Poin Tindak Lanjut: {poinDone}/{poinList.length} Selesai
                                             </div>
                                             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                                {poinList.slice(0, 3).map((p, pIdx) => (
+                                                {poinList.slice(0, expandedIds.has(item.id || '') ? undefined : 3).map((p, pIdx) => (
                                                     <div key={p.id || pIdx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px' }}>
-                                                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '190px' }}>
-                                                            • {p.teks}
-                                                        </span>
+                                                        <div style={{ minWidth: 0, flex: 1, overflowWrap: 'anywhere' }}>
+                                                            <span>• {p.teks}</span>
+                                                            {p.tenggat && <small style={{ display: 'block', color: 'var(--n-muted)' }}>Tenggat: {formatDateShort(p.tenggat)}</small>}
+                                                            {p.keterangan && <small style={{ display: 'block' }}>{p.keterangan}</small>}
+                                                        </div>
                                                         <span className={`nr-pill ${p.status.toLowerCase()}`} style={{ fontSize: '0.68rem', padding: '1px 6px' }}>
                                                             {p.status}
                                                         </span>
                                                     </div>
                                                 ))}
                                                 {poinList.length > 3 && (
-                                                    <span style={{ fontSize: '0.72rem', color: 'var(--n-primary)', fontWeight: 600 }}>
-                                                        +{poinList.length - 3} poin lainnya...
-                                                    </span>
+                                                    <button type="button" className="nr-points-toggle" onClick={() => toggleExpand(item.id || '')}>{expandedIds.has(item.id || '') ? 'Ringkas poin' : `Lihat semua ${poinList.length} poin`}</button>
                                                 )}
                                             </div>
                                         </div>
                                     )}
 
-                                    <div className="nr-card-actions">
-                                        <Button
+                                    {(item.can_print || item.can_edit) && <div className="nr-card-actions">
+                                        {item.can_print && <Button
                                             size="sm"
                                             variant="secondary"
                                             onClick={() => setPrintItem(item)}
                                             leftIcon={<i className="bi bi-file-earmark-pdf" />}
                                         >
                                             PDF &amp; Cetak
-                                        </Button>
+                                        </Button>}
 
-                                        {bolehKelola && (
+                                        {item.can_edit && (
                                             <div style={{ display: 'flex', gap: '6px' }}>
                                                 <Button
                                                     size="sm"
@@ -557,13 +580,15 @@ export default function DaftarNotulensiTab({ bolehKelola, headerTabs }: DaftarNo
                                                 </Button>
                                             </div>
                                         )}
-                                    </div>
+                                    </div>}
                                 </div>
                             );
                         })}
                     </div>
                 </>
             )}
+
+            {total > pageSize && <div className="nr-pagination"><Button variant="secondary" size="sm" disabled={loading || offset === 0} onClick={() => setOffset(previous => Math.max(0, previous - pageSize))}>Sebelumnya</Button><span>{offset + 1}–{Math.min(offset + pageSize, total)} dari {total}</span><Button variant="secondary" size="sm" disabled={loading || offset + pageSize >= total} onClick={() => setOffset(previous => previous + pageSize)}>Berikutnya</Button></div>}
 
             {bolehKelola && !isFormOpen && !printItem && (
                 <DesktopFab

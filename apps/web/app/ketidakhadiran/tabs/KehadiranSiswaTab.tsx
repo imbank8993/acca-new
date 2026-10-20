@@ -103,7 +103,7 @@ function ErrorView({ message, onRetry }: { message: string; onRetry: () => void 
 }
 
 
-export function KehadiranSiswaTab() {
+export function KehadiranSiswaTab({ pageAccess = false }: { pageAccess?: boolean }) {
     const router = useRouter();
 
     const [user, setUser] = useState<User | null>(null);
@@ -253,8 +253,8 @@ export function KehadiranSiswaTab() {
 
             const adminRoles = ['ADMIN', 'WALI_KELAS', 'KAMAD'];
             const isSiswaUser = userData.role === 'SISWA' || userData.roles?.includes('SISWA');
-            const isOrangTuaUser = userData.role === 'ORANG_TUA' || userData.roles?.includes('ORANG_TUA');
-            const isAdminUser = adminRoles.some(r => userData.roles?.includes(r));
+            const isOrangTuaUser = !pageAccess && (userData.role === 'ORANG_TUA' || userData.roles?.includes('ORANG_TUA'));
+            const isAdminUser = pageAccess || adminRoles.some(r => userData.roles?.includes(r));
             setIsAdmin(isAdminUser || isOrangTuaUser);
             setIsOrangTua(isOrangTuaUser);
             setUser(userData);
@@ -279,7 +279,7 @@ export function KehadiranSiswaTab() {
                     }
                 } else {
                     try {
-                        const resSiswa = await fetch('/api/settings/siswa-kelas?aktif=true');
+                        const resSiswa = await fetch(pageAccess ? '/api/ketidakhadiran/siswa' : '/api/settings/siswa-kelas?aktif=true');
                         if (resSiswa.ok) {
                             const jsonSiswa = await resSiswa.json().catch(() => null);
                             const list = jsonSiswa?.data || jsonSiswa || [];
@@ -313,7 +313,7 @@ export function KehadiranSiswaTab() {
             }
 
             const nisn = userData.nip;
-            if (isSiswaUser && !nisn) {
+            if (isSiswaUser && !pageAccess && !nisn) {
                 setError('NISN tidak ditemukan. Hubungi administrator.');
                 return;
             }
@@ -356,7 +356,7 @@ export function KehadiranSiswaTab() {
         } finally {
             setLoading(false);
         }
-    }, [router, selectedNisn]);
+    }, [router, selectedNisn, pageAccess]);
 
     const fetchKehadiran = useCallback(async (nisn: string) => {
         try {

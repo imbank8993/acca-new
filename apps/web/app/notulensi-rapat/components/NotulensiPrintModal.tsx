@@ -134,7 +134,7 @@ export default function NotulensiPrintModal({ isOpen, onClose, data }: Notulensi
         };
     }, []);
 
-    if (!isOpen || !data) return null;
+    if (!isOpen || !data || !data.can_print) return null;
 
     const handlePrint = () => {
         if (!sheetRef.current) return;

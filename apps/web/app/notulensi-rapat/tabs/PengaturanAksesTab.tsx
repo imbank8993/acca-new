@@ -187,7 +187,7 @@ export default function PengaturanAksesTab({ headerTabs }: { headerTabs?: React.
                         </h4>
                     </div>
                     <p className="nr-akses-section-desc">
-                        Semua pengguna dengan jabatan terpilih mendapat hak kelola.
+                        Jabatan terpilih dapat membuat notulen. Setiap pembuat hanya dapat mengedit notulen buatannya sendiri.
                     </p>
 
                     <SearchableSelect
@@ -232,7 +232,7 @@ export default function PengaturanAksesTab({ headerTabs }: { headerTabs?: React.
                         </h4>
                     </div>
                     <p className="nr-akses-section-desc">
-                        Tambahkan guru atau staf sebagai pengelola tanpa mengubah akses seluruh jabatannya.
+                        Izinkan pengguna tertentu membuat notulen. Akses ini tidak membuka isi atau hak edit notulen milik orang lain.
                     </p>
 
                     <SearchableSelect
