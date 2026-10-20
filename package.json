@@ -16,9 +16,11 @@
     "build:backend": "npm run build --workspace=apps/api",
     "lint": "npm run lint --workspace=apps/web && npm run lint --workspace=apps/api",
     "typecheck": "npx tsc --noEmit -p apps/web/tsconfig.json",
+    "test:notulensi-kinerja": "node --test apps/api/test/notulensi-*.test.cjs apps/api/test/kinerja-*.test.cjs",
     "db:studio": "npm --workspace=@acca/api exec prisma studio"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.5.10",
     "@types/jest": "^30.0.0",
     "@types/pg": "^8.23.1",
     "jest": "^30.5.1",

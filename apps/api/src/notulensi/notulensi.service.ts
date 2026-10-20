@@ -2,6 +2,7 @@ import { Injectable, BadRequestException, NotFoundException, ForbiddenException,
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../common/audit.service';
 import { notulensiDirectory, NotulensiDirectory } from './notulensi-access';
+import { NOTULENSI_LIST_SQL } from './notulensi-list';
 import {
   NOTULENSI_KELOLA_KEY,
   FeatureAccessGuard,
@@ -251,33 +252,18 @@ export class NotulensiService {
     if (query.tahun && !/^\d{4}$/.test(query.tahun)) throw new BadRequestException('Tahun tidak valid');
 
     const directory = await this.directory();
-    const rows: any[] = await this.prisma.$queryRawUnsafe(
-      'SELECT *, updated_at::text AS revision FROM public.notulensi_rapat ORDER BY tanggal DESC, id DESC',
+    const bindings = Object.fromEntries(Object.entries(directory.legacyBindings)
+      .filter(([, id]) => id && directory.byId.has(id)));
+    const [result] = await this.prisma.$queryRawUnsafe<any[]>(
+      NOTULENSI_LIST_SQL, String(user?.id || ''), JSON.stringify(bindings),
+      String(query.search || '').trim().toLowerCase(),
+      query.status && query.status !== 'Semua' ? query.status : '',
+      query.tanggal || query.bulan || query.tahun || '', limit, offset,
     );
-    // Search, statistics, filtering and pagination operate only on permitted data.
-    // Hidden points must not be discoverable through search matches or status counts.
-    const projected = rows.map(row => this.projectRow(row, user, directory));
-    const stats = {
-      total: projected.length,
-      belum: projected.filter(row => row.status === 'Belum').length,
-      proses: projected.filter(row => row.status === 'Proses').length,
-      selesai: projected.filter(row => row.status === 'Selesai').length,
+    return {
+      success: true, data: result.data.map((row: any) => this.projectRow(row, user, directory)),
+      stats: result.stats, total: result.total, limit, offset,
     };
-    const search = String(query.search || '').trim().toLowerCase();
-    const filtered = projected.filter(row => {
-      const date = 'tanggal' in row ? row.tanggal || '' : '';
-      if (query.tanggal && date !== query.tanggal) return false;
-      if (!query.tanggal && query.bulan && !date.startsWith(query.bulan)) return false;
-      if (!query.tanggal && !query.bulan && query.tahun && !date.startsWith(query.tahun)) return false;
-      if (query.status && query.status !== 'Semua' && row.status !== query.status) return false;
-      if (search) {
-        const permittedText = [row.agenda, ...row.poin_poin.flatMap(point => [point.teks, point.pic, point.keterangan])];
-        if ('lokasi' in row) permittedText.push(row.lokasi, row.pimpinan_rapat, row.notulis, row.catatan);
-        if (!permittedText.some(value => String(value || '').toLowerCase().includes(search))) return false;
-      }
-      return true;
-    });
-    return { success: true, data: filtered.slice(offset, offset + limit), stats, total: filtered.length, limit, offset };
   }
 
   /** Only the creator receives the full note; PICs receive their own points. */

@@ -7,6 +7,32 @@ const notePoints = [
 ];
 const isForbidden = error => error.getStatus?.() === 403;
 
+test('all notulensi endpoints enforce page access in addition to authentication', async () => {
+  require('reflect-metadata');
+  const { Reflector } = require('@nestjs/core');
+  const { compileModule } = require('./notulensi-fixture.cjs');
+  const pageAccess = compileModule('apps/api/src/auth/page-access.guard.ts', name =>
+    name.endsWith('access.service') ? {} : require(name));
+  const { NotulensiController } = compileModule('apps/api/src/notulensi/notulensi.controller.ts', name => {
+    if (name.endsWith('page-access.guard')) return pageAccess;
+    if (name.endsWith('jwt-auth.guard')) return { JwtAuthGuard: class {} };
+    if (name.endsWith('notulensi.service')) return {};
+    if (name.endsWith('feature-access.guard')) return { FeatureAccessGuard: class {}, FeatureAccess: () => () => {} };
+    return require(name);
+  });
+  assert(Reflect.getMetadata('__guards__', NotulensiController).includes(pageAccess.PageAccessGuard));
+  let pageIds = [];
+  const guard = new pageAccess.PageAccessGuard(new Reflector(), { resolveUserAccess: async () => ({ roles: ['SISWA'], pageIds }) });
+  for (const method of ['getList', 'getDetail', 'getIzinSaya', 'getPengaturan', 'getPesertaOptions', 'create', 'update', 'updateStatus', 'delete', 'updatePengaturan']) {
+    const context = { getClass: () => NotulensiController, getHandler: () => NotulensiController.prototype[method],
+      switchToHttp: () => ({ getRequest: () => ({ user: { id: '7' }, headers: {} }) }) };
+    pageIds = [];
+    await assert.rejects(guard.canActivate(context), isForbidden);
+    pageIds = ['notulensi-rapat'];
+    assert.equal(await guard.canActivate(context), true);
+  }
+});
+
 test('list and detail expose only assigned points, without meeting metadata', async () => {
   const f = fixture({ poin_poin: notePoints });
   for (const response of [await f.service.getList({}, pic), await f.service.getDetail('1', pic)]) {

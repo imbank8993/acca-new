@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useTabParam } from '@/hooks/useTabParam';
 import { Spinner } from '@/components/ui/Spinner';
 import Tab from '@/components/ui/Tab';
@@ -80,6 +80,7 @@ export default function KinerjaGuruPage() {
     const [activeTab, setActiveTab] = useTabParam<'jamKosong' | 'penugasanTanpa' | 'penugasanDengan' | 'digabung' | 'terlambat' | 'daring' | 'mengambilIstirahat' | 'keluarSebelumWaktu' | 'piket'>('jamKosong', ['jamKosong', 'penugasanTanpa', 'penugasanDengan', 'digabung', 'terlambat', 'daring', 'mengambilIstirahat', 'keluarSebelumWaktu', 'piket']);
     const [data, setData] = useState<KinerjaGuruData>({ jamKosong: [], penugasanTanpa: [], penugasanDengan: [], digabung: [], terlambat: [], daring: [], mengambilIstirahat: [], keluarSebelumWaktu: [], piket: [] });
     const [loading, setLoading] = useState(true);
+    const requestId = useRef(0);
     const [isAdmin, setIsAdmin] = useState(false);
     const [canCetakRekap, setCanCetakRekap] = useState(false);
     const [userName, setUserName] = useState('Petugas Kepegawaian');
@@ -192,14 +193,16 @@ export default function KinerjaGuruPage() {
             .catch(() => {});
     }, []);
 
-    const fetchData = async () => {
+    const fetchData = async (signal?: AbortSignal) => {
+        const currentRequest = ++requestId.current;
         setLoading(true);
         try {
             const params = new URLSearchParams();
             if (periodStart) params.set('start_month', periodStart);
             if (periodEnd) params.set('end_month', periodEnd);
-            const res = await fetch(`/api/kinerja-guru?${params.toString()}`);
+            const res = await fetch(`/api/kinerja-guru?${params.toString()}`, { signal });
             const result = await res.json();
+            if (signal?.aborted || currentRequest !== requestId.current) return;
             if (result.success) {
                 setData(result.data);
                 if (result.akses?.cetakRekap !== undefined) {
@@ -207,21 +210,24 @@ export default function KinerjaGuruPage() {
                 }
             }
         } catch (err) {
+            if (signal?.aborted || currentRequest !== requestId.current) return;
             console.error('Failed to fetch kinerja guru data', err);
         } finally {
-            setLoading(false);
+            if (!signal?.aborted && currentRequest === requestId.current) setLoading(false);
         }
     };
 
     useEffect(() => {
+        const controller = new AbortController();
         if (periodStart && periodEnd) {
-            fetchData();
+            fetchData(controller.signal);
         }
-    }, [periodStart, periodEnd]);
-
-    useEffect(() => {
-        const interval = setInterval(fetchData, 60000);
-        return () => clearInterval(interval);
+        const interval = setInterval(() => fetchData(controller.signal), 60000);
+        return () => {
+            controller.abort();
+            ++requestId.current;
+            clearInterval(interval);
+        };
     }, [periodStart, periodEnd]);
 
     const getCurrentList = () => {

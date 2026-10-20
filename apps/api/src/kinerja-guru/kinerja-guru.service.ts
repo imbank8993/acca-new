@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { JadwalService } from '../jadwal/jadwal.service';
 import {
@@ -65,8 +65,17 @@ export class KinerjaGuruService {
     const periodStart = startMonth || defaultStart;
     const periodEnd = endMonth || defaultEnd;
 
+    const validMonth = /^(19|20|21)\d{2}-(0[1-9]|1[0-2])$/;
+    if (typeof periodStart !== 'string' || typeof periodEnd !== 'string' || !validMonth.test(periodStart) || !validMonth.test(periodEnd)) {
+      throw new BadRequestException('Periode harus berformat YYYY-MM dengan bulan yang valid.');
+    }
+
     const [sy, sm] = periodStart.split('-').map(Number);
     const [ey, em] = periodEnd.split('-').map(Number);
+    const monthCount = (ey - sy) * 12 + em - sm + 1;
+    if (monthCount < 1 || monthCount > 12) {
+      throw new BadRequestException('Periode harus berurutan dan maksimal 12 bulan.');
+    }
 
     const periodStartStr = `${sy}-${String(sm).padStart(2, '0')}-01`;
     const lastDay = new Date(ey, em, 0).getDate();
@@ -277,10 +286,10 @@ export class KinerjaGuruService {
 
     const stats: Record<string, TeacherStats> = {};
 
-    const ensureKey = (nama: string, nipInput?: string) => {
+    const ensureKey = (nama: string, nipInput?: string, resolveName = true) => {
       const normalizedName = (nama || '').trim().toLowerCase();
       const baseName = normalizedName.split(',')[0].trim();
-      const nip = nipInput || nameToNipMap[normalizedName] || nameToNipMap[baseName] || '';
+      const nip = nipInput || (resolveName ? nameToNipMap[normalizedName] || nameToNipMap[baseName] : '') || '';
       const key = nip || normalizedName;
       const displayName = nip && nipToNameMap[nip] ? nipToNameMap[nip] : nama;
 
@@ -307,7 +316,7 @@ export class KinerjaGuruService {
 
     // Calculate Piket stats (strictly bounded within selected period)
     try {
-      if (jadwalPiket.length > 0 && allLaporanPiket.length > 0) {
+      if (jadwalPiket.length > 0) {
         const slotReportedTable = new Set<string>();
         allLaporanPiket.forEach((lp) => {
           const datePart = lp.tanggal instanceof Date ? lp.tanggal.toISOString().split('T')[0] : String(lp.tanggal || '');
@@ -431,12 +440,14 @@ export class KinerjaGuruService {
       const isGuruPengganti = guruPengganti && guruPengganti !== '-' && guruPengganti !== '';
       const kategoriUtama = (j.kategori_kehadiran || '').trim().toLowerCase();
 
-      // Incident always belongs to the main scheduled teacher (j.nama_guru / j.nip)
-      const targetNama = (j.nama_guru || '').trim() || (j.nip ? `Guru (${j.nip})` : '');
-      const targetNip = j.nip || '';
+      // Attendance and duration fields describe the substitute when one is selected.
+      const targetNama = isGuruPengganti ? guruPengganti : (j.nama_guru || '').trim() || (j.nip ? `Guru (${j.nip})` : '');
+      const substituteNips = isGuruPengganti ? [...new Set(allTeachers
+        .filter(t => (t.nama_lengkap || '').trim().toLowerCase() === guruPengganti.toLowerCase()).map(t => t.nip))] : [];
+      const targetNip = isGuruPengganti ? (substituteNips.length === 1 ? substituteNips[0] : '') : j.nip || '';
       if (!targetNama && !targetNip) return;
 
-      const targetKey = ensureKey(targetNama, targetNip);
+      const targetKey = ensureKey(targetNama, targetNip, !isGuruPengganti);
 
       const statusUtama = kategoriUtama;
       const statusPengganti = (j.status_pengganti || '').trim().toLowerCase();

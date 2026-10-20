@@ -2,19 +2,21 @@ const fs = require('node:fs');
 const vm = require('node:vm');
 const ts = require('typescript');
 const common = require('@nestjs/common');
+const { queryList } = require('./notulensi-list-db.cjs');
 
 function compileModule(path, resolve) {
   const compiled = ts.transpileModule(fs.readFileSync(path, 'utf8'), {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, experimentalDecorators: true },
   }).outputText;
   const module = { exports: {} };
-  vm.runInNewContext(compiled, { module, exports: module.exports, Date, console, require: resolve });
+  vm.runInNewContext(compiled, { module, exports: module.exports, Date, console, process, require: resolve });
   return module.exports;
 }
 const access = compileModule('apps/api/src/notulensi/notulensi-access.ts', require);
 const rolesUser = user => user?.roles || [];
 const { NotulensiService } = compileModule('apps/api/src/notulensi/notulensi.service.ts', name => {
   if (name === './notulensi-access') return access;
+  if (name === './notulensi-list') return compileModule('apps/api/src/notulensi/notulensi-list.ts', require);
   if (name === '@nestjs/common') return common;
   if (name.endsWith('feature-access.guard')) return {
     rolesUser, ROLE_ADMIN: ['ADMIN', 'ADMINISTRATOR'], NOTULENSI_KELOLA_KEY: 'notulensi_access_config',
@@ -54,6 +56,9 @@ function fixture(initial = {}, extraUsers = []) {
     async $transaction(fn) { return fn(db); },
     async $queryRawUnsafe(sql, ...args) {
       queries.push({ sql, args });
+      if (sql.includes('WITH ownership AS')) {
+        return queryList([row], sql, args);
+      }
       if (sql.includes('INSERT INTO')) return touch({
         agenda: args[0], tanggal: args[1], poin_poin: JSON.parse(args[8]), status: args[9], created_by: args[12],
       });
@@ -73,4 +78,4 @@ function fixture(initial = {}, extraUsers = []) {
   return { service: new NotulensiService(db, { async bacaKonfigurasi() { return {}; } }), queries, db, users, get row() { return row; } };
 }
 
-module.exports = { fixture, owner, pic, other, admin, points, json, ...access };
+module.exports = { fixture, owner, pic, other, admin, points, json, compileModule, ...access };

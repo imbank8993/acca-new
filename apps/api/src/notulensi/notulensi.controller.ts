@@ -13,10 +13,12 @@ import {
 } from '@nestjs/common';
 import { NotulensiService } from './notulensi.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { PageAccessGuard, RequiresPage } from '../auth/page-access.guard';
 import { NOTULENSI_KELOLA_KEY, FeatureAccess, FeatureAccessGuard } from '../auth/feature-access.guard';
 
 @Controller('notulensi')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, PageAccessGuard)
+@RequiresPage('notulensi-rapat')
 export class NotulensiController {
   constructor(private readonly notulensiService: NotulensiService) {}
 
