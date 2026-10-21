@@ -47,9 +47,9 @@ test('list and detail expose only assigned points, without meeting metadata', as
   }
 });
 
-test('unrelated users, including administrators, get title only from list and detail', async () => {
+test('unrelated non-admin users get title only from list and detail', async () => {
   const f = fixture({ poin_poin: notePoints.slice(0, 1) });
-  for (const user of [other, admin]) {
+  for (const user of [other, { ...other, isAdmin: true }]) {
     const detail = (await f.service.getDetail('1', user)).data;
     const list = await f.service.getList({}, user);
     assert.deepEqual(json(detail), { id: '1', agenda: 'Rapat', poin_poin: [], status: null, visibility: 'title', can_edit: false, can_print: false });
@@ -60,7 +60,7 @@ test('unrelated users, including administrators, get title only from list and de
 
 test('search, date and status filters cannot reveal hidden metadata or points', async () => {
   const f = fixture({ poin_poin: notePoints });
-  for (const user of [pic, admin]) {
+  for (const user of [pic, { id: '999', roles: ['GURU'] }]) {
     for (const search of ['Keputusan rahasia', 'Daftar rahasia', 'Catatan rahasia', 'Ruang privat']) {
       assert.equal((await f.service.getList({ search }, user)).data.length, 0);
     }
@@ -164,4 +164,28 @@ test('configuration and participant directory cannot be read by unrelated viewer
   await assert.rejects(f.service.getPesertaOptions(pic), isForbidden);
   assert.equal((await f.service.getPengaturan(admin)).success, true);
   assert.equal((await f.service.getPesertaOptions(owner)).data.picUsers[1].id, '2');
+});
+
+
+test('ADMIN and ADMINISTRATOR read all notes, points and metadata without acquiring write permissions', async () => {
+  const f = fixture({ poin_poin: notePoints });
+  for (const role of ['ADMIN', 'ADMINISTRATOR']) {
+    const reader = { ...admin, roles: [role] };
+    const detail = (await f.service.getDetail('1', reader)).data;
+    const list = await f.service.getList({}, reader);
+    assert.equal(detail.visibility, 'admin');
+    assert.equal(detail.poin_poin.length, 2);
+    assert.equal(detail.catatan, 'Catatan rahasia');
+    assert.equal(detail.peserta, 'Daftar rahasia');
+    assert.equal(detail.created_by, owner.nama);
+    assert.equal(detail.can_edit, false);
+    assert.equal(detail.can_print, false);
+    assert.deepEqual(json({ ...list.data[0], revision: detail.revision }), json(detail));
+    assert.deepEqual(json(list.stats), { total: 1, belum: 0, proses: 1, selesai: 0 });
+    for (const search of ['Keputusan rahasia', 'Catatan rahasia', 'Ruang privat']) {
+      assert.equal((await f.service.getList({ search }, reader)).total, 1);
+    }
+    assert.equal((await f.service.getList({ tanggal: '2026-10-20', status: 'Proses' }, reader)).total, 1);
+    await assert.rejects(f.service.delete('1', reader), isForbidden);
+  }
 });

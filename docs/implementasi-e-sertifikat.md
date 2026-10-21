@@ -31,7 +31,7 @@ Untuk sertifikat dicabut, halaman hanya menampilkan nomor, status, tanggal, dan 
 - Pemeriksaan pemilik dijalankan pada setiap endpoint pengelolaan, bukan hanya di antarmuka. Identitas pemilik berasal dari sesi server.
 - Berkas disimpan privat sebagai `bytea` pada database, dibaca melalui endpoint dengan pemeriksaan pemilik atau QR aktif. Tidak ada URL penyimpanan publik permanen. Ini membuat publikasi dan pencabutan akses dokumen berlaku pada permintaan berikutnya.
 - Batas awal: 5 MB per template/dokumen, 20 berkas per kegiatan termasuk riwayat template, gambar maksimal 24 megapiksel, dokumen PDF maksimal 50 halaman. Untuk volume besar, penyimpanan dapat dipindah ke bucket privat tanpa mengubah kontrak URL publik.
-- Excel maksimal 2 MB, 500 peserta setiap impor, 30 kolom, delapan kolom tambahan, serta 2.000 peserta per kegiatan. Arsip XLSX diperiksa ukuran hasil ekstraknya; formula tidak dieksekusi.
+- Excel maksimal 2 MB, 500 peserta setiap impor, 30 kolom, delapan kolom tambahan, serta 2.000 peserta per kegiatan. Pembacaan peserta memakai ExcelJS, terpisah dari paket `xlsx` lama yang masih dipakai fitur lain. Arsip XLSX diperiksa terhadap ukuran ekstraksi sebenarnya (maksimal 25 MB), metadata ukuran palsu, serta koordinat sel/rentang gabungan yang berlebihan sebelum parsing workbook. Batas lembar berlaku pada seluruh worksheet dalam berkas. Formula XLSX ditolak; ubah menjadi nilai sebelum mengimpor. CSV mempertahankan nol di depan dan tidak mengubah teks menjadi angka atau tanggal otomatis.
 - Pengelola dapat menghapus dokumen pendukung dan template yang belum dipakai. Template aktif harus diganti terlebih dahulu; template yang dirujuk sertifikat terbit/dicabut dipertahankan agar dokumen historis tidak berubah.
 - Nomor, token, snapshot, dan identitas sertifikat yang telah terbit dilindungi trigger database. Semua tabel modul dikecualikan dari fitur penggantian data massal.
 - Pembuatan/edit kegiatan, impor, perubahan draf, penerbitan, pencabutan, unggah, publikasi, dan penghapusan berkas dicatat dalam audit.
@@ -40,7 +40,7 @@ Untuk sertifikat dicabut, halaman hanya menampilkan nomor, status, tanggal, dan 
 
 ## Model data dan konsistensi
 
-Migrasi: `apps/api/prisma/sql/20261016_e_sertifikat.sql`.
+Migrasi berurutan: `apps/api/prisma/sql/20261016_e_sertifikat.sql`, kemudian `apps/api/prisma/sql/20261021_e_sertifikat_hardening.sql`.
 
 | Tabel | Fungsi |
 |---|---|
@@ -48,12 +48,15 @@ Migrasi: `apps/api/prisma/sql/20261016_e_sertifikat.sql`.
 | `ecert_recipients` | Draf/sertifikat, identitas, nomor unik, token unik, snapshot penerbitan, pencabutan |
 | `ecert_assets` | Template, dokumentasi, persuratan privat dan pilihan publikasi |
 | `ecert_audit` | Riwayat tindakan pengelola |
+| `ecert_public_limits` | Penghitung permintaan publik bersama seluruh proses server, dengan masa berlaku |
 
 Tabel dikelola melalui SQL terparameterisasi Prisma. Tidak ada perubahan pada tabel nilai, CBT, atau data lama. RLS diaktifkan tanpa izin publik; koneksi aplikasi harus memakai pemilik tabel atau peran server yang berwenang. Pengelolaan tidak menggunakan klien database anonim.
 
 Penerbitan memakai transaksi dengan kunci baris kegiatan dan penerima. Permintaan penerbitan berulang tidak menggandakan nomor pada peserta yang sama. Impor memakai UUID yang dibuat pada pratinjau agar pengulangan permintaan gagal tidak menyisipkan peserta dua kali. Mengunggah ulang Excel sebagai impor baru tetap membuat draf baru; periksa daftar sebelum menerbitkan.
 
-Edit kegiatan memakai nomor revisi. Penyimpanan dengan revisi lama ditolak agar perubahan dari dua perangkat tidak saling menimpa. Perubahan pada kegiatan tidak mengubah snapshot sertifikat terbit. Pencabutan mengubah status, bukan identitas dokumen historis.
+Edit kegiatan dan identitas peserta draf memakai nomor revisi. PATCH peserta wajib menyertakan `revision` dari detail terakhir. Penyimpanan dengan revisi lama/tidak ada ditolak dengan HTTP 409; pembaruan yang berhasil menaikkan revisi secara atomik. Perubahan pada kegiatan tidak mengubah snapshot sertifikat terbit. Pencabutan mengubah status, bukan identitas dokumen historis.
+
+Daftar kegiatan memakai pagination server, urutan `created_at DESC, id DESC`, dan filter yang diterapkan sebelum pagination. GET daftar menerima `page` (mulai 1), `pageSize` (bawaan 24, maksimal 100), `q` (judul/penyelenggara), dan `status` (`all`, `active`, `archived`). Respons `data` berbentuk `{ items, total, page, pageSize }`. Tidak ada lagi batas tersembunyi 200 kegiatan. Tanggal awal/akhir dan tahun awalan nomor kegiatan baru mengikuti pengaturan zona waktu aplikasi.
 
 ## Endpoint
 
@@ -83,14 +86,17 @@ Endpoint publik hanya baca:
 
 Berkas publik harus terkait kegiatan dari token aktif, berstatus publik, dan bukan template. Token sertifikat dari kegiatan lain tidak dapat membuka berkas tersebut.
 
+Pembatasan publik memakai upsert atomik di PostgreSQL: 120 permintaan per token per 60 detik (verifikasi dan berkas digabung), serta 1.200 permintaan publik secara keseluruhan per 60 detik. Batas global melindungi dari pergantian token; header `X-Forwarded-For`/`CF-Connecting-IP` tidak dipakai sebagai identitas terpercaya. Ini merupakan kuota bersama, bukan kuota per IP: satu token yang ramai dibagikan berbagi kuota, dan lonjakan/penyalahgunaan dapat menghabiskan kuota global. Respons kelebihan kuota adalah HTTP 429 dengan `Retry-After: 60`. Penghitung berlaku lintas proses/restart; bucket kedaluwarsa dibersihkan pada awal periode global berikutnya. Database tidak tersedia berarti permintaan tidak diteruskan tanpa pembatasan. Pembatasan trafik di proxy tetap diperlukan untuk serangan jaringan bervolume besar.
+
 ## Aktivasi dan deployment
 
-Migrasi sudah dijalankan pada database aplikasi yang dikonfigurasi di lingkungan kerja. Keempat tabel dibuat dengan RLS aktif dan tabel aplikasi lama tidak diubah. Hasil aktivasi tercatat pada `artifacts/e-sertifikat-migration.json`. Deployment produksi mengikuti workflow GitHub setelah perubahan dipush.
+Migrasi awal sudah dijalankan pada database aplikasi yang dikonfigurasi di lingkungan kerja; hasil awal tercatat pada `artifacts/e-sertifikat-migration.json`. Pada 21 Oktober 2026 migrasi tambahan juga diterapkan pada database yang dirujuk `apps/api/.env`: kolom `ecert_recipients.revision` tersedia dan tabel `ecert_public_limits` memiliki RLS aktif. Snapshot dan identitas sertifikat terbit tetap dipertahankan. Deployment produksi mengikuti workflow GitHub setelah perubahan dipush.
 
 Migrasi bersifat tambahan dan dapat dijalankan ulang. Workflow deployment sudah menyertakan migrasi ini sebelum aplikasi baru diaktifkan. Untuk menjalankan secara manual, gunakan koneksi aplikasi:
 
 ```text
 node node_modules/prisma/build/index.js db execute --schema apps/api/prisma/schema.prisma --file apps/api/prisma/sql/20261016_e_sertifikat.sql
+node node_modules/prisma/build/index.js db execute --schema apps/api/prisma/schema.prisma --file apps/api/prisma/sql/20261021_e_sertifikat_hardening.sql
 ```
 
 Admin mendapatkan halaman baru melalui resolver akses. Berikan akses halaman `e-sertifikat` kepada pegawai yang ditugaskan melalui Pengaturan Akses. Tidak ada pemberian izin penerbitan massal kepada seluruh guru secara otomatis.
@@ -99,7 +105,13 @@ Format Excel contoh tersedia di `apps/web/public/templates/peserta-e-sertifikat.
 
 ## Verifikasi implementasi
 
-Hasil akhir: **85 pemeriksaan fungsi/keamanan lolos**, pengujian antarmuka pada lebar 320, 390, 768, dan 1280 piksel lolos, pemeriksaan TypeScript frontend terkait dan backend lolos, serta QR pada PDF hasil render berhasil dipindai. Pengujian mencakup template PDF, PNG lanskap, dan JPG potret, termasuk unduhan PDF/ZIP dan dokumen pendukung publik.
+Laporan implementasi awal di `artifacts/e-sertifikat-test-results.json` mencatat 85 pemeriksaan fungsi/keamanan. Laporan tersebut merupakan hasil historis; pengujian antarmuka, database, dan QR perlu dijalankan ulang bila alur terkait berubah.
+
+Perbaikan 21 Oktober 2026 memiliki pengujian regresi terpisah (24 kasus) pada `apps/web/test/e-sertifikat-security.test.cjs`: impor XLSX/CSV, formula, header berbahaya, arsip dengan metadata palsu, koordinat sangat besar, alias lokasi worksheet, ID lembar berlebihan, konflik revisi, pagination lebih dari 200 kegiatan, pembatasan publik antar-handler dengan header IP palsu, konkurensi, pembersihan bucket, dan pergantian tanggal/tahun di zona waktu sekolah. Pengujian ini memakai batas database tiruan dan tidak mengubah data aplikasi.
+
+Hasil perbaikan: 24 kasus regresi lokal, 95 pemeriksaan integrasi pada skema PostgreSQL sementara, dan pemeriksaan TypeScript web lolos. Pemeriksaan gabungan e-Sertifikat, Kinerja Guru, dan Notulensi mencakup 65 tes yang seluruhnya lolos. Hasil tercatat di `artifacts/e-sertifikat-hardening-results.json`. Migrasi tambahan telah diterapkan pada database konfigurasi lingkungan kerja. Pengujian browser e-Sertifikat telah dijalankan ulang: pembuatan kegiatan, unggah template, pemetaan Excel, perubahan peserta, penerbitan, publikasi berkas, verifikasi publik, pencarian kegiatan, serta layout 320–1280 piksel lolos dengan data tiruan. Hasil gambar disimpan sementara di `scratch/review-ui/`.
+
+- `node --test --test-isolation=none apps/web/test/e-sertifikat-security.test.cjs`: regresi lokal tanpa database aplikasi.
 
 - `node artifacts/verify-e-sertifikat.cjs`: pengujian terhadap skema PostgreSQL sementara yang dihapus setelah pengujian, termasuk otorisasi, transaksi, konkurensi, snapshot, pembacaan dokumen, pencabutan, validasi Excel, dan endpoint HTTP.
 - `node artifacts/verify-e-sertifikat-ui.cjs`: pengujian browser dengan data contoh, termasuk unggah template, pemetaan Excel, perbaikan identitas, penerbitan, dokumen privat/publik, verifikasi aktif/dicabut/tidak ditemukan, serta lebar 320–1280 piksel.

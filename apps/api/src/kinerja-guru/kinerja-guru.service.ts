@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { JadwalService } from '../jadwal/jadwal.service';
+import { calculateMissingPiket, schoolClock } from './piket-calculation';
 import {
   KINERJA_GURU_CETAK_REKAP_KEY,
   aksesDiizinkan,
@@ -14,6 +15,7 @@ interface TeacherStats {
   tanpa: number;
   dengan: number;
   digabung: number;
+  daring: number;
   terlambat: number;
   total_menit: number;
   mengambilIstirahat: number;
@@ -57,25 +59,24 @@ export class KinerjaGuruService {
 
   async getStats(startMonth?: string, endMonth?: string, apiUser?: any) {
     const now = new Date();
-    const currentYear = now.getFullYear();
-    const currentMonth = String(now.getMonth() + 1).padStart(2, '0');
-    const defaultStart = `${currentYear}-01`;
-    const defaultEnd = `${currentYear}-${currentMonth}`;
-
-    const periodStart = startMonth || defaultStart;
-    const periodEnd = endMonth || defaultEnd;
-
     const validMonth = /^(19|20|21)\d{2}-(0[1-9]|1[0-2])$/;
-    if (typeof periodStart !== 'string' || typeof periodEnd !== 'string' || !validMonth.test(periodStart) || !validMonth.test(periodEnd)) {
-      throw new BadRequestException('Periode harus berformat YYYY-MM dengan bulan yang valid.');
-    }
-
-    const [sy, sm] = periodStart.split('-').map(Number);
-    const [ey, em] = periodEnd.split('-').map(Number);
-    const monthCount = (ey - sy) * 12 + em - sm + 1;
-    if (monthCount < 1 || monthCount > 12) {
-      throw new BadRequestException('Periode harus berurutan dan maksimal 12 bulan.');
-    }
+    const resolvePeriod = (today: string) => {
+      const periodStart = startMonth || `${today.slice(0, 4)}-01`;
+      const periodEnd = endMonth || today.slice(0, 7);
+      if (typeof periodStart !== 'string' || typeof periodEnd !== 'string' || !validMonth.test(periodStart) || !validMonth.test(periodEnd))
+        throw new BadRequestException('Periode harus berformat YYYY-MM dengan bulan yang valid.');
+      const [sy, sm] = periodStart.split('-').map(Number), [ey, em] = periodEnd.split('-').map(Number);
+      const monthCount = (ey - sy) * 12 + em - sm + 1;
+      if (monthCount < 1 || monthCount > 12) throw new BadRequestException('Periode harus berurutan dan maksimal 12 bulan.');
+      return { periodStart, periodEnd, sy, sm, ey, em };
+    };
+    // Validate explicit input before touching the database.
+    resolvePeriod(schoolClock(now, 'Asia/Makassar').date);
+    const timezoneRow = await this.prisma.site_settings.findUnique({ where: { key: 'timezone' }, select: { value: true } });
+    const configuredZone = timezoneRow?.value;
+    const timezone = configuredZone && ['Asia/Jakarta', 'Asia/Makassar', 'Asia/Jayapura'].includes(configuredZone) ? configuredZone : 'Asia/Makassar';
+    const clock = schoolClock(now, timezone);
+    const { periodStart, periodEnd, sy, sm, ey, em } = resolvePeriod(clock.date);
 
     const periodStartStr = `${sy}-${String(sm).padStart(2, '0')}-01`;
     const lastDay = new Date(ey, em, 0).getDate();
@@ -116,7 +117,7 @@ export class KinerjaGuruService {
 
     // 2. Classes & Waktu
     const kelasRows = await this.prisma.master_kelas.findMany({
-      select: { nama: true, program: true },
+      select: { nama: true, program: true, tingkat: true },
     });
     const kelasProgramMap: Record<string, string> = {};
     kelasRows.forEach((k) => {
@@ -191,7 +192,11 @@ export class KinerjaGuruService {
     });
 
     const jadwalPiket = await this.prisma.jadwal_piket.findMany({
-      where: { aktif: true },
+      where: { aktif: true, berlaku_mulai: { lte: endQueryDate } },
+    });
+    const holidays = await this.prisma.libur.findMany({
+      where: { tanggal: { gte: startQueryDate, lte: endQueryDate } },
+      select: { tanggal: true, jam_ke: true, lingkup: true, target_kelas: true },
     });
 
     // 5. Master Guru
@@ -260,7 +265,7 @@ export class KinerjaGuruService {
 
       const matches = preparedIzinList.filter((iz) => {
         if (dateStr < iz.mulaiStr || dateStr > iz.selesaiStr) return false;
-        if (tNip && iz.nip && tNip === iz.nip) return true;
+        if (tNip && iz.nip) return tNip === iz.nip;
         if (tName && iz.nama && (tName === iz.nama || tBase === iz.baseName)) return true;
         return false;
       });
@@ -301,6 +306,7 @@ export class KinerjaGuruService {
           tanpa: 0,
           dengan: 0,
           digabung: 0,
+          daring: 0,
           terlambat: 0,
           total_menit: 0,
           mengambilIstirahat: 0,
@@ -314,103 +320,21 @@ export class KinerjaGuruService {
       return key;
     };
 
-    // Calculate Piket stats (strictly bounded within selected period)
-    try {
-      if (jadwalPiket.length > 0) {
-        const slotReportedTable = new Set<string>();
-        allLaporanPiket.forEach((lp) => {
-          const datePart = lp.tanggal instanceof Date ? lp.tanggal.toISOString().split('T')[0] : String(lp.tanggal || '');
-          lp.laporan_piket_detail?.forEach((d: any) => {
-            const slotKey = `${datePart}|${(d.nama_kelas || '').trim()}|${d.jam_ke}`;
-            slotReportedTable.add(slotKey);
-          });
-        });
-
-        const scheduleByDay: Record<string, any[]> = {};
-        jadwalPiket.forEach((s) => {
-          if (!scheduleByDay[s.hari]) scheduleByDay[s.hari] = [];
-          scheduleByDay[s.hari].push(s);
-        });
-
-        const todayStr = new Date().toISOString().split('T')[0];
-        const calcPiketStart = periodStartStr;
-        const calcPiketEnd = periodEndStr < todayStr ? periodEndStr : todayStr;
-
-        if (calcPiketStart <= calcPiketEnd) {
-          const [csY, csM, csD] = calcPiketStart.split('-').map(Number);
-          const [ceY, ceM, ceD] = calcPiketEnd.split('-').map(Number);
-          const current = new Date(csY, csM - 1, csD);
-          const end = new Date(ceY, ceM - 1, ceD);
-          const dayNames = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
-
-          let securityCounter = 0;
-          while (current <= end && securityCounter < 500) {
-            securityCounter++;
-            const cY = current.getFullYear();
-            const cM = String(current.getMonth() + 1).padStart(2, '0');
-            const cD = String(current.getDate()).padStart(2, '0');
-            const dateStr = `${cY}-${cM}-${cD}`;
-            const dayName = dayNames[current.getDay()];
-
-            if (dayName !== 'Minggu') {
-              const rawDaySchedules = scheduleByDay[dayName] || [];
-              const activeSchedules = rawDaySchedules.filter((s) => {
-                const bStr = s.berlaku_mulai instanceof Date ? s.berlaku_mulai.toISOString().split('T')[0] : String(s.berlaku_mulai || '');
-                return bStr <= dateStr;
-              });
-
-              if (activeSchedules.length > 0) {
-                const slotMap = new Map<string, any>();
-                activeSchedules.forEach((s) => {
-                  const slotUID = `${s.jam_ke}|${s.kelas}`;
-                  const existing = slotMap.get(slotUID);
-                  const bStr = s.berlaku_mulai instanceof Date ? s.berlaku_mulai.toISOString().split('T')[0] : String(s.berlaku_mulai || '');
-                  const exStr = existing?.berlaku_mulai instanceof Date ? existing.berlaku_mulai.toISOString().split('T')[0] : String(existing?.berlaku_mulai || '');
-                  if (!existing || bStr > exStr) {
-                    slotMap.set(slotUID, s);
-                  }
-                });
-
-                const teacherSlotsMap = new Map<string, any[]>();
-                slotMap.forEach((s) => {
-                  if (!s.nip) return;
-                  if (!teacherSlotsMap.has(s.nip)) teacherSlotsMap.set(s.nip, []);
-                  teacherSlotsMap.get(s.nip)!.push(s);
-                });
-
-                teacherSlotsMap.forEach((slots, nip) => {
-                  const missedJams = new Set<number>();
-                  const missedKelas = new Set<string>();
-
-                  for (const s of slots) {
-                    const checkKey = `${dateStr}|${(s.kelas || '').trim()}|${s.jam_ke}`;
-                    if (!slotReportedTable.has(checkKey)) {
-                      missedJams.add(s.jam_ke);
-                      if (s.kelas) missedKelas.add(s.kelas);
-                    }
-                  }
-
-                  if (missedJams.size > 0) {
-                    const teacherKey = ensureKey(slots[0].nama_guru || nip, nip);
-                    stats[teacherKey].piket += missedJams.size;
-                    stats[teacherKey].details.push({
-                      tanggal: dateStr,
-                      type: 'Tidak Piket',
-                      keterangan: 'Tidak Piket',
-                      jam_ke: Array.from(missedJams).sort((a, b) => a - b).join(', '),
-                      kelas: Array.from(missedKelas).join(', '),
-                      izin: findIzin(nip, slots[0].nama_guru || '', dateStr),
-                    });
-                  }
-                });
-              }
-            }
-            current.setDate(current.getDate() + 1);
-          }
-        }
-      }
-    } catch (piketErr) {
-      console.error('Error in Piket Calculation:', piketErr);
+    // Count one missing duty per teacher/date/JP, with one matching detail row.
+    // Reports represent completed class slots, including work covered by a colleague.
+    const missingPiket = calculateMissingPiket({
+      schedules: jadwalPiket, reports: allLaporanPiket, holidays, classes: kelasRows,
+      start: periodStartStr, end: periodEndStr, today: clock.date, currentMinutes: clock.minutes,
+    });
+    for (const missed of missingPiket) {
+      const teacherKey = ensureKey(missed.nama, missed.nip);
+      stats[teacherKey].piket += 1;
+      stats[teacherKey].details.push({
+        tanggal: missed.tanggal, hari: missed.hari, type: 'Tidak Piket',
+        keterangan: 'Slot piket belum dilaporkan', mapel: 'Tugas Piket',
+        jam_ke: String(missed.jam), kelas: missed.kelas, waktu: missed.waktu,
+        izin: findIzin(missed.nip, nipToNameMap[missed.nip] || missed.nama, missed.tanggal),
+      });
     }
 
     // Dedup and process Jurnal Guru (Priority: SISWA > GURU)
@@ -532,6 +456,12 @@ export class KinerjaGuruService {
           e.type = 'Digabung';
           e.keterangan = ketTambahan && ketTambahan !== '-' ? ketTambahan : '-';
           stats[targetKey].details.push(e);
+        } else if (status.includes('daring')) {
+          stats[targetKey].daring++;
+          const e: any = baseEntry();
+          e.type = 'Daring';
+          e.keterangan = ketTambahan && ketTambahan !== '-' ? ketTambahan : '-';
+          stats[targetKey].details.push(e);
         }
       });
 
@@ -613,7 +543,7 @@ export class KinerjaGuruService {
             .slice(0, 10),
         ),
         piket: addTotalJP(wrap([...allStats], 'piket')),
-        daring: [] as any[],
+        daring: addTotalJP(wrap([...allStats], 'daring')),
       },
       akses: {
         cetakRekap: canCetak,

@@ -17,6 +17,14 @@ interface DaftarNotulensiTabProps {
     headerTabs?: React.ReactNode;
 }
 
+function MeetingNotes({ item }: { item: NotulensiItem }) {
+    if (!item.peserta && !item.catatan) return null;
+    return <div style={{ fontSize: '0.8rem', marginTop: '10px', whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>
+        {item.peserta && <div><strong>Peserta:</strong> {item.peserta}</div>}
+        {item.catatan && <div style={{ marginTop: '6px' }}><strong>Catatan Tambahan:</strong><div>{item.catatan}</div></div>}
+    </div>;
+}
+
 export default function DaftarNotulensiTab({ bolehKelola, headerTabs }: DaftarNotulensiTabProps) {
     const [items, setItems] = useState<NotulensiItem[]>([]);
     const [stats, setStats] = useState({ total: 0, belum: 0, proses: 0, selesai: 0 });
@@ -311,12 +319,12 @@ export default function DaftarNotulensiTab({ bolehKelola, headerTabs }: DaftarNo
                                         <React.Fragment key={item.id || idx}>
                                             <tr className="nr-row">
                                                 <td style={{ textAlign: 'center' }}>
-                                                    {poinList.length > 0 && (
+                                                    {(poinList.length > 0 || item.catatan || item.peserta) && (
                                                         <button
                                                             type="button"
                                                             className="nr-row-expand-btn"
                                                             onClick={() => toggleExpand(item.id || '')}
-                                                            title={isExpanded ? 'Tutup rincian poin' : 'Lihat rincian poin'}
+                                                            title={isExpanded ? 'Tutup rincian rapat' : 'Lihat rincian rapat'}
                                                         >
                                                             <i className={`bi bi-chevron-${isExpanded ? 'down' : 'right'}`} />
                                                         </button>
@@ -474,6 +482,7 @@ export default function DaftarNotulensiTab({ bolehKelola, headerTabs }: DaftarNo
                                                                 </div>
                                                             ))}
                                                         </div>
+                                                        <MeetingNotes item={item} />
                                                     </td>
                                                 </tr>
                                             )}
@@ -547,6 +556,7 @@ export default function DaftarNotulensiTab({ bolehKelola, headerTabs }: DaftarNo
                                         </div>
                                     )}
 
+                                    <MeetingNotes item={item} />
                                     {(item.can_print || item.can_edit) && <div className="nr-card-actions">
                                         {item.can_print && <Button
                                             size="sm"

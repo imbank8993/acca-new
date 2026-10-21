@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useRef, useState, useMemo } from 'react';
+import { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { Award, Plus, ArrowLeft, Download, FileCheck2, Upload, QrCode, ExternalLink, CalendarDays, UsersRound } from 'lucide-react';
 import { DesktopFab } from '@/components/ui/DesktopFab';
@@ -10,6 +10,8 @@ import Tab from '@/components/ui/Tab';
 import { DEFAULT_TEMPLATE, type CertificateEvent, type Recipient, type Asset } from '@/lib/e-sertifikat/model';
 import TemplateEditor from './TemplateEditor';
 import { pointTemplate, newSigner } from '@/lib/e-sertifikat/layout';
+import { createEventDraft } from '@/lib/e-sertifikat/draft';
+import { getTimezone } from '@/lib/timezone';
 import './e-sertifikat.css';
 
 type Detail = { event: CertificateEvent; recipients: Recipient[]; assets: Asset[]; audit: { action: string; created_at: string }[] };
@@ -22,9 +24,7 @@ async function request(path = '', init?: RequestInit) {
     return json.data;
 }
 const send = (body: unknown, method = 'POST'): RequestInit => ({ method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-const initialEvent = () => ({ title: '', organizer: 'MAN Insan Cendekia Gowa', description: '', location: '',
-    start_date: new Date().toISOString().slice(0, 10), end_date: new Date().toISOString().slice(0, 10),
-    number_prefix: `ACCA-${new Date().getFullYear()}-${Math.random().toString(36).slice(2, 7).toUpperCase()}`, template: structuredClone(DEFAULT_TEMPLATE), archived: false });
+const initialEvent = () => createEventDraft();
 const dateLabel = (value: string) => new Date(value.slice(0, 10) + 'T12:00:00').toLocaleDateString('id-ID', { dateStyle: 'long' });
 
 export default function CertificateManager() {
@@ -32,6 +32,7 @@ export default function CertificateManager() {
     const [draft, setDraft] = useState<CertificateEvent | null>(null), [creating, setCreating] = useState(false), [newEvent, setNewEvent] = useState(initialEvent);
     const [tab, setTab] = useState<'template' | 'penerima' | 'dokumen'>('template');
     const [query, setQuery] = useState(''), [status, setStatus] = useState('all'), [recipientQuery, setRecipientQuery] = useState('');
+    const [eventPage, setEventPage] = useState(1), [eventTotal, setEventTotal] = useState(0), [listLoading, setListLoading] = useState(true);
     const [recipientStatus, setRecipientStatus] = useState('all'), [page, setPage] = useState(1), [selected, setSelected] = useState<string[]>([]);
     const [busy, setBusy] = useState(false), [loading, setLoading] = useState(true), [error, setError] = useState(''), [message, setMessage] = useState('');
     const [excel, setExcel] = useState<Excel | null>(null), [nameCol, setNameCol] = useState('0'), [schoolCol, setSchoolCol] = useState(''), [extras, setExtras] = useState<string[]>([]);
@@ -39,14 +40,35 @@ export default function CertificateManager() {
     const [editRecipient, setEditRecipient] = useState<Recipient | null>(null), [removeAsset, setRemoveAsset] = useState<Asset | null>(null);
     const [kind, setKind] = useState('documentation');
     const selection = useRef(0), selectedEventId = useRef<string | null>(null);
-    const loadList = async () => { setEvents(await request()); };
+    const listSelection = useRef(0), listFilters = useRef({ query, status, page: eventPage });
+    listFilters.current = { query, status, page: eventPage };
+    const loadList = useCallback(async () => {
+        const version = ++listSelection.current;
+        const filters = listFilters.current;
+        setListLoading(true);
+        try {
+            const params = new URLSearchParams({ q: filters.query, status: filters.status, page: String(filters.page), pageSize: '24' });
+            const result = await request(`?${params}`);
+            if (version !== listSelection.current) return;
+            setEvents(result.items); setEventTotal(result.total); setEventPage(result.page);
+        } catch (e) {
+            if (version === listSelection.current) setError(e instanceof Error ? e.message : 'Daftar kegiatan gagal dimuat');
+        } finally {
+            if (version === listSelection.current) { setListLoading(false); setLoading(false); }
+        }
+    }, []);
     const load = async (id: string) => {
         const version = ++selection.current; selectedEventId.current = id;
         const data = await request(`/${id}`);
         if (version !== selection.current) return;
         setDetail(data); setDraft(structuredClone(data.event)); setSelected([]);
     };
-    useEffect(() => { loadList().catch(e => setError(e.message)).finally(() => setLoading(false)); }, []);
+    useEffect(() => {
+        ++listSelection.current;
+        setListLoading(true);
+        const timer = setTimeout(() => { void loadList(); }, 250);
+        return () => { clearTimeout(timer); ++listSelection.current; };
+    }, [loadList, query, status, eventPage]);
     useEffect(() => () => { if (preview) URL.revokeObjectURL(preview); }, [preview]);
     useEffect(() => { setPage(1); }, [recipientQuery, recipientStatus]);
     const work = async (action: () => Promise<void>) => {
@@ -76,7 +98,7 @@ export default function CertificateManager() {
     };
     const selectedDrafts = (detail?.recipients || []).filter(row => row.status === 'draft' && selected.includes(row.id));
     const selectedIssued = (detail?.recipients || []).filter(row => row.status === 'issued' && selected.includes(row.id));
-    const filteredEvents = useMemo(() => events.filter(event => (status === 'all' || event.archived === (status === 'archived')) && `${event.title} ${event.organizer}`.toLowerCase().includes(query.toLowerCase())), [events, status, query]);
+    const filteredEvents = events;
     const uploadAsset = async (file: File, assetKind: string) => {
         if (!draft) return;
         const data = new FormData(); data.set('file', file); data.set('kind', assetKind);
@@ -113,17 +135,19 @@ export default function CertificateManager() {
         {row.status === 'revoked' && <button className="ec-text-button" disabled={busy} onClick={() => work(async () => { await request(`/${draft.id}/recipients`, send({ rows: [{ id: crypto.randomUUID(), name: row.name, institution: row.institution, identities: row.identities }] })); await load(draft.id); setMessage('Draf pengganti dibuat. Perbaiki identitas sebelum menerbitkan nomor baru.'); })}>Buat pengganti</button>}
     </div>;
     return <div className="ec-root ec-manager" aria-busy={busy}>
-        {!draft && !loading && !creating && <DesktopFab label="Kegiatan baru" mobileLabel="Tambah" icon={<Plus size={21} />} mobileIcon="plus-lg" title="Tambah kegiatan sertifikat" onClick={() => { if (busy) return; setNewEvent(initialEvent()); setCreating(true); }} />}
+        {!draft && !loading && !creating && <DesktopFab label="Kegiatan baru" mobileLabel="Tambah" icon={<Plus size={21} />} mobileIcon="plus-lg" title="Tambah kegiatan sertifikat" onClick={() => work(async () => { setNewEvent(createEventDraft(await getTimezone())); setCreating(true); })} />}
         {error && typeof document !== 'undefined' && createPortal(<div className="ec-root ec-error-toast"><div className="ec-alert ec-alert--error" role="alert">{error}<button type="button" onClick={() => setError('')} aria-label="Tutup pesan">×</button></div></div>, document.body)}
         {message && <div className="ec-alert" role="status">{message}</div>}
         {loading ? <div className="ec-empty" role="status">Memuat kegiatan…</div> : !draft ? <section className="ec-panel ec-events-panel" aria-label="Daftar kegiatan sertifikat">
-            <div className="ec-panel-heading"><div className="ec-panel-title"><span className="ec-heading-icon"><Award size={21} /></span><div><h2>Daftar kegiatan</h2><p>Kelola template, peserta, dan penerbitan sertifikat kegiatan.</p></div></div><span className="ec-list-count">{filteredEvents.length} kegiatan</span></div>
-            <FilterToolbar><FilterSearch value={query} onChange={setQuery} placeholder="Cari kegiatan atau penyelenggara" /><FilterSelect label="Status" value={status} onChange={setStatus} options={[{ value: 'all', label: 'Semua kegiatan' }, { value: 'active', label: 'Aktif' }, { value: 'archived', label: 'Diarsipkan' }]} /></FilterToolbar>
+            <div className="ec-panel-heading"><div className="ec-panel-title"><span className="ec-heading-icon"><Award size={21} /></span><div><h2>Daftar kegiatan</h2><p>Kelola template, peserta, dan penerbitan sertifikat kegiatan.</p></div></div><span className="ec-list-count">{eventTotal} kegiatan</span></div>
+            <FilterToolbar><FilterSearch value={query} onChange={value => { setQuery(value); setEventPage(1); }} placeholder="Cari kegiatan atau penyelenggara" /><FilterSelect label="Status" value={status} onChange={value => { setStatus(value); setEventPage(1); }} options={[{ value: 'all', label: 'Semua kegiatan' }, { value: 'active', label: 'Aktif' }, { value: 'archived', label: 'Diarsipkan' }]} /></FilterToolbar>
+            {listLoading && <p role="status">Memuat kegiatan…</p>}
             {!!filteredEvents.length && <div className="ec-event-grid">{filteredEvents.map(event =>
-                <button className="ec-event-card" key={event.id} aria-label={`Kelola ${event.title}`} disabled={busy} onClick={() => work(async () => { await load(event.id); setTab('template'); })}>
+                <button className="ec-event-card" key={event.id} aria-label={`Kelola ${event.title}`} disabled={busy || listLoading} onClick={() => work(async () => { await load(event.id); setTab('template'); })}>
                     <div className="ec-event-card-top"><span className="ec-event-icon"><Award size={22} /></span><span className={`ec-pill${event.archived ? ' ec-pill--archived' : ''}`}>{event.archived ? 'Diarsipkan' : 'Aktif'}</span></div><h3>{event.title}</h3><p>{event.organizer}</p><div className="ec-event-meta"><span><CalendarDays size={15} />{dateLabel(event.start_date)}</span><span><UsersRound size={15} />{event.total || 0} peserta</span></div><div className="ec-event-counts"><strong><FileCheck2 size={15} />{event.issued || 0} sertifikat terbit</strong><span className="ec-event-open">Kelola kegiatan</span></div>
                 </button>)}</div>}
-            {!filteredEvents.length && <div className="ec-empty"><span className="ec-empty-icon"><Award size={30} /></span><h3>{events.length ? 'Kegiatan tidak ditemukan' : 'Belum ada kegiatan'}</h3><p>{events.length ? 'Sesuaikan pencarian atau status untuk melihat kegiatan lainnya.' : 'Gunakan tombol tambah untuk membuat kegiatan, unggah template, lalu impor peserta dari Excel.'}</p>{!!events.length && <Button variant="secondary" size="sm" onClick={() => { setQuery(''); setStatus('all'); }}>Reset filter</Button>}</div>}
+            {!listLoading && !filteredEvents.length && <div className="ec-empty"><span className="ec-empty-icon"><Award size={30} /></span><h3>{query || status !== 'all' ? 'Kegiatan tidak ditemukan' : 'Belum ada kegiatan'}</h3><p>{query || status !== 'all' ? 'Sesuaikan pencarian atau status untuk melihat kegiatan lainnya.' : 'Gunakan tombol tambah untuk membuat kegiatan, unggah template, lalu impor peserta dari Excel.'}</p>{(query || status !== 'all') && <Button variant="secondary" size="sm" onClick={() => { setQuery(''); setStatus('all'); setEventPage(1); }}>Reset filter</Button>}</div>}
+            {eventTotal > 0 && <nav className="ec-pagination" aria-label="Halaman kegiatan"><span>{eventTotal} kegiatan · Halaman {eventPage} dari {Math.max(1, Math.ceil(eventTotal / 24))}</span><Button variant="secondary" size="sm" disabled={busy || listLoading || eventPage === 1} onClick={() => setEventPage(value => value - 1)}>Sebelumnya</Button><Button variant="secondary" size="sm" disabled={busy || listLoading || eventPage * 24 >= eventTotal} onClick={() => setEventPage(value => value + 1)}>Berikutnya</Button></nav>}
         </section> : <>
             <div className="ec-detail-heading"><Button variant="secondary" size="sm" className="ec-button ec-button--soft ec-detail-back" aria-label="Kembali ke daftar kegiatan" title="Kembali ke daftar kegiatan" disabled={busy} onClick={() => work(leaveEvent)}><ArrowLeft size={16} /><span className="ec-detail-back-label">Kegiatan</span></Button><div className="ec-detail-summary"><h2>{detail?.event.title}</h2><div className="ec-detail-meta"><span><UsersRound size={13} />{detail?.recipients.length || 0} peserta</span><span><FileCheck2 size={13} />{detail?.recipients.filter(row => row.status === 'issued').length || 0} terbit</span><span className={`ec-pill${draft.archived ? ' ec-pill--archived' : ''}`}>{draft.archived ? 'Diarsipkan' : 'Aktif'}</span></div></div></div>
             <Tab variant="slider" ariaLabel="Pengelolaan e-sertifikat" tabs={[{ key: 'template', label: 'Kegiatan & Template', shortLabel: 'Template', icon: 'award' }, { key: 'penerima', label: 'Penerima & Sertifikat', shortLabel: 'Penerima', icon: 'people' }, { key: 'dokumen', label: 'Dokumen Pendukung', shortLabel: 'Dokumen', icon: 'folder2-open' }]} activeTab={tab} onChange={changeTab} />

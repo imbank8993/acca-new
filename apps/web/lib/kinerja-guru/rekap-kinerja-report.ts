@@ -1,4 +1,4 @@
-import { renderKopHTML, KOP_CSS, kotaKedudukan, type ProfilSekolah } from '@/lib/lckh/print-shared';
+import { renderKopHTML, CENTERED_KOP_CSS, kotaKedudukan, type ProfilSekolah } from '@/lib/lckh/print-shared';
 
 export interface IncidentIzinItem {
   id?: string;
@@ -86,6 +86,9 @@ export function generateRekapKinerjaHtml(input: RekapKinerjaReportInput): string
   } = input;
 
   const kota = kotaKedudukan(profil) || 'Makassar';
+  // Identitas penandatangan diambil dari Pengaturan Umum › Profil Sekolah.
+  const kepalaNama = (profil?.kepala_sekolah_nama || '').trim();
+  const kepalaNip = (profil?.kepala_sekolah_nip || '').trim();
   const tglCetak = new Date().toLocaleDateString('id-ID', {
     day: 'numeric',
     month: 'long',
@@ -114,7 +117,7 @@ export function generateRekapKinerjaHtml(input: RekapKinerjaReportInput): string
 
   // ── Render Tabel Ringkasan Top 10 ──────────────────────────────────────────
   const ringkasanRowsHtml = top10.length === 0
-    ? `<tr><td colspan="6" class="text-center empty-cell">Tidak ada data catatan kinerja pada kategori dan periode ini.</td></tr>`
+    ? `<tr><td colspan="5" class="text-center empty-cell">Tidak ada data catatan kinerja pada kategori dan periode ini.</td></tr>`
     : top10.map((guru, idx) => {
       const rank = guru.rank || (idx + 1);
       const filtered = getFilteredDetails(guru.details);
@@ -221,7 +224,7 @@ export function generateRekapKinerjaHtml(input: RekapKinerjaReportInput): string
   <style>
     @page {
       size: A4 portrait;
-      margin: 15mm 15mm 15mm 15mm;
+      margin: 10mm 15mm 15mm 20mm;
     }
     * {
       margin: 0;
@@ -236,10 +239,7 @@ export function generateRekapKinerjaHtml(input: RekapKinerjaReportInput): string
       background: #fff;
     }
 
-    ${KOP_CSS}
-    .kop { position: relative; display: block; }
-    .kop-logo { position: absolute; left: 0; top: 0; margin: 0; }
-    .kop-text { width: 100%; }
+    ${CENTERED_KOP_CSS}
 
     .doc-header {
       text-align: center;
@@ -504,6 +504,7 @@ export function generateRekapKinerjaHtml(input: RekapKinerjaReportInput): string
   </div>
 
   <!-- ── BAGIAN I: TABEL RINGKASAN 10 BESAR ── -->
+  ${kategoriKey === 'piket' ? '<p class="sub-text">Kategori Tidak Piket dihitung dari jam tugas yang belum memiliki laporan kelas. Satu guru pada tanggal dan JP yang sama dihitung sekali meskipun mencakup beberapa kelas. Izin/sakit ditampilkan sebagai keterangan.</p>' : ''}
   <div class="section-title">I. Ringkasan Peringkat 10 Besar</div>
   <table class="report-table">
     <thead>
@@ -531,8 +532,8 @@ export function generateRekapKinerjaHtml(input: RekapKinerjaReportInput): string
     <div class="sign-col">
       <div style="font-size: 8.5pt; color: #555; margin-bottom: 2px;">&nbsp;</div>
       <div class="sign-role">Mengetahui,<br/>Kepala Madrasah</div>
-      <div class="sign-name">${esc(profil?.kepala_sekolah_nama || 'Kepala Madrasah')}</div>
-      <div class="sign-nip">NIP. ${esc(profil?.kepala_sekolah_nip || '-')}</div>
+      <div class="sign-name">${kepalaNama ? esc(kepalaNama) : '.......................................'}</div>
+      <div class="sign-nip">NIP. ${esc(kepalaNip || '-')}</div>
     </div>
 
     <div class="sign-col">

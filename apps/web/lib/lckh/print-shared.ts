@@ -128,6 +128,13 @@ export const KOP_CSS = `
   .kop-rule-thin { border-top: 1px solid #000; margin-top: 2px; margin-bottom: 16px; }
 `;
 
+/** Kop berpusat pada lebar halaman dengan logo di kiri, seperti laporan Guru Asuh. */
+export const CENTERED_KOP_CSS = `${KOP_CSS}
+  .kop { position: relative; display: block; }
+  .kop-logo { position: absolute; left: 0; top: 0; margin: 0; }
+  .kop-text { width: 100%; }
+`;
+
 export interface ApprovalRow {
     level?: string | null;
     status_approval?: string | null;

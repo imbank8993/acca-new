@@ -8,13 +8,13 @@ test('database pagination preserves order, totals and global visible statistics'
   const base = fixture().row;
   const notes = Array.from({ length: 125 }, (_, i) => ({ ...base, id: String(i + 1),
     agenda: `Rapat ${i}`, poin_poin: [{ teks: 'Tugas', status: i % 2 ? 'Selesai' : 'Belum' }] }));
-  const [page] = await queryList(notes, sql, ['1', '{}', '', '', '', 50, 50]);
+  const [page] = await queryList(notes, sql, ['1', '{}', '', '', '', 50, 50, false]);
   assert.equal(page.total, 125);
   assert.equal(page.data.length, 50);
   assert.equal(page.data[0].id, '75');
   assert.equal(page.data[49].id, '26');
   assert.deepEqual(page.stats, { total: 125, belum: 63, selesai: 62, proses: 0 });
-  const [beyond] = await queryList(notes, sql, ['1', '{}', '', '', '', 50, 150]);
+  const [beyond] = await queryList(notes, sql, ['1', '{}', '', '', '', 50, 150, false]);
   assert.equal(beyond.total, 125);
   assert.equal(beyond.data.length, 0);
 });

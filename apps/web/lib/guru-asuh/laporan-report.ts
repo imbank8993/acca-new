@@ -5,7 +5,7 @@
  */
 import QRCode from 'qrcode';
 import { nestFetchAsUser } from '@/lib/nest-api';
-import { renderKopHTML, KOP_CSS } from '@/lib/lckh/print-shared';
+import { renderKopHTML, CENTERED_KOP_CSS } from '@/lib/lckh/print-shared';
 import { getPublicOrigin } from '@/lib/public-url';
 import { optimizeImageUrls } from '@/lib/image-optimizer';
 
@@ -209,10 +209,7 @@ export async function buildLaporanReport(input: LaporanReportInput): Promise<Lap
   @media screen and (max-width: 820px) {
       body { zoom: calc(100vw / 820); }
   }
-  ${KOP_CSS}
-  .kop { position: relative; display: block; }
-  .kop-logo { position: absolute; left: 0; top: 0; margin: 0; }
-  .kop-text { width: 100%; }
+  ${CENTERED_KOP_CSS}
   .doc-title { text-align: center; margin: 14px 0 4px; }
   .doc-title h1 { font-size: 12.5pt; text-decoration: underline; text-underline-offset: 4px; letter-spacing: 1px; }
   .doc-sub { text-align: center; font-size: 10pt; margin-bottom: 14px; }

@@ -3,7 +3,8 @@ const { Client } = require('pg');
 require('dotenv').config({ path: 'apps/api/.env', quiet: true });
 const schema = `ecert_test_${Date.now()}`;
 const connection = { connectionString: process.env.DATABASE_URL };
-const output = path.resolve('output/pdf');
+const output = path.resolve(process.env.ECERT_TEST_OUTPUT_DIR || 'output/pdf');
+const reportPath = process.env.ECERT_TEST_REPORT_PATH || 'artifacts/e-sertifikat-test-results.json';
 
 // A real PostgreSQL schema isolates all test writes from application data.
 (async () => {
@@ -36,6 +37,8 @@ const output = path.resolve('output/pdf');
     await root.query(`CREATE SCHEMA "${schema}"`); await root.query(`SET search_path TO "${schema}"`);
     const migration = fs.readFileSync('apps/api/prisma/sql/20261016_e_sertifikat.sql', 'utf8');
     await root.query(migration); await root.query(migration); pass(); // Re-running a deploy migration is safe.
+    const hardening = fs.readFileSync('apps/api/prisma/sql/20261021_e_sertifikat_hardening.sql', 'utf8');
+    await root.query(hardening); await root.query(hardening); pass();
     const service = new CertificateService(adapter(root));
     assert.throws(() => assertManager(null), /masuk/); pass();
     assert.throws(() => assertManager({ ...owner, roles: ['SISWA'] }), /akses/); pass();
@@ -46,8 +49,8 @@ const output = path.resolve('output/pdf');
     assert.throws(() => validateRecipients([{ id: randomUUID(), name: 'Peserta', identities: JSON.parse('{"__proto__":"bad"}') }])); pass();
     let event = await service.saveEvent(owner, { title: 'Lokakarya Pembelajaran Kreatif', organizer: 'MAN Insan Cendekia Gowa', description: 'Pengembangan kompetensi pendidik melalui kegiatan kolaboratif.', location: 'Gowa', start_date: '2026-10-16', end_date: '2026-10-16', number_prefix: `TEST-${Date.now()}`, template: DEFAULT_TEMPLATE });
     await rejects(() => service.event(other, event.id), /tidak ditemukan/);
-    assert.equal((await service.list(other)).length, 0); pass();
-    assert.equal((await service.list(admin)).length, 1); pass();
+    assert.equal((await service.list(other)).total, 0); pass();
+    assert.equal((await service.list(admin)).total, 1); pass();
     await rejects(() => service.saveEvent(owner, { ...event, revision: 0 }, event.id), /berubah/);
     const templatePdf = await PDFDocument.create(); const page = templatePdf.addPage([841.89, 595.28]);
     const bold = await templatePdf.embedFont(StandardFonts.HelveticaBold), normal = await templatePdf.embedFont(StandardFonts.Helvetica);
@@ -73,7 +76,8 @@ const output = path.resolve('output/pdf');
     const rows = [{ id: randomUUID(), name: 'Amelia Putri', institution: 'Sekolah Contoh Gowa', identities: { Peran: 'Peserta' } }, { id: randomUUID(), name: 'Budi Santoso', institution: 'Sekolah Contoh Makassar', identities: { Peran: 'Peserta' } }];
     assert.equal((await service.importRecipients(owner, event.id, rows)).count, 2); pass();
     assert.equal((await service.importRecipients(owner, event.id, rows)).count, 0); pass();
-    await service.updateDraft(owner, event.id, rows[1].id, { ...rows[1], institution: 'Sekolah Contoh Sulawesi' });
+    await service.updateDraft(owner, event.id, rows[1].id, { ...rows[1], revision: 1, institution: 'Sekolah Contoh Sulawesi' });
+    await rejects(() => service.updateDraft(owner, event.id, rows[1].id, { ...rows[1], revision: 1 }), /berubah/);
     assert.equal((await service.detail(owner, event.id)).recipients.find(row => row.id === rows[1].id).institution, 'Sekolah Contoh Sulawesi'); pass();
     await rejects(() => service.issue(other, event.id, [rows[0].id]), /tidak ditemukan/);
     await rejects(() => service.issue(owner, event.id, [rows[0].id], async () => { throw new Error('Render gagal'); }), /Render gagal/);
@@ -82,7 +86,7 @@ const output = path.resolve('output/pdf');
     assert.equal(concurrent.reduce((sum, result) => sum + result.count, 0), 1); pass();
     await service.issue(owner, event.id, [rows[1].id]);
     const certificate = await service.certificate(owner, event.id, rows[0].id);
-    await rejects(() => service.updateDraft(owner, event.id, rows[0].id, rows[0]), /Hanya identitas/);
+    await rejects(() => service.updateDraft(owner, event.id, rows[0].id, { ...rows[0], revision: 1 }), /bukan draf/);
     await rejects(() => service.removeDraft(owner, event.id, rows[0].id), /Hanya peserta/);
     await rejects(() => service.removeAsset(owner, event.id, asset.id), /Ganti template/);
     assert(certificate.certificate_number.endsWith('/0001')); pass();
@@ -205,6 +209,32 @@ const output = path.resolve('output/pdf');
     const docResponse = await publicRead(new NextRequest('http://localhost:3006/api/public/e-sertifikat/file'), [liveCertificate.verify_token, 'files', publicDoc.id]);
     assert.equal(docResponse.status, 200); assert.equal(docResponse.headers.get('content-type'), 'application/pdf'); assert(docResponse.headers.get('content-disposition').startsWith('attachment')); pass();
     assert.equal((await publicRead(new NextRequest('http://localhost:3006/api/public/e-sertifikat/file'), [certificate.verify_token, 'files', publicDoc.id])).status, 404); pass();
+    // Exercise the shared PostgreSQL counters, not just the in-memory boundary fixture.
+    const tokenBucket = 'token:' + require('node:crypto').createHash('sha256').update(liveCertificate.verify_token).digest('hex');
+    await root.query('UPDATE ecert_public_limits SET hits=119 WHERE bucket=$1', [tokenBucket]);
+    const publicRequest = ip => new NextRequest('http://localhost:3006/api/public/e-sertifikat/check', { headers: { 'x-forwarded-for': ip } });
+    assert.equal((await publicRead(publicRequest('198.51.100.1'), [liveCertificate.verify_token])).status, 200); pass();
+    const capped = await publicRead(publicRequest('203.0.113.2'), [liveCertificate.verify_token]);
+    assert.equal(capped.status, 429); assert.equal(capped.headers.get('Retry-After'), '60'); pass();
+    await root.query("UPDATE ecert_public_limits SET hits=1199 WHERE bucket='global'");
+    assert.equal((await publicRead(publicRequest('203.0.113.3'), ['c'.repeat(48)])).status, 404); pass();
+    assert.equal((await publicRead(publicRequest('203.0.113.4'), ['d'.repeat(48)])).status, 429); pass();
+    await root.query("UPDATE ecert_public_limits SET expires_at=now()-interval '121 seconds'");
+    assert.equal((await publicRead(publicRequest('203.0.113.5'), [liveCertificate.verify_token])).status, 200); pass();
+    assert.equal((await root.query('SELECT count(*)::int AS n FROM ecert_public_limits')).rows[0].n, 2); pass();
+
+    // Keep fixtures under another owner so earlier authorization/count checks stay independent.
+    await root.query(`INSERT INTO ecert_events(owner_id,title,organizer,start_date,end_date,number_prefix)
+      SELECT 'pagination-owner','Pagination '||n,'MAN','2026-10-21','2026-10-21','PAGE-'||n FROM generate_series(1,205) n`);
+    const paginationOwner = { ...owner, authId: 'pagination-owner' };
+    const allEventIds = new Set();
+    for (let page=1; page<=9; page++) {
+      const result = await service.list(paginationOwner, new URLSearchParams({ page: String(page) }));
+      assert.equal(result.total,205); result.items.forEach(row => allEventIds.add(row.id));
+    }
+    assert.equal(allEventIds.size,205); pass();
+    const searched = await service.list(paginationOwner,new URLSearchParams({ q:'Pagination 205' }));
+    assert.equal(searched.total,1); assert.equal(searched.items[0].title,'Pagination 205'); pass();
     delete global.__ecertDb; delete global.__ecertUser;
     const XLSX = require('xlsx'), workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet([['Nama', 'Asal Sekolah', 'Peran'], ['Amelia', 'Sekolah Contoh', 'Peserta']]), 'Peserta');
@@ -215,8 +245,8 @@ const output = path.resolve('output/pdf');
     const longWorkbook=XLSX.utils.book_new(),longRows=[['Nama'],...Array.from({length:505},(_,index)=>[index===501?'':`Peserta ${index}`])];
     XLSX.utils.book_append_sheet(longWorkbook,XLSX.utils.aoa_to_sheet(longRows),'Peserta');
     await rejects(()=>readParticipantExcel(new File([XLSX.write(longWorkbook,{type:'buffer',bookType:'xlsx'})],'lebih-500.xlsx')),/500/);
-    const report = { checks, database: 'isolated schema; no existing application data modified', cases: ['authorization and owner scope', 'migration idempotency', 'input validation', 'template validation', 'safe Excel mapping', 'atomic import and issue', 'concurrent retries', 'immutable snapshots', 'document publication', 'public DTO privacy', 'revocation', 'PDF creation'], pdfPages: 1 };
-    fs.writeFileSync('artifacts/e-sertifikat-test-results.json', JSON.stringify(report, null, 2)); console.log(JSON.stringify(report));
+    const report = { checks, database: 'isolated schema; no existing application data modified', cases: ['authorization and owner scope', 'migration idempotency', 'input validation', 'template validation', 'safe Excel mapping', 'atomic import and issue', 'concurrent retries', 'draft revision conflicts', 'immutable snapshots', 'document publication', 'public DTO privacy', 'shared PostgreSQL public limits', 'server pagination beyond 200 events', 'revocation', 'PDF creation'], pdfPages: 1 };
+    fs.writeFileSync(reportPath, JSON.stringify(report, null, 2)); console.log(JSON.stringify(report));
   } finally {
     await root.query('SET search_path TO public');
     await root.query(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`); await root.end();

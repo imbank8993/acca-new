@@ -7,6 +7,7 @@ import { templateGeometry } from './geometry';
 import { Prisma } from '@prisma/client';
 import { renderCertificate, validateAsset } from './pdf';
 import { readParticipantExcel } from './excel';
+import { limitPublicCertificateRequest } from './rate-limit';
 import JSZip from 'jszip';
 import { validateRecipients } from './validation';
 
@@ -25,9 +26,9 @@ function binary(bytes: Uint8Array, mime: string, filename: string, attachment = 
     } });
 }
 function failed(error: unknown) {
-    if (error instanceof CertificateError) return NextResponse.json({ ok: false, error: error.message }, { status: error.status, headers: { 'Cache-Control': 'no-store' } });
+    if (error instanceof CertificateError) return NextResponse.json({ ok: false, error: error.message }, { status: error.status, headers: { 'Cache-Control': 'no-store', ...(error.status === 429 ? { 'Retry-After': '60' } : {}) } });
     const code = (error as any)?.code;
-    if (code === 'P2010' && ['42P01', '42501'].includes((error as any)?.meta?.code)) return NextResponse.json({ ok: false, error: 'Modul e-sertifikat belum diaktifkan. Administrator perlu menjalankan migrasi database.' }, { status: 503 });
+    if (code === 'P2010' && ['42P01', '42703', '42501'].includes((error as any)?.meta?.code)) return NextResponse.json({ ok: false, error: 'Modul e-sertifikat belum diaktifkan. Administrator perlu menjalankan migrasi database.' }, { status: 503 });
     if (code === 'P2010' && (error as any)?.meta?.code === '23505') return NextResponse.json({ ok: false, error: 'Awalan atau nomor sertifikat sudah digunakan. Gunakan awalan unik untuk kegiatan ini.' }, { status: 409 });
     console.error('[e-sertifikat] request failed', (error as any)?.code || 'UNKNOWN');
     return NextResponse.json({ ok: false, error: 'Permintaan e-sertifikat gagal diproses' }, { status: 500 });
@@ -66,7 +67,7 @@ export async function manage(request: NextRequest, path: string[] = []) {
         const origin = request.headers.get('origin');
         if (!['GET', 'HEAD'].includes(request.method) && origin && origin !== request.nextUrl.origin && origin !== new URL(verifyUrl('')).origin) throw new CertificateError('Asal permintaan tidak diizinkan', 403);
         if (!path.length) {
-            if (request.method === 'GET') return json(await service.list(user));
+            if (request.method === 'GET') return json(await service.list(user, request.nextUrl.searchParams));
             if (request.method === 'POST') return json(await service.saveEvent(user, await body(request)));
         }
         if (path[0] === 'excel' && path.length === 1 && request.method === 'POST') {
@@ -162,15 +163,9 @@ export async function manage(request: NextRequest, path: string[] = []) {
     } catch (error) { return failed(error); }
 }
 
-const publicHits = new Map<string, { at: number; count: number }>();
 export async function publicRead(request: NextRequest, path: string[]) {
     try {
-        const key = request.headers.get('x-forwarded-for')?.split(',')[0].trim() || 'anonymous';
-        const now = Date.now(), previous = publicHits.get(key);
-        const hit = previous && now - previous.at < 60000 ? previous : { at: now, count: 0 };
-        if (++hit.count > 120) throw new CertificateError('Terlalu banyak permintaan. Coba lagi sebentar.', 429);
-        if (publicHits.size > 5000) publicHits.clear();
-        publicHits.set(key, hit);
+        await limitPublicCertificateRequest(db, path[0] || '');
         if (path.length === 1) {
             const response = json(await service.verification(path[0])); response.headers.set('X-Robots-Tag', 'noindex, nofollow'); return response;
         }

@@ -37,12 +37,28 @@ export class CertificateService {
         if (!rows[0]) throw new CertificateError('Kegiatan tidak ditemukan', 404);
         return rows[0];
     }
-    async list(user: ApiUser) {
+    async list(user: ApiUser, params = new URLSearchParams()) {
         assertManager(user);
-        return this.db.$queryRaw<CertificateEvent[]>(Prisma.sql`SELECT e.id,e.title,e.organizer,e.start_date::text,e.end_date::text,e.archived,e.revision,
+        const integer = (key: string, fallback: number, max: number) => {
+            const value = params.get(key);
+            if (value === null) return fallback;
+            if (!/^[1-9]\d{0,6}$/.test(value) || Number(value) > max) throw new CertificateError('Pagination kegiatan tidak valid');
+            return Number(value);
+        };
+        const page = integer('page', 1, 1000000), pageSize = integer('pageSize', 24, 100);
+        const search = text(params.get('q') || '', 'Pencarian', 200, false).toLowerCase();
+        const status = params.get('status') || 'all';
+        if (!['all', 'active', 'archived'].includes(status)) throw new CertificateError('Status kegiatan tidak valid');
+        const where = Prisma.sql`(${user.isAdmin} OR e.owner_id=${user.authId})
+          AND (${status === 'all'} OR e.archived=${status === 'archived'})
+          AND (${search === ''} OR strpos(lower(e.title || ' ' || e.organizer),${search}) > 0)`;
+        const [{ total }] = await this.db.$queryRaw<{ total: number }[]>(Prisma.sql`SELECT count(*)::int AS total FROM ecert_events e WHERE ${where}`);
+        const currentPage = Math.min(page, Math.max(1, Math.ceil(total / pageSize)));
+        const items = await this.db.$queryRaw<CertificateEvent[]>(Prisma.sql`SELECT e.id,e.title,e.organizer,e.start_date::text,e.end_date::text,e.archived,e.revision,
           count(r.id)::int AS total,count(r.id) FILTER(WHERE r.status='issued')::int AS issued
           FROM ecert_events e LEFT JOIN ecert_recipients r ON r.event_id=e.id
-          WHERE (${user.isAdmin} OR e.owner_id=${user.authId}) GROUP BY e.id ORDER BY e.created_at DESC LIMIT 200`);
+          WHERE ${where} GROUP BY e.id ORDER BY e.created_at DESC,e.id DESC LIMIT ${pageSize} OFFSET ${(currentPage - 1) * pageSize}`);
+        return { items, total, page: currentPage, pageSize };
     }
     async saveEvent(user: ApiUser, body: any, id?: string) {
         assertManager(user);
@@ -78,7 +94,7 @@ export class CertificateService {
     }
     async detail(user: ApiUser, id: string) {
         const event = await this.event(user, id);
-        const recipients = await this.db.$queryRaw<Recipient[]>(Prisma.sql`SELECT id,name,institution,identities,status,certificate_number,verify_token,issued_at,revoke_reason
+        const recipients = await this.db.$queryRaw<Recipient[]>(Prisma.sql`SELECT id,name,institution,identities,revision,status,certificate_number,verify_token,issued_at,revoke_reason
           FROM ecert_recipients WHERE event_id=${id}::uuid ORDER BY name,id LIMIT 2000`);
         const assets = await this.db.$queryRaw<Asset[]>(Prisma.sql`SELECT id,kind,filename,mime,is_public FROM ecert_assets WHERE event_id=${id}::uuid ORDER BY created_at DESC`);
         const audit = await this.db.$queryRaw(Prisma.sql`SELECT action,detail,created_at FROM ecert_audit WHERE event_id=${id}::uuid ORDER BY created_at DESC,id DESC LIMIT 30`);
@@ -115,12 +131,13 @@ export class CertificateService {
         });
     }
     async updateDraft(user: ApiUser, eventId: string, recipientId: string, body: any) {
+        if (!Number.isSafeInteger(body?.revision) || body.revision < 1) throw new CertificateError('Muat ulang data peserta sebelum menyimpan.', 409);
         const row = validateRecipients([{ ...body, id: uuid(recipientId) }])[0];
         return this.db.$transaction(async db => {
             await this.event(user, eventId, db, true);
-            const changed = await db.$executeRaw(Prisma.sql`UPDATE ecert_recipients SET name=${row.name},institution=${row.institution},identities=${json(row.identities)}::jsonb
-              WHERE id=${recipientId}::uuid AND event_id=${eventId}::uuid AND status='draft'`);
-            if (!changed) throw new CertificateError('Hanya identitas peserta draf yang dapat diperbaiki', 409);
+            const changed = await db.$executeRaw(Prisma.sql`UPDATE ecert_recipients SET name=${row.name},institution=${row.institution},identities=${json(row.identities)}::jsonb,revision=revision+1
+              WHERE id=${recipientId}::uuid AND event_id=${eventId}::uuid AND status='draft' AND revision=${body.revision}`);
+            if (!changed) throw new CertificateError('Data peserta telah berubah atau bukan draf. Muat ulang sebelum menyimpan.', 409);
             await this.audit(db, eventId, user, 'recipient.update', { recipientId });
         });
     }

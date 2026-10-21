@@ -147,9 +147,11 @@ export class NotulensiService {
   private projectRow(row: any, user: any, directory: NotulensiDirectory) {
     const full = formatRow(row);
     full.poin_poin = full.poin_poin.map(point => ({ ...point, pic_user_id: point.pic_user_id || directory.picId(point) || undefined }));
-    if (this.isOwner(row, user, directory)) {
-      const owner = directory.byId.get(String(user.id));
-      return { ...full, created_by: owner?.nama || owner?.nama_lengkap || owner?.username || '', visibility: 'owner', can_edit: true, can_print: true };
+    const isOwner = this.isOwner(row, user, directory);
+    if (isOwner || rolesUser(user).some(role => ROLE_ADMIN.includes(role))) {
+      const owner = directory.byId.get(directory.ownerId(row.created_by) || '');
+      return { ...full, created_by: owner?.nama || owner?.nama_lengkap || owner?.username || '',
+        visibility: isOwner ? 'owner' : 'admin', can_edit: isOwner, can_print: isOwner };
     }
     const points = user?.id ? full.poin_poin.filter(point => directory.picId(point) === String(user.id)) : [];
     return {
@@ -259,6 +261,7 @@ export class NotulensiService {
       String(query.search || '').trim().toLowerCase(),
       query.status && query.status !== 'Semua' ? query.status : '',
       query.tanggal || query.bulan || query.tahun || '', limit, offset,
+      rolesUser(user).some(role => ROLE_ADMIN.includes(role)),
     );
     return {
       success: true, data: result.data.map((row: any) => this.projectRow(row, user, directory)),
@@ -266,7 +269,7 @@ export class NotulensiService {
     };
   }
 
-  /** Only the creator receives the full note; PICs receive their own points. */
+  /** Creators and administrators receive the full note; PICs receive their own points. */
   async getDetail(id: string, user: any) {
     const [row, directory] = await Promise.all([this.rawDetail(id), this.directory()]);
     return { success: true, data: this.projectRow(row, user, directory) };

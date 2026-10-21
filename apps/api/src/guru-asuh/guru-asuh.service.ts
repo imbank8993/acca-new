@@ -1090,7 +1090,7 @@ export class GuruAsuhService {
             orderBy: { nama_siswa: 'asc' },
           })
         : [],
-      this.prisma.profil_sekolah.findFirst(),
+      this.prisma.profil_sekolah.findFirst({ orderBy: { updated_at: 'desc' } }),
       submission?.approved_by
         ? this.prisma.public_users.findFirst({
             where: { auth_id: submission.approved_by },

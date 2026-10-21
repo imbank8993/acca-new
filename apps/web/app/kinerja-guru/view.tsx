@@ -55,6 +55,7 @@ const TAB_OPTIONS = [
     { value: 'keluarSebelumWaktu', label: 'Keluar Sebelum Waktunya', icon: 'bi-box-arrow-right', color: '#3b82f6', bgColor: 'rgba(59, 130, 246, 0.1)' },
     { value: 'jamKosong', label: 'Jam Kosong', icon: 'bi-calendar-x', color: '#ef4444', bgColor: 'rgba(239, 68, 68, 0.1)' },
     { value: 'terlambat', label: 'Terlambat', icon: 'bi-alarm', color: '#06b6d4', bgColor: 'rgba(6, 182, 212, 0.1)' },
+    { value: 'daring', label: 'Daring', icon: 'bi-wifi', color: '#8b5cf6', bgColor: 'rgba(139, 92, 246, 0.1)' },
     { value: 'penugasanTanpa', label: 'Tanpa Pendampingan', icon: 'bi-journal-x', color: '#f59e0b', bgColor: 'rgba(245, 158, 11, 0.1)' },
     { value: 'penugasanDengan', label: 'Dengan Pendampingan', icon: 'bi-journal-check', color: '#10b981', bgColor: 'rgba(16, 185, 129, 0.1)' },
     { value: 'digabung', label: 'Digabung', icon: 'bi-intersect', color: '#3083FF', bgColor: 'rgba(99, 102, 241, 0.1)' },
@@ -87,6 +88,7 @@ export default function KinerjaGuruPage() {
     const [userNip, setUserNip] = useState('');
     const [previewHtml, setPreviewHtml] = useState<string | null>(null);
     const [profil, setProfil] = useState<ProfilSekolah | null>(null);
+    const [profilError, setProfilError] = useState(''), [dataError, setDataError] = useState('');
 
     // Filter toolbar state
     const [searchQuery, setSearchQuery] = useState('');
@@ -183,19 +185,20 @@ export default function KinerjaGuruPage() {
 
     useEffect(() => {
         fetch('/api/profil-sekolah')
-            .then(res => res.json())
+            .then(res => { if (!res.ok) throw new Error('Profil sekolah gagal dimuat'); return res.json(); })
             .then(json => {
                 const p = json?.data || json;
-                if (p && (p.nama_sekolah || p.namaSekolah)) {
+                if (p && typeof p.nama === 'string' && p.nama.trim()) {
                     setProfil(p);
-                }
+                } else throw new Error('Profil sekolah belum lengkap');
             })
-            .catch(() => {});
+            .catch(() => setProfilError('Profil sekolah belum dapat dimuat. Muat ulang halaman sebelum mencetak laporan.'));
     }, []);
 
     const fetchData = async (signal?: AbortSignal) => {
         const currentRequest = ++requestId.current;
         setLoading(true);
+        setDataError('');
         try {
             const params = new URLSearchParams();
             if (periodStart) params.set('start_month', periodStart);
@@ -203,6 +206,7 @@ export default function KinerjaGuruPage() {
             const res = await fetch(`/api/kinerja-guru?${params.toString()}`, { signal });
             const result = await res.json();
             if (signal?.aborted || currentRequest !== requestId.current) return;
+            if (!res.ok || !result.success) throw new Error(result.message || result.error || 'Data kinerja guru gagal dimuat. Silakan coba lagi.');
             if (result.success) {
                 setData(result.data);
                 if (result.akses?.cetakRekap !== undefined) {
@@ -212,6 +216,8 @@ export default function KinerjaGuruPage() {
         } catch (err) {
             if (signal?.aborted || currentRequest !== requestId.current) return;
             console.error('Failed to fetch kinerja guru data', err);
+            setData({ jamKosong: [], penugasanTanpa: [], penugasanDengan: [], digabung: [], terlambat: [], daring: [], mengambilIstirahat: [], keluarSebelumWaktu: [], piket: [] });
+            setDataError(err instanceof Error ? err.message : 'Data kinerja guru gagal dimuat. Silakan coba lagi.');
         } finally {
             if (!signal?.aborted && currentRequest === requestId.current) setLoading(false);
         }
@@ -286,6 +292,12 @@ export default function KinerjaGuruPage() {
     }, [filterMode, selectedMonthVal, selectedYearVal, selectedTa, selectedSemester]);
 
     const handleCetakRekap = () => {
+        if (loading || dataError) return;
+        if (!profil) { setProfilError('Profil sekolah belum dapat dimuat. Muat ulang halaman sebelum mencetak laporan.'); return; }
+        // Penandatangan (Kepala Madrasah) selalu diambil dari Pengaturan Umum › Profil Sekolah.
+        setProfilError(profil.kepala_sekolah_nama?.trim()
+            ? ''
+            : 'Nama Kepala Madrasah belum diisi di Pengaturan Umum › Profil Sekolah. Kolom tanda tangan dicetak kosong.');
         const html = generateRekapKinerjaHtml({
             top10,
             kategoriLabel: getTabLabel(),
@@ -403,6 +415,7 @@ export default function KinerjaGuruPage() {
     return (
         <MaintenanceBanner pageKey="maintenance_kinerja_guru" isAdmin={isAdmin}>
             <div className="kinerja-guru-page kg-scope">
+                {(profilError || dataError) && <div role="alert" style={{ padding: '12px 16px', marginBottom: 16, border: '1px solid #fca5a5', borderRadius: 12 }}>{dataError || profilError}</div>}
                 <KinerjaGuruDetailModal
                     isOpen={!!selectedTeacher}
                     onClose={() => setSelectedTeacher(null)}
@@ -508,6 +521,7 @@ export default function KinerjaGuruPage() {
                             { value: 'mengambilIstirahat', label: 'Mengambil Waktu Istirahat' },
                             { value: 'keluarSebelumWaktu', label: 'Keluar Sebelum Waktunya' },
                             { value: 'terlambat', label: 'Terlambat' },
+                            { value: 'daring', label: 'Daring' },
                             { value: 'penugasanTanpa', label: 'Tanpa Pendampingan' },
                             { value: 'penugasanDengan', label: 'Dengan Pendampingan' },
                             { value: 'digabung', label: 'Digabung' },
@@ -638,6 +652,7 @@ export default function KinerjaGuruPage() {
                                             if (activeTab === 'penugasanDengan') return d.type === 'Dengan Pendampingan';
                                             if (activeTab === 'digabung') return d.type === 'Digabung';
                                             if (activeTab === 'terlambat') return d.type === 'Terlambat';
+                                            if (activeTab === 'daring') return d.type === 'Daring';
                                             if (activeTab === 'mengambilIstirahat') return d.type === 'Mengambil Waktu Istirahat';
                                             if (activeTab === 'keluarSebelumWaktu') return d.type === 'Keluar Sebelum Waktunya';
                                             if (activeTab === 'piket') return d.type === 'Tidak Piket';
@@ -719,6 +734,7 @@ export default function KinerjaGuruPage() {
                                         if (activeTab === 'penugasanDengan') return d.type === 'Dengan Pendampingan';
                                         if (activeTab === 'digabung') return d.type === 'Digabung';
                                         if (activeTab === 'terlambat') return d.type === 'Terlambat';
+                                        if (activeTab === 'daring') return d.type === 'Daring';
                                         if (activeTab === 'mengambilIstirahat') return d.type === 'Mengambil Waktu Istirahat';
                                         if (activeTab === 'keluarSebelumWaktu') return d.type === 'Keluar Sebelum Waktunya';
                                         if (activeTab === 'piket') return d.type === 'Tidak Piket';

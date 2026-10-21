@@ -1,0 +1,75 @@
+{
+  "date": "2026-10-21",
+  "unit": {
+    "passed": 24,
+    "failed": 0,
+    "command": "node --test --test-isolation=none apps/web/test/e-sertifikat-security.test.cjs"
+  },
+  "integration": {
+    "checks": 95,
+    "database": "isolated schema; no existing application data modified",
+    "cases": [
+      "authorization and owner scope",
+      "migration idempotency",
+      "input validation",
+      "template validation",
+      "safe Excel mapping",
+      "atomic import and issue",
+      "concurrent retries",
+      "draft revision conflicts",
+      "immutable snapshots",
+      "document publication",
+      "public DTO privacy",
+      "shared PostgreSQL public limits",
+      "server pagination beyond 200 events",
+      "revocation",
+      "PDF creation"
+    ],
+    "pdfPages": 1
+  },
+  "typescript": {
+    "passed": true,
+    "command": "node node_modules/typescript/bin/tsc --noEmit --pretty false -p apps/web/tsconfig.json"
+  },
+  "migration": {
+    "file": "apps/api/prisma/sql/20261021_e_sertifikat_hardening.sql",
+    "appliedToConfiguredDatabase": true,
+    "recipientRevisionReady": true,
+    "publicLimiterRlsReady": true
+  },
+  "browserUiRetested": true,
+  "browser": {
+    "passed": true,
+    "widths": [
+      320,
+      390,
+      768,
+      1280
+    ],
+    "cases": [
+      "shared desktop FAB opens create modal",
+      "mobile bottomnav FAB registration opens create modal",
+      "event search and reset filter",
+      "320–1280 event list and light/dark styles",
+      "native-size PDF canvas",
+      "signer selection and title",
+      "mm precision and modifier arrow keys",
+      "drag position independent of zoom",
+      "QR minimum physical size",
+      "individual Excel identity layers",
+      "320–1280 editor layout",
+      "create event",
+      "template upload",
+      "Excel mapping and chosen identities",
+      "issue selected participants",
+      "PDF and verification links",
+      "private attachment default and publication toggle",
+      "320–1280 layout",
+      "valid/revoked/invalid verification"
+    ]
+  },
+  "combinedRegressionTests": {
+    "passed": 65,
+    "failed": 0
+  }
+}

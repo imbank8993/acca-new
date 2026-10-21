@@ -29,7 +29,7 @@ export type CertificateEvent = {
     revision: number; archived: boolean; total?: number; issued?: number;
 };
 export type Recipient = {
-    id: string; name: string; institution: string; identities: Record<string, string>;
+    id: string; name: string; institution: string; identities: Record<string, string>; revision: number;
     status: 'draft' | 'issued' | 'revoked'; certificate_number: string | null; verify_token?: string;
     issued_at?: string; revoke_reason?: string;
 };

@@ -36,7 +36,7 @@ export interface NotulensiItem {
     catatan?: string;
     agenda_id?: string | null;
     revision?: string | null;
-    visibility?: 'owner' | 'pic' | 'title';
+    visibility?: 'owner' | 'admin' | 'pic' | 'title';
     can_edit?: boolean;
     can_print?: boolean;
 }

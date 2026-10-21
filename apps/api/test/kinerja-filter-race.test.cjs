@@ -18,12 +18,13 @@ function visit(node) {
 visit(tree);
 assert(loader && effect);
 function harness() {
-  const requests = [], updates = [], loading = [], cleared = [];
+  const requests = [], updates = [], loading = [], cleared = [], errors = [];
   const state = { requestId: { current: 0 }, AbortController, URLSearchParams, console,
     setData: value => updates.push(value), setCanCetakRekap: () => {}, setLoading: value => loading.push(value),
+    setDataError: value => errors.push(value),
     setInterval: () => 1, clearInterval: id => cleared.push(id),
     fetch: (url, options) => new Promise(resolve => requests.push({ url, signal: options.signal,
-      finish: data => resolve({ json: async () => ({ success: true, data }) }) })),
+      finish: (data, success = true) => resolve({ ok: success, json: async () => ({ success, data }) }) })),
   };
   function mount(month) {
     const module = { exports: {} };
@@ -33,7 +34,7 @@ function harness() {
     const cleanup = module.exports.setup();
     return { cleanup, refresh: module.exports.fetchData };
   }
-  return { requests, updates, loading, cleared, mount };
+  return { requests, updates, loading, cleared, errors, mount };
 }
 const flush = () => new Promise(resolve => setImmediate(resolve));
 test('a slow previous filter cannot overwrite the latest period or loading state', async () => {
@@ -65,4 +66,14 @@ test('overlapping refreshes retain only the newest response, and cleanup suppres
   f.requests[2].finish('After unmount');
   await pending;
   assert.deepEqual(f.updates, ['Newest']);
+});
+
+test('a failed new period clears previous results and exposes an error instead of stale printable data', async () => {
+  const f = harness();
+  const old = f.mount('2020-01'); f.requests[0].finish('January'); await flush(); old.cleanup();
+  const current = f.mount('2020-02'); f.requests[1].finish(null, false); await flush();
+  assert.equal(f.updates[0], 'January');
+  assert.equal(Object.values(f.updates.at(-1)).every(rows => rows.length === 0), true);
+  assert.match(f.errors.at(-1), /gagal dimuat/);
+  assert.equal(f.loading.at(-1), false); current.cleanup();
 });
