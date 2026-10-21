@@ -26,7 +26,7 @@ Kategori ini menunjukkan slot tugas yang belum mempunyai laporan, sehingga tidak
 
 Pengujian regresi mencakup versi jadwal, libur sesuai lingkup, normalisasi JP/tanggal, penghitungan beberapa kelas, batas hari/waktu sekolah, rincian, pencocokan izin, pemuatan profil sekolah, kop surat bersama, serta respons filter yang datang terlambat atau gagal.
 
-Hasil: 18 tes regresi lulus; pemeriksaan TypeScript API dan web lulus. Enam pemeriksaan pengamanan permintaan PDF Guru Asuh dengan browser tiruan juga lulus. Tampilan PDF/cetak belum diperiksa ulang secara visual pada browser.
+Hasil: 24 tes regresi lulus; pemeriksaan TypeScript API dan web lulus. Termasuk kategori Daring di pilihan dan konfigurasi grafik, hitungan/rincian Daring, guru pengganti, serta penandatangan dari profil sekolah. Enam pemeriksaan pengamanan permintaan PDF Guru Asuh dengan browser tiruan juga lulus. Tampilan PDF/cetak belum diperiksa ulang secara visual pada browser.
 
 ```text
 node --test --test-isolation=none apps/api/test/kinerja-guru.test.cjs apps/api/test/kinerja-filter-race.test.cjs apps/api/test/kinerja-print.test.cjs

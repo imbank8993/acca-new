@@ -47,6 +47,24 @@ test('print cannot use stale data or a missing school profile', () => {
     assert.match(source, /if \(loading \|\| dataError\) return/);
     assert.match(source, /if \(!profil\)/);
 });
+
+test('Daring is available in the category picker and chart configuration', () => {
+    const source = fs.readFileSync('apps/web/app/kinerja-guru/view.tsx', 'utf8');
+    const tree = ts.createSourceFile('view.tsx', source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+    let chartOptions, pickerOptions;
+    const visit = node => {
+        if (ts.isVariableDeclaration(node) && node.name.getText(tree) === 'TAB_OPTIONS') chartOptions = node.initializer.getText(tree);
+        if (ts.isJsxSelfClosingElement(node) && node.tagName.getText(tree) === 'FilterSelect' && node.attributes.properties.some(prop => prop.name?.getText(tree) === 'label' && prop.initializer?.text === 'Kategori'))
+            pickerOptions = node.attributes.properties.find(prop => prop.name?.getText(tree) === 'options').initializer.expression.getText(tree);
+        ts.forEachChild(node, visit);
+    };
+    visit(tree);
+    for (const options of [chartOptions, pickerOptions]) {
+        assert(options); assert.match(options, /value: 'daring'/); assert.match(options, /label: 'Daring'/);
+    }
+    const html = generateRekapKinerjaHtml({ top10: [{ nama: 'Guru A', nip: '1', count: 1, total_jp: 4, details: [{ type: 'Daring', tanggal: '2020-01-06', kelas: 'X', jam_ke: '1', mapel: 'Matematika' }] }], kategoriKey: 'daring', kategoriLabel: 'Daring', periodeLabel: 'Januari 2020' });
+    assert.match(html, /Matematika/);
+});
 test('Kepala Madrasah signer comes from the school profile, never a placeholder name', () => {
     const base = { nama: 'MAN Insan Cendekia Gowa', jenjang: 'MA', kabupaten_kota: 'Gowa' };
     const html = generateRekapKinerjaHtml({ top10: [], kategoriLabel: 'Daring', kategoriKey: 'daring', periodeLabel: 'Oktober 2026',

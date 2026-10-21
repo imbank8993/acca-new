@@ -141,6 +141,21 @@ test('permission for another NIP is not attached solely because teacher names ma
   }).service.getStats('2020-01', '2020-01');
   assert.equal(result.data.piket[0].details.find(detail => detail.tanggal === '2020-01-06').izin, null);
 });
+
+test('Daring is returned with matching counts, identity and details, without duplicate status counts', async () => {
+  const result = await fixture({ jurnal_guru: [{ id: 'online', nip: '1', nama_guru: 'Guru A', tanggal: new Date('2020-01-06'),
+    jam_ke: '1', jam_ke_id: 1, kelas: 'X', kategori_kehadiran: ' DARING ', status_tambahan_1: 'Daring' }] }).service.getStats('2020-01', '2020-01');
+  assert.equal(result.data.daring.length, 1);
+  assert.equal(result.data.daring[0].nip, '1');
+  assert.equal(result.data.daring[0].count, 1);
+  assert.equal(result.data.daring[0].details.filter(detail => detail.type === 'Daring').length, 1);
+});
+
+test('Daring by a substitute is attributed to the substitute', async () => {
+  const result = await fixture({ jurnal_guru: [{ id: 'online-substitute', nip: '1', nama_guru: 'Guru A', guru_pengganti: 'Guru B',
+    tanggal: new Date('2020-01-06'), jam_ke: '1', jam_ke_id: 1, kelas: 'X', kategori_kehadiran: 'Tukaran', status_pengganti: 'Daring' }] }).service.getStats('2020-01', '2020-01');
+  assert.equal(result.data.daring[0].nip, '2'); assert.equal(result.data.daring[0].count, 1);
+});
 test('daring attendance is counted per teacher and exposed in the daring category', async () => {
   const j = (id, jam, kategori) => ({ id, nip: '1', nama_guru: 'Guru A', tanggal: new Date('2020-01-06'), jam_ke_id: jam, kategori_kehadiran: kategori });
   const result = await fixture({ jurnal_guru: [j('a', '1', 'Daring'), j('b', '2', 'Daring'), j('c', '3', 'Sesuai')] }).service.getStats('2020-01', '2020-01');

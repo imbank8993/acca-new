@@ -29,7 +29,7 @@
   },
   "typescript": {
     "passed": true,
-    "command": "node node_modules/typescript/bin/tsc --noEmit --pretty false -p apps/web/tsconfig.json"
+    "command": "node --max-old-space-size=6144 node_modules/typescript/bin/tsc --noEmit --pretty false -p apps/web/tsconfig.json"
   },
   "migration": {
     "file": "apps/api/prisma/sql/20261021_e_sertifikat_hardening.sql",
@@ -69,7 +69,25 @@
     ]
   },
   "combinedRegressionTests": {
-    "passed": 65,
+    "passed": 71,
     "failed": 0
+  },
+  "compiledPdfWorker": {
+    "passed": true,
+    "workingDirectories": [
+      "repository root",
+      "apps/web"
+    ],
+    "command": "node apps/web/scripts/test-e-sertifikat-worker.cjs"
+  },
+  "builds": {
+    "api": {
+      "passed": true,
+      "command": "npm run build --workspace=apps/api"
+    },
+    "web": {
+      "passed": true,
+      "command": "npm run build --workspace=apps/web"
+    }
   }
 }
