@@ -39,7 +39,8 @@ export async function generateFromTemplate(
 
 export { generateRekamMedis } from '@/lib/print/html-print';
 
-export { openPdfLetter } from '@/lib/print/pdf-letter';
+// Browser callers use the authenticated PDF endpoints. Do not re-export the
+// legacy pdf-letter module here: it imports Prisma and Node HTTPS at runtime.
 
 // ── formatDataForPrint — kept here for backward compatibility ──
 import type { KetidakhadiranRow } from './types';
