@@ -28,6 +28,7 @@ docker compose run --rm --no-deps acca-api node node_modules/prisma/build/index.
 echo "🗄️ Mengaktifkan audit perubahan database..."
 docker compose run --rm --no-deps acca-api node node_modules/prisma/build/index.js db execute --schema apps/api/prisma/schema.prisma --file apps/api/prisma/sql/20261022_system_audit.sql
 docker compose up -d --remove-orphans
+sh scripts/check-deployment-health.sh
 
 # 4. Bersihkan cache/image lama
 echo "🧹 [4/4] Membersihkan docker image lama yang dangling..."

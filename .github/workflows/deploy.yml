@@ -6,6 +6,10 @@ on:
       - main
   workflow_dispatch:
 
+concurrency:
+  group: acca-production-deploy
+  cancel-in-progress: false
+
 jobs:
   deploy:
     name: Deploy to VPS
@@ -68,6 +72,7 @@ jobs:
 
             echo "🔄 Restart aplikasi..."
             docker compose up -d --remove-orphans
+            sh scripts/check-deployment-health.sh
 
             echo "🧹 Bersihkan image lama..."
             docker image prune -f
