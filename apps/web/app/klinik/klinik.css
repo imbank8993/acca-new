@@ -233,6 +233,22 @@
 .status-pill.cancelled { background: var(--n-soft); color: var(--n-muted); }
 .status-pill.rejected { background: #fee2e2; color: #b91c1c; }
 
+/* Pengajuan siswa yang waktu pelaksanaannya sudah lewat sebelum disetujui. */
+.status-pill.kadaluarsa { background: #ffedd5; color: #c2410c; display: inline-flex; align-items: center; gap: 4px; }
+.klinik-kadaluarsa-note {
+    margin-top: 6px;
+    display: flex;
+    gap: 6px;
+    align-items: flex-start;
+    font-size: 0.75rem;
+    line-height: 1.4;
+    color: #c2410c;
+    background: #fff7ed;
+    border: 1px solid #fed7aa;
+    border-radius: 8px;
+    padding: 6px 8px;
+}
+
 /* Tahap pertama pengajuan kelompok siswa: menunggu kesediaan guru pengampu. */
 .status-pill.pending_guru,
 .status-tag.pending_guru { background: #ede9fe; color: #6d28d9; }
@@ -1214,6 +1230,8 @@
 .dark .status-pill.rejected,
 .dark .status-tag.rejected { background: rgba(220, 38, 38, 0.2) !important; color: #f87171 !important; border: 1.5px solid rgba(220, 38, 38, 0.45) !important; }
 .dark .act-note--batal { color: #f87171; }
+.dark .status-pill.kadaluarsa { background: rgba(234, 88, 12, 0.2) !important; color: #fb923c !important; border: 1.5px solid rgba(234, 88, 12, 0.45) !important; }
+.dark .klinik-kadaluarsa-note { background: rgba(234, 88, 12, 0.12); border-color: rgba(234, 88, 12, 0.4); color: #fdba74; }
 .dark .pengaju-tag--akademik {
     color: #38bdf8 !important;
     background: transparent !important;

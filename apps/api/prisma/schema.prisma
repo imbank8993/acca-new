@@ -2153,8 +2153,8 @@ model audit_logs {
   user_name  String?  @db.VarChar(100)
   user_role  String?  @db.VarChar(100)
   action     String   @db.VarChar(50)
-  entity     String   @db.VarChar(50)
-  entity_id  String?  @db.VarChar(100)
+  entity     String   @db.VarChar(128)
+  entity_id  String?  @db.VarChar(256)
   details    Json?
   ip_address String?  @db.VarChar(64)
   user_agent String?

@@ -126,7 +126,6 @@ export default function ProfilePage({ user, onRefreshUser }: ProfilePageProps) {
     const [croppedAreaPixels, setCroppedAreaPixels] = useState<any>(null)
     const [showNewPwd, setShowNewPwd] = useState(false)
     const [showConfirmPwd, setShowConfirmPwd] = useState(false)
-    const [showCurrentPwd, setShowCurrentPwd] = useState(false)
     const [showPwdGen, setShowPwdGen] = useState(false)
     const [pwdError, setPwdError] = useState('')
 
@@ -581,15 +580,13 @@ export default function ProfilePage({ user, onRefreshUser }: ProfilePageProps) {
         if (formData.newPassword) {
             if (formData.newPassword.length < 6) { swalError('Error', 'Password baru minimal 6 karakter'); return }
             if (formData.newPassword !== formData.confirmPassword) { swalError('Error', 'Konfirmasi password tidak cocok'); return }
-            if (!formData.currentPassword) { setPwdError('Password saat ini wajib diisi. Gunakan password sementara dari admin jika akun baru direset.'); return }
-            if (formData.newPassword === formData.currentPassword) { setPwdError('Password baru harus berbeda dari password saat ini'); return }
         }
         setLoading(true)
         try {
             const changingPassword = !!formData.newPassword
             const res = await fetch(changingPassword ? '/api/auth/update-password' : '/api/user/profile', {
                 method: changingPassword ? 'POST' : 'PUT', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(changingPassword ? { password: formData.newPassword, oldPassword: formData.currentPassword } : { username: formData.username, email: formData.email, photoUrl: formData.photoUrl || null })
+                body: JSON.stringify(changingPassword ? { password: formData.newPassword } : { username: formData.username, email: formData.email, photoUrl: formData.photoUrl || null })
             })
             const data = await res.json()
             if (res.ok && data.ok) {
@@ -604,7 +601,7 @@ export default function ProfilePage({ user, onRefreshUser }: ProfilePageProps) {
                     clearUserCache(); await onRefreshUser()
                 }
             } else {
-                if (data.error?.includes('Password saat ini') || data.error?.includes('wajib')) {
+                if (data.error?.includes('Password') || data.error?.includes('wajib')) {
                     setPwdError(data.error)
                 } else {
                     swalError('Gagal', data.error || 'Terjadi kesalahan')
@@ -830,23 +827,8 @@ export default function ProfilePage({ user, onRefreshUser }: ProfilePageProps) {
                                 </div>
 
                                 <div className="ps-section-body">
-                                    {formData.newPassword && (
-                                        <div className="ps-field-group animate-slideDown">
-                                            <label className="required-label">Password Saat Ini</label>
-                                            <div className="ps-input-wrapper">
-                                                <input 
-                                                    type={showCurrentPwd ? "text" : "password"} 
-                                                    className="ps-glass-input highlight"
-                                                    placeholder="Konfirmasi password lama"
-                                                    value={formData.currentPassword || ''}
-                                                    onChange={e => { setFormData({ ...formData, currentPassword: e.target.value }); setPwdError('') }} 
-                                                />
-                                                <button type="button" className="ps-eye-btn" onClick={() => setShowCurrentPwd(!showCurrentPwd)}>
-                                                    <i className={`bi ${showCurrentPwd ? 'bi-eye-fill' : 'bi-eye-slash-fill'}`}></i>
-                                                </button>
-                                            </div>
-                                            {pwdError && <div className="ps-error-msg"><i className="bi bi-exclamation-triangle-fill"></i> {pwdError}</div>}
-                                        </div>
+                                    {pwdError && formData.newPassword && (
+                                        <div className="ps-error-msg"><i className="bi bi-exclamation-triangle-fill"></i> {pwdError}</div>
                                     )}
 
                                     <div className="ps-field-group">

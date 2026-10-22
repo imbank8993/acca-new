@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { redactAuditValue } from '@acca/shared';
 
 export interface AuditLogOptions {
   user?: any;
@@ -61,7 +62,7 @@ export class AuditService {
           action,
           entity,
           entity_id: entityId ? String(entityId) : null,
-          details: details ? JSON.parse(JSON.stringify(details, (_, v) => typeof v === 'bigint' ? v.toString() : v)) : null,
+          details: details ? redactAuditValue(details) as any : null,
           ip_address: ipAddress,
           user_agent: userAgent,
         },
@@ -75,9 +76,11 @@ export class AuditService {
    * Mengambil riwayat log audit terkini dengan pagination / filter entity & action.
    */
   async getRecentLogs(limit = 50, offset = 0, entity?: string, action?: string, search?: string) {
+    limit = Number.isSafeInteger(limit) ? Math.max(1, Math.min(limit, 100)) : 50;
+    offset = Number.isSafeInteger(offset) ? Math.max(0, Math.min(offset, 10000000)) : 0;
     const where: any = {};
-    if (entity && entity !== 'Semua') where.entity = entity;
-    if (action && action !== 'Semua') where.action = action;
+    if (entity && entity !== 'Semua') where.entity = { contains: entity, mode: 'insensitive' };
+    if (action && action !== 'Semua') where.action = ['CREATE','UPDATE','DELETE'].includes(action) ? { startsWith: action } : action;
     if (search && search.trim()) {
       const q = search.trim();
       where.OR = [
@@ -85,6 +88,7 @@ export class AuditService {
         { user_nip: { contains: q, mode: 'insensitive' } },
         { action: { contains: q, mode: 'insensitive' } },
         { entity: { contains: q, mode: 'insensitive' } },
+        { entity_id: { contains: q, mode: 'insensitive' } },
       ];
     }
 
@@ -92,7 +96,7 @@ export class AuditService {
       (this.prisma as any).audit_logs.count({ where }),
       (this.prisma as any).audit_logs.findMany({
         where,
-        orderBy: { created_at: 'desc' },
+        orderBy: [{ created_at: 'desc' }, { id: 'desc' }],
         take: Math.min(limit, 100),
         skip: offset,
       }),
@@ -101,6 +105,7 @@ export class AuditService {
     const data = rows.map((r: any) => ({
       ...r,
       id: r.id.toString(),
+      details: redactAuditValue(r.details),
     }));
 
     return { ok: true, total, data };

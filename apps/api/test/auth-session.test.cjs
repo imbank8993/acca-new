@@ -30,7 +30,7 @@ test('session failure includes the HTTP status for diagnosis without clearing ca
 
 test('Next auth helper checks revocation online and uses current server identity',async()=>{for(const status of [200,401,503]){let calls=0;const j=moduleOf('apps/web/lib/app-jwt.ts',{'jose':{jwtVerify:async()=>({payload:{sub:'3',authId:'auth-3',role:'ADMIN',username:'stale'}})},'./nest-api':{nestFetchAsUser:async()=>{calls++;return{status,body:{user:{id:'3',auth_id:'auth-3',role:'GURU',username:'current',email:null}}}}}});const result=await j.getAuthUserFromRequest(request('token'));assert.equal(calls,1);if(status===200){assert.equal(result.user_metadata.role,'GURU');assert.equal(result.user_metadata.username,'current')}else assert.equal(result,null)}});
 
-test('password update forwards current password and removes the revoked browser cookie only on success',async()=>{for(const status of[200,401]){const removed=[];let sent;const r=moduleOf('apps/web/app/api/auth/update-password/route.ts',{'next/server':{NextResponse:{json:(body,init={})=>({body,status:init.status||200,cookies:{set:(...args)=>removed.push(args)}})}},'@/lib/app-jwt':{extractRequestToken:()=> 'token'},'@/lib/nest-api':{nestFetchAsUser:async(_path,_token,init)=>{sent=JSON.parse(init.body);return{status,body:{}}}}});const result=await r.POST({json:async()=>({password:'new-password',oldPassword:'old-password'})});assert.equal(sent.oldPassword,'old-password');assert.equal(result.status,status);assert.equal(removed.length,status===200?1:0);if(status===200){assert.equal(removed[0][0],'acca_session');assert.equal(removed[0][2].maxAge,0)}}});
+test('password update forwards only the new password and removes the revoked browser cookie only on success',async()=>{for(const status of[200,401]){const removed=[];let sent;const r=moduleOf('apps/web/app/api/auth/update-password/route.ts',{'next/server':{NextResponse:{json:(body,init={})=>({body,status:init.status||200,cookies:{set:(...args)=>removed.push(args)}})}},'@/lib/app-jwt':{extractRequestToken:()=> 'token'},'@/lib/nest-api':{nestFetchAsUser:async(_path,_token,init)=>{sent=JSON.parse(init.body);return{status,body:{}}}}});const result=await r.POST({json:async()=>({password:'new-password',oldPassword:'ignored-legacy-value'})});assert.deepEqual(Object.keys(sent),['password']);assert.equal(sent.password,'new-password');assert.equal(result.status,status);assert.equal(removed.length,status===200?1:0);if(status===200){assert.equal(removed[0][0],'acca_session');assert.equal(removed[0][2].maxAge,0)}}});
 
 const errorHelper=moduleOf('apps/web/lib/auth-error-message.ts');
 test('account error messages accept Nest error and validation arrays without exposing server internals',()=>{
@@ -51,19 +51,33 @@ test('profile proxy shows the actual backend validation reason',async()=>{
   const result=await r.module.PUT({json:async()=>({password:'new-password',oldPassword:'wrong'})});
   assert.equal(result.status,400);assert.equal(result.body.error,'Password saat ini tidak sesuai');assert.equal(r.removed.length,0);
 });
-test('dedicated password proxy validates current password and forwards only credentials',async()=>{
+test('dedicated password proxy validates the new password and forwards only credentials',async()=>{
   for(const status of [200,201,400,503]){
     const r=accountRoute('apps/web/app/api/auth/update-password/route.ts',status,{error:'Password saat ini tidak sesuai'});
     const result=await r.module.POST({json:async()=>({password:'chosen-password',oldPassword:'temporary-password',username:'ignored',email:'invalid'})});
     assert.equal(r.calls[0].path,'/users/me/password');assert.equal(r.calls[0].method,'POST');
-    assert.deepEqual(Object.keys(r.calls[0].body).sort(),['oldPassword','password']);
+    assert.deepEqual(Object.keys(r.calls[0].body),['password']);
     assert.equal(result.status,status===201?200:status);assert.equal(r.removed.length,status<300?1:0);
     if(status===400)assert.equal(result.body.error,'Password saat ini tidak sesuai');
     if(status===503)assert.match(result.body.error,/Layanan akun/);
   }
-  for(const payload of [{password:'chosen-password'},{password:'short',oldPassword:'temporary-password'}]){
+  for(const payload of [{},{password:null},{password:'short'}]){
     const r=accountRoute('apps/web/app/api/auth/update-password/route.ts',200,{});
     assert.equal((await r.module.POST({json:async()=>payload})).status,400);assert.equal(r.calls.length,0);
+  }
+});
+
+test('password endpoint rejects absent sessions and malformed bodies before forwarding',async()=>{
+  for(const token of [null,'session']){
+    let forwarded=0;
+    const r=moduleOf('apps/web/app/api/auth/update-password/route.ts',{
+      'next/server':{NextResponse:{json:(body,init={})=>({body,status:init.status||200})}},
+      '@/lib/app-jwt':{extractRequestToken:()=>token},
+      '@/lib/nest-api':{nestFetchAsUser:async()=>{forwarded++;throw Error('Must not forward')}}
+    });
+    const response=await r.POST({json:async()=>{throw SyntaxError('Malformed JSON')}});
+    assert.equal(response.status,token?400:401);
+    assert.equal(forwarded,0);
   }
 });
 
@@ -92,10 +106,10 @@ function accountSubmit(formData,response={ok:true,status:200,json:async()=>({ok:
 test('profile form saves password independently from invalid profile fields without a second logout request',async()=>{
   const f=accountSubmit({username:'',email:'invalid-email',photoUrl:'old',newPassword:'chosen-password',confirmPassword:'chosen-password',currentPassword:'temporary-password'});
   await f.submit();assert.equal(f.state.calls.length,1);assert.equal(f.state.calls[0].url,'/api/auth/update-password');assert.equal(f.state.calls[0].method,'POST');
-  assert.deepEqual(Object.keys(f.state.calls[0].body).sort(),['oldPassword','password']);assert.equal(f.location.href,'/login');assert.equal(f.state.refreshes,0);assert.equal(f.state.clears,1);
+  assert.deepEqual(Object.keys(f.state.calls[0].body),['password']);assert.equal(f.location.href,'/login');assert.equal(f.state.refreshes,0);assert.equal(f.state.clears,1);
 });
-test('profile form rejects missing/wrong current password and preserves ordinary profile saves',async()=>{
-  const missing=accountSubmit({newPassword:'chosen-password',confirmPassword:'chosen-password',currentPassword:''});await missing.submit();assert.match(missing.state.error,/Password saat ini/);assert.equal(missing.state.calls.length,0);
+test('profile form accepts a new password without the old one and preserves ordinary profile saves',async()=>{
+  const missing=accountSubmit({newPassword:'chosen-password',confirmPassword:'chosen-password',currentPassword:''});await missing.submit();assert.equal(missing.state.error,'');assert.equal(missing.state.calls.length,1);assert.equal(missing.location.href,'/login');
   const wrong=accountSubmit({newPassword:'chosen-password',confirmPassword:'chosen-password',currentPassword:'wrong-password'},{ok:false,status:400,json:async()=>({ok:false,error:'Password saat ini tidak sesuai'})});await wrong.submit();assert.match(wrong.state.error,/tidak sesuai/);assert.equal(wrong.location.href,'');
   const normal=accountSubmit({username:'guru',email:'guru@example.com',photoUrl:'photo'});await normal.submit();assert.equal(normal.state.calls[0].url,'/api/user/profile');assert.equal(normal.state.calls[0].method,'PUT');assert.equal(normal.state.refreshes,1);assert.equal(normal.location.href,'');
 });

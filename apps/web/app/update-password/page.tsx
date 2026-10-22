@@ -19,7 +19,6 @@ export default function UpdatePasswordPage() {
 function UpdatePasswordContent() {
   const router = useRouter()
   const [password, setPassword] = useState('')
-  const [oldPassword, setOldPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -95,10 +94,6 @@ function UpdatePasswordContent() {
       setError('Sesi belum dapat diperiksa. Silakan coba lagi atau login kembali.');
       return;
     }
-    if (!oldPassword) {
-      setError('Masukkan password saat ini. Gunakan password sementara dari admin jika akun baru direset.');
-      return;
-    }
     
     if (password.length < 6) {
       setError('Password minimal harus 6 karakter');
@@ -107,10 +102,6 @@ function UpdatePasswordContent() {
 
     if (password !== confirmPassword) {
       setError('Konfirmasi password tidak cocok');
-      return;
-    }
-    if (password === oldPassword) {
-      setError('Password baru harus berbeda dari password saat ini');
       return;
     }
 
@@ -126,7 +117,7 @@ function UpdatePasswordContent() {
       const res = await fetch('/api/auth/update-password', {
         method: 'POST',
         headers,
-        body: JSON.stringify({ password, oldPassword })
+        body: JSON.stringify({ password })
       });
 
       const data = await res.json();
@@ -140,7 +131,6 @@ function UpdatePasswordContent() {
 
       clearUserCache();
       setPassword('');
-      setOldPassword('');
       setConfirmPassword('');
       setToken('');
       legacyToken.current = '';
@@ -167,14 +157,10 @@ function UpdatePasswordContent() {
         </div> : <>
         <div className="up-card-head">
           <h2>{mustChangePassword ? 'Ganti Password Sementara' : 'Ganti Password'}</h2>
-          <p>{mustChangePassword ? 'Gunakan password sementara dari admin sebagai password saat ini, lalu tentukan password baru Anda.' : 'Masukkan password saat ini dan password baru untuk akun Anda.'}</p>
+          <p>{mustChangePassword ? 'Tentukan password baru untuk menggantikan password sementara dari admin.' : 'Masukkan password baru untuk akun Anda.'}</p>
         </div>
 
         <form className="up-form" onSubmit={handleUpdate}>
-          <div className="up-field">
-            <label htmlFor="currentPassword">Password Saat Ini</label>
-            <input id="currentPassword" type="password" autoComplete="current-password" placeholder="Password yang digunakan saat login" value={oldPassword} onChange={e => setOldPassword(e.target.value)} disabled={loading} required />
-          </div>
           <div className="up-field">
             <label htmlFor="password">Password Baru</label>
             <div className="up-input-wrap">

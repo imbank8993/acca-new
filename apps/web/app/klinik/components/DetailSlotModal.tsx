@@ -18,6 +18,9 @@ interface DetailSlotModalProps {
   bisaLihatLaporan: (slot: any) => boolean;
   bolehIsiAbsensi: (slot: any) => boolean;
   pengajuanDitolak: (slot: any) => boolean;
+  /** Pengajuan siswa/guru yang waktu pelaksanaannya sudah lewat — tak bisa disetujui. */
+  isKadaluarsa?: (slot: any) => boolean;
+  pesanKadaluarsa?: string;
   getLaporan: (slot: any) => any;
   cekPeserta: (slot: any) => { kurang: number; batal: boolean };
   labelStatus: (status: string) => string;
@@ -76,6 +79,8 @@ export default function DetailSlotModal({
   bisaLihatLaporan,
   bolehIsiAbsensi,
   pengajuanDitolak,
+  isKadaluarsa,
+  pesanKadaluarsa,
   getLaporan,
   cekPeserta,
   labelStatus,
@@ -99,6 +104,7 @@ export default function DetailSlotModal({
   if (!slot) return null;
 
   const isRejected = slot.status === 'cancelled' || pengajuanDitolak(slot);
+  const kadaluarsa = !isRejected && !!isKadaluarsa?.(slot);
   const isCreator =
     isSameId(slot.guru_id, user?.id) ||
     (slot.initiator_type === 'SISWA' && isSameId(slot.initiator_siswa_id, user?.id));
@@ -182,8 +188,10 @@ export default function DetailSlotModal({
                 <td className="kdt-colon">:</td>
                 <td className="kdt-value">
                   <div className="flex flex-wrap items-center gap-1.5">
-                    <span className={`status-pill ${isRejected ? 'rejected' : slot.status}`}>
-                      {isRejected ? 'Ditolak' : labelStatus(slot.status)}
+                    <span className={`status-pill ${isRejected ? 'rejected' : kadaluarsa ? 'kadaluarsa' : slot.status}`}>
+                      {isRejected ? 'Ditolak' : kadaluarsa ? (
+                        <><i className="bi bi-hourglass-bottom" /> Kadaluarsa</>
+                      ) : labelStatus(slot.status)}
                     </span>
                     {batal ? (
                       <span className="status-pill batal">Batal · peserta kurang</span>
@@ -191,6 +199,12 @@ export default function DetailSlotModal({
                       <span className="status-pill kurang">Butuh {kurang} siswa lagi</span>
                     ) : null}
                   </div>
+                  {kadaluarsa && (
+                    <div className="klinik-kadaluarsa-note">
+                      <i className="bi bi-exclamation-triangle-fill" />
+                      <span>{pesanKadaluarsa || 'Waktu pelaksanaan klinik ini sudah terlewati sehingga pengajuan tidak dapat disetujui lagi.'}</span>
+                    </div>
+                  )}
                 </td>
               </tr>
               {laporan?.status && (
@@ -334,17 +348,19 @@ export default function DetailSlotModal({
           {/* Guru penanggung jawab terima/tolak */}
           {isGuru && slot.status === 'pending_guru' && isSameId(slot.guru_id, user?.id) && (
             <div className="flex gap-1.5">
-              <Button
-                size="sm"
-                variant="primary"
-                onClick={() => {
-                  onClose();
-                  onApproveGuru(slot.id, 'terima');
-                }}
-                leftIcon={<i className="bi bi-check-lg" />}
-              >
-                Bersedia
-              </Button>
+              {!kadaluarsa && (
+                <Button
+                  size="sm"
+                  variant="primary"
+                  onClick={() => {
+                    onClose();
+                    onApproveGuru(slot.id, 'terima');
+                  }}
+                  leftIcon={<i className="bi bi-check-lg" />}
+                >
+                  Bersedia
+                </Button>
+              )}
               <Button
                 size="sm"
                 variant="danger"
@@ -409,17 +425,19 @@ export default function DetailSlotModal({
           {/* Admin Approval */}
           {bisaApproveSesi && slot.status === 'pending' && (
             <div className="flex gap-1.5">
-              <Button
-                size="sm"
-                variant="primary"
-                onClick={() => {
-                  onClose();
-                  onApproveSesi(slot.id, 'open');
-                }}
-                leftIcon={<i className="bi bi-check-lg" />}
-              >
-                Setujui
-              </Button>
+              {!kadaluarsa && (
+                <Button
+                  size="sm"
+                  variant="primary"
+                  onClick={() => {
+                    onClose();
+                    onApproveSesi(slot.id, 'open');
+                  }}
+                  leftIcon={<i className="bi bi-check-lg" />}
+                >
+                  Setujui
+                </Button>
+              )}
               <Button
                 size="sm"
                 variant="danger"

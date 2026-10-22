@@ -229,6 +229,28 @@ function jendelaAbsensi(slot: KlinikSlot): { mulai: string; selesai: string } {
   };
 }
 
+/** Jam mulai sesi sebagai waktu dinding "YYYY-MM-DDTHH:mm". */
+function waktuMulaiSesi(slot: KlinikSlot): string {
+  const tgl = (slot.tanggal || '').includes('T') ? slot.tanggal.split('T')[0] : (slot.tanggal || '').slice(0, 10);
+  const jm = formatJam(slot.jam_mulai);
+  return tgl && jm ? `${tgl}T${jm}` : '';
+}
+
+/**
+ * Pengajuan klinik siswa/guru yang belum diputuskan tetapi jam mulainya sudah lewat
+ * = KADALUARSA: tidak bisa lagi disetujui, hanya ditolak. Sepadan dgn
+ * pengajuanKadaluarsa() di API (server tetap menjadi penentu akhir).
+ */
+function pengajuanKadaluarsa(slot: KlinikSlot, sekarang: string): boolean {
+  if (!STATUS_PENGAJUAN.includes(slot.status)) return false;
+  const mulai = waktuMulaiSesi(slot);
+  return !!mulai && sekarang >= mulai;
+}
+
+const PESAN_KADALUARSA =
+  'Waktu pelaksanaan klinik ini sudah terlewati sehingga pengajuan tidak dapat disetujui lagi. '
+  + 'Silakan tolak pengajuan ini dan minta pengaju mengajukan jadwal baru.';
+
 /**
  * Parse string tanggal "YYYY-MM-DD" menjadi Date pada tengah hari lokal
  * agar terhindar dari pergeseran hari akibat UTC midnight di timezone tertentu.
@@ -341,6 +363,7 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
     return () => clearInterval(t);
   }, []);
   const sekarang = useMemo(() => waktuDindingSekarang(skewMs), [skewMs, tick]);
+  const isKadaluarsa = (slot: KlinikSlot) => pengajuanKadaluarsa(slot, sekarang);
 
   // Modals state
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -1236,6 +1259,11 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
       if (!input.isConfirmed) return;
       catatan = input.value || '';
     } else {
+      const slotGuru = slots.find((s) => s.id === id);
+      if (slotGuru && isKadaluarsa(slotGuru)) {
+        Swal.fire('Klinik Kadaluarsa', PESAN_KADALUARSA, 'warning');
+        return;
+      }
       const confirm = await Swal.fire({
         title: 'Bersedia Mengampu Klinik Ini?',
         text: 'Pengajuan akan diteruskan ke Admin untuk persetujuan akhir.',
@@ -1281,6 +1309,10 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
       // memang disetujui dalam keadaan kosong lalu diisi lewat pendaftaran —
       // lihat catatan di approve_slot pada app/api/klinik/route.ts.
       const slot = slots.find((s) => s.id === id);
+      if (slot && isKadaluarsa(slot)) {
+        Swal.fire('Klinik Kadaluarsa', PESAN_KADALUARSA, 'warning');
+        return;
+      }
       if (slot?.initiator_type === 'SISWA' && (slot.klinik_peserta?.length || 0) < PESERTA_MINIMAL) {
         Swal.fire('Tidak Dapat Disetujui', `Pengajuan kelompok minimal harus memiliki ${PESERTA_MINIMAL} peserta untuk dapat disetujui.`, 'warning');
         return;
@@ -2424,8 +2456,13 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
                             <td>
                               <div className="status-kuota-stack">
                                 <div className="status-kuota-row">
-                                  <span className={`status-pill ${isRejected ? 'rejected' : slot.status}`}>
-                                    {isRejected ? 'Ditolak' : labelStatus(slot.status)}
+                                  <span
+                                    className={`status-pill ${isRejected ? 'rejected' : isKadaluarsa(slot) ? 'kadaluarsa' : slot.status}`}
+                                    title={!isRejected && isKadaluarsa(slot) ? PESAN_KADALUARSA : undefined}
+                                  >
+                                    {isRejected ? 'Ditolak' : isKadaluarsa(slot) ? (
+                                      <><i className="bi bi-hourglass-bottom" /> Kadaluarsa</>
+                                    ) : labelStatus(slot.status)}
                                   </span>
                                   {isRejected && slot.catatan_penolakan && (
                                     <button
@@ -2478,15 +2515,21 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
                                     menyatakan kesediaannya sebelum reviewer menilai. */}
                                 {isGuru && slot.status === 'pending_guru' && isSameId(slot.guru_id, user?.id) && (
                                   <>
-                                    <button
-                                      type="button"
-                                      className="btn-icon-soft"
-                                      data-tooltip="Bersedia Mengampu"
-                                      aria-label="Bersedia Mengampu"
-                                      onClick={() => handleApproveGuru(slot.id, 'terima')}
-                                    >
-                                      <i className="bi bi-check-lg" style={{ color: '#0284c7' }} />
-                                    </button>
+                                    {isKadaluarsa(slot) ? (
+                                      <span className="act-note act-note--batal" title={PESAN_KADALUARSA}>
+                                        <i className="bi bi-hourglass-bottom" /> Kadaluarsa
+                                      </span>
+                                    ) : (
+                                      <button
+                                        type="button"
+                                        className="btn-icon-soft"
+                                        data-tooltip="Bersedia Mengampu"
+                                        aria-label="Bersedia Mengampu"
+                                        onClick={() => handleApproveGuru(slot.id, 'terima')}
+                                      >
+                                        <i className="bi bi-check-lg" style={{ color: '#0284c7' }} />
+                                      </button>
+                                    )}
                                     <button
                                       type="button"
                                       className="btn-icon-soft"
@@ -2550,15 +2593,21 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
 
                                 {bisaApproveSesi && tabAktif === 'approval' && slot.status === 'pending' && (
                                   <>
-                                    <button
-                                      type="button"
-                                      className="btn-icon-soft"
-                                      data-tooltip="Setujui"
-                                      aria-label="Setujui"
-                                      onClick={() => handleApprove(slot.id, 'open')}
-                                    >
-                                      <i className="bi bi-check-lg" style={{ color: '#0284c7' }} />
-                                    </button>
+                                    {isKadaluarsa(slot) ? (
+                                      <span className="act-note act-note--batal" title={PESAN_KADALUARSA}>
+                                        <i className="bi bi-hourglass-bottom" /> Kadaluarsa
+                                      </span>
+                                    ) : (
+                                      <button
+                                        type="button"
+                                        className="btn-icon-soft"
+                                        data-tooltip="Setujui"
+                                        aria-label="Setujui"
+                                        onClick={() => handleApprove(slot.id, 'open')}
+                                      >
+                                        <i className="bi bi-check-lg" style={{ color: '#0284c7' }} />
+                                      </button>
+                                    )}
                                     <button
                                       type="button"
                                       className="btn-icon-soft"
@@ -2881,6 +2930,8 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
           bisaLihatLaporan={bisaLihatLaporan}
           bolehIsiAbsensi={bolehIsiAbsensi}
           pengajuanDitolak={pengajuanDitolak}
+          isKadaluarsa={isKadaluarsa}
+          pesanKadaluarsa={PESAN_KADALUARSA}
           getLaporan={getLaporan}
           cekPeserta={cekPeserta}
           labelStatus={labelStatus}

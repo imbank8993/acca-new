@@ -166,6 +166,28 @@ function jendelaAbsensi(slot: { tanggal: string; jam_mulai: string; jam_selesai:
 }
 
 /**
+ * Pengajuan klinik (siswa MAUPUN guru) yang belum diputuskan (pending_guru / pending) tetapi
+ * jam mulainya sudah terlewati dianggap KADALUARSA: menyetujuinya berarti
+ * membuka sesi yang waktunya sudah lewat. Pengajuan seperti ini hanya boleh
+ * ditolak. Dibandingkan pada waktu dinding madrasah, sepadan dgn
+ * `pengajuanKadaluarsa()` di apps/web/app/klinik/view.tsx.
+ */
+async function pengajuanKadaluarsa(slot: any, db?: PrismaDbAdapter): Promise<boolean> {
+    if (!slot || !STATUS_PENGAJUAN.includes(slot.status)) return false;
+    const mulai = geserWaktuDinding(slot.tanggal, slot.jam_mulai, 0);
+    if (!mulai) return false;
+    return (await getCurrentDateTimeInTz(db)) >= mulai;
+}
+
+const pesanKadaluarsa = (slot: any) => {
+    const mulai = geserWaktuDinding(slot?.tanggal, slot?.jam_mulai, 0);
+    const [tgl, jam] = mulai ? mulai.split('T') : ['', ''];
+    return `Klinik kadaluarsa: waktu pelaksanaan (${tgl} pukul ${jam}) sudah terlewati, `
+        + 'sehingga pengajuan ini tidak dapat disetujui lagi. Silakan tolak pengajuan ini '
+        + 'dan minta pengaju (siswa/guru) mengajukan jadwal baru.';
+};
+
+/**
  * Resolve baris `users` milik pemanggil. Utamakan `auth_id` (akurat), tapi
  * fallback ke `nip` (dipakai jg utk NISN siswa, lihat api-auth-pattern) kalau
  * baris auth_id tidak ketemu — beberapa akun siswa ternyata tidak selalu
@@ -1743,19 +1765,24 @@ export async function handlePatch(req: any, action: string, id: any, payload: an
             }
 
             const { data: slot } = await db.from('klinik_slots')
-                .select('id, guru_id, status').eq('id', id).maybeSingle();
+                .select('id, guru_id, status, initiator_type, tanggal, jam_mulai').eq('id', id).maybeSingle();
             if (!slot) {
                 throw new HttpException({ ok: false, error: 'Pengajuan tidak ditemukan' }, 404);
             }
             if (slot.status !== 'pending_guru') {
                 throw new HttpException({ ok: false, error: 'Pengajuan ini sudah diproses' }, 409);
             }
-
             // Hanya guru pengampu yang ditunjuk. Admin diizinkan sbg jalan keluar
             // manual kalau gurunya berhalangan lama, bukan sebagai alur normal.
             const callerRecord = await resolveUserRecord(db, user.authId, user.nip);
             if (!isAdminUser(user) && (!callerRecord || slot.guru_id !== callerRecord.id)) {
                 throw new ForbiddenException('Hanya guru pengampu yang ditunjuk yang dapat memproses pengajuan ini');
+            }
+
+            // Periksa izin sebelum menampilkan detail waktu pengajuan.
+            // Menolak tetap diizinkan supaya pengajuan kadaluarsa bisa dibersihkan.
+            if (guruAction === 'terima' && await pengajuanKadaluarsa(slot, db)) {
+                throw new HttpException({ ok: false, error: pesanKadaluarsa(slot), code: 'KLINIK_KADALUARSA' }, 409);
             }
 
             const { data, error } = await db.from('klinik_slots').update({
@@ -1776,7 +1803,7 @@ export async function handlePatch(req: any, action: string, id: any, payload: an
                 throw new HttpException({ ok: false, error: 'Status hanya boleh open atau cancelled' }, 400);
             }
             const { data: checkSlot, error: checkError } = await db.from('klinik_slots')
-                .select('id, status, initiator_type, klinik_peserta(id)')
+                .select('id, status, initiator_type, tanggal, jam_mulai, klinik_peserta(id)')
                 .eq('id', id)
                 .single();
 
@@ -1792,6 +1819,12 @@ export async function handlePatch(req: any, action: string, id: any, payload: an
                     ok: false,
                     error: 'Pengajuan ini masih menunggu kesediaan guru pengampu',
                 }, 409);
+            }
+
+            // Pengajuan siswa/guru yang waktu pelaksanaannya sudah lewat tidak boleh
+            // disetujui (kadaluarsa) — hanya boleh ditolak.
+            if (payload.status === 'open' && await pengajuanKadaluarsa(checkSlot, db)) {
+                throw new HttpException({ ok: false, error: pesanKadaluarsa(checkSlot), code: 'KLINIK_KADALUARSA' }, 409);
             }
 
             // Syarat peserta minimal HANYA berlaku untuk pengajuan kelompok siswa,

@@ -64,6 +64,7 @@ jobs:
             docker compose run --rm --no-deps acca-api node node_modules/prisma/build/index.js db execute --schema apps/api/prisma/schema.prisma --file apps/api/prisma/sql/20261013_agenda_sasaran.sql
             docker compose run --rm --no-deps acca-api node node_modules/prisma/build/index.js db execute --schema apps/api/prisma/schema.prisma --file apps/api/prisma/sql/20261016_e_sertifikat.sql
             docker compose run --rm --no-deps acca-api node node_modules/prisma/build/index.js db execute --schema apps/api/prisma/schema.prisma --file apps/api/prisma/sql/20261021_e_sertifikat_hardening.sql
+            docker compose run --rm --no-deps acca-api node node_modules/prisma/build/index.js db execute --schema apps/api/prisma/schema.prisma --file apps/api/prisma/sql/20261022_system_audit.sql
 
             echo "🔄 Restart aplikasi..."
             docker compose up -d --remove-orphans

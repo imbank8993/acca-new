@@ -19,15 +19,15 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        const { password, oldPassword } = await request.json();
+        const input = await request.json().catch(() => null);
+        const password = input?.password;
         if (typeof password !== 'string' || password.length < 6) {
             return NextResponse.json({ ok: false, error: 'Password minimal 6 karakter' }, { status: 400 });
         }
-        if (typeof oldPassword !== 'string' || !oldPassword) return NextResponse.json({ ok: false, error: 'Password saat ini wajib diisi. Gunakan password sementara dari admin jika akun baru direset.' }, { status: 400 });
 
         const { status, body } = await nestFetchAsUser('/users/me/password', token, {
             method: 'POST',
-            body: JSON.stringify({ password, oldPassword }),
+            body: JSON.stringify({ password }),
         });
 
         if (status === 401) {

@@ -676,12 +676,12 @@ export class UsersService {
   private async verifyOwnPassword(tx: Prisma.TransactionClient, user: any, password: string, oldPassword?: string) {
     if (typeof password !== 'string' || password.length < 6) throw new BadRequestException('Password minimal 6 karakter');
     if (!user.auth_id) throw new BadRequestException('Akun belum memiliki kredensial');
-    if (typeof oldPassword !== 'string' || !oldPassword) throw new BadRequestException('Password saat ini wajib diisi');
+    // Konfirmasi password lama sengaja tidak diminta lagi: pengguna yang sudah
+    // login (sesi JWT valid) cukup memasukkan password baru. `oldPassword`
+    // tetap diterima di signature agar pemanggil lama tidak rusak, tapi diabaikan.
+    void oldPassword;
     const current = await tx.auth_users.findUnique({ where: { id: user.auth_id }, select: { encrypted_password: true } });
-    if (!current?.encrypted_password || !await bcrypt.compare(oldPassword, current.encrypted_password)) {
-      throw new BadRequestException('Password saat ini tidak sesuai');
-    }
-    if (await bcrypt.compare(password, current.encrypted_password)) throw new BadRequestException('Password baru harus berbeda dari password saat ini');
+    if (current?.encrypted_password && await bcrypt.compare(password, current.encrypted_password)) throw new BadRequestException('Password baru harus berbeda dari password saat ini');
   }
 
   private async changeOwnPasswordInTransaction(tx: Prisma.TransactionClient, user: any, password: string) {

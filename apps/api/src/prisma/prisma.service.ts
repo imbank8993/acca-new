@@ -1,9 +1,16 @@
 import { Injectable, OnModuleInit, OnModuleDestroy, Logger } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
+import { withAuditContext } from '@acca/shared';
+import { auditContext } from '../common/audit-context';
 
 @Injectable()
 export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(PrismaService.name);
+
+  constructor() {
+    super();
+    return withAuditContext(this, () => auditContext.getStore());
+  }
 
   async onModuleInit() {
     try {
