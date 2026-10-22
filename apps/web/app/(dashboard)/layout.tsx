@@ -16,6 +16,7 @@ import { resolvePageLabel } from '@/lib/sidebar-menu'
 import type { User, PageNode } from '@/lib/types'
 import Sidebar from '@/components/Sidebar'
 import Header from '@/components/Header'
+import SingleLogoutListener from '@/components/SingleLogoutListener'
 import BottomNav from '@/components/BottomNav'
 import { useSidebarBadges } from '@/hooks/use-sidebar-badges'
 import MaintenanceBanner from '@/components/MaintenanceBanner'
@@ -295,6 +296,7 @@ export default function DashboardShellLayout({ children }: { children: React.Rea
   return (
     <DashboardUserContext.Provider value={userContextValue}>
       <UserHeartbeat />
+      <SingleLogoutListener />
       <div className={`dashboard-layout ${sidebarOpen ? 'sidebar-mobile-open' : ''}`}>
         <div className="mobile-browser-edge" aria-hidden="true" />
         <Sidebar

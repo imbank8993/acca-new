@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
 import { encodeSessionCookie } from '@/lib/app-jwt';
+import { logoutResponse } from '@/lib/single-logout';
 
 const NEST_API_URL = process.env.NEXT_PUBLIC_NEST_API_URL || 'http://127.0.0.1:3007/api';
 
@@ -33,18 +33,6 @@ function sessionExpiry(accessToken: string): Date {
     return typeof klaim?.exp === 'number' ? new Date(klaim.exp * 1000) : CADANGAN;
   } catch {
     return CADANGAN;
-  }
-}
-
-function clearSessionCookies(cookieStore: Awaited<ReturnType<typeof cookies>>) {
-  const clearOpts = { path: '/', expires: new Date(0), sameSite: 'lax' as const, httpOnly: true };
-  try {
-    cookieStore.set(COOKIE_NAMES.accessToken, '', clearOpts);
-    cookieStore.set(COOKIE_NAMES.refreshToken, '', clearOpts);
-    cookieStore.set('sb-access-token.0', '', clearOpts);
-    cookieStore.set('sb-refresh-token.0', '', clearOpts);
-  } catch (e) {
-    console.warn('[logout] Manual cookie clear:', e);
   }
 }
 
@@ -109,8 +97,4 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function DELETE() {
-  const cookieStore = await cookies();
-  clearSessionCookies(cookieStore);
-  return NextResponse.json({ ok: true, message: 'Logout berhasil' });
-}
+export const DELETE = logoutResponse;

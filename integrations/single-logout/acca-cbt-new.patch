@@ -1,0 +1,83 @@
+===================================================================
+--- /dev/null
++++ b/apps/web/app/api/auth/single-logout/route.ts
+@@ -1,0 +1,23 @@
+\ No newline at end of file
++import { SECURE_SESSION_COOKIE, SESSION_COOKIE, sessionCookieOptions } from '@/lib/app-jwt';
++import { NextRequest, NextResponse } from 'next/server';
++
++function allowedOrigin(request: NextRequest): string | null {
++    const origin = request.headers.get('origin');
++    const expected = new URL(process.env.NEXT_PUBLIC_ACCA_URL || 'https://acca.icgowa.sch.id').origin;
++    return origin === expected ? origin : null;
++}
++function headers(origin: string) {
++    return { 'Access-Control-Allow-Origin': origin, 'Access-Control-Allow-Credentials': 'true', 'Access-Control-Allow-Methods': 'POST, OPTIONS', 'Cache-Control': 'private, no-store', 'Vary': 'Origin' };
++}
++export async function POST(request: NextRequest) {
++    const origin = allowedOrigin(request);
++    if (!origin) return NextResponse.json({ ok: false }, { status: 403 });
++    const response = NextResponse.json({ ok: true }, { headers: headers(origin) });
++    response.cookies.set(SESSION_COOKIE, '', sessionCookieOptions(0));
++    response.cookies.set(SECURE_SESSION_COOKIE, '', { ...sessionCookieOptions(0), secure: true });
++    return response;
++}
++export async function OPTIONS(request: NextRequest) {
++    const origin = allowedOrigin(request);
++    return origin ? new NextResponse(null, { status: 204, headers: headers(origin) }) : NextResponse.json({ ok: false }, { status: 403 });
++}
+===================================================================
+--- /dev/null
++++ b/apps/web/app/components/SingleLogoutListener.tsx
+@@ -1,0 +1,30 @@
+\ No newline at end of file
++'use client';
++import { useEffect } from 'react';
++import { clearSessionCache } from '@/lib/session';
++import { clearActiveRoleInStorage } from '@/lib/rbac';
++
++/** A public cookie is only an event signal; never a credential or a permission. */
++export function SingleLogoutListener() {
++    useEffect(() => {
++        const read = () => document.cookie.split('; ').find(part => part.startsWith('acca_logout_at=')) || '';
++        const previous = read();
++        let closing = false;
++        const check = async () => {
++            if (!window.location.pathname.startsWith('/dashboard')) return;
++            if (!read() || read() === previous || closing) return;
++            closing = true;
++            try {
++                const response = await fetch('/api/auth/logout', { method: 'POST', cache: 'no-store', signal: AbortSignal.timeout(10000) });
++                if (!response.ok) throw new Error('Logout failed');
++                clearSessionCache();
++                try { clearActiveRoleInStorage(); } catch { /* Browser storage may be blocked. */ }
++                window.location.replace(new URL('/login?logged_out=1', process.env.NEXT_PUBLIC_ACCA_URL || 'https://acca.icgowa.sch.id').toString());
++            } catch { closing = false; }
++        };
++        const timer = setInterval(check, 2000);
++        window.addEventListener('focus', check);
++        document.addEventListener('visibilitychange', check);
++        return () => { clearInterval(timer); window.removeEventListener('focus', check); document.removeEventListener('visibilitychange', check); };
++    }, []);
++    return null;
++}
+===================================================================
+--- a/apps/web/app/layout.tsx
++++ b/apps/web/app/layout.tsx
+@@ -1,5 +1,6 @@
+ import { ExamSubmissionSync } from '@/app/components/ExamSubmissionSync';
++import { SingleLogoutListener } from '@/app/components/SingleLogoutListener';
+ import { ExamPwaRegistration } from "@/app/components/ExamPwaRegistration";
+ import MaintenanceProvider from "@/app/components/MaintenanceProvider";
+ import { ErrorBoundary } from "@/app/components/ui/ErrorBoundary";
+ import { ToastProvider } from "@/app/components/ui/Toast";
+@@ -99,8 +100,9 @@
+       <body
+         className={`${openSans.variable} ${poppins.variable} antialiased`}
+       >
+         <div className="acca-ambient-bg" aria-hidden="true" />
++        <SingleLogoutListener />
+         <ExamPwaRegistration />
+         <ErrorBoundary>
+           <ToastProvider>
+             <ExamSubmissionSync />

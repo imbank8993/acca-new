@@ -41,12 +41,8 @@ import {
     Mail,
     Sun,
     Moon,
-    User as UserIcon,
-    Globe,
-    ExternalLink,
-    Loader2
+    User as UserIcon
 } from 'lucide-react';
-import { swalError } from '@/lib/swal-premium';
 
 export default function DashboardContent({ user, headerExtra }: { user: User; headerExtra?: ReactNode }) {
     // Birthday state
@@ -282,45 +278,6 @@ export default function DashboardContent({ user, headerExtra }: { user: User; he
     const isOtherRole = !isSiswa && !isGuru && !isOrangTua;
     const isTU = roles.includes('TU') || roles.includes('TATA_USAHA');
     const canViewKinerjaGuru = isGuru || isSiswa || isTU || isAdmin;
-    const isAllowedWp = !isSiswa && (isAdmin || user?.pagesArray?.includes('wordpress-app') || isGuru || roles.some((r: string) => ['SUPERADMIN', 'HUMAS', 'EDITOR', 'PEMBINA', 'STAF', 'STAFF'].includes(r)));
-
-    // WordPress SSO state & launcher
-    const [loadingWp, setLoadingWp] = useState(false);
-    const handleOpenWordPress = async () => {
-        if (loadingWp) return;
-        setLoadingWp(true);
-        // Buka tab baru sedini mungkin saat klik user agar tidak diblokir browser popup blocker
-        const win = window.open('about:blank', '_blank');
-        if (win) {
-            try { win.opener = null; } catch { /* ignore cross-origin */ }
-        }
-
-        try {
-            const res = await fetch('/api/sso/wordpress', {
-                headers: { 'Accept': 'application/json' },
-            });
-            const data = await res.json().catch(() => null);
-
-            if (res.ok && data?.sso_url) {
-                if (win) {
-                    win.location.href = data.sso_url;
-                } else {
-                    window.open(data.sso_url, '_blank');
-                }
-            } else {
-                win?.close();
-                const errMsg = data?.error || data?.message || 'Gagal menghasilkan sesi SSO ke WordPress.';
-                swalError('Gagal Membuka WordPress', errMsg);
-            }
-        } catch (err: any) {
-            win?.close();
-            console.error('[WordPress SSO] Error:', err);
-            swalError('Gagal Membuka WordPress', 'Terjadi kesalahan jaringan saat menghubungi server SSO.');
-        } finally {
-            setLoadingWp(false);
-        }
-    };
-
     useEffect(() => {
         if (isSiswa || isOrangTua) {
             loadSiswaKelas();
@@ -841,47 +798,6 @@ export default function DashboardContent({ user, headerExtra }: { user: User; he
             {/* 🏆 KINERJA GURU — RADAR KEDISIPLINAN (JAM KOSONG, PENUGASAN TANPA PENDAMPINGAN, TERLAMBAT) */}
             {canViewKinerjaGuru && (
                 <DashboardKinerjaCard />
-            )}
-
-            {/* 🌐 WORDPRESS SSO — PORTAL RESMI MADRASAH (GURU & ADMIN) */}
-            {isAllowedWp && (
-                <div className="db__wp-portal-card">
-                    <div className="db__wp-portal-info">
-                        <div className="db__wp-portal-icon">
-                            <Globe size={22} />
-                        </div>
-                        <div className="db__wp-portal-texts">
-                            <div className="db__wp-portal-heading">
-                                <h3 className="db__wp-portal-title">Website Madrasah (WordPress)</h3>
-                                <span className="db__wp-portal-badge">SSO Aktif</span>
-                            </div>
-                            <p className="db__wp-portal-desc">
-                                Akses langsung ke dashboard <code>/wp-admin/</code> website resmi MAN Insan Cendekia Gowa tanpa login manual.
-                            </p>
-                        </div>
-                    </div>
-                    <button
-                        type="button"
-                        onClick={handleOpenWordPress}
-                        disabled={loadingWp}
-                        className="db__wp-portal-btn"
-                        title="Buka WordPress Admin"
-                        aria-busy={loadingWp}
-                    >
-                        {loadingWp ? (
-                            <>
-                                <Loader2 size={16} className="db__wp-spin" />
-                                <span>Menghubungkan…</span>
-                            </>
-                        ) : (
-                            <>
-                                <Globe size={16} />
-                                <span>Buka WordPress</span>
-                                <ExternalLink size={14} className="db__wp-external-icon" />
-                            </>
-                        )}
-                    </button>
-                </div>
             )}
 
             {/* Layout Grid */}
@@ -1410,153 +1326,6 @@ export default function DashboardContent({ user, headerExtra }: { user: User; he
                 @keyframes fadeUp {
                     from { opacity: 0; transform: translateY(10px); }
                     to { opacity: 1; transform: translateY(0); }
-                }
-
-                /* WordPress SSO Portal Card */
-                .db__wp-portal-card {
-                    display: flex;
-                    align-items: center;
-                    justify-content: space-between;
-                    gap: 16px;
-                    padding: 16px 20px;
-                    background: linear-gradient(135deg, #ffffff 0%, #f0f7ff 100%);
-                    border: 1.5px solid rgba(48, 131, 255, 0.25);
-                    border-radius: 16px;
-                    box-shadow: 0 4px 20px rgba(0, 56, 168, 0.05);
-                    transition: all 0.25s ease;
-                }
-                .db__wp-portal-card:hover {
-                    border-color: #3083FF;
-                    box-shadow: 0 8px 24px rgba(48, 131, 255, 0.12);
-                }
-                :global(.dark) .db__wp-portal-card {
-                    background: linear-gradient(135deg, #0b1329 0%, #111e40 100%) !important;
-                    border: 1.5px solid rgba(96, 165, 250, 0.3) !important;
-                    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5) !important;
-                }
-                :global(.dark) .db__wp-portal-card:hover {
-                    border-color: #60a5fa !important;
-                    box-shadow: 0 8px 28px rgba(26, 115, 232, 0.35) !important;
-                }
-                .db__wp-portal-info {
-                    display: flex;
-                    align-items: center;
-                    gap: 14px;
-                    flex: 1 1 auto;
-                    min-width: 0;
-                }
-                .db__wp-portal-icon {
-                    width: 44px;
-                    height: 44px;
-                    border-radius: 12px;
-                    background: linear-gradient(135deg, #3083FF 0%, #1e5bb8 100%);
-                    color: #ffffff;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    flex-shrink: 0;
-                    box-shadow: 0 4px 12px rgba(48, 131, 255, 0.35);
-                }
-                .db__wp-portal-texts {
-                    display: flex;
-                    flex-direction: column;
-                    gap: 2px;
-                    min-width: 0;
-                }
-                .db__wp-portal-heading {
-                    display: flex;
-                    align-items: center;
-                    gap: 8px;
-                    flex-wrap: wrap;
-                }
-                .db__wp-portal-title {
-                    margin: 0;
-                    font-size: 1.05rem;
-                    font-weight: 700;
-                    color: #112E59;
-                }
-                :global(.dark) .db__wp-portal-title {
-                    color: #eaf2ff;
-                }
-                .db__wp-portal-badge {
-                    font-size: 0.7rem;
-                    font-weight: 600;
-                    padding: 2px 8px;
-                    border-radius: 20px;
-                    background: rgba(16, 185, 129, 0.12);
-                    color: #059669;
-                    border: 1px solid rgba(16, 185, 129, 0.25);
-                }
-                :global(.dark) .db__wp-portal-badge {
-                    background: rgba(16, 185, 129, 0.2);
-                    color: #34d399;
-                    border-color: rgba(52, 211, 153, 0.3);
-                }
-                .db__wp-portal-desc {
-                    margin: 0;
-                    font-size: 0.82rem;
-                    color: #64748b;
-                    line-height: 1.4;
-                }
-                :global(.dark) .db__wp-portal-desc {
-                    color: #94a3b8;
-                }
-                .db__wp-portal-desc code {
-                    font-size: 0.8rem;
-                    padding: 1px 5px;
-                    border-radius: 4px;
-                    background: rgba(48, 131, 255, 0.08);
-                    color: #3083FF;
-                }
-                :global(.dark) .db__wp-portal-desc code {
-                    background: rgba(96, 165, 250, 0.15);
-                    color: #93c5fd;
-                }
-                .db__wp-portal-btn {
-                    display: inline-flex;
-                    align-items: center;
-                    justify-content: center;
-                    gap: 8px;
-                    padding: 10px 18px;
-                    border-radius: 10px;
-                    font-size: 0.88rem;
-                    font-weight: 600;
-                    color: #ffffff;
-                    background: #3083FF;
-                    border: none;
-                    cursor: pointer;
-                    box-shadow: 0 4px 14px rgba(48, 131, 255, 0.35);
-                    transition: all 0.2s ease;
-                    white-space: nowrap;
-                    flex-shrink: 0;
-                }
-                .db__wp-portal-btn:hover:not(:disabled) {
-                    background: #1e6fe8;
-                    transform: translateY(-1px);
-                    box-shadow: 0 6px 18px rgba(48, 131, 255, 0.45);
-                }
-                .db__wp-portal-btn:disabled {
-                    opacity: 0.7;
-                    cursor: not-allowed;
-                }
-                .db__wp-spin {
-                    animation: wpSpin 1s linear infinite;
-                }
-                @keyframes wpSpin {
-                    from { transform: rotate(0deg); }
-                    to { transform: rotate(360deg); }
-                }
-                @media (max-width: 640px) {
-                    .db__wp-portal-card {
-                        flex-direction: column;
-                        align-items: stretch;
-                        gap: 14px;
-                        padding: 14px;
-                    }
-                    .db__wp-portal-btn {
-                        width: 100%;
-                        height: 40px;
-                    }
                 }
 
                 .db__roleSection {

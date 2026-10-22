@@ -8,6 +8,8 @@ import { getProxiedImageUrl } from '@/lib/image-utils'
 import { Sun, Moon, Menu, User as UserIcon, Shield, LogOut, ArrowLeft } from 'lucide-react'
 import NotificationBell from './NotificationBell'
 import './header.css'
+import Swal from 'sweetalert2'
+import { logoutAcrossApplications, setLogoutInProgress } from '@/lib/single-logout-client'
 
 interface HeaderProps {
     user: User
@@ -32,6 +34,7 @@ function useDetectModalOpen() {
 
 export default function Header({ user, onMenuToggle, onNavigate, isCollapsed, onCollapse, onBack, pageTitle, pageSubtitle, onScrollHiddenChange }: HeaderProps) {
     const [showUserMenu, setShowUserMenu] = useState(false)
+    const [loggingOut, setLoggingOut] = useState(false)
     const [customSubtitle, setCustomSubtitle] = useState<string | null>(null)
 
     useEffect(() => {
@@ -109,27 +112,24 @@ export default function Header({ user, onMenuToggle, onNavigate, isCollapsed, on
     }, [showUserMenu])
 
     const handleLogout = async () => {
-        const { clearUserCache } = await import('@/lib/auth-client')
-        clearUserCache()
+        if (loggingOut) return
+        setLoggingOut(true)
+        setLogoutInProgress(true)
+        let localLogoutSucceeded = false
         try {
-            await fetch('/api/auth/logout', { method: 'POST' })
-        } catch { }
-
-        // Arahkan ke login lokal saat di localhost, atau ke acca.icgowa.sch.id jika di produksi
-        const isLocal =
-            process.env.NODE_ENV === 'development' ||
-            (typeof window !== 'undefined' && (
-                window.location.hostname === 'localhost' ||
-                window.location.hostname === '127.0.0.1' ||
-                window.location.hostname.endsWith('.local') ||
-                window.location.hostname.startsWith('192.168.')
-            ))
-
-        const targetUrl = isLocal
-            ? '/login'
-            : (process.env.NEXT_PUBLIC_LOGIN_URL || 'https://acca.icgowa.sch.id/login')
-
-        window.location.href = targetUrl
+            while (true) {
+                try {
+                    const failed = await logoutAcrossApplications()
+                    localLogoutSucceeded = true
+                    if (!failed.length) { window.location.replace('/login?logged_out=1'); return }
+                    const answer = await Swal.fire({ icon: 'warning', title: 'Sebagian sesi belum ditutup', text: `Anda sudah keluar dari ACCA. Logout ${failed.join(', ')} belum berhasil.`, confirmButtonText: 'Coba lagi', showCancelButton: true, cancelButtonText: 'Ke halaman login', allowOutsideClick: false, allowEscapeKey: false, confirmButtonColor: '#3083ff' })
+                    if (!answer.isConfirmed) { window.location.replace('/login?logout=partial'); return }
+                } catch {
+                    const answer = await Swal.fire({ icon: 'error', title: 'Logout belum selesai', text: 'Koneksi terganggu. Silakan coba lagi untuk menutup sesi Anda.', confirmButtonText: 'Coba lagi', showCancelButton: true, cancelButtonText: localLogoutSucceeded ? 'Ke halaman login' : 'Tutup', allowOutsideClick: false, confirmButtonColor: '#3083ff' })
+                    if (!answer.isConfirmed) { if (localLogoutSucceeded) window.location.replace('/login?logout=partial'); return }
+                }
+            }
+        } finally { setLoggingOut(false); setLogoutInProgress(false) }
     }
 
     const handleBack = () => {
@@ -293,9 +293,9 @@ export default function Header({ user, onMenuToggle, onNavigate, isCollapsed, on
                                     <span>Profil & Keamanan</span>
                                 </button>
                                 <div style={{ borderTop: '1px solid var(--header-border)', margin: '4px 0' }}></div>
-                                <button className="user-menu-item" onClick={handleLogout} style={{ color: '#ef4444' }}>
+                                <button className="user-menu-item" onClick={handleLogout} disabled={loggingOut} style={{ color: '#ef4444' }}>
                                     <LogOut size={16} style={{ flexShrink: 0 }} />
-                                    <span>Sign Out</span>
+                                    <span>{loggingOut ? 'Menutup sesi...' : 'Sign Out'}</span>
                                 </button>
                             </div>
                         )}
