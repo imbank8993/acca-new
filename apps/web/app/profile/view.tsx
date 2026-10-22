@@ -581,18 +581,23 @@ export default function ProfilePage({ user, onRefreshUser }: ProfilePageProps) {
         if (formData.newPassword) {
             if (formData.newPassword.length < 6) { swalError('Error', 'Password baru minimal 6 karakter'); return }
             if (formData.newPassword !== formData.confirmPassword) { swalError('Error', 'Konfirmasi password tidak cocok'); return }
+            if (!formData.currentPassword) { setPwdError('Password saat ini wajib diisi. Gunakan password sementara dari admin jika akun baru direset.'); return }
+            if (formData.newPassword === formData.currentPassword) { setPwdError('Password baru harus berbeda dari password saat ini'); return }
         }
         setLoading(true)
         try {
-            const res = await fetch('/api/user/profile', {
-                method: 'PUT', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username: formData.username, email: formData.email, photoUrl: formData.photoUrl || null, password: formData.newPassword || undefined, oldPassword: formData.newPassword ? (formData.currentPassword || undefined) : undefined })
+            const changingPassword = !!formData.newPassword
+            const res = await fetch(changingPassword ? '/api/auth/update-password' : '/api/user/profile', {
+                method: changingPassword ? 'POST' : 'PUT', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(changingPassword ? { password: formData.newPassword, oldPassword: formData.currentPassword } : { username: formData.username, email: formData.email, photoUrl: formData.photoUrl || null })
             })
             const data = await res.json()
-            if (data.ok) {
+            if (res.ok && data.ok) {
                 if (formData.newPassword) {
-                    await Swal.fire({ icon: 'success', title: 'Password Berhasil Diganti', text: 'Anda akan dialihkan ke halaman login.', timer: 3000, showConfirmButton: false })
-                    await fetch('/api/auth/login', { method: 'DELETE' }); clearUserCache(); window.location.href = '/login'
+                    setFormData(prev => ({ ...prev, newPassword: '', confirmPassword: '', currentPassword: '' }))
+                    clearUserCache()
+                    try { await Swal.fire({ icon: 'success', title: 'Password Berhasil Diganti', text: 'Silakan login kembali menggunakan password baru.', timer: 2000, showConfirmButton: false }) }
+                    finally { window.location.href = '/login' }
                 } else {
                     Swal.fire({ icon: 'success', title: 'Berhasil', text: 'Profil diperbarui', timer: 2000, showConfirmButton: false, confirmButtonColor: '#3083FF' })
                     setFormData(prev => ({ ...prev, newPassword: '', confirmPassword: '', currentPassword: '' }))
@@ -700,7 +705,7 @@ export default function ProfilePage({ user, onRefreshUser }: ProfilePageProps) {
 
                 {/* ── Tab: Akun & Keamanan ── */}
                 {activeTab === 'akun' && (
-                    <form onSubmit={handleSubmitAccount} className="profile-tab-content">
+                    <form onSubmit={handleSubmitAccount} noValidate={!!formData.newPassword} className="profile-tab-content">
 
                         {/* Simple & Clean Identity Strip */}
                         <div className="ps-identity-bar">
@@ -920,11 +925,12 @@ export default function ProfilePage({ user, onRefreshUser }: ProfilePageProps) {
 
                         {/* Footer Actions */}
                         <div className="ps-glass-footer">
+                            {formData.newPassword && <p className="ps-field-helpText">Yang disimpan saat ini hanya password. Simpan perubahan data profil secara terpisah.</p>}
                             <button type="submit" className="ps-btn-submit-premium" disabled={loading || uploading}>
                                 {loading ? (
                                     <span className="ps-loading-dots"><span></span><span></span><span></span></span>
                                 ) : (
-                                    <><i className="bi bi-cloud-arrow-up-fill"></i> Simpan Perubahan</>
+                                    <><i className="bi bi-cloud-arrow-up-fill"></i> {formData.newPassword ? 'Ganti Password' : 'Simpan Perubahan'}</>
                                 )}
                             </button>
                         </div>

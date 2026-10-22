@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { deleteFile } from '@/lib/storage';
 import { extractRequestToken } from '@/lib/app-jwt';
 import { nestFetchAsUser } from '@/lib/nest-api';
+import { authErrorMessage } from '@/lib/auth-error-message';
 
 // Profil & password sendiri disimpan di PostgreSQL VPS lewat NestJS.
 // Password ditulis sebagai bcrypt ke auth_users — bukan plaintext seperti dulu.
@@ -32,7 +33,7 @@ export async function PUT(request: NextRequest) {
 
         if (status !== 200) {
             return NextResponse.json(
-                { ok: false, error: result?.message || 'Gagal memperbarui profil' },
+                { ok: false, error: authErrorMessage(result, status, 'Gagal memperbarui profil') },
                 { status }
             );
         }
@@ -47,8 +48,11 @@ export async function PUT(request: NextRequest) {
             }
         }
 
-        return NextResponse.json({ ok: true, data: result?.data, message: 'Profil berhasil diperbarui' });
+        const response = NextResponse.json({ ok: true, data: result?.data, message: 'Profil berhasil diperbarui' });
+        if (password) response.cookies.set('acca_session', '', { httpOnly: true, secure: request.headers?.get('x-forwarded-proto') === 'https' || request.nextUrl?.protocol === 'https:', sameSite: 'lax', path: '/', maxAge: 0 });
+        return response;
     } catch (error: any) {
-        return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
+        console.error('Profile update failed:', error);
+        return NextResponse.json({ ok: false, error: 'Layanan akun sedang tidak tersedia. Silakan coba lagi beberapa saat.' }, { status: 500 });
     }
 }

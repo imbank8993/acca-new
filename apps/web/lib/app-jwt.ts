@@ -12,13 +12,15 @@ export interface AppJwtPayload {
     username: string | null;
     role: string | null;
     pageIds?: string[];
+    must_change_password?: boolean;
 }
 
-export async function verifyAppToken(token: string): Promise<AppJwtPayload | null> {
+export async function verifyAppToken(token: string, allowPasswordChange = false): Promise<AppJwtPayload | null> {
     if (!token) return null;
     try {
         const { payload } = await jwtVerify(token, secret);
         if (!payload.sub) return null;
+        if ((payload as any).must_change_password === true && !allowPasswordChange) return null;
         return {
             sub: String(payload.sub),
             authId: (payload as any).authId ?? null,
@@ -26,6 +28,7 @@ export async function verifyAppToken(token: string): Promise<AppJwtPayload | nul
             username: (payload as any).username ?? null,
             role: (payload as any).role ?? null,
             pageIds: Array.isArray((payload as any).pageIds) ? (payload as any).pageIds : undefined,
+            must_change_password: (payload as any).must_change_password === true,
         };
     } catch (e: any) {
         console.warn('[app-jwt] verifyAppToken failed:', e?.message || e);
@@ -39,7 +42,7 @@ export async function verifyAppSession(token: string): Promise<AppJwtPayload | n
     if (!claims) return null;
     const { nestFetchAsUser } = await import('./nest-api');
     const { status, body } = await nestFetchAsUser('/access/me', token);
-    if (status !== 200 || !body?.user) return null;
+    if (status !== 200 || !body?.user || body.user.must_change_password === true) return null;
     return {
         sub: String(body.user.id),
         authId: body.user.auth_id || null,

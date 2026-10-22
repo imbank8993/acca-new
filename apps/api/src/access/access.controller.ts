@@ -33,6 +33,7 @@ function serializeUser(u: any) {
     aktif: u.aktif,
     foto_profil: u.foto_profil,
     page_overrides: u.page_overrides,
+    must_change_password: u.must_change_password === true,
   };
 }
 
@@ -108,7 +109,10 @@ export class AccessController {
   async me(@Request() req: any) {
     return {
       user: serializeUser(req.user),
-      access: await this.accessService.resolveUserAccess(req.user),
+      access: req.user.must_change_password ? {
+        roles: [], pageIds: ['update-password'], flatGroupKeys: [], caps: [],
+        theme: { can_use_dark_mode: false, forced_theme: 'light' },
+      } : await this.accessService.resolveUserAccess(req.user),
     };
   }
 

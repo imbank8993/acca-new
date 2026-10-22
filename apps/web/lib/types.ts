@@ -4,6 +4,7 @@ export interface User {
     id: number;
     auth_id: string | null;
     username: string;
+    must_change_password?: boolean;
     // `password` sengaja TIDAK ada di sini. Dulu field ini mencerminkan kolom
     // users.password_hash yang berisi teks polos; kolomnya dihapus, dan
     // kredensial tidak pernah dikirim ke klien dalam bentuk apa pun.

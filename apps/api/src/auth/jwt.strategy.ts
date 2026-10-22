@@ -50,10 +50,14 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       throw new UnauthorizedException('Sesi tidak sesuai dengan akun');
     }
     const credential = await this.prismaService.auth_users.findUnique({
-      where: { id: user.auth_id }, select: { raw_app_meta_data: true },
+      where: { id: user.auth_id }, select: { raw_app_meta_data: true, raw_user_meta_data: true },
     });
     if (!credential || (payload.sessionVersion || '') !== sessionVersion(credential.raw_app_meta_data)) {
       throw new UnauthorizedException('Sesi telah berakhir. Silakan login kembali.');
+    }
+    const metadata = credential.raw_user_meta_data as Record<string, unknown> | null;
+    if (metadata?.must_change_password === true) {
+      return { ...user, role: '', authId: user.auth_id, roles: [], caps: [], must_change_password: true };
     }
 
     const baseRoles: string[] = user.role
@@ -75,6 +79,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       authId: user.auth_id,
       roles,
       caps,
+      must_change_password: false,
     };
   }
 }

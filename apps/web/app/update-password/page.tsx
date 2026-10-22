@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, FormEvent, Suspense, useEffect } from 'react'
+import { useState, FormEvent, Suspense, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { clearUserCache } from '@/lib/auth-client'
 
@@ -26,37 +26,79 @@ function UpdatePasswordContent() {
   const [error, setError] = useState('')
   const [token, setToken] = useState('')
   const [success, setSuccess] = useState(false)
+  const [checkingSession, setCheckingSession] = useState(true)
+  const [sessionValid, setSessionValid] = useState(false)
+  const [sessionAttempt, setSessionAttempt] = useState(0)
+  const [mustChangePassword, setMustChangePassword] = useState(false)
+  const legacyToken = useRef('')
 
   useEffect(() => {
-    // 1. Coba tangkap token reset dari URL jika datang dari tautan reset email
-    const url = window.location.href;
-    const tokenMatch = url.match(/access_token=([^&]+)/);
-    const codeMatch = url.match(/code=([^&]+)/);
-    
-    if (tokenMatch && tokenMatch[1]) {
-      const cleanToken = tokenMatch[1].replace(/&amp;/g, '').split('#')[0];
-      setToken(cleanToken);
-      console.log('Token berhasil ditangkap dari URL');
-    } else if (codeMatch && codeMatch[1]) {
-      const code = codeMatch[1].replace(/&amp;/g, '').split('#')[0];
-      setToken(code);
-      window.history.replaceState(null, '', window.location.pathname);
-    } else {
-      // 2. Cek apakah pengguna sudah memiliki sesi login aktif via /api/auth/me
-      fetch('/api/auth/me')
-        .then(res => res.json())
-        .then(data => {
-          if (data.ok && data.user) {
-            setToken('active-cookie-session');
-          }
+    let active = true
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 10000)
+    setCheckingSession(true)
+    setSessionValid(false)
+    setError('')
+    const checkSession = async () => {
+      try {
+        // Tetap mendukung token sesi dari tautan lama; jangan biarkan token di URL.
+        const url = new URL(window.location.href)
+        const fragment = new URLSearchParams(url.hash.slice(1))
+        const suppliedToken = url.searchParams.get('access_token') || fragment.get('access_token')
+        if (suppliedToken) legacyToken.current = suppliedToken
+        const sessionToken = legacyToken.current
+        if (suppliedToken) {
+          url.searchParams.delete('access_token')
+          fragment.delete('access_token')
+          url.hash = fragment.toString()
+          window.history.replaceState(null, '', url.pathname + url.search + url.hash)
+          setToken(suppliedToken)
+        }
+        const res = await fetch('/api/auth/me', {
+          cache: 'no-store', signal: controller.signal,
+          headers: sessionToken ? { Authorization: `Bearer ${sessionToken}` } : undefined,
         })
-        .catch(() => {});
+        const data = await res.json()
+        if (!res.ok || !data.ok || !data.user) {
+          if (active) setError(res.status === 401
+            ? 'Sesi Anda sudah berakhir. Silakan login dengan password sementara dari admin.'
+            : 'Sesi belum dapat diperiksa. Silakan coba lagi.')
+          return
+        }
+        if (active) {
+          setToken(sessionToken || 'active-cookie-session')
+          setMustChangePassword(data.user.must_change_password === true)
+          setSessionValid(true)
+        }
+      } catch {
+        if (active) setError('Sesi belum dapat diperiksa. Periksa koneksi Anda lalu coba lagi.')
+      } finally {
+        clearTimeout(timeout)
+        if (active) setCheckingSession(false)
+      }
     }
-  }, []);
+    checkSession()
+    return () => { active = false; controller.abort(); clearTimeout(timeout) }
+  }, [sessionAttempt])
+
+  useEffect(() => {
+    if (!success) return
+    const timer = setTimeout(() => router.replace('/login'), 3000)
+    return () => clearTimeout(timer)
+  }, [success, router])
 
   const handleUpdate = async (e: FormEvent) => {
     e.preventDefault();
     setError('');
+
+    if (checkingSession || !sessionValid || !token) {
+      setError('Sesi belum dapat diperiksa. Silakan coba lagi atau login kembali.');
+      return;
+    }
+    if (!oldPassword) {
+      setError('Masukkan password saat ini. Gunakan password sementara dari admin jika akun baru direset.');
+      return;
+    }
     
     if (password.length < 6) {
       setError('Password minimal harus 6 karakter');
@@ -67,16 +109,14 @@ function UpdatePasswordContent() {
       setError('Konfirmasi password tidak cocok');
       return;
     }
+    if (password === oldPassword) {
+      setError('Password baru harus berbeda dari password saat ini');
+      return;
+    }
 
     setLoading(true);
 
     try {
-      if (!token) {
-        setError('Sesi tidak valid atau telah kedaluwarsa. Silakan minta tautan reset baru.');
-        setLoading(false);
-        return;
-      }
-
       // Sync ke database PostgreSQL VPS via API route internal
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
       if (token && token !== 'active-cookie-session') {
@@ -91,50 +131,43 @@ function UpdatePasswordContent() {
 
       const data = await res.json();
 
-      if (!data.ok) {
+      if (!res.ok || !data.ok) {
         setError(data.error || 'Gagal memperbarui password');
+        if (res.status === 401) setSessionValid(false);
         setLoading(false);
         return;
       }
 
       clearUserCache();
+      setPassword('');
+      setOldPassword('');
+      setConfirmPassword('');
+      setToken('');
+      legacyToken.current = '';
       setSuccess(true);
-
-      // Redirect ke login setelah 3 detik
-      setTimeout(() => {
-        router.push('/login');
-      }, 3000);
-
-    } catch (err: any) {
-      setError(err.message || 'Terjadi kesalahan');
+    } catch {
+      setError('Koneksi terganggu. Silakan coba lagi.');
     } finally {
       setLoading(false);
     }
   };
 
-  if (success) {
-    return (
-      <div className="up-wrap">
-        <div className="up-card" style={{ textAlign: 'center', padding: '40px' }}>
+  return (
+    <div className="up-wrap">
+      <div className="up-card">
+        {success ? <div style={{ textAlign: 'center' }}>
           <div style={{ fontSize: '3rem', color: '#16a34a', marginBottom: '20px' }}>
             <i className="bi bi-check-circle-fill"></i>
           </div>
           <h2 style={{ fontSize: '1.5rem', marginBottom: '10px', color: '#0f172a' }}>Password Diperbarui!</h2>
           <p style={{ color: '#64748b', marginBottom: '20px' }}>Password Anda telah berhasil diubah. Anda akan diarahkan ke halaman login dalam beberapa detik.</p>
-          <button className="up-btn" onClick={() => router.push('/login')}>
+          <button className="up-btn" onClick={() => router.replace('/login')}>
             Ke Halaman Login
           </button>
-        </div>
-      </div>
-    )
-  }
-
-  return (
-    <div className="up-wrap">
-      <div className="up-card">
+        </div> : <>
         <div className="up-card-head">
-          <h2>Atur Ulang Password</h2>
-          <p>Masukkan password baru untuk akun Anda.</p>
+          <h2>{mustChangePassword ? 'Ganti Password Sementara' : 'Ganti Password'}</h2>
+          <p>{mustChangePassword ? 'Gunakan password sementara dari admin sebagai password saat ini, lalu tentukan password baru Anda.' : 'Masukkan password saat ini dan password baru untuk akun Anda.'}</p>
         </div>
 
         <form className="up-form" onSubmit={handleUpdate}>
@@ -149,6 +182,7 @@ function UpdatePasswordContent() {
               <input
                 type={showPassword ? 'text' : 'password'}
                 id="password"
+                autoComplete="new-password"
                 placeholder="Minimal 6 karakter"
                 value={password}
                 onChange={e => setPassword(e.target.value)}
@@ -160,7 +194,8 @@ function UpdatePasswordContent() {
                 type="button"
                 className="up-toggle-pw"
                 onClick={() => setShowPassword(!showPassword)}
-                tabIndex={-1}
+                aria-label={showPassword ? 'Sembunyikan password' : 'Tampilkan password'}
+                disabled={loading}
               >
                 <i className={`bi ${showPassword ? 'bi-eye-slash' : 'bi-eye'}`} />
               </button>
@@ -174,6 +209,7 @@ function UpdatePasswordContent() {
               <input
                 type={showPassword ? 'text' : 'password'}
                 id="confirmPassword"
+                autoComplete="new-password"
                 placeholder="Ketik ulang password baru"
                 value={confirmPassword}
                 onChange={e => setConfirmPassword(e.target.value)}
@@ -185,17 +221,17 @@ function UpdatePasswordContent() {
           </div>
 
           {error && (
-            <div className="up-error">
+            <div className="up-error" role="alert">
               <i className="bi bi-x-circle-fill" />
               <span>{error}</span>
             </div>
           )}
 
-          <button type="submit" className="up-btn" disabled={loading} suppressHydrationWarning>
-            {loading ? (
+          <button type="submit" className="up-btn" disabled={loading || checkingSession || !sessionValid} suppressHydrationWarning>
+            {loading || checkingSession ? (
               <>
                 <span className="up-spin" />
-                Menyimpan...
+                {checkingSession ? 'Memeriksa sesi...' : 'Menyimpan...'}
               </>
             ) : (
               <>
@@ -204,7 +240,10 @@ function UpdatePasswordContent() {
               </>
             )}
           </button>
+          {!checkingSession && !sessionValid && <button type="button" className="up-retry" disabled={loading} onClick={() => setSessionAttempt(value => value + 1)}>Periksa sesi lagi</button>}
+          <a className="up-retry" href="/login">Kembali ke login</a>
         </form>
+        </>}
       </div>
 
       <style jsx global>{`
@@ -292,9 +331,9 @@ function UpdatePasswordContent() {
           font-size: 1.1rem;
         }
 
-        .up-input-wrap input {
+        .up-field input {
           width: 100%;
-          padding: 14px 16px 14px 44px;
+          padding: 14px 16px;
           border: 1.5px solid #e2e8f0;
           border-radius: 12px;
           font-size: 0.95rem;
@@ -304,7 +343,8 @@ function UpdatePasswordContent() {
           transition: all 0.2s;
         }
 
-        .up-input-wrap input:focus {
+        .up-input-wrap input { padding-left: 44px; padding-right: 44px; }
+        .up-field input:focus {
           outline: none;
           border-color: #3083FF;
           background: #ffffff;
@@ -368,6 +408,9 @@ function UpdatePasswordContent() {
           opacity: 0.7;
           cursor: not-allowed;
         }
+
+        .up-retry { font: inherit; color: #3083ff; text-align: center; background: none; border: 0; cursor: pointer; text-decoration: none; }
+        @media (max-width: 480px) { .up-card { padding: 28px 22px; } }
 
         .up-spin {
           width: 18px;

@@ -5,7 +5,7 @@ import { AuthGuard } from '@nestjs/passport';
 export class OptionalJwtAuthGuard extends AuthGuard('jwt') {
   handleRequest(err: any, user: any, info: any) {
     // If error or no user, just return null (do not throw error)
-    if (err || !user) {
+    if (err || !user || user.must_change_password) {
       return null;
     }
     return user;

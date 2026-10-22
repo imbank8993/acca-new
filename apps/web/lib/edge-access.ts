@@ -5,6 +5,7 @@ export interface AccessInfo {
     roles: string[]
     pages: Set<string>
     found: boolean
+    mustChangePassword?: boolean
 }
 
 export async function getAccessForAuthId(authId: string, token: string): Promise<AccessInfo | null> {
@@ -17,7 +18,7 @@ export async function getAccessForAuthId(authId: string, token: string): Promise
         if (!res.ok) return null
         const data = await res.json()
         if (data?.user?.auth_id !== authId || data?.user?.aktif !== true || !Array.isArray(data?.access?.pageIds)) return null
-        return { roles: data.access.roles || [], pages: new Set(data.access.pageIds), found: true }
+        return { roles: data.access.roles || [], pages: new Set(data.access.pageIds), found: true, mustChangePassword: data.user.must_change_password === true }
     } catch (e) {
         console.error('[edge-access] gagal resolve akses:', (e as Error).message)
         return null

@@ -26,3 +26,62 @@ test('recovery reset consumes the link, clears the forced-change flag and revoke
 test('failed provisioning by admin leaves legacy auth_id untouched',async()=>{const f=fixture();f.failure['auth_users.create']=true;await assert.rejects(f.auth.adminResetPassword('1','4','temporary-password'));assert.equal(f.state.public_users[3].auth_id,null)});
 
 test('alternate admin registration also rolls back credential creation on profile failure',async()=>{const f=fixture();f.failure['public_users.create']=true;await assert.rejects(f.auth.register({email:'new@example.com',username:'new',name:'New',password:'new-password',role:'GURU'}));assert.equal(f.state.auth_users.length,3)});
+
+test('temporary login has no business roles or grants until a different password is saved', async () => {
+  for (const account of ['guru', 'admin2']) {
+    const f = fixture(), target = account === 'guru' ? 2 : 1;
+    await f.auth.adminResetPassword('1', String(target + 1), 'temporary-password');
+    const login = await f.auth.login({ usernameOrEmail: account, password: 'temporary-password' });
+    assert.equal(login.must_change_password, true);
+    assert.equal(login.access_token.must_change_password, true);
+    assert.equal(login.access_token.role, '');
+    assert.deepEqual([...login.access_token.pageIds], ['update-password']);
+    const user = await f.strategy.validate(login.access_token);
+    assert.equal(user.must_change_password, true);
+    assert.equal(user.role, ''); assert.equal(user.roles.length, 0); assert.equal(user.caps.length, 0);
+    for (const [password, oldPassword] of [['new-password', undefined], ['new-password', 'wrong-password'], ['temporary-password', 'temporary-password']]) {
+      await assert.rejects(f.users.changeOwnPassword(user, password, oldPassword));
+      assert.equal(f.state.auth_users[target].raw_user_meta_data.must_change_password, true);
+    }
+    await f.users.changeOwnPassword(user, 'chosen-password', 'temporary-password');
+    await assert.rejects(f.strategy.validate(login.access_token));
+    const fresh = await f.auth.login({ usernameOrEmail: account, password: 'chosen-password' });
+    assert.equal(fresh.must_change_password, false);
+    assert.equal((await f.strategy.validate(fresh.access_token)).must_change_password, false);
+    assert.equal(f.state.public_users[target].username, account);
+    assert.equal(f.state.public_users[target].email, account === 'guru' ? undefined : 'two@example.com');
+  }
+});
+
+test('recovery cannot clear mandatory change by retaining the current password', async () => {
+  const f = fixture(), token = 'b'.repeat(64), credential = f.state.auth_users[2];
+  credential.recovery_token = require('node:crypto').createHash('sha256').update(token).digest('hex');
+  credential.recovery_sent_at = new Date(); credential.raw_user_meta_data.must_change_password = true;
+  await assert.rejects(f.auth.resetPasswordDenganToken(token, 'old-password'), /berbeda/);
+  assert.equal(f.state.auth_users[2].raw_user_meta_data.must_change_password, true);
+  assert.equal(f.state.auth_users[2].recovery_token, credential.recovery_token);
+});
+
+function loadGuard(file) {
+  const m = { exports: {} };
+  const output = ts.transpileModule(fs.readFileSync(path.join(root, file), 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, experimentalDecorators: true } }).outputText;
+  vm.runInNewContext(output, { module: m, exports: m.exports, process: { env: {} }, require: name => name === '@nestjs/common' ? common : { AuthGuard: () => class {} } });
+  return Object.values(m.exports)[0];
+}
+
+test('mandatory-change guard only accepts own password and session endpoints; optional auth is anonymous', () => {
+  const Guard = loadGuard('apps/api/src/auth/jwt-auth.guard.ts'), guard = new Guard();
+  const user = { id: 3n, must_change_password: true };
+  const context = (method, originalUrl) => ({ switchToHttp: () => ({ getRequest: () => ({ method, originalUrl }) }) });
+  for (const [method, url] of [['GET', '/api/access/me'], ['GET', '/access/me?x=1'], ['POST', '/api/users/me/password/'], ['PUT', '/api/users/me']]) {
+    assert.equal(guard.handleRequest(null, user, null, context(method, url)), user);
+  }
+  for (const [method, url] of [['GET', '/api/users'], ['PUT', '/api/users/1'], ['POST', '/api/access/me'], ['GET', '/api/users/me/password'], ['PUT', '/api/users/pinned-pages'], ['GET', '/api/access/me/extra']]) {
+    assert.throws(() => guard.handleRequest(null, user, null, context(method, url)), common.ForbiddenException);
+  }
+  assert.throws(() => guard.handleRequest(null, null, null, context('POST', '/api/users/me/password')), common.UnauthorizedException);
+  const normal = { id: 3n }; assert.equal(guard.handleRequest(null, normal, null, context('GET', '/api/users')), normal);
+  const Optional = loadGuard('apps/api/src/auth/optional-jwt-auth.guard.ts');
+  assert.equal(new Optional().handleRequest(null, user, null), null);
+  assert.equal(new Optional().handleRequest(null, normal, null), normal);
+});

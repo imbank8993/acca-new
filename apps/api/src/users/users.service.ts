@@ -681,6 +681,7 @@ export class UsersService {
     if (!current?.encrypted_password || !await bcrypt.compare(oldPassword, current.encrypted_password)) {
       throw new BadRequestException('Password saat ini tidak sesuai');
     }
+    if (await bcrypt.compare(password, current.encrypted_password)) throw new BadRequestException('Password baru harus berbeda dari password saat ini');
   }
 
   private async changeOwnPasswordInTransaction(tx: Prisma.TransactionClient, user: any, password: string) {

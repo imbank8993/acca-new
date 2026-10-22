@@ -101,6 +101,7 @@ export class AuthService {
     }
 
     const userIdStr = user.id.toString();
+    const harusGantiPassword = await this.perluGantiPassword(user.auth_id);
 
     // Resolve user access pageIds for JWT payload (Edge optimization)
     let pageIds: string[] | undefined = undefined;
@@ -118,8 +119,9 @@ export class AuthService {
       sessionVersion: verifiedSessionVersion,
       email: user.email,
       username: user.username,
-      role: user.role,
-      ...(pageIds ? { pageIds } : {}),
+      role: harusGantiPassword ? '' : user.role,
+      must_change_password: harusGantiPassword,
+      ...(harusGantiPassword ? { pageIds: ['update-password'] } : pageIds ? { pageIds } : {}),
     };
 
     const token = this.jwtService.sign(payload);
@@ -127,7 +129,6 @@ export class AuthService {
     // Ditandai saat admin mereset password. Klien memakainya untuk memaksa
     // penggantian sebelum akunnya dipakai, supaya password sementara benar-benar
     // sementara — tanpa ini ia bisa bertahan berbulan-bulan.
-    const harusGantiPassword = await this.perluGantiPassword(user.auth_id);
 
     return {
       access_token: token,
@@ -527,7 +528,7 @@ export class AuthService {
 
       const baris = await tx.auth_users.findFirst({
         where: { recovery_token: this.hashToken(tokenBersih) },
-        select: { id: true, recovery_sent_at: true, raw_user_meta_data: true, raw_app_meta_data: true },
+        select: { id: true, encrypted_password: true, recovery_sent_at: true, raw_user_meta_data: true, raw_app_meta_data: true },
       });
 
       const tidakSah = () =>
@@ -539,6 +540,10 @@ export class AuthService {
 
       const umurMenit = (Date.now() - baris.recovery_sent_at.getTime()) / 60000;
       if (umurMenit > AuthService.MENIT_BERLAKU_TOKEN) throw tidakSah();
+
+      if (baris.encrypted_password && await bcrypt.compare(password, baris.encrypted_password)) {
+        throw new BadRequestException('Password baru harus berbeda dari password saat ini');
+      }
 
       const meta =
         baris.raw_user_meta_data && typeof baris.raw_user_meta_data === 'object'

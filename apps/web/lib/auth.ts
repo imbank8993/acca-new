@@ -135,12 +135,14 @@ export const FULL_ADMIN_PAGES = "Dashboard=dashboard,Informasi=informasi,Pengumu
  * bentuk tampilan: label halaman & pagesTree untuk sidebar.
  */
 export async function buildUserObject(dbUser: any, access?: NestAccess): Promise<User> {
-    const identityRoles = parseRoles(dbUser.role || '');
+    const mustChangePassword = dbUser.must_change_password === true;
+    const identityRoles = mustChangePassword ? [] : parseRoles(dbUser.role || '');
     const isAdmin = identityRoles.some(r => r === 'ADMIN');
     const nip = dbUser.nip || dbUser.guru_id || dbUser.guruId || dbUser.nisn || dbUser.username || '';
 
-    const resolved =
-        access ?? (await fetchUserAccessByAuthId(dbUser.auth_id || ''))?.access ?? null;
+    const resolved = mustChangePassword
+        ? { roles: [], pageIds: ['update-password'], caps: [], theme: { can_use_dark_mode: false, forced_theme: 'light' as const } }
+        : access ?? (await fetchUserAccessByAuthId(dbUser.auth_id || ''))?.access ?? null;
 
     const roles = resolved ? resolved.roles : identityRoles;
 
@@ -176,13 +178,14 @@ export async function buildUserObject(dbUser: any, access?: NestAccess): Promise
         id: dbUser.id,
         auth_id: dbUser.auth_id || null,
         username: dbUser.username || '',
+        must_change_password: dbUser.must_change_password === true,
         nip,
         nisn: dbUser.nisn || '',
         nama: dbUser.nama || 'User',
         nama_lengkap: dbUser.nama_lengkap || dbUser.nama || '',
         tanggal_lahir: dbUser.tanggal_lahir || '',
         email: dbUser.email || '',
-        role: dbUser.role || '',
+        role: mustChangePassword ? '' : dbUser.role || '',
         roles,
         caps,
         divisi: dbUser.divisi || '',

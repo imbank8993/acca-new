@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { extractRequestToken } from '@/lib/app-jwt';
 import { nestFetchAsUser } from '@/lib/nest-api';
+import { authErrorMessage } from '@/lib/auth-error-message';
 
 /**
  * Set password baru untuk sesi yang sedang berjalan.
@@ -19,12 +20,13 @@ export async function POST(request: NextRequest) {
         }
 
         const { password, oldPassword } = await request.json();
-        if (!password || password.length < 6) {
+        if (typeof password !== 'string' || password.length < 6) {
             return NextResponse.json({ ok: false, error: 'Password minimal 6 karakter' }, { status: 400 });
         }
+        if (typeof oldPassword !== 'string' || !oldPassword) return NextResponse.json({ ok: false, error: 'Password saat ini wajib diisi. Gunakan password sementara dari admin jika akun baru direset.' }, { status: 400 });
 
-        const { status, body } = await nestFetchAsUser('/users/me', token, {
-            method: 'PUT',
+        const { status, body } = await nestFetchAsUser('/users/me/password', token, {
+            method: 'POST',
             body: JSON.stringify({ password, oldPassword }),
         });
 
@@ -34,21 +36,21 @@ export async function POST(request: NextRequest) {
                 { status: 401 }
             );
         }
-        if (status !== 200) {
+        if (status !== 200 && status !== 201) {
             return NextResponse.json(
-                { ok: false, error: body?.message || 'Gagal memperbarui password' },
+                { ok: false, error: authErrorMessage(body, status, 'Gagal memperbarui password') },
                 { status }
             );
         }
 
         const response = NextResponse.json({ ok: true, message: 'Password berhasil diperbarui' });
         response.cookies.set('acca_session', '', {
-            httpOnly: true, secure: process.env.NODE_ENV === 'production',
+            httpOnly: true, secure: request.headers?.get('x-forwarded-proto') === 'https' || request.nextUrl?.protocol === 'https:',
             sameSite: 'lax', path: '/', maxAge: 0,
         });
         return response;
     } catch (error: any) {
         console.error('Update password error:', error);
-        return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
+        return NextResponse.json({ ok: false, error: 'Layanan akun sedang tidak tersedia. Silakan coba lagi beberapa saat.' }, { status: 500 });
     }
 }

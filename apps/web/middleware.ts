@@ -300,7 +300,7 @@ export async function middleware(request: NextRequest) {
      * tanda tangannya, sehingga `authId` bisa ditentukan sendiri oleh pemanggil.
      * Token tanpa tanda tangan sah tidak boleh membuka halaman mana pun.
      */
-    const claims = await verifyAppToken(accessToken)
+    const claims = await verifyAppToken(accessToken, true)
     if (!claims) {
         if (path.startsWith('/api/')) {
             const out = NextResponse.json({ ok: false, error: 'Unauthorized' }, { status: 401 })
@@ -312,6 +312,12 @@ export async function middleware(request: NextRequest) {
         const out = NextResponse.redirect(url)
         clearDeadSessionCookies(request, out)
         return out
+    }
+
+    if (!path.startsWith('/api/') && claims.must_change_password) {
+        url.pathname = '/update-password'
+        url.search = ''
+        return NextResponse.redirect(url)
     }
 
     // ── ROLE-BASED ACCESS CONTROL ──
@@ -341,6 +347,11 @@ export async function middleware(request: NextRequest) {
 
             // A signed token proves identity, not the continued validity of its old page grants.
             const access = await getAccessForAuthId(authId, accessToken)
+            if (access?.mustChangePassword) {
+                url.pathname = '/update-password'
+                url.search = ''
+                return NextResponse.redirect(url)
+            }
             const isAdmin = access ? access.roles.some(r => ['ADMIN', 'ADMINISTRATOR'].includes(r.toUpperCase())) : false
             const extras = access ? access.roles.flatMap(r => ROLE_SCOPED_EXTRAS[r.toUpperCase()] || []) : []
             const allowed = !!access?.found && (access.pages.has(pageId) || extras.includes(pageId) || (isAdmin && pageId === 'audit-log'))

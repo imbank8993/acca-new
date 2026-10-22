@@ -165,3 +165,34 @@ test('edge access validates current account and never reuses old data after fail
   const { getAccessForAuthId } = load('apps/web/lib/edge-access.ts', {}, { fetch: async (url, init) => { assert(url.endsWith('/access/me')); assert.equal(init.headers.authorization, 'Bearer token'); if (fail) return { ok: false }; return { ok: true, json: async () => ({ user: { auth_id: 'fixture', aktif: active }, access: { roles: ['GURU'], pageIds: ['master'] } }) }; } });
   assert((await getAccessForAuthId('fixture', 'token')).pages.has('master')); active = false; assert.equal(await getAccessForAuthId('fixture', 'token'), null); active = true; fail = true; assert.equal(await getAccessForAuthId('fixture', 'token'), null);
 });
+
+test('password endpoints do not apply profile fields while the session is restricted', async () => {
+  const { UsersController } = load('apps/api/src/users/users.controller.ts');
+  const calls = [], controller = new UsersController({ changeOwnPassword: async (...args) => calls.push(args), updateOwn: async () => { throw Error('Profile mutation is forbidden'); } }, {});
+  const user = { id: 3n, must_change_password: true };
+  await controller.updateMe({ user }, { password: 'chosen-password', oldPassword: 'temporary-password', username: 'attacker', email: 'bad', role: 'ADMIN', nama: 'Changed' });
+  await controller.changePassword({ user }, { password: 'chosen-password', oldPassword: 'temporary-password', username: 'ignored' });
+  assert.equal(calls.length, 2);
+  for (const [who, password, old] of calls) { assert.equal(who, user); assert.equal(password, 'chosen-password'); assert.equal(old, 'temporary-password'); }
+});
+
+test('current session access for mandatory change contains only password navigation', async () => {
+  let queries = 0;
+  const controller = new AccessController({ resolveUserAccess: async () => { queries++; throw Error('Unexpected query'); } });
+  const result = await controller.me({ user: { id: 3n, role: '', must_change_password: true } });
+  assert.equal(result.user.must_change_password, true); assert.equal(result.access.pageIds.join(','), 'update-password');
+  assert.equal(result.access.roles.length, 0); assert.equal(result.access.caps.length, 0); assert.equal(queries, 0);
+});
+
+test('middleware sends restricted sessions to password change even for utility and CBT pages', async () => {
+  const { middleware } = load('apps/web/middleware.ts', {
+    'next/server': { NextResponse: { next: () => ({ kind: 'next', cookies: { set() {} } }), redirect: url => ({ kind: 'redirect', url }) } },
+    '@/lib/app-jwt': { verifyAppToken: async () => ({ authId: 'fixture', must_change_password: true }) },
+    '@/lib/edge-access': { getAccessForAuthId: async () => { throw Error('Unnecessary query'); } },
+  });
+  for (const path of ['/master', '/dashboard', '/profile', '/cbt-app']) {
+    const url = new URL('https://fixture.invalid' + path + '?tab=old'); url.clone = () => new URL(url);
+    const result = await middleware({ nextUrl: url, headers: { get: key => key === 'authorization' ? 'Bearer test' : null }, cookies: { has: () => false, get: () => undefined } });
+    assert.equal(result.kind, 'redirect'); assert.equal(result.url.pathname, '/update-password'); assert.equal(result.url.search, '');
+  }
+});

@@ -102,9 +102,21 @@ export class UsersController {
   ) {
     const { password, oldPassword, role, aktif, nip, ...profil } = body;
 
+    if (req.user?.must_change_password) {
+      await this.usersService.changeOwnPassword(req.user, password as string, oldPassword);
+      return { ok: true, password_changed: true };
+    }
+
     const data = await this.usersService.updateOwn(req.user, profil, password, oldPassword);
 
     return { ok: true, data };
+  }
+
+  @Post('me/password')
+  @ApiOperation({ summary: 'Ganti password sendiri tanpa mengubah data profil' })
+  async changePassword(@Request() req: any, @Body() body: { password?: string; oldPassword?: string }) {
+    await this.usersService.changeOwnPassword(req.user, body?.password as string, body?.oldPassword);
+    return { ok: true };
   }
 
   @Get('pinned-pages')

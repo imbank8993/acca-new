@@ -42,7 +42,8 @@ export async function fetchUserAccessByUsername(username: string): Promise<NestU
 /** Resolve user pemilik token (dipakai dari browser maupun server). */
 export async function fetchMyAccess(token: string): Promise<NestUserAccess | null> {
     if (!token) return null;
-    return getJson('/access/me', { Authorization: `Bearer ${token}` });
+    const payload = await getJson('/access/me', { Authorization: `Bearer ${token}` });
+    return payload?.user?.must_change_password ? null : payload;
 }
 
 /**

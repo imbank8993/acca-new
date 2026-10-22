@@ -34,6 +34,10 @@ function HomeRedirect() {
         // Cek via /api/auth/me (cookie server) — getSession() tidak andal di app ini
         const userData = await getCurrentUser({ throwOnFailure: true })
         if (!active) return
+        if (userData?.must_change_password) {
+          router.replace('/update-password')
+          return
+        }
         hasSession = !!userData
       } catch (error) {
         if (active) setAuthError(error instanceof Error && error.name === 'SessionCheckError' ? error.message : 'Koneksi pemeriksaan sesi terganggu. Silakan coba lagi.')

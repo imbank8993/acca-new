@@ -138,10 +138,7 @@ function LoginContent() {
       setLoading(false)
       setLoginSuccess(true)
 
-      // Password sementara dari admin: arahkan ke Profil, yang tab bawaannya
-      // ('akun') memang memuat form ganti password. Tanpa pengarahan ini penanda
-      // `must_change_password` tidak berarti apa-apa bagi pemakai, dan password
-      // sementara bisa bertahan berbulan-bulan.
+      // Sesi sementara hanya dapat dipakai untuk mengganti password sendiri.
       if (data.must_change_password) {
         setError('')
         await Swal.fire({
@@ -151,7 +148,7 @@ function LoginContent() {
           confirmButtonText: 'Ganti sekarang',
           allowOutsideClick: false,
         })
-        window.location.href = '/profile'
+        window.location.href = '/update-password'
         return
       }
 

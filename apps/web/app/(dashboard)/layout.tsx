@@ -162,6 +162,10 @@ export default function DashboardShellLayout({ children }: { children: React.Rea
       }
 
       setUser(userData)
+      if (userData.must_change_password) {
+        router.push('/update-password')
+        return
+      }
       setAuthError('')
 
       // Log login activity if not already logged in this session (simple check)
