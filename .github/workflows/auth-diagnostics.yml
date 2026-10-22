@@ -19,6 +19,16 @@ jobs:
           script_stop: false
           script: |
             set -e
+            echo '=== VPS build processes ==='
+            ps -eo etime,pcpu,pmem,comm | grep -E '(^ *ELAPSED|npm|node|docker|build|git)' || true
+            echo '=== VPS memory ==='
+            free -m
+            echo '=== Container memory ==='
+            docker stats --no-stream --format '{{.Name}} CPU={{.CPUPerc}} MEM={{.MemUsage}}'
+            echo '=== Image build ages ==='
+            docker image ls --format '{{.Repository}} {{.Tag}} {{.CreatedSince}}' | grep acca || true
+            echo '=== Deployed source commit ==='
+            git -C /www/wwwroot/acca-new rev-parse --short HEAD
             docker ps --format '{{.Names}} {{.Status}}' --filter name=acca
             docker logs --since 30m --tail 3000 acca-web 2>&1 | docker exec -i acca-web node -e '
               let logs = "";
