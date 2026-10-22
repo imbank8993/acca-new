@@ -1,0 +1,57 @@
+{
+  "scope": "Local source with mocked persistence, no production requests",
+  "results": [
+    {
+      "name": "Baseline: exact admin write guard and normal role/user feature matching",
+      "confirmed": true
+    },
+    {
+      "name": "Security: failed override query restores a revoked role capability",
+      "confirmed": true
+    },
+    {
+      "name": "Feature UI: selecting Klinik role saves site_settings but never role_capabilities",
+      "confirmed": true
+    },
+    {
+      "name": "Feature UI: existing role_capabilities holders are hidden by loader",
+      "confirmed": true
+    },
+    {
+      "name": "Feature UI: one failed source is marked saveable; grants can be overwritten with empty list",
+      "confirmed": true
+    },
+    {
+      "name": "Backend: capability holder read errors are returned as empty successful data",
+      "confirmed": true
+    },
+    {
+      "name": "Feature UI: save reloads all cards and erases another unsaved card",
+      "confirmed": true
+    },
+    {
+      "name": "Role pages: slow previous role response overwrites current role; save writes wrong access",
+      "confirmed": true
+    },
+    {
+      "name": "Role pages: database load failure is disguised as an empty map",
+      "confirmed": true
+    },
+    {
+      "name": "Persistence: failed second capability upsert leaves only partially replaced grants",
+      "confirmed": true
+    },
+    {
+      "name": "Security: an old signed JWT page grant bypasses current revoked page access",
+      "confirmed": true
+    },
+    {
+      "name": "UI: Kinerja Guru exists but cannot be selected in group filter",
+      "confirmed": true
+    },
+    {
+      "name": "Security/UI: hidden legacy Jurnal config still grants generate privilege",
+      "confirmed": true
+    }
+  ]
+}

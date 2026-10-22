@@ -97,7 +97,7 @@ export async function PUT(req: NextRequest) {
       const mode = body.mode === 'revoke' ? 'revoke' : 'grant'
       const saved = await proxy(req, `/access/capability-holders/${encodeURIComponent(body.capability)}`, {
         method: 'PUT',
-        body: JSON.stringify({ userIds: body.userIds, mode }),
+        body: JSON.stringify({ userIds: body.userIds, mode, ...(body.roles !== undefined ? { roles: body.roles, revokedUserIds: body.revokedUserIds ?? [] } : {}) }),
       })
       if (!saved.ok) {
         return NextResponse.json({ ok: false, error: saved.body?.message || 'Gagal menyimpan' }, { status: saved.status })

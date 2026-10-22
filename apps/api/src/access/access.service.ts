@@ -1,5 +1,5 @@
 import { lockAccountWrites, countUsableAdmins } from '../auth/session-security';
-import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
 export type RolePagesMap = Record<string, string[]>;
@@ -19,6 +19,8 @@ export interface UserAccess {
   flatGroupKeys: string[];
   /** `null` = tabel role_capabilities tak terbaca; pemanggil pakai paket bawaan registry. */
   caps: string[] | null;
+  /** Explicit denials must also constrain compatibility readers of older settings. */
+  revokedCaps?: string[];
   theme: { can_use_dark_mode: boolean; forced_theme: 'light' | 'dark' | null };
 }
 
@@ -96,8 +98,8 @@ export class AccessService {
     return !!entry && Date.now() - entry.at < TTL_MS;
   }
 
-  async getRolePagesMap(): Promise<RolePagesMap> {
-    if (this.fresh(this.rolePagesCache)) return this.rolePagesCache!.map;
+  async getRolePagesMap(fresh = false): Promise<RolePagesMap> {
+    if (!fresh && this.fresh(this.rolePagesCache)) return this.rolePagesCache!.map;
     try {
       const rows = await this.prisma.role_pages.findMany({
         select: { role: true, page_id: true },
@@ -112,12 +114,12 @@ export class AccessService {
       return map;
     } catch (e) {
       this.logger.error(`getRolePagesMap: ${(e as Error).message}`);
-      return {};
+      throw new ServiceUnavailableException('Akses halaman gagal dibaca. Silakan coba lagi.');
     }
   }
 
-  async getRoleFlatGroupsMap(): Promise<RoleFlatGroupsMap> {
-    if (this.fresh(this.flatGroupsCache)) return this.flatGroupsCache!.map;
+  async getRoleFlatGroupsMap(fresh = false): Promise<RoleFlatGroupsMap> {
+    if (!fresh && this.fresh(this.flatGroupsCache)) return this.flatGroupsCache!.map;
     try {
       const rows = await this.prisma.role_group_flat.findMany({
         select: { role: true, group_key: true },
@@ -132,17 +134,13 @@ export class AccessService {
       return map;
     } catch (e) {
       this.logger.error(`getRoleFlatGroupsMap: ${(e as Error).message}`);
-      return {};
+      throw new ServiceUnavailableException('Tampilan grup akses gagal dibaca. Silakan coba lagi.');
     }
   }
 
-  /**
-   * `null` berarti tabelnya tak terbaca — HANYA di situ pemanggil boleh jatuh ke
-   * paket bawaan registry. Objek kosong adalah keadaan sah ("tidak ada role yang
-   * punya kapabilitas"), dan tidak boleh menghidupkan lagi izin bawaan.
-   */
-  async getRoleCapabilitiesMap(): Promise<RoleCapabilitiesMap | null> {
-    if (this.fresh(this.roleCapsCache)) return this.roleCapsCache!.map;
+  /** Empty is a valid policy; read failures must propagate instead of enabling fallback grants. */
+  async getRoleCapabilitiesMap(fresh = false): Promise<RoleCapabilitiesMap | null> {
+    if (!fresh && this.fresh(this.roleCapsCache)) return this.roleCapsCache!.map;
     try {
       const rows = await this.prisma.role_capabilities.findMany({
         select: { role: true, capability_key: true },
@@ -157,7 +155,7 @@ export class AccessService {
       return map;
     } catch (e) {
       this.logger.error(`getRoleCapabilitiesMap: ${(e as Error).message}`);
-      return null;
+      throw new ServiceUnavailableException('Kapabilitas gagal dibaca. Silakan coba lagi.');
     }
   }
 
@@ -180,7 +178,7 @@ export class AccessService {
       return { grants, revokes };
     } catch (e) {
       this.logger.error(`getUserCapabilityOverrides: ${(e as Error).message}`);
-      return { grants: [], revokes: [] };
+      throw new ServiceUnavailableException('Pengecualian izin gagal dibaca. Silakan coba lagi.');
     }
   }
 
@@ -198,7 +196,7 @@ export class AccessService {
     roles: string[],
   ): Promise<string[] | null> {
     const [roleCaps, overrides] = await Promise.all([
-      this.getRoleCapabilitiesMap(),
+      this.getRoleCapabilitiesMap(true),
       this.getUserCapabilityOverrides(userId),
     ]);
     if (!roleCaps) return null;
@@ -259,8 +257,8 @@ export class AccessService {
     }
   }
 
-  async getRoleThemeMap(): Promise<RoleThemeMap> {
-    if (this.fresh(this.themeCache)) return this.themeCache!.map;
+  async getRoleThemeMap(fresh = false): Promise<RoleThemeMap> {
+    if (!fresh && this.fresh(this.themeCache)) return this.themeCache!.map;
     const map: RoleThemeMap = {};
     try {
       const rows = await this.prisma.system_config.findMany({
@@ -293,6 +291,7 @@ export class AccessService {
       }
     } catch (e) {
       this.logger.error(`getRoleThemeMap: ${(e as Error).message}`);
+      throw new ServiceUnavailableException('Preferensi tema gagal dibaca. Silakan coba lagi.');
     }
 
     ALWAYS_ALLOWED_THEME_ROLES.forEach((adm) => (map[adm] = 'ALL'));
@@ -337,9 +336,9 @@ export class AccessService {
     const roles = [...new Set([...identityRoles, ...dutyRoles])];
 
     const [rolePages, flatGroups, roleCaps, overrides] = await Promise.all([
-      this.getRolePagesMap(),
+      this.getRolePagesMap(true),
       this.getRoleFlatGroupsMap(),
-      this.getRoleCapabilitiesMap(),
+      this.getRoleCapabilitiesMap(true),
       this.getUserCapabilityOverrides(user.id),
     ]);
 
@@ -380,6 +379,7 @@ export class AccessService {
       pageIds: [...pages],
       flatGroupKeys: [...flatGroupKeys],
       caps,
+      revokedCaps: overrides.revokes,
       theme: await this.getUserThemeSetting(roles),
     };
   }
@@ -500,6 +500,7 @@ export class AccessService {
         pageIds: [...pages],
         flatGroupKeys: [...flatGroupKeys],
         caps,
+        revokedCaps: capsByUser.get(user.id.toString())?.revokes || [],
         theme,
       });
     }
@@ -508,6 +509,87 @@ export class AccessService {
   }
 
   // ── Jalur tulis (UI admin "Akses per Role") ────────────────────────────
+
+  private stringList(value: unknown, field: string): string[] {
+    if (!Array.isArray(value) || value.length > 1000 || value.some(v => typeof v !== 'string' || !v.trim() || v.length > 255)) {
+      throw new BadRequestException(`${field} harus berupa daftar teks yang valid`);
+    }
+    return [...new Set(value.map(v => v.trim()))];
+  }
+
+  private capabilityUserIds(value: unknown): bigint[] {
+    if (!Array.isArray(value) || value.length > 10000) throw new BadRequestException('Daftar pengguna tidak valid');
+    return [...new Set(value.map(id => {
+      if ((typeof id === 'number' && !Number.isSafeInteger(id)) || !/^[1-9]\d{0,18}$/.test(String(id))) {
+        throw new BadRequestException('ID pengguna tidak valid');
+      }
+      const uid = BigInt(id);
+      if (uid > 9223372036854775807n) throw new BadRequestException('ID pengguna tidak valid');
+      return uid.toString();
+    }))].map(id => BigInt(id));
+  }
+
+  /** One role's pages, grouping and optional theme commit together. */
+  async saveRoleAccess(role: string, pageIds: unknown, flatGroups?: unknown, themeMode?: ThemeMode): Promise<void> {
+    if (typeof role !== 'string' || !role.trim()) throw new BadRequestException('Role wajib diisi');
+    const R = role.trim().toUpperCase();
+    const pages = this.stringList(pageIds, 'pageIds');
+    const groups = flatGroups === undefined ? undefined : this.stringList(flatGroups, 'flatGroups');
+    if (themeMode !== undefined && !['ALL', 'LIGHT', 'DARK'].includes(themeMode)) throw new BadRequestException('Mode tema tidak valid');
+    await this.prisma.$transaction(async tx => {
+      await tx.$queryRawUnsafe('SELECT pg_advisory_xact_lock(hashtext($1))::text', `access:role:${R}`);
+      const exists = await tx.roles.findFirst({ where: { name: R }, select: { id: true } });
+      if (!exists) throw new BadRequestException('Role tidak ditemukan');
+      await tx.role_pages.deleteMany({ where: { role: R } });
+      if (pages.length) await tx.role_pages.createMany({ data: pages.map((page_id, sort_order) => ({ role: R, page_id, sort_order })) });
+      if (groups) {
+        await tx.role_group_flat.deleteMany({ where: { role: R } });
+        if (groups.length) await tx.role_group_flat.createMany({ data: groups.map(group_key => ({ role: R, group_key })) });
+      }
+      if (themeMode !== undefined) {
+        await tx.$queryRawUnsafe('SELECT pg_advisory_xact_lock(hashtext($1))::text', 'access:theme');
+        const rows = await tx.system_config.findMany({ where: { key: { in: ['role_theme_modes', 'dark_mode_roles'] } } });
+        const current = rows.find(r => r.key === 'role_theme_modes');
+        const map: RoleThemeMap = current?.value ? JSON.parse(current.value) : {};
+        if (!current) {
+          const legacy = rows.find(r => r.key === 'dark_mode_roles');
+          if (legacy?.value) for (const r of JSON.parse(legacy.value)) map[String(r).toUpperCase()] = 'ALL';
+        }
+        if (!map || typeof map !== 'object' || Array.isArray(map)) throw new BadRequestException('Konfigurasi tema tidak valid');
+        map[R] = ALWAYS_ALLOWED_THEME_ROLES.includes(R) ? 'ALL' : themeMode;
+        ALWAYS_ALLOWED_THEME_ROLES.forEach(r => map[r] = 'ALL');
+        await this.writeThemeMap(tx, map);
+      }
+    });
+    this.rolePagesCache = null;
+    this.flatGroupsCache = null;
+    this.themeCache = null;
+  }
+
+  /** Replace all holders for one capability, including explicit exceptions and its legacy mirror. */
+  async setCapabilityConfiguration(key: string, body: { roles: unknown; userIds: unknown; revokedUserIds: unknown }): Promise<void> {
+    const known = ['absensi.admin', 'klinik.kelola_sesi', 'klinik.approve_slot', 'klinik.approve_laporan', 'klinik.rekap', 'bank_data.kelola', 'bank_data.export_sensitif'];
+    if (!known.includes(key)) throw new BadRequestException('Kapabilitas tidak dikenal');
+    const roles = this.stringList(body.roles, 'roles').map(r => r.toUpperCase()).filter(r => !ALWAYS_ALLOWED_THEME_ROLES.includes(r));
+    const grants = this.capabilityUserIds(body.userIds);
+    const revokes = this.capabilityUserIds(body.revokedUserIds);
+    if (grants.some(id => revokes.includes(id))) throw new BadRequestException('Pengguna tidak boleh sekaligus diberikan dan dikecualikan');
+    await this.prisma.$transaction(async tx => {
+      await tx.$queryRawUnsafe('SELECT pg_advisory_xact_lock(hashtext($1))::text', `access:capability:${key}`);
+      const foundRoles = await tx.roles.findMany({ where: { name: { in: roles } }, select: { name: true } });
+      if (roles.some(r => !foundRoles.some(found => found.name === r))) throw new BadRequestException('Ada role yang tidak ditemukan');
+      const users = await tx.public_users.findMany({ where: { id: { in: [...grants, ...revokes] } }, select: { id: true, nama: true, nip: true } });
+      if (users.length !== grants.length + revokes.length) throw new BadRequestException('Ada pengguna yang tidak ditemukan. Muat ulang daftar pengguna.');
+      await tx.role_capabilities.deleteMany({ where: { capability_key: key } });
+      if (roles.length) await tx.role_capabilities.createMany({ data: [...new Set(roles)].map(role => ({ role, capability_key: key })) });
+      await tx.user_capabilities.deleteMany({ where: { capability_key: key } });
+      const entries = [...grants.map(user_id => ({ user_id, capability_key: key, mode: 'grant' })), ...revokes.map(user_id => ({ user_id, capability_key: key, mode: 'revoke' }))];
+      if (entries.length) await tx.user_capabilities.createMany({ data: entries });
+      const value = JSON.stringify({ capabilityManaged: true, allowedRoles: [...ALWAYS_ALLOWED_THEME_ROLES, ...roles], allowedUsers: users.filter(u => grants.includes(u.id)).map(u => ({ id: u.id.toString(), nama: u.nama || `User #${u.id}`, nip: u.nip || '' })) });
+      await tx.site_settings.upsert({ where: { key }, create: { key, value, label: `Hak Akses ${key}`, is_active: true }, update: { value } });
+    });
+    this.roleCapsCache = null;
+  }
 
   async setRolePages(role: string, pageIds: string[]): Promise<void> {
     const R = role.toUpperCase();
@@ -587,23 +669,19 @@ export class AccessService {
     userIds: Array<number | string>,
     mode: 'grant' | 'revoke' = 'grant',
   ): Promise<void> {
-    const ids = [...new Set(userIds.map((id) => Number(id)).filter(Number.isFinite))];
-
-    await this.prisma.user_capabilities.deleteMany({
-      where: { capability_key: capabilityKey, mode },
+    const ids = this.capabilityUserIds(userIds);
+    if (!['grant', 'revoke'].includes(mode)) throw new BadRequestException('Mode kapabilitas tidak valid');
+    await this.prisma.$transaction(async tx => {
+      await tx.$queryRawUnsafe('SELECT pg_advisory_xact_lock(hashtext($1))::text', `access:capability:${capabilityKey}`);
+      await tx.user_capabilities.deleteMany({ where: { capability_key: capabilityKey, mode } });
+      for (const id of ids) {
+        await tx.user_capabilities.upsert({
+          where: { user_id_capability_key: { user_id: id, capability_key: capabilityKey } },
+          create: { user_id: id, capability_key: capabilityKey, mode },
+          update: { mode },
+        });
+      }
     });
-
-    for (const id of ids) {
-      // Orang yang sama bisa punya baris mode lain untuk kunci ini
-      // (mis. pindah revoke → grant) — timpa, jangan gagal.
-      await this.prisma.user_capabilities.upsert({
-        where: {
-          user_id_capability_key: { user_id: BigInt(id), capability_key: capabilityKey },
-        },
-        create: { user_id: BigInt(id), capability_key: capabilityKey, mode },
-        update: { mode },
-      });
-    }
   }
 
   async getCapabilityHolders(capabilityKey: string) {
@@ -634,7 +712,7 @@ export class AccessService {
 
       userRows.forEach((row) => {
         const entri = {
-          user_id: Number(row.user_id),
+          user_id: row.user_id.toString(),
           nama: row.users?.nama || row.users?.username || `#${row.user_id}`,
           role: row.users?.role || '',
         };
@@ -644,7 +722,7 @@ export class AccessService {
       return hasil;
     } catch (e) {
       this.logger.error(`getCapabilityHolders: ${(e as Error).message}`);
-      return kosong;
+      throw new ServiceUnavailableException('Daftar pemegang izin gagal dibaca. Silakan coba lagi.');
     }
   }
 
@@ -658,7 +736,16 @@ export class AccessService {
     });
     ALWAYS_ALLOWED_THEME_ROLES.forEach((adm) => (normalized[adm] = 'ALL'));
 
-    await this.prisma.system_config.upsert({
+    await this.prisma.$transaction(async tx => {
+      await tx.$queryRawUnsafe('SELECT pg_advisory_xact_lock(hashtext($1))::text', 'access:theme');
+      await this.writeThemeMap(tx, normalized, updatedBy);
+    });
+    this.themeCache = null;
+    return normalized;
+  }
+
+  private async writeThemeMap(tx: any, normalized: RoleThemeMap, updatedBy?: string): Promise<void> {
+    await tx.system_config.upsert({
       where: { key: 'role_theme_modes' },
       create: {
         key: 'role_theme_modes',
@@ -674,7 +761,7 @@ export class AccessService {
 
     // Sinkronkan format lama supaya pembaca yang belum pindah tetap konsisten.
     const allowedRoles = Object.keys(normalized).filter((r) => normalized[r] === 'ALL');
-    await this.prisma.system_config.upsert({
+    await tx.system_config.upsert({
       where: { key: 'dark_mode_roles' },
       create: {
         key: 'dark_mode_roles',
@@ -689,8 +776,6 @@ export class AccessService {
       },
     });
 
-    this.themeCache = { at: Date.now(), map: normalized };
-    return normalized;
   }
 
   // ── Roles CRUD ──────────────────────────────────────────────────────────

@@ -1,0 +1,50 @@
+{
+  "mockedData": true,
+  "metrics": {
+    "features-320": {
+      "document": 320,
+      "viewport": 320
+    },
+    "features-390": {
+      "document": 390,
+      "viewport": 390
+    },
+    "features-768": {
+      "document": 768,
+      "viewport": 768
+    },
+    "features-1280": {
+      "document": 1280,
+      "viewport": 1280
+    },
+    "dropdown": {
+      "dropdownHeight": 256,
+      "dropdownBottom": 743.6875,
+      "clippingGroupBottom": 550.6875,
+      "visibleHeight": 63,
+      "groupOverflow": "hidden"
+    },
+    "pages-320": {
+      "document": 390,
+      "viewport": 320
+    },
+    "pages-390": {
+      "document": 390,
+      "viewport": 390
+    },
+    "pages-768": {
+      "document": 768,
+      "viewport": 768
+    },
+    "pages-1280": {
+      "document": 1280,
+      "viewport": 1280
+    },
+    "bulk": {
+      "selectedLabels": "GURU (30 user)SISWA (0 user)WALI KELAS (0 user)WKM AKADEMIK (0 user)OP JURNAL (0 user)OP MADRASAH (0 user)",
+      "controlHeight": 38,
+      "rootHeight": 38
+    }
+  },
+  "errors": []
+}

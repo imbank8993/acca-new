@@ -14,17 +14,18 @@ export class BankDataService {
         const admin = a.roles.some(r => ['ADMIN', 'ADMINISTRATOR'].includes(r));
         
         let bolehKelola = admin || !!a.caps?.includes('bank_data.kelola');
-        if (!bolehKelola) {
+        const revoked = !admin && !!a.revokedCaps?.includes('bank_data.kelola');
+        if (!bolehKelola && !revoked) {
             try {
                 const setting = await this.prisma.site_settings.findUnique({ where: { key: 'bank_data.kelola' } });
                 if (setting?.value) {
                     const parsed = typeof setting.value === 'string' ? JSON.parse(setting.value) : setting.value;
                     const roles = a.roles.map(r => r.toUpperCase());
                     const idStr = String(user.id);
-                    if (Array.isArray(parsed?.allowedRoles) && parsed.allowedRoles.some((r: string) => roles.includes(r.toUpperCase()))) {
+                    if (!parsed.capabilityManaged && Array.isArray(parsed?.allowedRoles) && parsed.allowedRoles.some((r: string) => roles.includes(r.toUpperCase()))) {
                         bolehKelola = true;
                     }
-                    if (Array.isArray(parsed?.allowedUsers) && parsed.allowedUsers.some((u: any) => String(u?.id) === idStr)) {
+                    if (!parsed.capabilityManaged && Array.isArray(parsed?.allowedUsers) && parsed.allowedUsers.some((u: any) => String(u?.id) === idStr)) {
                         bolehKelola = true;
                     }
                 }

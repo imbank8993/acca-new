@@ -116,8 +116,8 @@ export class AccessController {
   @ApiOperation({ summary: 'Peta role → page_id (untuk UI Akses per Role)' })
   async rolePages() {
     const [pages, flatGroups] = await Promise.all([
-      this.accessService.getRolePagesMap(),
-      this.accessService.getRoleFlatGroupsMap(),
+      this.accessService.getRolePagesMap(true),
+      this.accessService.getRoleFlatGroupsMap(true),
     ]);
     return { pages, flatGroups };
   }
@@ -196,17 +196,21 @@ export class AccessController {
   async setCapabilityHolders(
     @Request() req: any,
     @Param('key') key: string,
-    @Body() body: { userIds?: Array<number | string>; mode?: 'grant' | 'revoke' },
+    @Body() body: { userIds?: Array<number | string>; mode?: 'grant' | 'revoke'; roles?: string[]; revokedUserIds?: Array<number | string> },
   ) {
     assertAdmin(req);
-    await this.accessService.setCapabilityHolders(key, body.userIds || [], body.mode || 'grant');
+    if (body.roles !== undefined) {
+      await this.accessService.setCapabilityConfiguration(key, { roles: body.roles, userIds: body.userIds, revokedUserIds: body.revokedUserIds ?? [] });
+    } else {
+      await this.accessService.setCapabilityHolders(key, body.userIds || [], body.mode || 'grant');
+    }
     return { ok: true };
   }
 
   @Get('theme-roles')
   @ApiOperation({ summary: 'Peta role → mode tema (ALL/LIGHT/DARK)' })
   async themeRoles() {
-    return { map: await this.accessService.getRoleThemeMap() };
+    return { map: await this.accessService.getRoleThemeMap(true) };
   }
 
   @Put('theme-roles')
@@ -324,17 +328,14 @@ export class AccessController {
   @ApiOperation({ summary: 'Simpan halaman dan flat groups untuk sebuah role' })
   async saveRolePages(
     @Request() req: any,
-    @Body() body: { role: string; pageIds?: string[]; flatGroups?: string[] },
+    @Body() body: { role: string; pageIds?: string[]; flatGroups?: string[]; themeMode?: 'ALL' | 'LIGHT' | 'DARK' },
   ) {
     assertAdmin(req);
     if (!body.role || !Array.isArray(body.pageIds)) {
       return { ok: false, error: 'role dan pageIds wajib diisi' };
     }
     try {
-      await this.accessService.setRolePages(body.role, body.pageIds);
-      if (Array.isArray(body.flatGroups)) {
-        await this.accessService.setRoleFlatGroups(body.role, body.flatGroups);
-      }
+      await this.accessService.saveRoleAccess(body.role, body.pageIds, body.flatGroups, body.themeMode);
       return { ok: true };
     } catch (e: any) {
       return { ok: false, error: e.message };

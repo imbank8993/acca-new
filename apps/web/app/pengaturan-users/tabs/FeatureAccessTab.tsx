@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import Swal from 'sweetalert2';
 import { PageLoader } from '@/components/ui/Spinner';
 import SearchableSelect, { type Option } from '@/components/ui/SearchableSelect';
@@ -37,6 +37,9 @@ interface UserApiItem {
 interface AccessConfig {
     allowedRoles: string[];
     allowedUsers: UserAccessItem[];
+    revokedUsers?: UserAccessItem[];
+    capabilityManaged?: boolean;
+    legacyPending?: boolean;
 }
 
 interface ModulItem {
@@ -110,6 +113,11 @@ const MODUL: ModulItem[] = [
         grup: 'Guru Asuh',
     },
     // ─── JURNAL PEMBELAJARAN ─────────────────────────────────────────────
+    {
+        settingKey: 'jurnal_access_config', judul: 'Pengelola Jurnal (semua fitur)',
+        ikon: 'bi-shield-check', grup: 'Jurnal Pembelajaran',
+        keterangan: 'Akses umum yang juga berlaku untuk input, review banding, generate, dan pengelolaan massal jurnal. Cabut penunjukan di sini untuk membatasi izin umum yang sudah diberikan.',
+    },
     {
         settingKey: 'jurnal_input_access_config',
         judul: 'Input Jurnal',
@@ -370,6 +378,12 @@ const MODUL: ModulItem[] = [
         ikon: 'bi-megaphone-fill',
         keterangan: 'Daftar role dan pengguna yang diberikan akses untuk mengelola pengumuman (tambah, edit, pin, hapus).',
         grup: 'Informasi',
+        peranBawaan: ['OP_PENGUMUMAN'],
+    },
+    {
+        settingKey: 'informasi_access_config', judul: 'Pengelola Semua Folder',
+        ikon: 'bi-folder-fill', grup: 'Informasi',
+        keterangan: 'Akses umum ke semua divisi Informasi. Penunjukan ini tetap berlaku di samping pengaturan per divisi di bawah.',
     },
     {
         settingKey: 'informasi_akademik_access_config',
@@ -466,6 +480,7 @@ const GRUP_ORDER = [
     'Jurnal Pembelajaran',
     'Jadwal',
     'Izin Guru',
+    'Kinerja Guru',
     'Absensi',
     'Master Data',
     'Pengaturan Data',
@@ -487,28 +502,35 @@ type GagalMuat = Set<string>;
 function parseKonfig(nilai: unknown): AccessConfig {
     let raw: unknown = nilai;
     if (typeof raw === 'string') {
-        try { raw = JSON.parse(raw); } catch { raw = null; }
+        raw = JSON.parse(raw);
     }
-    if (!raw || typeof raw !== 'object') return { ...KONFIG_AWAL };
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw new Error('Format konfigurasi akses tidak valid');
     const config = raw as Record<string, unknown>;
+    if (!Array.isArray(config.allowedRoles) || !Array.isArray(config.allowedUsers)) throw new Error('Daftar izin tidak valid');
     return {
+        capabilityManaged: config.capabilityManaged === true,
         allowedRoles: Array.isArray(config.allowedRoles)
             ? config.allowedRoles.filter((role): role is string => typeof role === 'string')
             : [...ROLE_ADMIN],
         allowedUsers: Array.isArray(config.allowedUsers)
             ? config.allowedUsers.filter((user): user is UserAccessItem =>
-                !!user && typeof user === 'object' && 'id' in user && 'nama' in user)
+                !!user && typeof user === 'object' && ('id' in user || 'nip' in user))
+                .map(user => ({ ...user, id: String(user.id || `nip:${user.nip}`), nama: user.nama || user.nip || `User #${user.id}` }))
             : [],
     };
 }
 
-export default function FeatureAccessTab() {
+const configSnapshot = (cfg: AccessConfig) => JSON.stringify({ roles: [...cfg.allowedRoles].sort(), users: cfg.allowedUsers.map(u => String(u.id)).sort(), revokes: (cfg.revokedUsers || []).map(u => String(u.id)).sort() });
+
+export default function FeatureAccessTab({ onDirtyChange }: { onDirtyChange?: (dirty: boolean) => void } = {}) {
     const [loading, setLoading] = useState(true);
     const [savingKey, setSavingKey] = useState<string | null>(null);
 
     /** Konfigurasi per modul, dikunci `settingKey`. */
     const [konfig, setKonfig] = useState<Record<string, AccessConfig>>({});
     const [gagalMuat, setGagalMuat] = useState<GagalMuat>(new Set());
+    const [savedSnapshots, setSavedSnapshots] = useState<Record<string, string>>({});
+    const loadId = useRef(0);
 
     const [dbRoles, setDbRoles] = useState<RoleApiItem[]>([]);
     const [rawUserList, setRawUserList] = useState<UserApiItem[]>([]);
@@ -519,6 +541,7 @@ export default function FeatureAccessTab() {
     const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
 
     const muatSemua = useCallback(async () => {
+        const request = ++loadId.current;
         try {
             setLoading(true);
             const [usersRes, rolesRes, ssAllRes] = await Promise.all([
@@ -528,6 +551,7 @@ export default function FeatureAccessTab() {
             ]);
 
             const usersList: UserApiItem[] = usersRes.ok && Array.isArray(usersRes.data) ? usersRes.data : [];
+            if (request !== loadId.current) return;
             if (usersRes.ok && Array.isArray(usersRes.data)) setRawUserList(usersRes.data);
             if (rolesRes.ok && Array.isArray(rolesRes.data)) setDbRoles(rolesRes.data);
 
@@ -549,9 +573,11 @@ export default function FeatureAccessTab() {
             for (const m of MODUL) {
                 const kunci = m.settingKey;
                 const settingRow = settingsMap.get(kunci);
-
+                if (!usersRes.ok || !Array.isArray(usersRes.data) || !rolesRes.ok || !Array.isArray(rolesRes.data) || !ssAllRes.ok || !Array.isArray(ssAllRes.data)) gagal.add(kunci);
+                try {
                 if (m.isCapability) {
                     const capJson = capMap.get(kunci);
+                    if (!capJson?.ok || !Array.isArray(capJson.roles) || !Array.isArray(capJson.grants) || !Array.isArray(capJson.revokes)) gagal.add(kunci);
                     let capUsers: UserAccessItem[] = [];
                     if (capJson?.ok && Array.isArray(capJson.grants)) {
                         const grantedIds = capJson.grants.map((g: { user_id: string | number }) => String(g.user_id));
@@ -568,12 +594,18 @@ export default function FeatureAccessTab() {
                     }
 
                     const ssCfg = settingRow ? parseKonfig(settingRow.value) : { ...KONFIG_AWAL };
-                    if (!ssAllRes.ok && capJson && !capJson.ok) {
-                        gagal.add(kunci);
-                    }
+                    const revokedUsers: UserAccessItem[] = (Array.isArray(capJson?.revokes) ? capJson.revokes : []).map((entry: { user_id: string; nama?: string }) => {
+                        const found = usersList.find(u => String(u.id || u.user_id) === String(entry.user_id));
+                        return { id: String(entry.user_id), nama: found?.nama || entry.nama || `User #${entry.user_id}` };
+                    });
+                    const capRoles: string[] = Array.isArray(capJson?.roles) ? capJson.roles : [];
+                    const managed = ssCfg.capabilityManaged === true;
+                    const mergedUsers = [...new Map([...(managed ? [] : ssCfg.allowedUsers), ...capUsers].map(u => [String(u.id), u])).values()].filter(u => !revokedUsers.some(r => r.id === String(u.id)));
                     hasil[kunci] = {
-                        allowedRoles: ssCfg.allowedRoles || [...ROLE_ADMIN],
-                        allowedUsers: capUsers.length > 0 ? capUsers : ssCfg.allowedUsers || [],
+                        allowedRoles: [...new Set([...(managed ? ROLE_ADMIN : ssCfg.allowedRoles), ...capRoles])],
+                        allowedUsers: mergedUsers,
+                        revokedUsers,
+                        legacyPending: !managed && (ssCfg.allowedRoles.some(r => !ROLE_ADMIN.includes(r) && !capRoles.includes(r)) || mergedUsers.some(u => !capUsers.some(c => c.id === u.id))),
                     };
                 } else {
                     if (settingRow) {
@@ -585,17 +617,26 @@ export default function FeatureAccessTab() {
                         gagal.add(kunci);
                     }
                 }
+                } catch {
+                    hasil[kunci] = { ...KONFIG_AWAL };
+                    gagal.add(kunci);
+                }
             }
+            if (request !== loadId.current) return;
             setKonfig(hasil);
+            setSavedSnapshots(Object.fromEntries(Object.entries(hasil).map(([key, cfg]) => [key, configSnapshot(cfg)])));
             setGagalMuat(gagal);
         } catch (err) {
             console.error(err);
+            if (request === loadId.current) setGagalMuat(new Set(MODUL.map(m => m.settingKey)));
         } finally {
-            setLoading(false);
+            if (request === loadId.current) setLoading(false);
         }
     }, []);
 
-    useEffect(() => { muatSemua(); }, [muatSemua]);
+    useEffect(() => { void muatSemua(); return () => { loadId.current++; }; }, [muatSemua]);
+    const dirty = Object.entries(konfig).some(([key, cfg]) => savedSnapshots[key] !== configSnapshot(cfg));
+    useEffect(() => { onDirtyChange?.(dirty); }, [dirty, onDirtyChange]);
 
     const roleOptions: Option[] = useMemo(() => {
         return dbRoles
@@ -611,7 +652,7 @@ export default function FeatureAccessTab() {
     }, [dbRoles]);
 
     const userOptions: Option[] = useMemo(() => {
-        return rawUserList.map(u => {
+        const options = rawUserList.map(u => {
             const roleStr = u.role || (Array.isArray(u.roles) ? u.roles[0] : '');
             const formattedRole = roleStr ? formatRoleDisplay(roleStr) : '';
             return {
@@ -620,7 +661,13 @@ export default function FeatureAccessTab() {
                 subLabel: u.nip ? `NIP: ${u.nip}` : u.nisn ? `NISN: ${u.nisn}` : formattedRole ? `Role: ${formattedRole}` : '',
             };
         });
-    }, [rawUserList]);
+        const known = new Set(options.map(o => o.value));
+        for (const cfg of Object.values(konfig)) for (const user of [...cfg.allowedUsers, ...(cfg.revokedUsers || [])]) {
+            const id = String(user.id);
+            if (!known.has(id)) { known.add(id); options.push({ value: id, label: user.nama || `User #${id}`, subLabel: user.nip || 'Penunjukan tersimpan' }); }
+        }
+        return options;
+    }, [rawUserList, konfig]);
 
     const ubahRole = (m: ModulItem, dipilih: string | number | (string | number)[]) => {
         const nilai = (Array.isArray(dipilih) ? dipilih : [dipilih]).map(String).filter(Boolean);
@@ -628,16 +675,17 @@ export default function FeatureAccessTab() {
         setKonfig(prev => ({
             ...prev,
             [m.settingKey]: {
+                ...prev[m.settingKey],
                 allowedRoles: Array.from(new Set([...defaults, ...nilai])),
                 allowedUsers: prev[m.settingKey]?.allowedUsers ?? [],
             },
         }));
     };
 
-    const ubahUser = (settingKey: string, dipilih: string | number | (string | number)[]) => {
+    const ubahUser = (settingKey: string, dipilih: string | number | (string | number)[], revoke = false) => {
         const ids = (Array.isArray(dipilih) ? dipilih : [dipilih]).map(String).filter(Boolean);
         setKonfig(prev => {
-            const lama = prev[settingKey]?.allowedUsers ?? [];
+            const lama = (revoke ? prev[settingKey]?.revokedUsers : prev[settingKey]?.allowedUsers) ?? [];
             const baru: UserAccessItem[] = ids.map(id => {
                 const ada = lama.find(u => String(u.id) === id);
                 if (ada) return ada;
@@ -653,14 +701,17 @@ export default function FeatureAccessTab() {
             return {
                 ...prev,
                 [settingKey]: {
+                    ...prev[settingKey],
                     allowedRoles: prev[settingKey]?.allowedRoles ?? [...ROLE_ADMIN],
-                    allowedUsers: baru,
+                    allowedUsers: revoke ? (prev[settingKey]?.allowedUsers || []).filter(u => !ids.includes(String(u.id))) : baru,
+                    revokedUsers: revoke ? baru : (prev[settingKey]?.revokedUsers || []).filter(u => !ids.includes(String(u.id))),
                 },
             };
         });
     };
 
     const simpan = async (m: ModulItem) => {
+        if (savingKey) return;
         if (gagalMuat.has(m.settingKey)) {
             Swal.fire(
                 'Tidak bisa menyimpan',
@@ -680,10 +731,14 @@ export default function FeatureAccessTab() {
                 allowedUsers: currentCfg.allowedUsers || [],
             };
 
-            const res = await fetch('/api/site-settings', {
+            const res = await fetch(m.isCapability ? '/api/admin/capabilities' : '/api/site-settings', {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
+                body: JSON.stringify(m.isCapability ? {
+                    capability: m.settingKey, roles: mergedRoles,
+                    userIds: currentCfg.allowedUsers.map(u => String(u.id)),
+                    revokedUserIds: (currentCfg.revokedUsers || []).map(u => String(u.id)),
+                } : {
                     key: m.settingKey,
                     value: JSON.stringify(payloadValue),
                     label: `Pengaturan Akses ${m.judul}`,
@@ -693,25 +748,10 @@ export default function FeatureAccessTab() {
             const json = await res.json();
             if (!json.ok) throw new Error(json.message || json.error || 'Gagal menyimpan pengaturan');
 
-            if (m.isCapability) {
-                const userIds = (currentCfg.allowedUsers || [])
-                    .map((u) => Number(u.id))
-                    .filter((v) => Number.isFinite(v));
-                const capRes = await fetch('/api/admin/capabilities', {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        capability: m.settingKey,
-                        userIds,
-                        mode: 'grant',
-                    }),
-                });
-                const capJson = await capRes.json();
-                if (!capJson.ok) throw new Error(capJson.error || 'Gagal menyimpan kapabilitas petugas');
-            }
-
+            const saved = { ...currentCfg, ...payloadValue, legacyPending: false, capabilityManaged: !!m.isCapability };
+            setKonfig(prev => ({ ...prev, [m.settingKey]: saved }));
+            setSavedSnapshots(prev => ({ ...prev, [m.settingKey]: configSnapshot(saved) }));
             Swal.fire('Berhasil!', `Hak akses ${m.judul} berhasil disimpan.`, 'success');
-            muatSemua();
         } catch (err: unknown) {
             Swal.fire('Error', err instanceof Error ? err.message : 'Terjadi kesalahan', 'error');
         } finally {
@@ -747,7 +787,7 @@ export default function FeatureAccessTab() {
     const allGroups = useMemo(() => {
         const seen = new Set<string>();
         const result: string[] = [];
-        for (const g of GRUP_ORDER) {
+        for (const g of [...new Set([...GRUP_ORDER, ...MODUL.map(m => m.grup)])]) {
             if (MODUL.some(m => m.grup === g) && !seen.has(g)) {
                 seen.add(g);
                 result.push(g);
@@ -771,6 +811,13 @@ export default function FeatureAccessTab() {
 
     return (
         <div className="fa-clean-page">
+            {gagalMuat.size > 0 && <div role="alert" className="fa-load-error">
+                Sebagian pengaturan gagal dimuat. Kartu yang bermasalah dikunci agar izin tersimpan tetap aman.
+                <button type="button" disabled={!!savingKey} onClick={async () => {
+                    if (dirty && !(await Swal.fire({ title: 'Muat ulang pengaturan?', text: 'Perubahan yang belum disimpan akan dibatalkan.', icon: 'warning', showCancelButton: true, confirmButtonText: 'Muat ulang', cancelButtonText: 'Batal' })).isConfirmed) return;
+                    void muatSemua();
+                }}>Coba lagi</button>
+            </div>}
             {/* ──── HEADER ──── */}
             <div className="fa-header-bar">
                 <div className="fa-title-group">
@@ -815,6 +862,7 @@ export default function FeatureAccessTab() {
                         <button
                             type="button"
                             className="fa-group-header"
+                            aria-expanded={!isCollapsed}
                             onClick={() => toggleGroup(grup)}
                         >
                             <div className="fa-group-left">
@@ -834,6 +882,10 @@ export default function FeatureAccessTab() {
                                     const filteredRoleOptions = roleOptions.filter(opt => !(m.peranBawaan || []).includes(String(opt.value).toUpperCase()));
                                     const userTerpilih = cfg.allowedUsers.map(u => String(u.id));
                                     const sedangSimpan = savingKey === m.settingKey;
+                                    const gagal = gagalMuat.has(m.settingKey);
+                                    const sourceKey = ['jurnal_input_access_config', 'jurnal_review_banding_access_config', 'jurnal_generate_access_config'].includes(m.settingKey) ? 'jurnal_access_config' : ['informasi_akademik_access_config', 'informasi_keasramaan_access_config', 'informasi_kesiswaan_access_config', 'informasi_umum_access_config'].includes(m.settingKey) ? 'informasi_access_config' : null;
+                                    const sourceCfg = sourceKey ? konfig[sourceKey] : null;
+                                    const inherited = sourceCfg ? [...sourceCfg.allowedRoles.filter(r => !ROLE_ADMIN.includes(r.toUpperCase())), ...sourceCfg.allowedUsers.map(u => u.nama)] : [];
 
                                     return (
                                         <div className="fa-card" key={m.settingKey}>
@@ -846,11 +898,15 @@ export default function FeatureAccessTab() {
                                             </div>
 
                                             <div className="fa-card-body">
+                                                {gagal && <p role="alert" className="fa-load-error">Konfigurasi kartu ini belum berhasil dimuat. Gunakan Coba lagi sebelum mengubah izin.</p>}
+                                                {cfg.legacyPending && <p className="fa-load-error">Penunjukan lama turut dimuat. Simpan kartu ini untuk menyelaraskan penunjukan tersebut dengan izin server.</p>}
+                                                {['jurnal_access_config', 'informasi_access_config'].includes(m.settingKey) && <p className="fa-note">{m.keterangan}</p>}
                                                 <p className="fa-note">
                                                     {m.peranBawaan && m.peranBawaan.length > 0
                                                         ? `ADMIN dan ${m.peranBawaan.join(', ')} memiliki hak akses bawaan.`
                                                         : 'ADMIN selalu punya akses penuh.'}
                                                 </p>
+                                                {sourceKey && <p className="fa-note">Akses umum dari kartu {sourceKey === 'jurnal_access_config' ? 'Pengelola Jurnal (semua fitur)' : 'Pengelola Semua Folder'} juga berlaku{inherited.length ? `: ${inherited.join(', ')}.` : '. Belum ada penunjukan tambahan.'}</p>}
 
                                                 <div className="fa-fields-row">
                                                     <div className="fa-inline-field">
@@ -862,6 +918,7 @@ export default function FeatureAccessTab() {
                                                             placeholder="Cari atau Pilih Role..."
                                                             itemLabel="role"
                                                             multiple={true}
+                                                            disabled={gagal || !!savingKey}
                                                         />
                                                     </div>
 
@@ -874,9 +931,12 @@ export default function FeatureAccessTab() {
                                                             placeholder="Cari atau Pilih Pengguna..."
                                                             itemLabel="pengguna"
                                                             multiple={true}
+                                                            disabled={gagal || !!savingKey}
                                                         />
                                                     </div>
                                                 </div>
+                                                {m.isCapability && <SearchableSelect label="Pengguna dikecualikan" options={userOptions} value={(cfg.revokedUsers || []).map(u => String(u.id))} onChange={v => ubahUser(m.settingKey, v, true)} placeholder="Pilih pengguna yang tidak menerima izin dari role" itemLabel="pengguna" multiple disabled={gagal || !!savingKey} />}
+                                                {m.isCapability && <p className="fa-note">Pengecualian mengalahkan izin role. ADMIN tetap memiliki akses penuh.</p>}
                                             </div>
 
                                             <div className="fa-card-foot">
@@ -884,7 +944,7 @@ export default function FeatureAccessTab() {
                                                     type="button"
                                                     className="fa-btn-submit"
                                                     onClick={() => simpan(m)}
-                                                    disabled={sedangSimpan}
+                                                    disabled={!!savingKey || gagal}
                                                 >
                                                     {sedangSimpan ? (
                                                         <>
@@ -914,6 +974,8 @@ export default function FeatureAccessTab() {
                     flex-direction: column;
                     gap: 12px;
                 }
+                .fa-load-error { padding: 12px; border: 1px solid #f59e0b; border-radius: 10px; background: #fffbeb; color: #92400e; font-size: .8rem; }
+                .fa-load-error button { margin-left: 12px; text-decoration: underline; }
 
                 /* ─── HEADER ─── */
                 .fa-header-bar {
@@ -966,7 +1028,7 @@ export default function FeatureAccessTab() {
                 .fa-group {
                     border: 1px solid var(--n-border, #e2e8f0);
                     border-radius: 14px;
-                    overflow: hidden;
+                    overflow: visible;
                     background: var(--n-card, #ffffff);
                 }
                 .fa-group-header {
@@ -981,7 +1043,9 @@ export default function FeatureAccessTab() {
                     cursor: pointer;
                     transition: background 0.15s;
                     font-family: inherit;
+                    border-radius: 13px 13px 0 0;
                 }
+                .fa-group-header[aria-expanded='false'] { border-radius: 13px; border-bottom: none; }
                 .fa-group-header:hover {
                     background: #eef4ff;
                 }

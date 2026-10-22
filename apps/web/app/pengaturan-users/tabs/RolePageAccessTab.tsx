@@ -32,14 +32,17 @@ interface RoleSelectOption {
   mode?: ThemeMode
 }
 
-export default function RolePageAccessTab() {
+export default function RolePageAccessTab({ onDirtyChange }: { onDirtyChange?: (dirty: boolean) => void } = {}) {
   const [roles, setRoles] = useState<string[]>([])
   const [users, setUsers] = useState<UserItem[]>([])
   const [selectedRole, setSelectedRole] = useState<string>('')
   const [pageIds, setPageIds] = useState<Set<string>>(new Set())
   const [flatGroups, setFlatGroups] = useState<Set<string>>(new Set())
   const [initial, setInitial] = useState<string>('') // serialized snapshot to detect changes
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [loadedRole, setLoadedRole] = useState('')
+  const [themeReady, setThemeReady] = useState(false)
+  const [setupError, setSetupError] = useState('')
   const [saving, setSaving] = useState(false)
   const [pageSearch, setPageSearch] = useState('')
 
@@ -60,25 +63,27 @@ export default function RolePageAccessTab() {
   }, [showBulkModal, registerModal])
 
   // Shared menu structure + label overrides from "Susun Menu" (keeps both tabs in sync).
-  const [groups, setGroups] = useState<MenuGroupDef[]>([])
+  const [groups, setGroups] = useState<MenuGroupDef[]>(MENU_GROUPS)
   const [labels, setLabels] = useState<Record<string, string>>({})
 
   useEffect(() => {
     fetch('/api/admin/roles')
       .then(r => r.json())
       .then(d => {
+        if (!d?.ok || !Array.isArray(d.data)) throw new Error('Daftar role gagal dimuat')
         if (d.ok) {
           const names: string[] = (d.data || []).map((r: { name?: string }) => r.name || '').filter(Boolean)
           setRoles(names)
           if (!selectedRole && names.length) setSelectedRole(names.includes('GURU') ? 'GURU' : names[0])
+          if (!names.length) { setSetupError('Belum ada role yang dapat diatur.'); setLoading(false) }
         }
       })
-      .catch(() => {})
+      .catch(() => { setSetupError('Daftar role gagal dimuat. Muat ulang halaman.'); setLoading(false) })
 
     fetch('/api/admin/users')
       .then(r => r.json())
-      .then(d => { if (d.ok) setUsers(d.data || []) })
-      .catch(() => {})
+      .then(d => { if (!d?.ok || !Array.isArray(d.data)) throw new Error('Daftar pengguna gagal dimuat'); setUsers(d.data) })
+      .catch(() => setSetupError('Daftar pengguna gagal dimuat. Muat ulang halaman.'))
 
     fetch('/api/menu-layout')
       .then(r => r.json())
@@ -96,9 +101,12 @@ export default function RolePageAccessTab() {
           const map: Record<string, ThemeMode> = d.themeMap
           setRoleThemeMap(map)
           setInitialRoleThemeMap(map)
+          setThemeReady(true)
+        } else {
+          setSetupError('Preferensi tema gagal dimuat. Muat ulang sebelum menyimpan.')
         }
       })
-      .catch(() => {})
+      .catch(() => setSetupError('Preferensi tema gagal dimuat. Muat ulang sebelum menyimpan.'))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -106,19 +114,27 @@ export default function RolePageAccessTab() {
 
   useEffect(() => {
     if (!selectedRole) return
+    const controller = new AbortController()
+    let cancelled = false
     setLoading(true)
+    setLoadedRole('')
+    setPageIds(new Set())
+    setFlatGroups(new Set())
     setGagalMuatAkses(false)
-    fetch(`/api/admin/role-pages?role=${encodeURIComponent(selectedRole)}`)
+    fetch(`/api/admin/role-pages?role=${encodeURIComponent(selectedRole)}`, { signal: controller.signal })
       .then(r => r.json())
       .then(d => {
-        if (!d?.ok) throw new Error(d?.error || 'Gagal memuat akses halaman role')
+        if (cancelled) return
+        if (!d?.ok || d.role !== selectedRole || !Array.isArray(d.pageIds) || !Array.isArray(d.flatGroups)) throw new Error(d?.error || 'Gagal memuat akses halaman role')
         const p = new Set<string>(d.pageIds || []), f = new Set<string>(d.flatGroups || [])
         setPageIds(p)
         setFlatGroups(f)
         setInitial(snapshot(p, f))
+        setLoadedRole(selectedRole)
       })
-      .catch(() => { setGagalMuatAkses(true) })
-      .finally(() => setLoading(false))
+      .catch(() => { if (!cancelled) setGagalMuatAkses(true) })
+      .finally(() => { if (!cancelled) setLoading(false) })
+    return () => { cancelled = true; controller.abort() }
   }, [selectedRole])
 
   // Effective display name = custom override (Susun Menu) || built-in default || id.
@@ -140,9 +156,20 @@ export default function RolePageAccessTab() {
   }, [selectedRole, roleThemeMap, initialRoleThemeMap])
 
   const dirty = useMemo(
-    () => snapshot(pageIds, flatGroups) !== initial || isThemeDirty,
-    [pageIds, flatGroups, initial, isThemeDirty]
+    () => loadedRole === selectedRole && !!selectedRole && (snapshot(pageIds, flatGroups) !== initial || isThemeDirty),
+    [pageIds, flatGroups, initial, isThemeDirty, loadedRole, selectedRole]
   )
+  useEffect(() => { onDirtyChange?.(dirty); }, [dirty, onDirtyChange])
+
+  const changeRole = async (role: string) => {
+    if (role === selectedRole || saving || bulkSaving) return
+    if (dirty) {
+      const answer = await Swal.fire({ title: 'Beralih role?', text: 'Perubahan pada role ini belum disimpan dan akan dibatalkan.', icon: 'warning', showCancelButton: true, confirmButtonText: 'Beralih', cancelButtonText: 'Tetap di sini' })
+      if (!answer.isConfirmed) return
+      setRoleThemeMap(prev => ({ ...prev, [selectedRole]: initialRoleThemeMap[selectedRole] || 'LIGHT' }))
+    }
+    setSelectedRole(role)
+  }
 
   const roleLacksAccess = (pageId: string) =>
     !!selectedRole && !ADMIN_ROLES.has(selectedRole.toUpperCase()) && !canAccessPage([selectedRole], pageId)
@@ -153,6 +180,7 @@ export default function RolePageAccessTab() {
   )
 
   const togglePage = (id: string) => {
+    if (loading || saving || loadedRole !== selectedRole) return
     setPageIds(prev => {
       const next = new Set(prev)
       if (next.has(id)) next.delete(id); else next.add(id)
@@ -161,6 +189,7 @@ export default function RolePageAccessTab() {
   }
 
   const toggleGroup = (groupPages: string[], allOn: boolean) => {
+    if (loading || saving || loadedRole !== selectedRole) return
     setPageIds(prev => {
       const next = new Set(prev)
       groupPages.forEach(p => { if (allOn) next.delete(p); else next.add(p) })
@@ -169,6 +198,7 @@ export default function RolePageAccessTab() {
   }
 
   const toggleFlat = (groupKey: string) => {
+    if (loading || saving || loadedRole !== selectedRole) return
     setFlatGroups(prev => {
       const next = new Set(prev)
       if (next.has(groupKey)) next.delete(groupKey); else next.add(groupKey)
@@ -178,6 +208,7 @@ export default function RolePageAccessTab() {
 
   // Set mode for active single role
   const setModeForRole = (role: string, mode: ThemeMode) => {
+    if (!themeReady || loading || saving || bulkSaving || loadedRole !== selectedRole) return
     const roleUpper = role.toUpperCase()
     if (ADMIN_ROLES.has(roleUpper)) return
     setRoleThemeMap(prev => ({
@@ -187,7 +218,7 @@ export default function RolePageAccessTab() {
   }
 
   const save = async () => {
-    if (!selectedRole) return
+    if (!selectedRole || loading || saving || bulkSaving || loadedRole !== selectedRole || !themeReady || setupError) return
     if (gagalMuatAkses) {
       Swal.fire(
         'Tidak bisa menyimpan',
@@ -198,28 +229,13 @@ export default function RolePageAccessTab() {
     }
     setSaving(true)
     try {
-      const rolePagesPromise = fetch('/api/admin/role-pages', {
+      const response = await fetch('/api/admin/role-pages', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ role: selectedRole, pageIds: [...pageIds], flatGroups: [...flatGroups] }),
+        body: JSON.stringify({ role: selectedRole, pageIds: [...pageIds], flatGroups: [...flatGroups], ...(isThemeDirty ? { themeMode: roleThemeMap[selectedRole] || 'LIGHT' } : {}) }),
       })
-
-      let themePromise: Promise<{ ok: boolean; error?: string }> = Promise.resolve({ ok: true })
-      if (isThemeDirty) {
-        themePromise = fetch('/api/admin/role-theme', {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ themeMap: roleThemeMap }),
-        }).then(r => r.json())
-      }
-
-      const [resPages, resTheme] = await Promise.all([
-        rolePagesPromise.then(r => r.json()),
-        themePromise
-      ])
-
-      if (!resPages.ok) throw new Error(resPages.error || 'Gagal menyimpan akses halaman')
-      if (!resTheme.ok) throw new Error(resTheme.error || 'Gagal menyimpan preferensi tema role')
+      const resPages = await response.json()
+      if (!response.ok || !resPages.ok) throw new Error(resPages.error || 'Gagal menyimpan akses halaman')
 
       setInitial(snapshot(pageIds, flatGroups))
       setInitialRoleThemeMap({ ...roleThemeMap })
@@ -240,6 +256,8 @@ export default function RolePageAccessTab() {
 
   // Handle Bulk Theme Mode Application
   const handleApplyBulkTheme = async () => {
+    if (!themeReady || saving || bulkSaving) return
+    if (isThemeDirty && !(await Swal.fire({ title: 'Terapkan tema massal?', text: 'Perubahan tema yang belum disimpan akan diganti dengan pengaturan massal.', icon: 'warning', showCancelButton: true, confirmButtonText: 'Terapkan', cancelButtonText: 'Batal' })).isConfirmed) return
     if (bulkSelectedRoles.length === 0) {
       Swal.fire('Peringatan', 'Pilih minimal satu role.', 'warning')
       return
@@ -278,7 +296,7 @@ export default function RolePageAccessTab() {
   }
 
   const totalSelected = pageIds.size
-  const totalPages = groups.reduce((count, group) => count + group.pages.length, 0)
+  const totalPages = new Set(groups.flatMap(group => group.pages)).size
 
   // Options for single searchable role selector dropdown
   const roleSelectOptions: RoleSelectOption[] = useMemo(() => {
@@ -335,7 +353,7 @@ export default function RolePageAccessTab() {
     control: (base, state) => ({
       ...base,
       minHeight: '38px',
-      height: '38px',
+      height: state.isMulti ? 'auto' : '38px',
       borderRadius: '8px',
       borderColor: state.isFocused ? '#3083FF' : 'var(--n-border, #cbd5e1)',
       backgroundColor: 'var(--n-card, #ffffff)',
@@ -346,9 +364,12 @@ export default function RolePageAccessTab() {
       fontSize: '0.84rem',
       fontWeight: '600'
     }),
-    valueContainer: base => ({
+    valueContainer: (base, state) => ({
       ...base,
-      height: '38px',
+      minHeight: '38px',
+      height: state.isMulti ? 'auto' : '38px',
+      maxHeight: state.isMulti ? '160px' : undefined,
+      overflowY: state.isMulti ? 'auto' : undefined,
       padding: '0 10px'
     }),
     indicatorsContainer: base => ({
@@ -391,7 +412,8 @@ export default function RolePageAccessTab() {
           <div className="rpa__selectBox">
             <Select<RoleSelectOption, false>
               value={roleSelectOptions.find(o => o.value === selectedRole) || null}
-              onChange={(opt: SingleValue<RoleSelectOption>) => opt && setSelectedRole(opt.value)}
+              onChange={(opt: SingleValue<RoleSelectOption>) => { if (opt) void changeRole(opt.value) }}
+              isDisabled={saving || bulkSaving}
               options={roleSelectOptions}
               placeholder="Pilih role..."
               isSearchable
@@ -427,6 +449,7 @@ export default function RolePageAccessTab() {
                     type="button"
                     className={`rpa__segBtn ${currentRoleMode === 'ALL' ? 'active all' : ''}`}
                     onClick={() => setModeForRole(selectedRole, 'ALL')}
+                    disabled={!themeReady || loading || saving || bulkSaving}
                     title="User bebas memilih tema terang / gelap"
                   >
                     <i className="bi bi-circle-half"></i>
@@ -436,6 +459,7 @@ export default function RolePageAccessTab() {
                     type="button"
                     className={`rpa__segBtn ${currentRoleMode === 'LIGHT' ? 'active light' : ''}`}
                     onClick={() => setModeForRole(selectedRole, 'LIGHT')}
+                    disabled={!themeReady || loading || saving || bulkSaving}
                     title="Kunci ke Mode Terang"
                   >
                     <i className="bi bi-sun-fill"></i>
@@ -445,6 +469,7 @@ export default function RolePageAccessTab() {
                     type="button"
                     className={`rpa__segBtn ${currentRoleMode === 'DARK' ? 'active dark' : ''}`}
                     onClick={() => setModeForRole(selectedRole, 'DARK')}
+                    disabled={!themeReady || loading || saving || bulkSaving}
                     title="Kunci ke Mode Gelap"
                   >
                     <i className="bi bi-moon-stars-fill"></i>
@@ -456,6 +481,7 @@ export default function RolePageAccessTab() {
               <button
                 type="button"
                 className="rpa__bulkIconBtn"
+                disabled={!themeReady || saving || bulkSaving}
                 onClick={() => setShowBulkModal(true)}
                 title="Atur tema massal untuk banyak role"
               >
@@ -470,7 +496,7 @@ export default function RolePageAccessTab() {
               variant="primary"
               icon="save"
               onClick={save}
-              disabled={!dirty || saving || !selectedRole || gagalMuatAkses}
+              disabled={!dirty || saving || bulkSaving || loading || !themeReady || !!setupError || loadedRole !== selectedRole || gagalMuatAkses}
               isLoading={saving}
             >
               Simpan
@@ -481,6 +507,7 @@ export default function RolePageAccessTab() {
       </div>
 
       {/* Error Banner */}
+      {setupError && <div role="alert" className="rpa__errorAlert">{setupError}</div>}
       {gagalMuatAkses && !loading && (
         <div className="rpa__errorAlert">
           <i className="bi bi-exclamation-triangle-fill"></i>
@@ -534,7 +561,7 @@ export default function RolePageAccessTab() {
         <div className="rpa__loading">
           <Spinner variant="buble" />
         </div>
-      ) : filteredGroups.length === 0 ? (
+      ) : gagalMuatAkses ? null : filteredGroups.length === 0 ? (
         <div className="rpa__emptySearch">
           <i className="bi bi-search"></i>
           <span>Tidak ada halaman yang cocok dengan &quot;{pageSearch}&quot;</span>
@@ -602,6 +629,7 @@ export default function RolePageAccessTab() {
                           type="checkbox"
                           className="rpa__hiddenCheck"
                           checked={isSelected}
+                          disabled={saving || bulkSaving}
                           onChange={() => togglePage(p)}
                         />
                         <span className={`rpa__checkMark ${isSelected ? 'checked' : ''}`}>
@@ -735,7 +763,7 @@ export default function RolePageAccessTab() {
               variant="primary"
               icon="check-circle-fill"
               onClick={handleApplyBulkTheme}
-              disabled={bulkSelectedRoles.length === 0 || bulkSaving}
+              disabled={bulkSelectedRoles.length === 0 || bulkSaving || !themeReady || saving}
               isLoading={bulkSaving}
             >
               Terapkan ke {bulkSelectedRoles.length} Role
@@ -1430,10 +1458,15 @@ export default function RolePageAccessTab() {
           .rpa__rightControl {
             width: 100%;
             justify-content: space-between;
+            flex-wrap: wrap;
+            flex-shrink: 1;
           }
           .rpa__themeWrap {
             flex: 1;
+            min-width: 0;
+            flex-wrap: wrap;
           }
+          .rpa__saveWrap { margin-left: auto; }
           .rpa__subBar {
             flex-direction: column;
             align-items: stretch;
@@ -1450,6 +1483,11 @@ export default function RolePageAccessTab() {
           .rpa__modeCards {
             grid-template-columns: 1fr;
           }
+        }
+        @media (max-width: 420px) {
+          .rpa__rightControl { flex-direction: column; align-items: stretch; }
+          .rpa__themeWrap { flex: none; width: 100%; justify-content: space-between; }
+          .rpa__saveWrap { align-self: flex-end; }
         }
       `}</style>
     </div>

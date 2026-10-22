@@ -1,7 +1,8 @@
 'use client'
 import { useTabParam } from '@/hooks/useTabParam';
 
-import { useMemo } from 'react'
+import { useMemo, useState, useEffect } from 'react'
+import Swal from 'sweetalert2'
 import UserDataTab from '../tabs/UserDataTab'
 import RolePageAccessTab from '../tabs/RolePageAccessTab'
 import MenuLayoutTab from '../tabs/MenuLayoutTab'
@@ -16,6 +17,13 @@ import type { User } from '@/lib/types'
 type TabType = 'user_data' | 'role_pages' | 'feature_access' | 'menu_layout' | 'role_permissions' | 'atur_halaman'
 
 export default function UserSettingsPage({ initialTab, user }: { initialTab?: string, user?: User }) {
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
+  useEffect(() => {
+    if (!hasUnsavedChanges) return
+    const warn = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = '' }
+    window.addEventListener('beforeunload', warn)
+    return () => window.removeEventListener('beforeunload', warn)
+  }, [hasUnsavedChanges])
   /**
    * Halaman ini HANYA untuk ADMIN, dan itu ditegakkan di dua tempat.
    *
@@ -59,6 +67,12 @@ export default function UserSettingsPage({ initialTab, user }: { initialTab?: st
   )
 
   const allowedTabs = tabs;
+  const changeTab = async (tab: TabType) => {
+    if (tab === activeTab) return
+    if (hasUnsavedChanges && !(await Swal.fire({ title: 'Pindah tab?', text: 'Perubahan hak akses yang belum disimpan akan dibatalkan.', icon: 'warning', showCancelButton: true, confirmButtonText: 'Pindah tab', cancelButtonText: 'Tetap di sini' })).isConfirmed) return
+    setHasUnsavedChanges(false)
+    setActiveTab(tab)
+  }
 
   if (!user) return <PageLoader minHeight="50vh" variant="buble" />
 
@@ -82,15 +96,15 @@ export default function UserSettingsPage({ initialTab, user }: { initialTab?: st
         <Tab
           tabs={allowedTabs}
           activeTab={activeTab}
-          onChange={setActiveTab}
+          onChange={tab => { void changeTab(tab) }}
           ariaLabel="User settings tabs"
           variant="slider"
         />
 
         <div className="us-content" role="tabpanel">
           {activeTab === 'user_data' && <UserDataTab user={user} />}
-          {activeTab === 'role_pages' && <RolePageAccessTab />}
-          {activeTab === 'feature_access' && <FeatureAccessTab />}
+          {activeTab === 'role_pages' && <RolePageAccessTab onDirtyChange={setHasUnsavedChanges} />}
+          {activeTab === 'feature_access' && <FeatureAccessTab onDirtyChange={setHasUnsavedChanges} />}
           {activeTab === 'menu_layout' && <MenuLayoutTab />}
           {activeTab === 'role_permissions' && <RoleManagementTab />}
           {activeTab === 'atur_halaman' && <MaintenanceTab user={user} />}

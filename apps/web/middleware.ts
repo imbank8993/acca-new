@@ -328,7 +328,6 @@ export async function middleware(request: NextRequest) {
         const isCbt = pageId.startsWith('cbt-')
 
         if (!isCbt && !ALWAYS_ALLOWED.has(pageId)) {
-            const enableJwtPagePermissions = process.env.ENABLE_JWT_PAGE_PERMISSIONS !== 'false'
 
             // `claims` sudah terverifikasi di atas. Jalur cadangan lama yang
             // men-decode payload dengan `atob` tanpa memeriksa tanda tangan
@@ -340,26 +339,11 @@ export async function middleware(request: NextRequest) {
                 return NextResponse.redirect(url)
             }
 
-            let allowed = false
-
-            // PENEGAKAN EDGE: Jika ENABLE_JWT_PAGE_PERMISSIONS aktif & token membawa pageIds
-            // Evaluasi dilakukan 100% lokal di Edge tanpa panggil VPS (0ms network overhead)
-            if (enableJwtPagePermissions && Array.isArray(claims?.pageIds)) {
-                const userRoles = (claims?.role || '').split(/[,|]/).map((r: string) => r.trim().toUpperCase())
-                const extras = userRoles.flatMap((r: string) => ROLE_SCOPED_EXTRAS[r] || [])
-                const isAdmin = userRoles.includes('ADMIN') || userRoles.includes('ADMINISTRATOR')
-                allowed = claims.pageIds.includes(pageId) || extras.includes(pageId) || (isAdmin && pageId === 'audit-log')
-            }
-
-            // FALLBACK: panggil getAccessForAuthId jika belum diizinkan oleh token (mis. akses baru saja diubah di admin)
-            if (!allowed && authId) {
-                const access = await getAccessForAuthId(authId)
-                const isAdmin = access ? access.roles.some(r => ['ADMIN', 'ADMINISTRATOR'].includes(r.toUpperCase())) : false
-                const extras = access
-                    ? access.roles.flatMap(r => ROLE_SCOPED_EXTRAS[r.toUpperCase()] || [])
-                    : []
-                allowed = !!access && (access.pages.has(pageId) || extras.includes(pageId) || (isAdmin && pageId === 'audit-log'))
-            }
+            // A signed token proves identity, not the continued validity of its old page grants.
+            const access = await getAccessForAuthId(authId, accessToken)
+            const isAdmin = access ? access.roles.some(r => ['ADMIN', 'ADMINISTRATOR'].includes(r.toUpperCase())) : false
+            const extras = access ? access.roles.flatMap(r => ROLE_SCOPED_EXTRAS[r.toUpperCase()] || []) : []
+            const allowed = !!access?.found && (access.pages.has(pageId) || extras.includes(pageId) || (isAdmin && pageId === 'audit-log'))
 
             if (!allowed) {
                 url.pathname = '/dashboard'
