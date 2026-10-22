@@ -37,7 +37,10 @@ export function logoutResponse(request: NextRequest) {
     let targets: LogoutTarget[] = [], configurationError = false;
     try { targets = logoutTargets(); }
     catch { configurationError = true; console.error('[logout] Invalid integration logout configuration'); }
-    const response = NextResponse.json({ ok: true, targets, configurationError }, { headers: { 'Cache-Control': 'no-store' } });
+    const response = NextResponse.json({ ok: true, targets, configurationError, integrationDisabled: !singleLogoutEnabled() }, { headers: { 'Cache-Control': 'no-store' } });
+    // Discover destinations without clearing ACCA or waking sibling tabs. The
+    // coordinator finishes remote logout before committing the local logout.
+    if (request.nextUrl.searchParams.get('phase') === 'prepare') return response;
     const clear = { path: '/', expires: new Date(0), sameSite: 'lax' as const, httpOnly: true };
     const names = new Set(['acca_session', 'acca_refresh_token', 'bypass_access', 'sb-access-token.0', 'sb-refresh-token.0']);
     for (const cookie of request.cookies.getAll()) if (cookie.name.startsWith('sb-')) names.add(cookie.name);

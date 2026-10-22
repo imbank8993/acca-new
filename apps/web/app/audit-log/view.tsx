@@ -195,7 +195,7 @@ export default function AuditLogView({ user }: { user?: User }) {
     const [tab, setTab] = useTabParam<'logs' | 'tables' | 'files'>('logs', ['logs','tables','files']);
     const roles = [...(user?.roles || []), ...(user?.role || '').split(/[,|]/)].map(role => role.trim().toUpperCase());
     if (!roles.some(role => ['ADMIN','ADMINISTRATOR'].includes(role))) return <div className="audit-page"><div className="audit-empty"><i className="bi bi-shield-lock" /><h3>Akses administrator diperlukan</h3><p>Audit, tabel, dan dokumen sistem hanya dapat dilihat administrator.</p></div></div>;
-    return <div className="audit-page"><div className="audit-heading"><div><h2>Audit & Data Sistem</h2><p>Riwayat perubahan, tabel database, dan dokumen tersimpan.</p></div><span className="audit-readonly"><i className="bi bi-lock" /> Hanya lihat</span></div>
+    return <div className="audit-page">
         <Tab variant="slider" activeTab={tab} onChange={setTab} ariaLabel="Audit dan data sistem" tabs={[{ key:'logs',label:'Log Audit',icon:'shield-check' },{ key:'tables',label:'Tabel Data',icon:'database' },{ key:'files',label:'Dokumen',icon:'folder2-open' }]} />
         <div className="audit-panel">{tab === 'logs' ? <History /> : tab === 'tables' ? <DatabaseExplorer /> : <FileExplorer />}</div>
     </div>;
