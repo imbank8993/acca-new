@@ -101,9 +101,11 @@ export class KinerjaGuruService {
 
     // 1. Fetch effective schedule
     let allJadwal: any[] = [];
+    let jadwalLoaded = false;
     try {
       const res = await this.jadwalService.getJadwal({ valid_date: periodEndStr });
       allJadwal = (res as any)?.data || [];
+      jadwalLoaded = Array.isArray((res as any)?.data);
     } catch (e) {
       console.error('Error fetching jadwal in KinerjaGuruService:', e);
     }
@@ -214,7 +216,7 @@ export class KinerjaGuruService {
 
     // 5. Master Guru
     const allTeachers = await this.prisma.master_guru.findMany({
-      select: { nip: true, nama_lengkap: true },
+      select: { nip: true, nama_lengkap: true, jenis_pegawai: true },
     });
 
     const nameToNipMap: Record<string, string> = {};
@@ -507,14 +509,41 @@ export class KinerjaGuruService {
     // kelas/JP yang dicatat guru piket di laporan_piket_detail. Guru piket tidak
     // mencatat durasi, jadi setiap kategori - termasuk Terlambat - dihitung
     // sebagai jumlah kejadian (satu kelas x satu JP = satu kejadian).
-    const jadwalSlotNip = new Map<string, { nip: string; nama: string }>();
-    allJadwal.forEach((j) => {
-      if (!j.nip) return;
-      const key = `${String(j.hari || '').trim().toLowerCase()}|${Number(j.jam_ke) || String(j.jam_ke ?? '').trim()}|${String(j.kelas || '').trim().toLowerCase()}`;
-      if (!jadwalSlotNip.has(key)) jadwalSlotNip.set(key, { nip: String(j.nip).trim(), nama: j.nama_guru || '' });
-    });
+    // A report may name a substitute. Incidents belong to the teacher owning
+    // the effective timetable slot on the report date, never the substitute.
+    const guruNips = new Set(allTeachers.filter(t => String(t.jenis_pegawai).trim().toUpperCase() === 'GURU').map(t => String(t.nip).trim()));
+    type PiketSlot = { nip: string; nama: string; mapel: string };
+    const indexSchedule = (rows: any[]) => {
+      const slots = new Map<string, PiketSlot | null>();
+      rows.forEach(j => {
+        const nip = String(j.nip || '').trim();
+        if (!guruNips.has(nip) || j.aktif === false) return;
+        const key = `${String(j.hari || '').trim().toLowerCase()}|${Number(j.jam_ke) || String(j.jam_ke ?? '').trim()}|${String(j.kelas || '').trim().toLowerCase()}`;
+        if (!slots.has(key)) slots.set(key, { nip, nama: nipToNameMap[nip] || j.nama_guru || '', mapel: j.mata_pelajaran || j.mapel || '-' });
+        else if (slots.get(key)?.nip !== nip) slots.set(key, null); // Ambiguous team-teaching slot: do not guess.
+      });
+      return slots;
+    };
+    // Reports in the same timetable version share an index. Historical reports
+    // before a change must not be attributed using the end-of-month timetable.
+    const versions = allLaporanPiket.length ? await this.prisma.jadwal_versi.findMany({
+      where: { berlaku_mulai: { lte: endQueryDate } }, select: { berlaku_mulai: true }, orderBy: { berlaku_mulai: 'desc' },
+    }) : [];
+    const versionDates = versions.map(v => v.berlaku_mulai.toISOString().slice(0, 10)).sort().reverse();
+    const scheduleKey = (date: string) => versionDates.find(start => start <= date) || `legacy:${date}`;
+    const scheduleCache = new Map<string, Map<string, PiketSlot | null>>();
+    if (jadwalLoaded) scheduleCache.set(scheduleKey(periodEndStr), indexSchedule(allJadwal));
+    const scheduleFor = async (date: string) => {
+      const key = scheduleKey(date);
+      if (!scheduleCache.has(key)) {
+        const response = await this.jadwalService.getJadwal({ valid_date: date });
+        if (!Array.isArray(response?.data)) throw new Error('Jadwal untuk laporan piket tidak dapat diperiksa');
+        scheduleCache.set(key, indexSchedule(response.data));
+      }
+      return scheduleCache.get(key)!;
+    };
     type PiketStat = { nip: string; nama: string; kosong: number; tanpa: number; dengan: number; digabung: number; daring: number; terlambat: number; total_jp: number; details: any[] };
-    const statsPiket: Record<string, PiketStat> = {};
+    const statsPiket: Record<string, PiketStat> = Object.create(null);
     const ensurePiketKey = (nama: string, nip: string) => {
       const key = nip || (nama || '').trim().toLowerCase();
       if (!statsPiket[key]) {
@@ -528,9 +557,10 @@ export class KinerjaGuruService {
     };
     const dayNamesPiket = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
     const piketSeen = new Set<string>();
-    allLaporanPiket.forEach((lap: any) => {
+    for (const lap of allLaporanPiket) {
       const tglStr = lap.tanggal instanceof Date ? lap.tanggal.toISOString().split('T')[0] : String(lap.tanggal || '').slice(0, 10);
-      if (!tglStr) return;
+      if (!tglStr || tglStr < periodStartStr || tglStr > periodEndStr) continue;
+      const jadwalSlotNip = await scheduleFor(tglStr);
       const [py, pm, pd] = tglStr.split('-').map(Number);
       const hari = dayNamesPiket[new Date(py, pm - 1, pd).getDay()];
       const pelapor = String(lap.nama_guru_piket || lap.nama_guru || '').trim();
@@ -546,22 +576,18 @@ export class KinerjaGuruService {
           // Satu slot kelas/JP hanya dihitung sekali walau laporannya terduplikasi.
           const slotKey = `${tglStr}|${kelas.toLowerCase()}|${jam}`;
           if (piketSeen.has(slotKey)) return;
-          piketSeen.add(slotKey);
-
-          // Identitas guru: nama yang ditulis guru piket, lalu jadwal kelas/JP.
           const namaTercatat = String(det.nama_guru || '').trim();
-          const normNama = namaTercatat.toLowerCase();
           const jadwalHit = jadwalSlotNip.get(`${hari.toLowerCase()}|${jam}|${kelas.toLowerCase()}`);
-          const nip = (normNama && (nameToNipMap[normNama] || nameToNipMap[normNama.split(',')[0].trim()])) || jadwalHit?.nip || '';
-          const nama = namaTercatat || jadwalHit?.nama || '';
-          if (!nip && !nama) return;
+          if (!jadwalHit) return;
+          piketSeen.add(slotKey);
+          const { nip, nama, mapel } = jadwalHit;
           const key = ensurePiketKey(nama, nip);
           const prog = kelasProgramMap[kelas] || 'Reguler';
           const entry = (type: string) => ({
-            tanggal: tglStr, hari, kelas, program: prog, mapel: '-', jam_ke: jam,
+            tanggal: tglStr, hari, kelas, program: prog, mapel, jam_ke: jam,
             waktu: findWaktu(prog, hari, jam) || jam,
             type, sumber: 'Piket',
-            keterangan: pelapor ? `Dicatat guru piket: ${pelapor}` : 'Dicatat guru piket',
+            keterangan: `${pelapor ? `Dicatat guru piket: ${pelapor}` : 'Dicatat guru piket'}${namaTercatat && namaTercatat.toLowerCase() !== nama.trim().toLowerCase() ? ` · Nama pada laporan: ${namaTercatat}` : ''}`,
             izin: findIzin(nip, nip ? nipToNameMap[nip] || nama : nama, tglStr),
           });
           statuses.forEach((status) => {
@@ -575,7 +601,7 @@ export class KinerjaGuruService {
           });
         });
       });
-    });
+    }
     const allPiketStats = Object.values(statsPiket);
     const topPiket = (field: 'kosong' | 'tanpa' | 'dengan' | 'digabung' | 'daring' | 'terlambat') =>
       allPiketStats

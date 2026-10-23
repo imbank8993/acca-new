@@ -18,9 +18,9 @@ const { KinerjaGuruService } = moduleUnderTest.exports;
 function fixture(overrides = {}) {
   let calls = 0;
   const tables = {
-    master_kelas: [], master_waktu: [], jurnal_guru: [], laporan_piket: [], izin_guru: [], libur: [],
+    master_kelas: [], master_waktu: [], jurnal_guru: [], laporan_piket: [], izin_guru: [], libur: [], jadwal_versi: [],
     jadwal_piket: [{ nip: '1', nama_guru: 'Guru A', hari: 'Senin', kelas: 'X', jam_ke: 1, berlaku_mulai: new Date('2020-01-01') }],
-    master_guru: [{ nip: '1', nama_lengkap: 'Guru A' }, { nip: '2', nama_lengkap: 'Guru B' }], ...overrides,
+    master_guru: [{ nip: '1', nama_lengkap: 'Guru A', jenis_pegawai: 'GURU' }, { nip: '2', nama_lengkap: 'Guru B', jenis_pegawai: 'GURU' }], ...overrides,
   };
   const db = Object.fromEntries(Object.entries(tables).map(([key, rows]) => [key, {
     findMany: async () => { calls++; return rows; },
@@ -165,7 +165,7 @@ test('daring attendance is counted per teacher and exposed in the daring categor
   assert.equal(result.data.daring[0].details.filter(d => d.type === 'Daring').length, 2);
 });
 
-test('versi piket dihitung terpisah dari jurnal, per kejadian, dengan identitas dari nama atau jadwal', async () => {
+test('versi piket dihitung terpisah dari jurnal, per kejadian, untuk guru pemilik jadwal', async () => {
   const laporan = [{ tanggal: new Date('2020-01-06'), nama_guru_piket: 'Guru Piket', laporan_piket_detail: [
     { nama_kelas: 'X', jam_ke: '1', nama_guru: 'Guru A', status_kehadiran: 'Terlambat' },
     { nama_kelas: 'X', jam_ke: '1', nama_guru: 'Guru A', status_kehadiran: 'Terlambat' }, // duplikat slot
@@ -175,7 +175,11 @@ test('versi piket dihitung terpisah dari jurnal, per kejadian, dengan identitas 
   ] }];
   const f = fixture({ laporan_piket: laporan, jurnal_guru: [{ id: 'j', nip: '1', nama_guru: 'Guru A', tanggal: new Date('2020-01-06'),
     jam_ke_id: 1, kelas: 'X', kategori_kehadiran: 'Terlambat', durasi_terlambat: 20 }] });
-  f.service.jadwalService.getJadwal = async () => ({ data: [{ nip: '2', nama_guru: 'Guru B', hari: 'Senin', jam_ke: '3', kelas: 'Z' }] });
+  f.service.jadwalService.getJadwal = async () => ({ data: [
+    { nip: '1', nama_guru: 'Guru A', hari: 'Senin', jam_ke: '1', kelas: 'X' },
+    { nip: '1', nama_guru: 'Guru A', hari: 'Senin', jam_ke: '2', kelas: 'Y' },
+    { nip: '2', nama_guru: 'Guru B', hari: 'Senin', jam_ke: '3', kelas: 'Z' },
+  ] });
   const result = await f.service.getStats('2020-01', '2020-01');
   // Versi jurnal tetap memakai menit dan tidak tercampur data piket.
   assert.equal(result.data.terlambat[0].count, 20);
@@ -187,4 +191,71 @@ test('versi piket dihitung terpisah dari jurnal, per kejadian, dengan identitas 
   assert.equal(result.dataPiket.jamKosong[0].nip, '2');
   assert.equal(result.dataPiket.jamKosong[0].count, 1);
   assert.equal(result.dataPiket.daring.length, 0);
+});
+
+test('Adrianah without a timetable is never ranked: both covered classes belong to their scheduled teacher', async () => {
+  const laporan = [{ tanggal: new Date('2026-10-09'), nama_guru_piket: 'Guru Piket', laporan_piket_detail: [
+    { nama_kelas: 'XII D', jam_ke: '3', nama_guru: 'Adrianah, S.Pd., M.Pd.', status_kehadiran: 'Penugasan dengan pendampingan' },
+    { nama_kelas: 'XII C', jam_ke: '5', nama_guru: 'Adrianah, S.Pd., M.Pd.', status_kehadiran: 'Penugasan dengan pendampingan' },
+  ] }];
+  const f = fixture({ laporan_piket: laporan, master_guru: [
+    { nip: '1', nama_lengkap: 'Guru Terjadwal', jenis_pegawai: 'GURU' },
+    { nip: '2', nama_lengkap: 'Adrianah, S.Pd., M.Pd.', jenis_pegawai: 'GURU' },
+  ] });
+  f.service.jadwalService.getJadwal = async () => ({ data: [
+    { nip: '1', nama_guru: 'Guru Terjadwal', hari: 'Jumat', jam_ke: '3', kelas: 'XII D', mata_pelajaran: 'Fisika' },
+    { nip: '1', nama_guru: 'Guru Terjadwal', hari: 'Jumat', jam_ke: '5', kelas: 'XII C', mata_pelajaran: 'Fisika' },
+  ] });
+  const result = await f.service.getStats('2026-10', '2026-10');
+  const rows = result.dataPiket.penugasanDengan;
+  assert.equal(rows.length, 1); assert.equal(rows[0].nip, '1'); assert.equal(rows[0].count, 2);
+  assert(rows[0].details.every(detail => detail.mapel === 'Fisika' && detail.keterangan.includes('Nama pada laporan: Adrianah')));
+  assert.equal(laporan[0].laporan_piket_detail[0].nama_guru, 'Adrianah, S.Pd., M.Pd.');
+});
+
+test('a substitute who is also a teacher is not charged with the scheduled teacher incident', async () => {
+  const f = fixture({ laporan_piket: [{ tanggal: new Date('2020-01-06'), laporan_piket_detail: [
+    { nama_kelas: 'X', jam_ke: '1', nama_guru: 'Guru B', status_kehadiran: 'Terlambat' },
+  ] }] });
+  f.service.jadwalService.getJadwal = async () => ({ data: [
+    { nip: '1', nama_guru: 'Guru A', hari: 'Senin', jam_ke: '1', kelas: 'X' },
+    { nip: '2', nama_guru: 'Guru B', hari: 'Selasa', jam_ke: '2', kelas: 'Y' },
+  ] });
+  const result = await f.service.getStats('2020-01', '2020-01');
+  assert.equal(result.dataPiket.terlambat.length, 1); assert.equal(result.dataPiket.terlambat[0].nip, '1');
+});
+
+test('piket attribution follows the effective timetable version on each incident date and caches versions', async () => {
+  const f = fixture({ jadwal_versi: [{ berlaku_mulai: new Date('2020-01-15') }, { berlaku_mulai: new Date('2020-01-01') }],
+    laporan_piket: ['2020-01-06', '2020-01-07', '2020-01-20', '2020-01-21'].map(tanggal => ({ tanggal: new Date(tanggal), laporan_piket_detail: [
+      { nama_kelas: 'X', jam_ke: '1', nama_guru: 'Guru B', status_kehadiran: 'Kosong' },
+    ] })),
+  });
+  const calls = [];
+  f.service.jadwalService.getJadwal = async ({ valid_date }) => {
+    calls.push(valid_date); const nip = valid_date < '2020-01-15' ? '1' : '2';
+    return { data: ['Senin', 'Selasa'].map(hari => ({ nip, nama_guru: nip === '1' ? 'Guru A' : 'Guru B', hari, jam_ke: '1', kelas: 'X' })) };
+  };
+  const result = await f.service.getStats('2020-01', '2020-01');
+  assert.equal(result.dataPiket.jamKosong.find(row => row.nip === '1').count, 2);
+  assert.equal(result.dataPiket.jamKosong.find(row => row.nip === '2').count, 2);
+  assert.deepEqual(calls, ['2020-01-31', '2020-01-06']);
+});
+
+test('missing, inactive, ambiguous and non-teaching timetable slots do not assign incidents by a report name', async () => {
+  const f = fixture({ master_guru: [
+    { nip: '1', nama_lengkap: 'Guru A', jenis_pegawai: 'GURU' },
+    { nip: '2', nama_lengkap: 'Guru B', jenis_pegawai: 'GURU' },
+    { nip: '3', nama_lengkap: 'Pegawai', jenis_pegawai: 'TENDIK' },
+  ], laporan_piket: [{ tanggal: new Date('2020-01-06'), laporan_piket_detail: ['1', '2', '3', '4'].map(jam_ke => ({
+    nama_kelas: 'X', jam_ke, nama_guru: 'Guru A', status_kehadiran: 'Kosong',
+  })) }] });
+  f.service.jadwalService.getJadwal = async () => ({ data: [
+    { nip: '1', hari: 'Senin', jam_ke: '2', kelas: 'X', aktif: false },
+    { nip: '1', hari: 'Senin', jam_ke: '3', kelas: 'X' },
+    { nip: '2', hari: 'Senin', jam_ke: '3', kelas: 'X' },
+    { nip: '3', hari: 'Senin', jam_ke: '4', kelas: 'X' },
+  ] });
+  const result = await f.service.getStats('2020-01', '2020-01');
+  assert.equal(result.dataPiket.jamKosong.length, 0);
 });

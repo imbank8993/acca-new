@@ -86,7 +86,7 @@ export class LaporanPiketService {
         piket_id: header.id,
         nama_kelas: item.kelas,
         jam_ke: item.jam_ke || (jams[0] || ''),
-        nama_guru: item.guru || null,
+        nama_guru: String(item.guru_jadwal || '').trim() || item.guru || null,
         status_kehadiran: item.status,
         status_tambahan_1: item.status_tambahan_1 || null,
         status_tambahan_2: item.status_tambahan_2 || null,
