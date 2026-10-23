@@ -156,6 +156,19 @@ test('Daring by a substitute is attributed to the substitute', async () => {
     tanggal: new Date('2020-01-06'), jam_ke: '1', jam_ke_id: 1, kelas: 'X', kategori_kehadiran: 'Tukaran', status_pengganti: 'Daring' }] }).service.getStats('2020-01', '2020-01');
   assert.equal(result.data.daring[0].nip, '2'); assert.equal(result.data.daring[0].count, 1);
 });
+test('jurnal "Penugasan dengan pendampingan" is charged to the scheduled teacher, not the companion', async () => {
+  const result = await fixture({ jurnal_guru: [{ id: 'pdp', nip: '1', nama_guru: 'Guru A', guru_pengganti: 'Guru B',
+    tanggal: new Date('2020-01-06'), jam_ke: '1', jam_ke_id: 1, kelas: 'X', kategori_kehadiran: 'Penugasan dengan pendampingan',
+    status_pengganti: 'Terlambat', durasi_terlambat: '5' }] }).service.getStats('2020-01', '2020-01');
+  assert.equal(result.data.penugasanDengan.length, 1);
+  assert.equal(result.data.penugasanDengan[0].nip, '1'); assert.equal(result.data.penugasanDengan[0].count, 1);
+  assert(result.data.penugasanDengan[0].details.some(d => d.type === 'Dengan Pendampingan' && d.keterangan.includes('Didampingi: Guru B')));
+  assert.equal(result.data.terlambat[0].nip, '2');
+  const dashboard = await fixture({ jurnal_guru: [{ id: 'pdp', nip: '1', nama_guru: 'Guru A', guru_pengganti: 'Guru B',
+    tanggal: new Date('2020-01-06'), jam_ke_id: 1, kategori_kehadiran: 'Penugasan dengan pendampingan', status_pengganti: 'Penugasan dengan pendampingan' }] })
+    .service.getDashboardSummary('2020-01', '2020-01');
+  assert.equal(JSON.stringify(dashboard.data.penugasanDengan), JSON.stringify([{ nama: 'Guru A' }]));
+});
 test('daring attendance is counted per teacher and exposed in the daring category', async () => {
   const j = (id, jam, kategori) => ({ id, nip: '1', nama_guru: 'Guru A', tanggal: new Date('2020-01-06'), jam_ke_id: jam, kategori_kehadiran: kategori });
   const result = await fixture({ jurnal_guru: [j('a', '1', 'Daring'), j('b', '2', 'Daring'), j('c', '3', 'Sesuai')] }).service.getStats('2020-01', '2020-01');
@@ -211,6 +224,9 @@ test('Adrianah without a timetable is never ranked: both covered classes belong 
   assert.equal(rows.length, 1); assert.equal(rows[0].nip, '1'); assert.equal(rows[0].count, 2);
   assert(rows[0].details.every(detail => detail.mapel === 'Fisika' && detail.keterangan.includes('Nama pada laporan: Adrianah')));
   assert.equal(laporan[0].laporan_piket_detail[0].nama_guru, 'Adrianah, S.Pd., M.Pd.');
+  const dashboard = await f.service.getDashboardSummary('2026-10', '2026-10');
+  assert.equal(JSON.stringify(dashboard.dataPiket.penugasanDengan), JSON.stringify([{ nama: 'Guru Terjadwal' }]));
+  assert.equal(dashboard.data.penugasanDengan.length, 0);
 });
 
 test('a substitute who is also a teacher is not charged with the scheduled teacher incident', async () => {

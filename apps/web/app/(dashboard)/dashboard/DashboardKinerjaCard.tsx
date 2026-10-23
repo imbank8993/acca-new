@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import {
-    Trophy,
+    ClipboardList,
     Ghost,
     FileText,
     FileCheck,
@@ -56,14 +56,13 @@ export default function DashboardKinerjaCard() {
     const gridRef = useRef<HTMLDivElement>(null);
     const [activeSlide, setActiveSlide] = useState(0);
 
-    const categoriesConfig = useMemo<{ key: CategoryKey; title: string; icon: typeof Ghost; color: string; bgBadge: string; sarcasticAlias: string; emptyText: string }[]>(() => [
+    const categoriesConfig = useMemo<{ key: CategoryKey; title: string; icon: typeof Ghost; color: string; bgBadge: string; emptyText: string }[]>(() => [
         {
             key: 'jamKosong',
             title: 'Jam Kosong',
             icon: Ghost,
             color: '#ef4444',
             bgBadge: 'rgba(239, 68, 68, 0.1)',
-            sarcasticAlias: 'Grand Master Ghosting',
             emptyText: 'Belum ada data'
         },
         {
@@ -72,7 +71,6 @@ export default function DashboardKinerjaCard() {
             icon: FileText,
             color: '#f59e0b',
             bgBadge: 'rgba(245, 158, 11, 0.1)',
-            sarcasticAlias: 'Duta Lempar Tugas',
             emptyText: 'Belum ada data'
         },
         {
@@ -81,16 +79,14 @@ export default function DashboardKinerjaCard() {
             icon: Wifi,
             color: '#8b5cf6',
             bgBadge: 'rgba(139, 92, 246, 0.1)',
-            sarcasticAlias: 'Duta Sinyal',
             emptyText: 'Belum ada data'
         },
         {
             key: 'penugasanDengan',
-            title: 'Penugasan Dengan Pendampingan',
+            title: 'Penugasan dengan Pendampingan',
             icon: FileCheck,
-            color: '#10b981',
-            bgBadge: 'rgba(16, 185, 129, 0.1)',
-            sarcasticAlias: 'Pendamping Setia',
+            color: '#2563eb',
+            bgBadge: 'rgba(37, 99, 235, 0.1)',
             emptyText: 'Belum ada data'
         },
         {
@@ -99,7 +95,6 @@ export default function DashboardKinerjaCard() {
             icon: Clock,
             color: '#06b6d4',
             bgBadge: 'rgba(6, 182, 212, 0.1)',
-            sarcasticAlias: 'Juara OTW Abadi',
             emptyText: 'Belum ada data'
         }
     ], []);
@@ -201,13 +196,13 @@ export default function DashboardKinerjaCard() {
                 {/* Header Row */}
                 <div className="kinerja-header">
                     <div className="kinerja-title-area">
-                        <div className="kinerja-trophy-icon">
-                            <Trophy size={18} />
+                        <div className="kinerja-summary-icon">
+                            <ClipboardList size={18} />
                         </div>
                         <div>
                             <h3 className="kinerja-title">Kinerja Guru</h3>
                             <p className="kinerja-subtitle">
-                                Menampilkan champion untuk masing-masing kategori.
+                                {sumber === 'piket' ? 'Berdasarkan laporan guru piket.' : 'Berdasarkan jurnal guru.'}
                             </p>
                         </div>
                     </div>
@@ -255,7 +250,7 @@ export default function DashboardKinerjaCard() {
                             const IconComp = cat.icon;
 
                             return (
-                                <div key={cat.key} className="category-card">
+                                <div key={cat.key} className="category-card" data-category={cat.key}>
                                     {/* Category Header */}
                                     <div className="cat-top">
                                         <span className="cat-icon-chip" style={{ color: cat.color, background: cat.bgBadge }}>
@@ -263,6 +258,9 @@ export default function DashboardKinerjaCard() {
                                         </span>
                                         <div className="cat-category-name">{cat.title}</div>
                                     </div>
+                                    {cat.key === 'penugasanDengan' && sumber === 'piket' && (
+                                        <p className="cat-note">Guru pemilik jadwal yang digantikan.</p>
+                                    )}
 
                                     {/* Content: Cukup Nama Saja (Tanpa Klik) */}
                                     {loading ? (
@@ -274,14 +272,13 @@ export default function DashboardKinerjaCard() {
                                     ) : topItems.length > 0 ? (
                                         <div className="leaderboard-list">
                                             {topItems.map((item, idx) => {
-                                                const medal = idx === 0 ? '🥇' : idx === 1 ? '🥈' : '🥉';
                                                 return (
                                                     <div
                                                         key={`${item.nama}-${idx}`}
                                                         className="leaderboard-row"
                                                     >
-                                                        <span className="row-rank">{medal}</span>
-                                                        <span className="row-name">{item.nama}</span>
+                                                        <span className="row-rank">{idx + 1}.</span>
+                                                        <span className="row-name" title={item.nama}>{item.nama}</span>
                                                     </div>
                                                 );
                                             })}
@@ -376,7 +373,7 @@ export default function DashboardKinerjaCard() {
                     gap: 10px;
                 }
 
-                .kinerja-trophy-icon {
+                .kinerja-summary-icon {
                     width: 34px;
                     height: 34px;
                     border-radius: 10px;
@@ -388,7 +385,7 @@ export default function DashboardKinerjaCard() {
                     flex-shrink: 0;
                 }
 
-                :global(.dark) .kinerja-trophy-icon {
+                :global(.dark) .kinerja-summary-icon {
                     background: rgba(48, 131, 255, 0.18);
                     color: #60a5fa;
                 }
@@ -686,6 +683,17 @@ export default function DashboardKinerjaCard() {
                     color: #f1f5f9;
                 }
 
+                .cat-note {
+                    margin: 0;
+                    font-size: 0.72rem;
+                    line-height: 1.4;
+                    color: var(--n-muted, #64748b);
+                }
+
+                :global(.dark) .cat-note {
+                    color: #94a3b8;
+                }
+
                 /* Leaderboard List: Hanya nama (tanpa cursor pointer atau klik) */
                 .leaderboard-list {
                     display: flex;
@@ -703,9 +711,14 @@ export default function DashboardKinerjaCard() {
                 }
 
                 .row-rank {
-                    font-size: 0.95rem;
-                    line-height: 1;
+                    min-width: 16px;
+                    font-size: 0.75rem;
+                    color: var(--n-muted, #64748b);
                     flex-shrink: 0;
+                }
+
+                :global(.dark) .row-rank {
+                    color: #94a3b8;
                 }
 
                 .row-name {

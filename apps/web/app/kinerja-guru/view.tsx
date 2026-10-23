@@ -67,7 +67,7 @@ const TAB_OPTIONS = [
     { value: 'terlambat', label: 'Terlambat', icon: 'bi-alarm', color: '#06b6d4', bgColor: 'rgba(6, 182, 212, 0.1)' },
     { value: 'daring', label: 'Daring', icon: 'bi-wifi', color: '#8b5cf6', bgColor: 'rgba(139, 92, 246, 0.1)' },
     { value: 'penugasanTanpa', label: 'Tanpa Pendampingan', icon: 'bi-journal-x', color: '#f59e0b', bgColor: 'rgba(245, 158, 11, 0.1)' },
-    { value: 'penugasanDengan', label: 'Dengan Pendampingan', icon: 'bi-journal-check', color: '#10b981', bgColor: 'rgba(16, 185, 129, 0.1)' },
+    { value: 'penugasanDengan', label: 'Dengan Pendampingan', icon: 'bi-journal-check', color: '#2563eb', bgColor: 'rgba(37, 99, 235, 0.1)' },
     { value: 'digabung', label: 'Digabung', icon: 'bi-intersect', color: '#3083FF', bgColor: 'rgba(99, 102, 241, 0.1)' },
     { value: 'piket', label: 'Tidak Piket', icon: 'bi-shield-x', color: 'var(--n-muted)', bgColor: 'rgba(100, 116, 139, 0.1)' },
 ];
@@ -276,7 +276,7 @@ export default function KinerjaGuruPage() {
         switch (activeTab) {
             case 'jamKosong': return 'Jam Kosong';
             case 'penugasanTanpa': return 'Penugasan Tanpa Pendampingan';
-            case 'penugasanDengan': return 'Penugasan Dengan Pendampingan';
+            case 'penugasanDengan': return 'Penugasan dengan Pendampingan';
             case 'digabung': return 'Digabung';
             case 'terlambat': return 'Terlambat';
             case 'daring': return 'Daring';
@@ -602,7 +602,9 @@ export default function KinerjaGuruPage() {
                         <i className="bi bi-info-circle-fill"></i>
                         <span>
                             {sumberAktif === 'piket'
-                                ? 'Versi Guru Piket dihitung dari laporan guru piket: satu kelas pada satu JP dihitung satu kejadian (tanpa durasi menit).'
+                                ? `Versi Guru Piket dihitung dari laporan guru piket: satu kelas pada satu JP dihitung satu kejadian (tanpa durasi menit).${activeTab === 'penugasanDengan' ? ' Kejadian dicatat untuk guru pemilik jadwal yang digantikan.' : ''}`
+                                : activeTab === 'penugasanDengan'
+                                ? 'Kejadian dicatat untuk guru pemilik jadwal yang memberikan penugasan, bukan guru pendampingnya. Jika Bapak/Ibu merasa data tersebut tidak sesuai, silakan ajukan banding melalui halaman Jurnal.'
                                 : activeTab === 'penugasanTanpa'
                                 ? 'Mulai tahun ajaran 2026/2027, setiap penugasan yang diberikan tanpa disertai LKPD akan dikategorikan sebagai Jam Kosong. Jika Bapak/Ibu merasa data tersebut tidak sesuai, silakan ajukan banding melalui halaman Jurnal.'
                                 : 'Jika Bapak/Ibu merasa data tersebut tidak sesuai, silakan ajukan banding melalui halaman Jurnal.'}

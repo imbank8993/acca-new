@@ -395,13 +395,19 @@ export class KinerjaGuruService {
       const statusT2 = (j.status_tambahan_2 || '').trim().toLowerCase();
       const statusT3 = (j.status_tambahan_3 || '').trim().toLowerCase();
 
+      // "Penugasan dengan pendampingan" describes the scheduled teacher who left an
+      // assignment; the selected guru_pengganti is only the companion. Charge the
+      // incident to the scheduled teacher, while the companion keeps their own
+      // attendance statuses (terlambat, daring, ...).
+      const isDenganPendampingan = isGuruPengganti && kategoriUtama.includes('dengan pendampingan');
+
       const rawStatuses = [
         isGuruPengganti ? statusPengganti : statusUtama,
         statusTambahan,
         statusT1,
         statusT2,
         statusT3,
-      ].filter((s) => s && s !== '-' && s !== '');
+      ].filter((s) => s && s !== '-' && s !== '' && !(isDenganPendampingan && s.includes('dengan pendampingan')));
 
       // Deduplicate statuses for the same jurnal entry
       const uniqueStatuses = Array.from(new Set(rawStatuses));
@@ -479,6 +485,21 @@ export class KinerjaGuruService {
           stats[targetKey].details.push(e);
         }
       });
+
+      if (isDenganPendampingan) {
+        const ownerNama = (j.nama_guru || '').trim() || (j.nip ? `Guru (${j.nip})` : '');
+        const ownerNip = j.nip || '';
+        if (ownerNama || ownerNip) {
+          const ownerKey = ensureKey(ownerNama, ownerNip);
+          stats[ownerKey].dengan++;
+          stats[ownerKey].details.push({
+            ...baseEntry(),
+            izin: findIzin(ownerNip, ownerNama, tglStr),
+            type: 'Dengan Pendampingan',
+            keterangan: `Didampingi: ${guruPengganti}${ketTambahan && ketTambahan !== '-' ? ` · ${ketTambahan}` : ''}`,
+          });
+        }
+      }
 
       if (j.mengambil_istirahat === true || j.mengambil_istirahat === 'true') {
         stats[targetKey].mengambilIstirahat++;
