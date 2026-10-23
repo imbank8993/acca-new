@@ -6,7 +6,7 @@ import { CertificateError, text, uuid, validateTemplate } from './validation';
 import { templateGeometry } from './geometry';
 import { Prisma } from '@prisma/client';
 import { renderCertificate, validateAsset } from './pdf';
-import { readParticipantExcel } from './excel';
+import { mapParticipantColumns, readParticipantExcel } from './excel';
 import { limitPublicCertificateRequest } from './rate-limit';
 import JSZip from 'jszip';
 import { validateRecipients } from './validation';
@@ -60,6 +60,13 @@ async function upload(request: NextRequest) {
     if (!(file instanceof File)) throw new CertificateError('Pilih berkas terlebih dahulu');
     return { file, form };
 }
+async function readUploadedParticipants(file: File) {
+    try { return await readParticipantExcel(file); }
+    catch (error) {
+        if (error instanceof CertificateError) throw error;
+        throw new CertificateError('Excel rusak atau tidak dapat dibaca. Simpan ulang sebagai .xls atau .xlsx.');
+    }
+}
 export async function manage(request: NextRequest, path: string[] = []) {
     try {
         const user = await getApiUser(request); assertManager(user);
@@ -72,8 +79,7 @@ export async function manage(request: NextRequest, path: string[] = []) {
         }
         if (path[0] === 'excel' && path.length === 1 && request.method === 'POST') {
             const { file } = await upload(request);
-            try { return json(await readParticipantExcel(file)); }
-            catch (error) { if (error instanceof CertificateError) throw error; throw new CertificateError('Excel rusak atau tidak dapat dibaca. Simpan ulang sebagai .xlsx atau .csv.'); }
+            return json(await readUploadedParticipants(file));
         }
         if (path[0] === 'signers' && path.length === 1 && request.method === 'GET')
             return json(await db.$queryRaw(Prisma.sql`SELECT id::text AS id,nama_lengkap FROM master_guru ORDER BY nama_lengkap LIMIT 1000`));
@@ -87,8 +93,15 @@ export async function manage(request: NextRequest, path: string[] = []) {
             if (request.method === 'GET') return json(await service.detail(user, eventId));
             if (request.method === 'PATCH') return json(await service.saveEvent(user, await body(request), eventId));
         }
-        if (path[1] === 'recipients' && path.length === 2 && request.method === 'POST')
-            return json(await service.importRecipients(user, eventId, (await body(request)).rows));
+        if (path[1] === 'recipients' && path.length === 2 && request.method === 'POST') {
+            if (!request.headers.get('content-type')?.startsWith('multipart/form-data')) throw new CertificateError('Penerima hanya dapat ditambahkan melalui impor Excel');
+            const { file, form } = await upload(request);
+            let mapping: unknown, ids: unknown;
+            try { mapping = JSON.parse(String(form.get('mapping'))); ids = JSON.parse(String(form.get('ids'))); }
+            catch { throw new CertificateError('Pemetaan kolom Excel tidak valid'); }
+            const table = await readUploadedParticipants(file);
+            return json(await service.importRecipients(user, eventId, mapParticipantColumns(table, mapping, ids)));
+        }
         if (path[1] === 'recipients' && path.length === 3 && request.method === 'DELETE') {
             await service.removeDraft(user, eventId, path[2]); return json(null);
         }

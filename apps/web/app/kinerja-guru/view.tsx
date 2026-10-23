@@ -50,6 +50,16 @@ interface KinerjaGuruData {
     piket: Winner[];
 }
 
+/**
+ * Kategori yang juga dicatat guru piket di laporan piket. Untuk kategori ini
+ * halaman menampilkan dua versi berdampingan: versi jurnal dan versi guru piket.
+ * Versi piket selalu berupa jumlah kejadian (guru piket tidak mencatat menit).
+ */
+type PiketKey = 'jamKosong' | 'penugasanTanpa' | 'penugasanDengan' | 'digabung' | 'terlambat' | 'daring';
+type KinerjaPiketData = Record<PiketKey, Winner[]>;
+const PIKET_TABS: string[] = ['jamKosong', 'penugasanTanpa', 'penugasanDengan', 'digabung', 'terlambat', 'daring'];
+const EMPTY_PIKET: KinerjaPiketData = { jamKosong: [], penugasanTanpa: [], penugasanDengan: [], digabung: [], terlambat: [], daring: [] };
+
 const TAB_OPTIONS = [
     { value: 'mengambilIstirahat', label: 'Mengambil Waktu Istirahat', icon: 'bi-cup-hot', color: '#ec4899', bgColor: 'rgba(236, 72, 153, 0.1)' },
     { value: 'keluarSebelumWaktu', label: 'Keluar Sebelum Waktunya', icon: 'bi-box-arrow-right', color: '#3b82f6', bgColor: 'rgba(59, 130, 246, 0.1)' },
@@ -80,6 +90,9 @@ const MONTH_OPTIONS = [
 export default function KinerjaGuruPage() {
     const [activeTab, setActiveTab] = useTabParam<'jamKosong' | 'penugasanTanpa' | 'penugasanDengan' | 'digabung' | 'terlambat' | 'daring' | 'mengambilIstirahat' | 'keluarSebelumWaktu' | 'piket'>('jamKosong', ['jamKosong', 'penugasanTanpa', 'penugasanDengan', 'digabung', 'terlambat', 'daring', 'mengambilIstirahat', 'keluarSebelumWaktu', 'piket']);
     const [data, setData] = useState<KinerjaGuruData>({ jamKosong: [], penugasanTanpa: [], penugasanDengan: [], digabung: [], terlambat: [], daring: [], mengambilIstirahat: [], keluarSebelumWaktu: [], piket: [] });
+    const [dataPiket, setDataPiket] = useState<KinerjaPiketData>(EMPTY_PIKET);
+    // Sumber yang dipakai tabel, ringkasan & cetak (grafik selalu menampilkan keduanya).
+    const [sumber, setSumber] = useState<'jurnal' | 'piket'>('jurnal');
     const [loading, setLoading] = useState(true);
     const requestId = useRef(0);
     const [isAdmin, setIsAdmin] = useState(false);
@@ -209,6 +222,7 @@ export default function KinerjaGuruPage() {
             if (!res.ok || !result.success) throw new Error(result.message || result.error || 'Data kinerja guru gagal dimuat. Silakan coba lagi.');
             if (result.success) {
                 setData(result.data);
+                setDataPiket({ ...EMPTY_PIKET, ...(result.dataPiket || {}) });
                 if (result.akses?.cetakRekap !== undefined) {
                     setCanCetakRekap(Boolean(result.akses.cetakRekap));
                 }
@@ -217,6 +231,7 @@ export default function KinerjaGuruPage() {
             if (signal?.aborted || currentRequest !== requestId.current) return;
             console.error('Failed to fetch kinerja guru data', err);
             setData({ jamKosong: [], penugasanTanpa: [], penugasanDengan: [], digabung: [], terlambat: [], daring: [], mengambilIstirahat: [], keluarSebelumWaktu: [], piket: [] });
+            setDataPiket(EMPTY_PIKET);
             setDataError(err instanceof Error ? err.message : 'Data kinerja guru gagal dimuat. Silakan coba lagi.');
         } finally {
             if (!signal?.aborted && currentRequest === requestId.current) setLoading(false);
@@ -236,8 +251,7 @@ export default function KinerjaGuruPage() {
         };
     }, [periodStart, periodEnd]);
 
-    const getCurrentList = () => {
-        const rawList = data[activeTab] || [];
+    const getCurrentList = (rawList: Winner[] = data[activeTab] || []) => {
         if (!searchQuery.trim()) return rawList;
         const q = searchQuery.toLowerCase().trim();
         return rawList.filter(item =>
@@ -277,8 +291,15 @@ export default function KinerjaGuruPage() {
         return TAB_OPTIONS.find(t => t.value === activeTab) || TAB_OPTIONS[0];
     };
 
-    const currentList = getCurrentList();
-    const top10 = currentList.slice(0, 10);
+    const hasPiket = PIKET_TABS.includes(activeTab);
+    const sumberAktif: 'jurnal' | 'piket' = hasPiket ? sumber : 'jurnal';
+    const top10Jurnal = getCurrentList().slice(0, 10);
+    const top10Piket = hasPiket ? getCurrentList(dataPiket[activeTab as PiketKey] || []).slice(0, 10) : [];
+    // Versi yang dipakai tabel, ringkasan, dan cetak.
+    const top10 = sumberAktif === 'piket' ? top10Piket : top10Jurnal;
+    const isMenitJurnal = activeTab === 'terlambat' || activeTab === 'keluarSebelumWaktu';
+    const isMenit = isMenitJurnal && sumberAktif === 'jurnal';
+    const sumberLabel = !hasPiket ? '' : sumberAktif === 'piket' ? ' (Versi Guru Piket)' : ' (Versi Jurnal)';
     const allTeachersCount = getAllTeachersCount();
 
     const periodeLabel = useMemo(() => {
@@ -300,8 +321,9 @@ export default function KinerjaGuruPage() {
             : 'Nama Kepala Madrasah belum diisi di Pengaturan Umum › Profil Sekolah. Kolom tanda tangan dicetak kosong.');
         const html = generateRekapKinerjaHtml({
             top10,
-            kategoriLabel: getTabLabel(),
+            kategoriLabel: getTabLabel() + sumberLabel,
             kategoriKey: activeTab,
+            satuanKejadian: sumberAktif === 'piket',
             periodeLabel,
             profil,
             pembuatNama: userName,
@@ -338,13 +360,13 @@ export default function KinerjaGuruPage() {
         return () => observer.disconnect();
     }, []);
 
-    const chartData = {
-        labels: top10.map(item => item.nama),
+    const buildChartData = (list: Winner[]) => ({
+        labels: list.map(item => item.nama),
         datasets: [
             {
                 label: getTabLabel(),
-                data: top10.map(item => item.count),
-                backgroundColor: top10.map((_, index) => {
+                data: list.map(item => item.count),
+                backgroundColor: list.map((_, index) => {
                     if (index === 0) return chartConfig.color;
                     return `${chartConfig.color}80`;
                 }),
@@ -354,9 +376,9 @@ export default function KinerjaGuruPage() {
                 barThickness: typeof window !== 'undefined' && window.innerWidth < 768 ? 20 : 32,
             },
         ],
-    };
+    });
 
-    const chartOptions: ChartOptions<'bar'> = {
+    const buildChartOptions = (unit: string): ChartOptions<'bar'> => ({
         indexAxis: 'y' as const,
         responsive: true,
         maintainAspectRatio: false,
@@ -379,7 +401,6 @@ export default function KinerjaGuruPage() {
                 displayColors: false,
                 callbacks: {
                     label: (context) => {
-                        const unit = (activeTab === 'terlambat' || activeTab === 'keluarSebelumWaktu') ? ' Menit' : 'x';
                         return `${context.parsed.x}${unit} ${getTabLabel()}`;
                     },
                 },
@@ -410,7 +431,7 @@ export default function KinerjaGuruPage() {
                 },
             },
         },
-    };
+    });
 
     return (
         <MaintenanceBanner pageKey="maintenance_kinerja_guru" isAdmin={isAdmin}>
@@ -427,7 +448,7 @@ export default function KinerjaGuruPage() {
                 {previewHtml && (
                     <HtmlPreviewModal
                         html={previewHtml}
-                        title={`Rekap 10 Besar Kinerja Guru - ${getTabLabel()}`}
+                        title={`Rekap 10 Besar Kinerja Guru - ${getTabLabel()}${sumberLabel}`}
                         onClose={() => setPreviewHtml(null)}
                     />
                 )}
@@ -567,8 +588,8 @@ export default function KinerjaGuruPage() {
                             <div className="summary-content">
                                 <span className="summary-value top-name">{top10[0].nama.split(' ').slice(0, 2).join(' ')}</span>
                                 <span className="summary-label">
-                                    Peringkat 1 ({top10[0].count}{activeTab === 'terlambat' || activeTab === 'keluarSebelumWaktu' ? ' Menit' : 'x'})
-                                    {top10[0].total_jp > 0 && activeTab !== 'piket' && ` • ${activeTab === 'terlambat' || activeTab === 'keluarSebelumWaktu' ? `${top10[0].total_jp * 40} Mnt (${top10[0].total_jp} JP)` : `${top10[0].total_jp} JP`}`}
+                                    Peringkat 1 ({top10[0].count}{isMenit ? ' Menit' : 'x'})
+                                    {top10[0].total_jp > 0 && activeTab !== 'piket' && ` • ${isMenit ? `${top10[0].total_jp * 40} Mnt (${top10[0].total_jp} JP)` : `${top10[0].total_jp} JP`}`}
                                 </span>
                             </div>
                         </div>
@@ -580,7 +601,9 @@ export default function KinerjaGuruPage() {
                     <div className="note-banner">
                         <i className="bi bi-info-circle-fill"></i>
                         <span>
-                            {activeTab === 'penugasanTanpa'
+                            {sumberAktif === 'piket'
+                                ? 'Versi Guru Piket dihitung dari laporan guru piket: satu kelas pada satu JP dihitung satu kejadian (tanpa durasi menit).'
+                                : activeTab === 'penugasanTanpa'
                                 ? 'Mulai tahun ajaran 2026/2027, setiap penugasan yang diberikan tanpa disertai LKPD akan dikategorikan sebagai Jam Kosong. Jika Bapak/Ibu merasa data tersebut tidak sesuai, silakan ajukan banding melalui halaman Jurnal.'
                                 : 'Jika Bapak/Ibu merasa data tersebut tidak sesuai, silakan ajukan banding melalui halaman Jurnal.'}
                         </span>
@@ -601,9 +624,33 @@ export default function KinerjaGuruPage() {
                         <div className="loading-state">
                             <Spinner size={36} />
                         </div>
+                    ) : hasPiket ? (
+                        <div className="kg-dual-grid">
+                            {[
+                                { key: 'jurnal' as const, judul: 'Versi Jurnal', icon: 'bi-journal-text', list: top10Jurnal, unit: isMenitJurnal ? ' Menit' : 'x', ket: isMenitJurnal ? 'Total menit dari isian jurnal' : 'Jumlah kejadian dari isian jurnal' },
+                                { key: 'piket' as const, judul: 'Versi Guru Piket', icon: 'bi-person-badge', list: top10Piket, unit: 'x', ket: 'Jumlah kejadian dari laporan guru piket' },
+                            ].map(panel => (
+                                <div key={panel.key} className={`kg-dual-panel ${sumberAktif === panel.key ? 'active' : ''}`}>
+                                    <div className="kg-dual-head">
+                                        <span className="kg-dual-title"><i className={`bi ${panel.icon}`}></i> {panel.judul}</span>
+                                        <span className="kg-dual-sub">{panel.ket}</span>
+                                    </div>
+                                    {panel.list.length > 0 ? (
+                                        <div className="chart-container kg-dual-chart">
+                                            <Bar data={buildChartData(panel.list)} options={buildChartOptions(panel.unit)} />
+                                        </div>
+                                    ) : (
+                                        <div className="empty-state">
+                                            <i className="bi bi-inbox"></i>
+                                            <p>Belum ada data versi ini</p>
+                                        </div>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
                     ) : top10.length > 0 ? (
                         <div className="chart-container">
-                            <Bar data={chartData} options={chartOptions} />
+                            <Bar data={buildChartData(top10)} options={buildChartOptions(isMenit ? ' Menit' : 'x')} />
                         </div>
                     ) : (
                         <div className="empty-state">
@@ -614,11 +661,27 @@ export default function KinerjaGuruPage() {
                 </div>
 
                 {/* Table Section */}
-                {top10.length > 0 && (
+                {(top10.length > 0 || (hasPiket && (top10Jurnal.length > 0 || top10Piket.length > 0))) && (
                     <div className="table-section">
-                        <div className="table-header">
+                        <div className="table-header kg-table-header">
                             <h3><i className="bi bi-table"></i> Detail Peringkat</h3>
+                            {hasPiket && (
+                                <div className="kg-sumber-toggle" role="tablist" aria-label="Sumber data tabel">
+                                    <button type="button" role="tab" aria-selected={sumberAktif === 'jurnal'} className={sumberAktif === 'jurnal' ? 'active' : ''} onClick={() => setSumber('jurnal')}>
+                                        <i className="bi bi-journal-text"></i> Jurnal
+                                    </button>
+                                    <button type="button" role="tab" aria-selected={sumberAktif === 'piket'} className={sumberAktif === 'piket' ? 'active' : ''} onClick={() => setSumber('piket')}>
+                                        <i className="bi bi-person-badge"></i> Guru Piket
+                                    </button>
+                                </div>
+                            )}
                         </div>
+                        {top10.length === 0 ? (
+                            <div className="empty-state">
+                                <i className="bi bi-inbox"></i>
+                                <p>Belum ada data versi ini</p>
+                            </div>
+                        ) : (
                         <div className="table-container">
                             <table className="desktop-only">
                                 <thead>
@@ -626,7 +689,7 @@ export default function KinerjaGuruPage() {
                                         <th style={{ textAlign: 'center', width: '90px' }}>Peringkat</th>
                                         <th style={{ width: '30%' }}>Nama Guru</th>
                                         <th style={{ width: '160px' }}>
-                                            {activeTab === 'terlambat' || activeTab === 'keluarSebelumWaktu' ? 'Total Durasi' : 'Jumlah Kejadian'}
+                                            {isMenit ? 'Total Durasi' : 'Jumlah Kejadian'}
                                         </th>
                                         {activeTab !== 'piket' && <th style={{ width: '150px' }}>Total JP</th>}
                                         <th style={{ textAlign: 'center', width: '130px' }}>Izin / Sakit</th>
@@ -639,7 +702,7 @@ export default function KinerjaGuruPage() {
                                         const totalJP = item.total_jp || 0;
                                         const count = item.count || 0;
                                         const percentage = totalJP > 0
-                                            ? (activeTab === 'terlambat' || activeTab === 'keluarSebelumWaktu')
+                                            ? isMenit
                                                 ? ((count / (totalJP * 40)) * 100).toFixed(1)
                                                 : ((count / totalJP) * 100).toFixed(1)
                                             : '0.0';
@@ -670,13 +733,13 @@ export default function KinerjaGuruPage() {
                                                 <td className="name-cell">{item.nama}</td>
                                                 <td className="count-cell">
                                                     <span className="count-badge" style={{ background: index === 0 ? chartConfig.bgColor : 'var(--n-soft)', color: index === 0 ? chartConfig.color : 'var(--n-muted)' }}>
-                                                        {count}{activeTab === 'terlambat' || activeTab === 'keluarSebelumWaktu' ? ' Menit' : 'x'}
+                                                        {count}{isMenit ? ' Menit' : 'x'}
                                                     </span>
                                                 </td>
                                                 {activeTab !== 'piket' && (
                                                     <td className="jp-cell">
                                                         <span className="jp-badge">
-                                                            {activeTab === 'terlambat' || activeTab === 'keluarSebelumWaktu' 
+                                                            {isMenit
                                                                 ? `${totalJP * 40} Menit (${totalJP} JP)` 
                                                                 : `${totalJP} JP`}
                                                         </span>
@@ -721,7 +784,7 @@ export default function KinerjaGuruPage() {
                                     const totalJP = item.total_jp || 0;
                                     const count = item.count || 0;
                                     const percentage = totalJP > 0
-                                        ? (activeTab === 'terlambat' || activeTab === 'keluarSebelumWaktu')
+                                        ? isMenit
                                             ? ((count / (totalJP * 40)) * 100).toFixed(1)
                                             : ((count / totalJP) * 100).toFixed(1)
                                         : '0.0';
@@ -750,8 +813,8 @@ export default function KinerjaGuruPage() {
                                             <div className="card-info">
                                                 <div className="card-name">{item.nama}</div>
                                                 <div className="card-meta">
-                                                    {activeTab === 'terlambat' ? 'Total Durasi' : 'Jumlah'}: {count}{activeTab === 'terlambat' || activeTab === 'keluarSebelumWaktu' ? ' Menit' : 'x'}
-                                                    {activeTab !== 'piket' && ` • ${activeTab === 'terlambat' || activeTab === 'keluarSebelumWaktu' ? `${totalJP * 40} Mnt (${totalJP} JP)` : `${totalJP} JP`}`}
+                                                    {isMenit ? 'Total Durasi' : 'Jumlah'}: {count}{isMenit ? ' Menit' : 'x'}
+                                                    {activeTab !== 'piket' && ` • ${isMenit ? `${totalJP * 40} Mnt (${totalJP} JP)` : `${totalJP} JP`}`}
                                                     {berizinCount > 0 && <span style={{ color: '#10b981', fontWeight: 600 }}> • {berizinCount} Berizin</span>}
                                                 </div>
                                                 {activeTab !== 'piket' && (
@@ -771,6 +834,7 @@ export default function KinerjaGuruPage() {
                                 })}
                             </div>
                         </div>
+                        )}
                     </div>
                 )}
 

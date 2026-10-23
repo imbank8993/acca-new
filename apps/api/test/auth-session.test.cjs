@@ -7,7 +7,18 @@ const request=(cookie,header)=>({cookies:{get:()=>cookie?{value:'base64-'+Buffer
 test('auth/me prefers current login cookie over stale Authorization header',async()=>{const r=route();const res=await r.module.GET(request('fresh-cookie','old-supabase'));assert.equal(res.status,200);assert.equal(r.used,'fresh-cookie');assert.equal(res.body.user.id,'547')});
 test('missing or expired sessions retain 401',async()=>{assert.equal((await route().module.GET(request())).status,401);assert.equal((await route(401,{}).module.GET(request('expired'))).status,401)});
 test('backend failures, network errors and malformed responses do not impersonate logout',async()=>{for(const r of[route(500,{}),route(503,{}),route(200,{}),route(200,{},true)]){const res=await r.module.GET(request('cookie'));assert.equal(res.status,503);assert.match(res.headers['Cache-Control'],/no-store/)}assert.equal((await route(403,{}).module.GET(request('cookie'))).status,403)});
-function client(fetch,storage){return moduleOf('apps/web/lib/auth-client.ts',{}, {fetch,AbortSignal,setTimeout:callback=>{callback();return 0},window:{},sessionStorage:storage||{getItem:()=>null,setItem(){},removeItem(){}}})}
+function client(fetch,storage,nodeEnv){return moduleOf('apps/web/lib/auth-client.ts',{}, {fetch,AbortSignal,process:{env:{NODE_ENV:nodeEnv}},setTimeout:callback=>{callback();return 0},window:{},sessionStorage:storage||{getItem:()=>null,setItem(){},removeItem(){}}})}
+
+test('development retries a temporarily unavailable route without treating it as an expired session',async()=>{
+  let calls=0;const c=client(async()=>++calls<3?{ok:false,status:404}:{ok:true,status:200,json:async()=>({ok:true,user:{id:'547'}})},undefined,'development');
+  assert.equal((await c.getCurrentUser({throwOnFailure:true})).id,'547');assert.equal(calls,3);
+});
+test('persistent route failures remain errors and production 404 is not retried',async()=>{
+  for(const [env,expected] of [['development',3],['production',1]]){
+    let calls=0,cleared=0;const c=client(async()=>{calls++;return{ok:false,status:404}},{getItem:()=>null,setItem(){},removeItem(){cleared++}},env);
+    await assert.rejects(c.getCurrentUser({throwOnFailure:true}),error=>error.status===404);assert.equal(calls,expected);assert.equal(cleared,0);
+  }
+});
 test('strict client rejects temporary API and network failures for retry; legacy callers remain compatible',async()=>{const c=client(async()=>({ok:false,status:503}));await assert.rejects(c.getCurrentUser({throwOnFailure:true}));assert.equal(await c.getCurrentUser(),null);await assert.rejects(client(async()=>{throw Error('offline')}).getCurrentUser({throwOnFailure:true}))});
 test('strict client returns null only for actual unauthenticated response',async()=>{assert.equal(await client(async()=>({ok:false,status:401})).getCurrentUser({throwOnFailure:true}),null);await assert.rejects(client(async()=>({ok:true,status:200,json:async()=>({ok:false})})).getCurrentUser({throwOnFailure:true}))});
 test('blocked browser storage does not reject a successfully loaded user',async()=>{const storage={getItem(){throw Error('Storage blocked')},setItem(){throw Error('Storage blocked')},removeItem(){throw Error('Storage blocked')}};const c=client(async()=>({ok:true,status:200,json:async()=>({ok:true,user:{id:'547'}})}),storage);assert.equal((await c.getCurrentUser({throwOnFailure:true})).id,'547')});

@@ -6,10 +6,14 @@ import {
     Trophy,
     Ghost,
     FileText,
+    FileCheck,
+    Wifi,
     Clock,
     CheckCircle2,
     AlertTriangle,
-    Calendar
+    Calendar,
+    ChevronLeft,
+    ChevronRight
 } from 'lucide-react';
 
 interface WinnerItem {
@@ -21,18 +25,30 @@ interface KinerjaGuruApiResponse {
     data: {
         jamKosong: WinnerItem[];
         penugasanTanpa: WinnerItem[];
+        daring: WinnerItem[];
+        penugasanDengan: WinnerItem[];
         terlambat: WinnerItem[];
     };
+    dataPiket?: Partial<Record<CategoryKey, WinnerItem[]>>;
 }
 
-type CategoryKey = 'jamKosong' | 'penugasanTanpa' | 'terlambat';
+type Sumber = 'jurnal' | 'piket';
+
+type CategoryKey = 'jamKosong' | 'penugasanTanpa' | 'daring' | 'penugasanDengan' | 'terlambat';
+
+const EMPTY_DATA: Record<CategoryKey, WinnerItem[]> = {
+    jamKosong: [],
+    penugasanTanpa: [],
+    daring: [],
+    penugasanDengan: [],
+    terlambat: []
+};
 
 export default function DashboardKinerjaCard() {
-    const [data, setData] = useState<Record<CategoryKey, WinnerItem[]>>({
-        jamKosong: [],
-        penugasanTanpa: [],
-        terlambat: []
-    });
+    const [data, setData] = useState<Record<CategoryKey, WinnerItem[]>>(EMPTY_DATA);
+
+    const [dataPiket, setDataPiket] = useState<Record<CategoryKey, WinnerItem[]>>(EMPTY_DATA);
+    const [sumber, setSumber] = useState<Sumber>('jurnal');
 
     const [loading, setLoading] = useState(true);
     const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -60,6 +76,24 @@ export default function DashboardKinerjaCard() {
             emptyText: 'Belum ada data'
         },
         {
+            key: 'daring',
+            title: 'Daring',
+            icon: Wifi,
+            color: '#8b5cf6',
+            bgBadge: 'rgba(139, 92, 246, 0.1)',
+            sarcasticAlias: 'Duta Sinyal',
+            emptyText: 'Belum ada data'
+        },
+        {
+            key: 'penugasanDengan',
+            title: 'Penugasan Dengan Pendampingan',
+            icon: FileCheck,
+            color: '#10b981',
+            bgBadge: 'rgba(16, 185, 129, 0.1)',
+            sarcasticAlias: 'Pendamping Setia',
+            emptyText: 'Belum ada data'
+        },
+        {
             key: 'terlambat',
             title: 'Terlambat',
             icon: Clock,
@@ -74,7 +108,7 @@ export default function DashboardKinerjaCard() {
         if (!gridRef.current) return;
         const container = gridRef.current;
         const card = container.querySelector('.category-card') as HTMLElement | null;
-        const cardWidth = card ? card.offsetWidth + 10 : 250;
+        const cardWidth = card ? card.offsetWidth + 14 : 250;
         const newIdx = Math.round(container.scrollLeft / cardWidth);
         setActiveSlide(Math.min(Math.max(newIdx, 0), categoriesConfig.length - 1));
     };
@@ -83,11 +117,19 @@ export default function DashboardKinerjaCard() {
         if (!gridRef.current) return;
         const container = gridRef.current;
         const card = container.querySelector('.category-card') as HTMLElement | null;
-        const cardWidth = card ? card.offsetWidth + 10 : 250;
+        const cardWidth = card ? card.offsetWidth + 14 : 250;
         container.scrollTo({
             left: idx * cardWidth,
             behavior: 'smooth'
         });
+    };
+
+    // Geser satu kartu ke kiri/kanan — perilaku sama dengan tombol Pengumuman.
+    const handleScrollCards = (direction: 'left' | 'right') => {
+        if (!gridRef.current) return;
+        const card = gridRef.current.querySelector('.category-card') as HTMLElement | null;
+        const step = card ? card.offsetWidth + 14 : 320;
+        gridRef.current.scrollBy({ left: direction === 'left' ? -step : step, behavior: 'smooth' });
     };
 
     const currentMonthStr = useMemo(() => {
@@ -136,11 +178,8 @@ export default function DashboardKinerjaCard() {
             }
 
             if (json && json.success && json.data) {
-                setData({
-                    jamKosong: json.data.jamKosong || [],
-                    penugasanTanpa: json.data.penugasanTanpa || [],
-                    terlambat: json.data.terlambat || []
-                });
+                setData({ ...EMPTY_DATA, ...json.data });
+                setDataPiket({ ...EMPTY_DATA, ...(json.dataPiket || {}) });
             } else {
                 setErrorMsg('Data tidak lengkap');
             }
@@ -172,6 +211,24 @@ export default function DashboardKinerjaCard() {
                             </p>
                         </div>
                     </div>
+                    <div className="kinerja-header-actions">
+                    <div className="kinerja-sumber-toggle" role="tablist" aria-label="Sumber data kinerja">
+                        <button type="button" role="tab" aria-selected={sumber === 'jurnal'} className={sumber === 'jurnal' ? 'is-active' : ''} onClick={() => setSumber('jurnal')}>
+                            Jurnal
+                        </button>
+                        <button type="button" role="tab" aria-selected={sumber === 'piket'} className={sumber === 'piket' ? 'is-active' : ''} onClick={() => setSumber('piket')}>
+                            Guru Piket
+                        </button>
+                    </div>
+                    <div className="kinerja-nav">
+                        <button type="button" onClick={() => handleScrollCards('left')} title="Geser ke kiri" aria-label="Geser ke kiri" className="kinerja-nav-btn">
+                            <ChevronLeft size={16} />
+                        </button>
+                        <button type="button" onClick={() => handleScrollCards('right')} title="Geser ke kanan" aria-label="Geser ke kanan" className="kinerja-nav-btn">
+                            <ChevronRight size={16} />
+                        </button>
+                    </div>
+                    </div>
                 </div>
 
                 {/* Error Box */}
@@ -193,7 +250,7 @@ export default function DashboardKinerjaCard() {
                         className="kinerja-grid"
                     >
                         {categoriesConfig.map((cat) => {
-                            const list = data[cat.key];
+                            const list = (sumber === 'piket' ? dataPiket : data)[cat.key];
                             const topItems = list.slice(0, 3);
                             const IconComp = cat.icon;
 
@@ -359,6 +416,49 @@ export default function DashboardKinerjaCard() {
                     color: #94a3b8;
                 }
 
+                /* Toggle sumber: Jurnal | Guru Piket */
+                .kinerja-sumber-toggle {
+                    display: inline-flex;
+                    background: var(--n-soft, rgba(0, 0, 0, 0.04));
+                    border: 1px solid var(--n-border, #e2e8f0);
+                    border-radius: 999px;
+                    padding: 2px;
+                    gap: 2px;
+                    flex-shrink: 0;
+                }
+
+                .kinerja-sumber-toggle button {
+                    border: none;
+                    background: transparent;
+                    color: var(--n-muted, #64748b);
+                    font-family: inherit;
+                    font-size: 0.7rem;
+                    font-weight: 600;
+                    padding: 4px 10px;
+                    border-radius: 999px;
+                    cursor: pointer;
+                    transition: background 0.15s ease, color 0.15s ease;
+                }
+
+                .kinerja-sumber-toggle button.is-active {
+                    background: #3083FF;
+                    color: #fff;
+                }
+
+                :global(.dark) .kinerja-sumber-toggle {
+                    background: rgba(15, 23, 42, 0.8);
+                    border-color: rgba(26, 115, 232, 0.4);
+                }
+
+                :global(.dark) .kinerja-sumber-toggle button {
+                    color: #94a3b8;
+                }
+
+                :global(.dark) .kinerja-sumber-toggle button.is-active {
+                    background: #3083FF;
+                    color: #fff;
+                }
+
                 /* Dots Indicator (Tengah) */
                 .kinerja-dots {
                     display: none;
@@ -437,12 +537,88 @@ export default function DashboardKinerjaCard() {
                     cursor: pointer;
                 }
 
-                /* 3-Col Grid */
+                /* Track geser — ukuran sama persis dengan track Pengumuman:
+                   3 kartu penuh + sedikit kartu ke-4 terlihat. */
                 .kinerja-grid {
-                    display: grid;
-                    grid-template-columns: repeat(3, 1fr);
-                    gap: 12px;
+                    display: flex;
+                    gap: 14px;
+                    overflow-x: auto;
+                    scroll-snap-type: x mandatory;
+                    -webkit-overflow-scrolling: touch;
+                    scrollbar-width: none;
+                    padding-bottom: 4px;
                     width: 100%;
+                }
+
+                .kinerja-grid::-webkit-scrollbar {
+                    display: none;
+                }
+
+                .kinerja-grid .category-card {
+                    flex: 0 0 calc((100% - 28px) / 3.10);
+                    scroll-snap-align: start;
+                    box-sizing: border-box;
+                    min-width: 0;
+                }
+
+                @media (max-width: 767.98px) {
+                    .kinerja-grid .category-card {
+                        flex: 0 0 calc((100% - 14px) / 1.25) !important;
+                    }
+                }
+
+                .kinerja-header-actions {
+                    display: flex;
+                    align-items: center;
+                    gap: 10px;
+                }
+
+                .kinerja-nav {
+                    display: flex;
+                    align-items: center;
+                    gap: 6px;
+                }
+
+                .kinerja-nav-btn {
+                    width: 28px;
+                    height: 28px;
+                    border-radius: 50%;
+                    border: 1px solid #E2E8F0;
+                    background: #F8FAFC;
+                    color: #475569;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    cursor: pointer;
+                    outline: none !important;
+                    padding: 0;
+                    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+                }
+
+                .kinerja-nav-btn:hover {
+                    background: #E0ECFF;
+                    color: #2563eb;
+                    border-color: #BFDBFE;
+                    transform: translateY(-1px);
+                    box-shadow: 0 2px 6px rgba(37, 99, 235, 0.15);
+                }
+
+                .kinerja-nav-btn:active {
+                    background: #2563eb;
+                    color: #ffffff;
+                    border-color: #1d4ed8;
+                    transform: scale(0.92);
+                }
+
+                :global(.dark) .kinerja-nav-btn {
+                    background: rgba(255, 255, 255, 0.05);
+                    border-color: rgba(255, 255, 255, 0.12);
+                    color: #cbd5e1;
+                }
+
+                :global(.dark) .kinerja-nav-btn:hover {
+                    background: rgba(48, 131, 255, 0.2);
+                    color: #60a5fa;
                 }
 
                 @media (max-width: 860px) {
@@ -458,25 +634,8 @@ export default function DashboardKinerjaCard() {
                         padding: 14px 16px;
                     }
 
-                    .kinerja-grid {
-                        display: flex;
-                        gap: 12px;
-                        overflow-x: auto;
-                        scroll-snap-type: x mandatory;
-                        -webkit-overflow-scrolling: touch;
-                        scrollbar-width: none;
-                        padding-bottom: 4px;
-                        width: 100%;
-                    }
-
-                    .kinerja-grid::-webkit-scrollbar {
+                    .kinerja-nav {
                         display: none;
-                    }
-
-                    .category-card {
-                        flex: 0 0 calc(100% - 44px);
-                        scroll-snap-align: start;
-                        box-sizing: border-box;
                     }
 
                     .kinerja-footer {

@@ -7,6 +7,7 @@ const { randomUUID } = require('node:crypto');
 const ts = require('typescript');
 const ExcelJS = require('exceljs');
 const JSZip = require('jszip');
+const XLSX = require('xlsx');
 
 // Load the real TypeScript modules without a build subprocess or application DB.
 function modules(stubs = {}) {
@@ -30,7 +31,9 @@ function modules(stubs = {}) {
     return name => load(`apps/web/lib/e-sertifikat/${name}.ts`);
 }
 const load = modules();
-const { readParticipantExcel } = load('excel');
+const { readParticipantExcel, mapParticipantColumns } = load('excel');
+const { fitLayerPlacement, resizeLayerWidth, mmToPt, pointTemplate } = load('layout');
+const { DEFAULT_TEMPLATE } = load('model');
 const { createEventDraft } = load('draft');
 const { CertificateService } = load('service');
 const { limitPublicCertificateRequest } = load('rate-limit');
@@ -49,34 +52,97 @@ test('XLSX parses names, rich text, institutions and leading zero identities', a
     assert.deepEqual(result.headers, ['Nama', 'Instansi', 'NIP']);
     assert.deepEqual(result.rows, [['Amelia Putri', 'MAN', '00123']]);
 });
-test('CSV preserves text, leading zeros, quoted commas, quotes and line breaks', async () => {
-    const result = await readParticipantExcel(new File(['\ufeffNama,NIP,Catatan\r\n"Amelia, Putri",00123,"Baris 1\nBaris ""2"""'], 'peserta.csv'));
+function xlsFile(rows) {
+    const book = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(book, XLSX.utils.aoa_to_sheet(rows), 'Peserta');
+    return new File([XLSX.write(book, { type: 'buffer', bookType: 'biff8' })], 'peserta.xls');
+}
+test('XLS preserves names, leading zeros, commas, quotes and line breaks', async () => {
+    const result = await readParticipantExcel(xlsFile([['Nama', 'NIP', 'Catatan'], ['Amelia, Putri', '00123', 'Baris 1\nBaris "2"']]));
     assert.deepEqual(result.rows, [['Amelia, Putri', '00123', 'Baris 1\nBaris "2"']]);
-    assert.equal((await readParticipantExcel(new File(['Nama;NIP\nAmelia;00123'], 'peserta.csv'))).rows[0][1], '00123');
 });
 test('XLSX rejects formula cells instead of evaluating or accepting cached results', async () => {
     await assert.rejects(readParticipantExcel(await workbookFile([['Nama'], [{ formula: '1+1', result: 2 }]])), /formula/);
 });
 for (const header of ['__proto__', 'constructor', 'prototype']) test(`rejects unsafe header ${header}`, async () => {
-    await assert.rejects(readParticipantExcel(new File([`${header}\nAmelia`], 'peserta.csv')), /Judul kolom/);
+    await assert.rejects(readParticipantExcel(xlsFile([[header], ['Amelia']])), /Judul kolom/);
     assert.equal({}.polluted, undefined);
 });
 test('rejects duplicate or empty headers, extra columns, long cells and unsupported file types', async () => {
-    for (const contents of ['Nama,Nama\nA,B', 'Nama,\nA,B']) await assert.rejects(readParticipantExcel(new File([contents], 'peserta.csv')), /Judul kolom/);
+    for (const headers of [['Nama', 'Nama'], ['Nama', '']]) await assert.rejects(readParticipantExcel(xlsFile([headers, ['A', 'B']])), /Judul kolom/);
     await assert.rejects(readParticipantExcel(await workbookFile([Array(31).fill('Judul'), Array(31).fill('A')])), /30 kolom/);
-    await assert.rejects(readParticipantExcel(new File([`Nama\n${'a'.repeat(201)}`], 'peserta.csv')), /200 karakter/);
-    await assert.rejects(readParticipantExcel(new File(['Nama\nA'], 'peserta.xls')), /xlsx/);
+    await assert.rejects(readParticipantExcel(xlsFile([['Nama'], ['a'.repeat(201)]])), /200 karakter/);
+    await assert.rejects(readParticipantExcel(new File(['Nama\nA'], 'peserta.csv')), /xls/);
+    await assert.rejects(readParticipantExcel(new File(['Nama\nA'], 'peserta.xls')), /tidak valid/);
 });
-test('enforces 500 participants in XLSX and CSV without silently truncating', async () => {
+test('enforces 500 participants in XLSX and XLS without silently truncating', async () => {
     const rows = [['Nama'], ...Array.from({ length: 500 }, (_, i) => [`Peserta ${i}`])];
     assert.equal((await readParticipantExcel(await workbookFile(rows))).rows.length, 500);
+    assert.equal((await readParticipantExcel(xlsFile(rows))).rows.length, 500);
     rows.push(['Kelebihan']);
     await assert.rejects(readParticipantExcel(await workbookFile(rows)), /500/);
-    await assert.rejects(readParticipantExcel(new File([rows.map(row => row[0]).join('\n')], 'peserta.csv')), /500/);
+    await assert.rejects(readParticipantExcel(xlsFile(rows)), /500/);
 });
 test('rejects oversized uploads and corrupted archives', async () => {
     await assert.rejects(readParticipantExcel(new File([Buffer.alloc(2 * 1024 * 1024 + 1)], 'peserta.xlsx')), /2 MB/);
     await assert.rejects(readParticipantExcel(new File(['not a zip'], 'peserta.xlsx')), /tidak valid/);
+});
+
+test('XLS rejects formulas and excessive columns', async () => {
+    await assert.rejects(readParticipantExcel(xlsFile([['Nama'], [{ t: 'n', f: '1+1', v: 2, bf: [7, 0, 0x1e, 1, 0, 0x1e, 1, 0, 0x03] }]])), /formula/);
+    await assert.rejects(readParticipantExcel(xlsFile([Array(31).fill('Kolom'), Array(31).fill('A')])), /30 kolom/);
+});
+
+test('Excel mapping rejects invalid, duplicate and out-of-range columns', () => {
+    const table = { headers: ['Nama', 'Sekolah', 'NIP'], rows: [['Amelia', 'MAN', '00123']] }, ids = [randomUUID()];
+    assert.deepEqual(mapParticipantColumns(table, { name: 0, institution: 1, extras: [2] }, ids), [{ id: ids[0], name: 'Amelia', institution: 'MAN', identities: { NIP: '00123' } }]);
+    for (const mapping of [{ name: 0, institution: 0, extras: [] }, { name: 0, institution: 1, extras: [1] }, { name: 0, extras: [2, 2] }, { name: 3, extras: [] }, { name: '0', extras: [] }, { name: 0, extras: [99] }])
+        assert.throws(() => mapParticipantColumns(table, mapping, ids), /kolom/);
+    assert.throws(() => mapParticipantColumns(table, { name: 0, extras: [] }, []), /Jumlah/);
+});
+
+test('recipient HTTP endpoint requires an Excel file and ignores arbitrary manual rows', async () => {
+    const { NextRequest } = require('next/server');
+    const imported = [];
+    const handler = modules({ '../prisma': { prisma: {} }, '../api-auth': { getApiUser: async () => owner },
+        './service': { CertificateService: class { async importRecipients(user, eventId, rows) { imported.push(rows); return { count: rows.length }; } }, assertManager() {}, verifyUrl: () => 'http://localhost' },
+    })('http');
+    const eventId = randomUUID(), url = `http://localhost/api/e-sertifikat/${eventId}/recipients`;
+    const manual = await handler.manage(new NextRequest(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ rows: [{ id: randomUUID(), name: 'Manual' }] }) }), [eventId, 'recipients']);
+    assert.equal(manual.status, 400); assert.equal(imported.length, 0);
+    const broken = new FormData(); broken.set('file', new File([Buffer.from('d0cf11e0a1b11ae10000000000000000', 'hex')], 'rusak.xls'));
+    broken.set('mapping', JSON.stringify({ name: 0, extras: [] })); broken.set('ids', JSON.stringify([randomUUID()]));
+    assert.equal((await handler.manage(new NextRequest(url, { method: 'POST', body: broken }), [eventId, 'recipients'])).status, 400);
+    assert.equal(imported.length, 0);
+    for (const file of [xlsFile([['Nama', 'Sekolah'], ['Amelia', 'MAN']]), await workbookFile([['Nama', 'Sekolah'], ['Amelia', 'MAN']])]) {
+        const form = new FormData(); form.set('file', file); form.set('mapping', JSON.stringify({ name: 0, institution: 1, extras: [] })); form.set('ids', JSON.stringify([randomUUID()]));
+        form.set('rows', JSON.stringify([{ name: 'Data palsu' }]));
+        const response = await handler.manage(new NextRequest(url, { method: 'POST', body: form }), [eventId, 'recipients']);
+        assert.equal(response.status, 200, JSON.stringify(await response.json()));
+        assert.equal(imported.at(-1)[0].name, 'Amelia');
+    }
+});
+
+test('name and institution move independently and text width can shrink without moving the anchor', () => {
+    const page = { width: 842, height: 595 }, template = pointTemplate(DEFAULT_TEMPLATE, page);
+    const moved = fitLayerPlacement(template.name, { x: 40, y: 180, width: 300 }, page);
+    assert.equal(moved.x, 40); assert.equal(moved.y, 180); assert.equal(moved.width, 300);
+    assert.equal(template.institution.x, 84.2);
+    const width = resizeLayerWidth({ ...template.name, ...moved }, page, -120, 0);
+    assert.equal(width, 180);
+    const resized = fitLayerPlacement({ ...template.name, ...moved }, { width }, page);
+    assert.equal(resized.x, 40); assert.equal(resized.y, 180);
+});
+
+test('QR shrinks, enlarges and stays within both page dimensions', () => {
+    const page = { width: 842, height: 595 }, placement = { x: 700, y: 450, width: 100, size: 100 };
+    assert.equal(resizeLayerWidth(placement, page, 30, 20, true), 130);
+    assert.equal(resizeLayerWidth(placement, page, -20, 0, true), 80);
+    assert.equal(resizeLayerWidth(placement, page, 0, -20, true), 80);
+    assert.equal(resizeLayerWidth(placement, page, 300, 300, true), 142);
+    assert.equal(resizeLayerWidth(placement, page, -1000, -1000, true), mmToPt(20));
+    const fitted = fitLayerPlacement(placement, { width: 900 }, page, true);
+    assert.equal(fitted.width, 595); assert.equal(fitted.x, 247); assert.equal(fitted.y, 0);
 });
 test('rejects ZIP bombs even with forged uncompressed size metadata', async () => {
     const zip = new JSZip(); zip.file('xl/worksheets/sheet1.xml', Buffer.alloc(25 * 1024 * 1024 + 1, 65));

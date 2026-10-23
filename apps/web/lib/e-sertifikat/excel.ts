@@ -1,7 +1,7 @@
 import ExcelJS from 'exceljs';
 import JSZip from 'jszip';
 import { inflateRawSync } from 'node:zlib';
-import { Readable } from 'node:stream';
+import * as XLSX from 'sheetjs';
 import { SaxesParser } from 'saxes';
 import { CertificateError } from './validation';
 
@@ -81,19 +81,26 @@ async function checkArchive(buffer: Buffer) {
 }
 
 export async function readParticipantExcel(file: File) {
-    if (!file.size || file.size > 2 * 1024 * 1024 || !/\.(xlsx|csv)$/i.test(file.name)) throw new CertificateError('Gunakan Excel .xlsx atau .csv maksimal 2 MB');
+    if (!file.size || file.size > 2 * 1024 * 1024 || !/\.(xlsx|xls)$/i.test(file.name)) throw new CertificateError('Gunakan Excel .xls atau .xlsx maksimal 2 MB');
     const buffer = Buffer.from(await file.arrayBuffer());
-    const book = new ExcelJS.Workbook();
-    if (/\.xlsx$/i.test(file.name)) {
-        await checkArchive(buffer);
-        await book.xlsx.load(buffer as unknown as ExcelJS.Buffer);
-    } else {
-        const firstLine = buffer.toString('utf8').split(/\r?\n/, 1)[0];
-        await book.csv.read(Readable.from([buffer]), {
-            sheetName: 'Peserta', map: (value: string) => value,
-            parserOptions: { maxRows: 502, ignoreEmpty: true, delimiter: !firstLine.includes(',') && firstLine.includes(';') ? ';' : ',' },
-        });
+    if (/\.xls$/i.test(file.name)) {
+        if (!buffer.subarray(0, 8).equals(Buffer.from('d0cf11e0a1b11ae1', 'hex'))) throw new CertificateError('Berkas Excel .xls tidak valid');
+        const workbook = XLSX.read(buffer, { type: 'buffer', dense: true, sheetRows: 502, sheets: 0, cellFormula: true, cellHTML: false, bookVBA: false });
+        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+        if (!sheet?.['!ref']) throw new CertificateError('Excel tidak memiliki lembar data');
+        const range = XLSX.utils.decode_range(sheet['!fullref'] || sheet['!ref']);
+        if (range.e.r > 500) throw new CertificateError('Excel melebihi 500 baris peserta');
+        if (range.e.c > 29) throw new CertificateError('Maksimal 30 kolom per lembar');
+        // Inspect cells before converting to text so cached formula results
+        // cannot bypass the same rules applied to XLSX workbooks.
+        for (const row of (sheet['!data'] || sheet) as unknown as XLSX.CellObject[][]) for (const cell of row || [])
+            if (cell?.f) throw new CertificateError('Gunakan nilai teks, bukan formula, pada data peserta');
+        const rows = XLSX.utils.sheet_to_json<string[]>(sheet, { header: 1, raw: false, defval: '', blankrows: false });
+        return participantTable(rows.map(row => row.map(value => String(value).trim())), workbook.SheetNames[0]);
     }
+    const book = new ExcelJS.Workbook();
+    await checkArchive(buffer);
+    await book.xlsx.load(buffer as unknown as ExcelJS.Buffer);
     const sheet = book.worksheets[0];
     if (!sheet) throw new CertificateError('Excel tidak memiliki lembar data');
     if (sheet.rowCount > 501) throw new CertificateError('Excel melebihi 500 baris peserta. Bersihkan baris kosong atau pecah berkas.');
@@ -109,9 +116,26 @@ export async function readParticipantExcel(file: File) {
         });
         if (values.some(Boolean)) raw.push(values);
     });
+    return participantTable(raw, sheet.name);
+}
+
+function participantTable(raw: string[][], sheet: string) {
     if (raw.length < 2 || raw.length > 501) throw new CertificateError('Excel harus berisi judul kolom dan 1–500 peserta (pecah berkas jika lebih)');
+    if (raw.some(row => row.some(value => value.length > 200))) throw new CertificateError('Setiap sel maksimal 200 karakter');
     const headers = raw[0];
     if (headers.some(value => !value || value.length > 50 || ['__proto__', 'constructor', 'prototype'].includes(value)) || new Set(headers).size !== headers.length)
         throw new CertificateError('Judul kolom harus terisi, unik, dan maksimal 50 karakter');
-    return { sheet: sheet.name, headers, rows: raw.slice(1) };
+    return { sheet, headers, rows: raw.slice(1) };
+}
+
+export function mapParticipantColumns(table: { headers: string[]; rows: string[][] }, mapping: unknown, ids: unknown) {
+    const value = mapping as { name?: number; institution?: number | null; extras?: number[] } | null;
+    const validColumn = (index: unknown): index is number => Number.isInteger(index) && Number(index) >= 0 && Number(index) < table.headers.length;
+    if (!value || !validColumn(value.name) || (value.institution != null && !validColumn(value.institution)) || !Array.isArray(value.extras) || value.extras.length > 8 || !value.extras.every(validColumn))
+        throw new CertificateError('Pemetaan kolom Excel tidak valid');
+    const columns = [value.name, ...(value.institution == null ? [] : [value.institution]), ...value.extras];
+    if (new Set(columns).size !== columns.length) throw new CertificateError('Pilih kolom yang berbeda untuk setiap isian');
+    if (!Array.isArray(ids) || ids.length !== table.rows.length) throw new CertificateError('Jumlah peserta impor tidak sesuai');
+    return table.rows.map((row, index) => ({ id: ids[index], name: row[value.name!] || '', institution: value.institution == null ? '' : row[value.institution] || '',
+        identities: Object.fromEntries(value.extras!.map(column => [table.headers[column], row[column] || ''])) }));
 }

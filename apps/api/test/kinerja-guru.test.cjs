@@ -164,3 +164,27 @@ test('daring attendance is counted per teacher and exposed in the daring categor
   assert.equal(result.data.daring[0].count, 2);
   assert.equal(result.data.daring[0].details.filter(d => d.type === 'Daring').length, 2);
 });
+
+test('versi piket dihitung terpisah dari jurnal, per kejadian, dengan identitas dari nama atau jadwal', async () => {
+  const laporan = [{ tanggal: new Date('2020-01-06'), nama_guru_piket: 'Guru Piket', laporan_piket_detail: [
+    { nama_kelas: 'X', jam_ke: '1', nama_guru: 'Guru A', status_kehadiran: 'Terlambat' },
+    { nama_kelas: 'X', jam_ke: '1', nama_guru: 'Guru A', status_kehadiran: 'Terlambat' }, // duplikat slot
+    { nama_kelas: 'Y', jam_ke: '2', nama_guru: 'Guru A', status_kehadiran: 'Hadir', status_tambahan_1: 'Terlambat' },
+    { nama_kelas: 'Z', jam_ke: '3', nama_guru: '', status_kehadiran: 'Kosong' },
+    { nama_kelas: 'X', jam_ke: '4', nama_guru: 'Guru B', status_kehadiran: 'Hadir' },
+  ] }];
+  const f = fixture({ laporan_piket: laporan, jurnal_guru: [{ id: 'j', nip: '1', nama_guru: 'Guru A', tanggal: new Date('2020-01-06'),
+    jam_ke_id: 1, kelas: 'X', kategori_kehadiran: 'Terlambat', durasi_terlambat: 20 }] });
+  f.service.jadwalService.getJadwal = async () => ({ data: [{ nip: '2', nama_guru: 'Guru B', hari: 'Senin', jam_ke: '3', kelas: 'Z' }] });
+  const result = await f.service.getStats('2020-01', '2020-01');
+  // Versi jurnal tetap memakai menit dan tidak tercampur data piket.
+  assert.equal(result.data.terlambat[0].count, 20);
+  assert.equal(result.data.jamKosong.length, 0);
+  // Versi piket: hitungan kejadian.
+  assert.equal(result.dataPiket.terlambat[0].nip, '1');
+  assert.equal(result.dataPiket.terlambat[0].count, 2);
+  assert(result.dataPiket.terlambat[0].details.every(d => d.sumber === 'Piket' && d.type === 'Terlambat'));
+  assert.equal(result.dataPiket.jamKosong[0].nip, '2');
+  assert.equal(result.dataPiket.jamKosong[0].count, 1);
+  assert.equal(result.dataPiket.daring.length, 0);
+});

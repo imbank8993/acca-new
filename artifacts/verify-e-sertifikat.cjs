@@ -240,8 +240,8 @@ const reportPath = process.env.ECERT_TEST_REPORT_PATH || 'artifacts/e-sertifikat
     XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet([['Nama', 'Asal Sekolah', 'Peran'], ['Amelia', 'Sekolah Contoh', 'Peserta']]), 'Peserta');
     const parsed = await readParticipantExcel(new File([XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' })], 'peserta.xlsx'));
     assert.deepEqual(parsed.headers, ['Nama', 'Asal Sekolah', 'Peran']); assert.equal(parsed.rows[0][0], 'Amelia'); pass();
-    await rejects(() => readParticipantExcel(new File(['Nama,Nama\nAmelia,Gowa'], 'duplicate.csv')), /unik/);
-    await rejects(() => readParticipantExcel(new File(['Nama,Asal Sekolah\nAmelia,Gowa'], 'unsupported.xls')), /xlsx/);
+    await rejects(() => readParticipantExcel(new File(['Nama,Nama\nAmelia,Gowa'], 'duplicate.csv')), /xls/);
+    await rejects(() => readParticipantExcel(new File(['Nama,Asal Sekolah\nAmelia,Gowa'], 'unsupported.xls')), /tidak valid/);
     const longWorkbook=XLSX.utils.book_new(),longRows=[['Nama'],...Array.from({length:505},(_,index)=>[index===501?'':`Peserta ${index}`])];
     XLSX.utils.book_append_sheet(longWorkbook,XLSX.utils.aoa_to_sheet(longRows),'Peserta');
     await rejects(()=>readParticipantExcel(new File([XLSX.write(longWorkbook,{type:'buffer',bookType:'xlsx'})],'lebih-500.xlsx')),/500/);

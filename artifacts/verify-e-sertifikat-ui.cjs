@@ -13,7 +13,7 @@ if(p==='/signers')data=[{id:'teacher',nama_lengkap:'Imran, S.Si.'}];if(p.include
 if(p==='/excel')data={headers:['Nama','Asal Sekolah','Peran'],rows:[['Amelia Putri','Sekolah Contoh Gowa','Peserta'],['Budi Santoso','Sekolah Contoh Makassar','Narasumber']]};
 if(p.endsWith('/assets')&&method==='POST'){const aid=assets.length?'33333333-3333-4333-8333-333333333333':'22222222-2222-4222-8222-222222222222';assets.push({id:aid,kind:body.get('kind'),filename:body.get('file').name,mime:'application/pdf',is_public:false});data={id:aid};}
 if(p.includes('/assets/')&&method==='PATCH'){assets=assets.map(a=>a.id===p.split('/').at(-1)?{...a,is_public:body.is_public}:a);data=null;}
-if(p.endsWith('/recipients')&&method==='POST'){recipients=body.rows.map(r=>({...r,revision:1,status:'draft',certificate_number:null}));data={count:recipients.length};}
+if(p.endsWith('/recipients')&&method==='POST'){const mapping=JSON.parse(body.get('mapping')),ids=JSON.parse(body.get('ids'));recipients=[['Amelia Putri','Sekolah Contoh Gowa','Peserta'],['Budi Santoso','Sekolah Contoh Makassar','Narasumber']].map((row,i)=>({id:ids[i],name:row[mapping.name],institution:row[mapping.institution]||'',identities:Object.fromEntries(mapping.extras.map(col=>[['Nama','Asal Sekolah','Peran'][col],row[col]])),revision:1,status:'draft',certificate_number:null}));data={count:recipients.length};}
 if(p.includes('/recipients/')&&method==='PATCH'){const r=recipients.find(r=>r.id===p.split('/').at(-1));if(r?.revision!==body.revision)return{ok:false,status:409,json:async()=>({ok:false,error:'Data peserta telah berubah'})};recipients=recipients.map(r=>r.id===p.split('/').at(-1)?{...r,...body,revision:r.revision+1}:r);data=null;}
 if(p.endsWith('/issue')){recipients=recipients.map((r,i)=>body.ids.includes(r.id)?{...r,status:'issued',certificate_number:'ACCA/000'+(i+1),verify_token:'a'.repeat(48)}:r);data={count:body.ids.length};}
 if(p.endsWith('/preview')){const data=Uint8Array.from(atob(await window.renderFixturePDF(body)),c=>c.charCodeAt(0));return{ok:true,arrayBuffer:async()=>data.buffer,blob:async()=>new Blob([data],{type:'application/pdf'})};}return{ok:true,json:async()=>({ok:true,data})};};
@@ -41,7 +41,7 @@ const root=createRoot(document.getElementById('root'));window.showVerify=(mode)=
     const tab = async label => {
       await page.waitForFunction(() => document.querySelector('.ec-root')?.getAttribute('aria-busy') !== 'true');
       await page.evaluate(label => { const el = [...document.querySelectorAll('[role="tab"]')].find(el => el.textContent.includes(label)); if (!el) throw new Error('Tab missing: '+label); el.click(); }, label);
-      const text = label.startsWith('Penerima') ? 'Penerima sertifikat' : 'Dokumen pendukung kegiatan';
+      const text = label.startsWith('Penerima') ? 'Penerima sertifikat' : 'Dokumen pendukung';
       await page.waitForFunction(text => document.body.textContent.includes(text), {}, text);
     };
     await page.waitForFunction(() => document.body.textContent.includes('Belum ada kegiatan'));
@@ -51,15 +51,15 @@ const root=createRoot(document.getElementById('root'));window.showVerify=(mode)=
     await page.waitForFunction(() => document.body.textContent.includes('Informasi kegiatan') && !document.querySelector('.mdl-overlay'));
     await page.$eval('input[type="file"]', () => {});
     await (await page.$('input[type="file"]')).uploadFile(path.resolve('output/pdf/template-e-sertifikat-contoh.pdf'));
-    await page.waitForFunction(() => document.body.textContent.includes('Template diunggah dan disimpan'));
+    await page.waitForFunction(() => document.body.textContent.includes('Template tersimpan.'));
     await page.waitForSelector('.ec-editor-layer');
     await page.waitForFunction(()=>document.querySelector('.ec-editor-stage canvas')?.width>100);
-    await clickText('Tambah penandatangan');
+    await page.click('.ec-signers > summary'); await clickText('Tambah penandatangan');
     await page.select('select[aria-label="Pilih pegawai 1"]','teacher');
     await page.type('input[aria-label="Jabatan penandatangan 1"]','Ketua Panitia');
     assert.equal(await page.$eval('input[aria-label="Nama penandatangan 1"]',el=>el.value),'Imran, S.Si.');
     // Millimeter coordinates persist as PDF points, independent of zoom.
-    const x=await page.$('input[aria-label="X (mm)"]');await x.focus();await page.keyboard.down('Control');await page.keyboard.press('A');await page.keyboard.up('Control');await x.type('25.01');
+    await page.click('.ec-position-details > summary'); const x=await page.$('input[aria-label="X (mm)"]');await x.focus();await page.keyboard.down('Control');await page.keyboard.press('A');await page.keyboard.up('Control');await x.type('25.01');
     await page.select('select[aria-label="Zoom template"]','2');
     await page.focus('.ec-editor-stage');await new Promise(resolve=>setTimeout(resolve,60));await page.keyboard.press('ArrowRight');await new Promise(resolve=>setTimeout(resolve,60));
     assert.equal(await page.$eval('input[aria-label="X (mm)"]',el=>el.value),'25.11');
@@ -73,14 +73,45 @@ const root=createRoot(document.getElementById('root'));window.showVerify=(mode)=
     for(const id of signerLayers){await page.select('select[aria-label="Elemen aktif"]',id);const field=await page.$('input[aria-label="X (mm)"]');await field.focus();await page.keyboard.down('Control');await page.keyboard.press('A');await page.keyboard.up('Control');await field.type('141.11');await page.keyboard.press('Tab');}
     await page.select('select[aria-label="Elemen aktif"]','qr');
     assert(Number(await page.$eval('input[aria-label="Sisi QR (mm)"]',el=>el.value))>=20);
+    // QR drag resizing and slider, at fit and 200% zoom.
+    for (const zoom of ['fit','2']) {
+      await page.select('select[aria-label="Zoom template"]',zoom);
+      const before=Number(await page.$eval('input[aria-label="Sisi QR (mm)"]',el=>el.value));
+      const handle=await page.$('button[aria-label="Ubah ukuran QR"]'); await handle.scrollIntoView();
+      const b=await handle.boundingBox(); await page.mouse.move(b.x+b.width/2,b.y+b.height/2);await page.mouse.down();await page.mouse.move(b.x+b.width/2-12,b.y+b.height/2-12,{steps:4});await page.mouse.up();
+      const after=Number(await page.$eval('input[aria-label="Sisi QR (mm)"]',el=>el.value));assert(after<before&&after>=20,'QR resize at '+zoom);
+    }
+    await page.select('select[aria-label="Zoom template"]','fit');
+    await page.$eval('input[aria-label="Ukuran QR"]',el=>{const set=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set;set.call(el,'26');el.dispatchEvent(new Event('input',{bubbles:true}));el.dispatchEvent(new Event('change',{bubbles:true}));});
+    await page.waitForFunction(()=>Math.abs(Number(document.querySelector('input[aria-label="Sisi QR (mm)"]').value)-26)<.01);
+    // Shrink the name box, then move name and school independently.
+    for(const id of ['name','institution']) {
+      await page.select('select[aria-label="Elemen aktif"]',id);
+      const before=Number(await page.$eval('input[aria-label="Lebar (mm)"]',el=>el.value));
+      const handle=await page.$('.ec-resize-handle');await handle.scrollIntoView();const b=await handle.boundingBox();
+      await page.mouse.move(b.x+b.width/2,b.y+b.height/2);await page.mouse.down();await page.mouse.move(b.x+b.width/2-25,b.y+b.height/2,{steps:5});await page.mouse.up();
+      assert(Number(await page.$eval('input[aria-label="Lebar (mm)"]',el=>el.value))<before,'Text resize '+id);
+    }
+    await page.select('select[aria-label="Elemen aktif"]','qr');
+    const setPrecise=async(label,value)=>{const field=await page.$('input[aria-label="'+label+'"]');await field.focus();await page.keyboard.down('Control');await page.keyboard.press('A');await page.keyboard.up('Control');await field.type(String(value));await page.keyboard.press('Tab');};
+    const originalQR=await page.$$eval('.ec-position-details input',nodes=>nodes.map(n=>n.value));
+    await setPrecise('X (mm)',99999);await setPrecise('Y (mm)',99999);
+    const edgeQR=await page.$$eval('.ec-position-details input',nodes=>nodes.map(n=>Number(n.value)));
+    assert(edgeQR[0]<297&&edgeQR[1]<210,'Out-of-range positions must display their actual clamped value');
+    const corner=await page.$('button[aria-label="Ubah ukuran QR"]');await corner.focus();await page.keyboard.down('Shift');await page.keyboard.press('ArrowRight');await page.keyboard.up('Shift');
+    const resizedQR=await page.$$eval('.ec-position-details input',nodes=>nodes.map(n=>Number(n.value)));
+    assert.equal(resizedQR[0],edgeQR[0],'Keyboard resize must not move QR X');assert.equal(resizedQR[1],edgeQR[1],'Keyboard resize must not move QR Y');
+    await setPrecise('X (mm)',originalQR[0]);await setPrecise('Y (mm)',originalQR[1]);await setPrecise('Sisi QR (mm)',originalQR[2]);
+    await page.evaluate(()=>{document.querySelector('.ec-signers').open=false;document.querySelector('.ec-position-details').open=false;});
     const editorMetrics={};for(const width of [320,390,768,1280]){
       await page.setViewport({width,height:1100});await new Promise(resolve=>setTimeout(resolve,800));
       await page.waitForFunction(()=>{const c=document.querySelector('.ec-editor-stage canvas');if(!c||!c.width)return false;const d=c.getContext('2d').getImageData(0,0,c.width,c.height).data;let dark=0;for(let i=0;i<d.length;i+=16)if(d[i]<180&&d[i+3]>0)dark++;return dark>50;});
       editorMetrics[width]=await page.evaluate(()=>({viewport:innerWidth,document:document.documentElement.scrollWidth}));assert(editorMetrics[width].document<=width+1,'Editor overflow '+width);
-      if([390,1280].includes(width))await page.screenshot({path:`artifacts/e-sertifikat-editor-${width}.png`,fullPage:true});
+      if([390,1280].includes(width))await page.screenshot({path:`artifacts/e-sertifikat-simple-editor-${width}.png`,fullPage:true});
+      if(width===1280)await (await page.$('.ec-editor-workspace')).screenshot({path:'artifacts/e-sertifikat-simple-preview.png'});
     }
     await tab('Penerima & Sertifikat');
-    await (await page.$('input[accept=".xlsx,.csv"]')).uploadFile(path.resolve('apps/web/public/templates/peserta-e-sertifikat.csv'));
+    await (await page.$('input[accept=".xls,.xlsx"]')).uploadFile(path.resolve('apps/web/public/templates/peserta-e-sertifikat.xlsx'));
     await page.waitForFunction(() => document.body.textContent.includes('Petakan kolom Excel'));
     const checks = await page.$$('.mdl-body input[type="checkbox"]'); await checks[2].click();
     await clickText('Impor 2 peserta');
@@ -111,7 +142,7 @@ const root=createRoot(document.getElementById('root'));window.showVerify=(mode)=
       metrics[width] = await page.evaluate(() => ({ viewport: innerWidth, document: document.documentElement.scrollWidth }));
       assert(metrics[width].document <= width + 1, `Overflow at ${width}: ${JSON.stringify(metrics[width])}`);
       assert.equal(await page.$$eval('a[title="Unduh PDF"]', nodes => nodes.filter(node => node.getBoundingClientRect().width > 0).length), 2);
-      if ([390,1280].includes(width)) await page.screenshot({ path: `artifacts/e-sertifikat-manager-${width}.png`, fullPage: true });
+      if ([390,1280].includes(width)) await page.screenshot({ path: `artifacts/e-sertifikat-simple-manager-${width}.png`, fullPage: true });
     }
     await clickText('Kegiatan');await page.waitForSelector('.ec-events-panel .ec-event-card');
     await page.waitForFunction(()=>window.getPageFab()?.label==='Tambah');
@@ -119,12 +150,12 @@ const root=createRoot(document.getElementById('root'));window.showVerify=(mode)=
       await page.setViewport({width,height:960});await new Promise(resolve=>setTimeout(resolve,100));
       listMetrics[width]=await page.evaluate(()=>({viewport:innerWidth,document:document.documentElement.scrollWidth}));assert(listMetrics[width].document<=width+1,'Event list overflow '+width);
       assert.equal(await page.$eval('.dfab-wrapper',el=>getComputedStyle(el).display==='none'),width<768);
-      if([390,1280].includes(width))await page.screenshot({path:`artifacts/e-sertifikat-kegiatan-${width}.png`,fullPage:true});
+      if([390,1280].includes(width))await page.screenshot({path:`artifacts/e-sertifikat-simple-kegiatan-${width}.png`,fullPage:true});
     }
     const search=await page.$('input[placeholder="Cari kegiatan atau penyelenggara"]');await search.type('Tidak cocok');await page.waitForFunction(()=>document.body.textContent.includes('Kegiatan tidak ditemukan'));await clickText('Reset filter');await page.waitForSelector('.ec-event-card');
     await page.setViewport({width:390,height:960});await page.evaluate(()=>window.runPageFab());await page.waitForSelector('.mdl-overlay');await clickText('Batal');await page.waitForFunction(()=>!document.querySelector('.mdl-overlay')&&window.getPageFab()?.label==='Tambah');
     await page.setViewport({width:1280,height:960});await clickText('Kegiatan baru');await page.waitForSelector('.mdl-overlay');await clickText('Batal');await page.waitForFunction(()=>!document.querySelector('.mdl-overlay'));
-    await page.evaluate(()=>document.documentElement.classList.add('dark'));await page.screenshot({path:'artifacts/e-sertifikat-kegiatan-dark-1280.png',fullPage:true});await page.evaluate(()=>document.documentElement.classList.remove('dark'));
+    await page.evaluate(()=>document.documentElement.classList.add('dark'));await page.screenshot({path:'artifacts/e-sertifikat-simple-kegiatan-dark-1280.png',fullPage:true});await page.evaluate(()=>document.documentElement.classList.remove('dark'));
     await page.evaluate(() => window.showVerify('issued'));
     await page.waitForFunction(() => document.body.textContent.includes('Sertifikat terverifikasi'));
     assert(await page.evaluate(() => document.body.textContent.includes('Amelia Putri') && document.body.textContent.includes('Dokumen persuratan')));
@@ -136,7 +167,7 @@ const root=createRoot(document.getElementById('root'));window.showVerify=(mode)=
     await page.evaluate(() => window.showVerify('invalid'));
     await page.waitForFunction(() => document.body.textContent.includes('Sertifikat tidak ditemukan'));
     assert.deepEqual(errors, []);
-    fs.writeFileSync('artifacts/e-sertifikat-ui-metrics.json', JSON.stringify({ metrics, editorMetrics, listMetrics, passed: ['shared desktop FAB opens create modal','mobile bottomnav FAB registration opens create modal','event search and reset filter','320–1280 event list and light/dark styles','native-size PDF canvas','signer selection and title','mm precision and modifier arrow keys','drag position independent of zoom','QR minimum physical size','individual Excel identity layers','320–1280 editor layout','create event','template upload','Excel mapping and chosen identities','issue selected participants','PDF and verification links','private attachment default and publication toggle','320–1280 layout','valid/revoked/invalid verification'] }, null, 2));
+    fs.writeFileSync('artifacts/e-sertifikat-simple-ui-metrics.json', JSON.stringify({ metrics, editorMetrics, listMetrics, passed: ['shared desktop FAB opens create modal','mobile bottomnav FAB registration opens create modal','event search and reset filter','320–1280 event list and light/dark styles','native-size PDF canvas','signer selection and title','mm precision and modifier arrow keys','drag position independent of zoom','QR minimum physical size','QR resizing at fit/200%','QR size slider','out-of-range coordinates remain synchronized','keyboard QR resize preserves edge anchor','name and school width handles','individual Excel identity layers','320–1280 editor layout','create event','template upload','Excel mapping and chosen identities','issue selected participants','PDF and verification links','private attachment default and publication toggle','320–1280 layout','valid/revoked/invalid verification'] }, null, 2));
     console.log('Passed e-sertifikat UI: event, template, Excel mapping, issue, documents, public verification, and mobile/desktop layout.');
   } catch (error) {
     const pages = await browser.pages(); const page = pages.at(-1);

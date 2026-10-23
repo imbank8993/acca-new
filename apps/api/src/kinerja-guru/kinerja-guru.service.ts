@@ -52,7 +52,17 @@ export class KinerjaGuruService {
       data: {
         jamKosong: summarize(result.data.jamKosong),
         penugasanTanpa: summarize(result.data.penugasanTanpa),
+        daring: summarize(result.data.daring),
+        penugasanDengan: summarize(result.data.penugasanDengan),
         terlambat: summarize(result.data.terlambat),
+      },
+      // Versi guru piket (hitungan kejadian), berdampingan dengan versi jurnal.
+      dataPiket: {
+        jamKosong: summarize(result.dataPiket.jamKosong),
+        penugasanTanpa: summarize(result.dataPiket.penugasanTanpa),
+        daring: summarize(result.dataPiket.daring),
+        penugasanDengan: summarize(result.dataPiket.penugasanDengan),
+        terlambat: summarize(result.dataPiket.terlambat),
       },
     };
   }
@@ -186,7 +196,10 @@ export class KinerjaGuruService {
       },
       include: {
         laporan_piket_detail: {
-          select: { nama_kelas: true, jam_ke: true },
+          select: {
+            nama_kelas: true, jam_ke: true, nama_guru: true,
+            status_kehadiran: true, status_tambahan_1: true, status_tambahan_2: true, status_tambahan_3: true,
+          },
         },
       },
     });
@@ -489,6 +502,88 @@ export class KinerjaGuruService {
       }
     });
 
+    // -- Versi Guru Piket ---------------------------------------------------
+    // Dihitung TERPISAH dari jurnal (tidak digabung): status kehadiran guru per
+    // kelas/JP yang dicatat guru piket di laporan_piket_detail. Guru piket tidak
+    // mencatat durasi, jadi setiap kategori - termasuk Terlambat - dihitung
+    // sebagai jumlah kejadian (satu kelas x satu JP = satu kejadian).
+    const jadwalSlotNip = new Map<string, { nip: string; nama: string }>();
+    allJadwal.forEach((j) => {
+      if (!j.nip) return;
+      const key = `${String(j.hari || '').trim().toLowerCase()}|${Number(j.jam_ke) || String(j.jam_ke ?? '').trim()}|${String(j.kelas || '').trim().toLowerCase()}`;
+      if (!jadwalSlotNip.has(key)) jadwalSlotNip.set(key, { nip: String(j.nip).trim(), nama: j.nama_guru || '' });
+    });
+    type PiketStat = { nip: string; nama: string; kosong: number; tanpa: number; dengan: number; digabung: number; daring: number; terlambat: number; total_jp: number; details: any[] };
+    const statsPiket: Record<string, PiketStat> = {};
+    const ensurePiketKey = (nama: string, nip: string) => {
+      const key = nip || (nama || '').trim().toLowerCase();
+      if (!statsPiket[key]) {
+        statsPiket[key] = {
+          nip, nama: nip && nipToNameMap[nip] ? nipToNameMap[nip] : nama,
+          kosong: 0, tanpa: 0, dengan: 0, digabung: 0, daring: 0, terlambat: 0,
+          total_jp: teacherTotalJP[nip] || 0, details: [],
+        };
+      }
+      return key;
+    };
+    const dayNamesPiket = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+    const piketSeen = new Set<string>();
+    allLaporanPiket.forEach((lap: any) => {
+      const tglStr = lap.tanggal instanceof Date ? lap.tanggal.toISOString().split('T')[0] : String(lap.tanggal || '').slice(0, 10);
+      if (!tglStr) return;
+      const [py, pm, pd] = tglStr.split('-').map(Number);
+      const hari = dayNamesPiket[new Date(py, pm - 1, pd).getDay()];
+      const pelapor = String(lap.nama_guru_piket || lap.nama_guru || '').trim();
+      (lap.laporan_piket_detail || []).forEach((det: any) => {
+        const kelas = String(det.nama_kelas || '').trim();
+        const statuses = Array.from(new Set([det.status_kehadiran, det.status_tambahan_1, det.status_tambahan_2, det.status_tambahan_3]
+          .map((v) => String(v || '').trim().toLowerCase())
+          .filter((v) => v && v !== '-')));
+        if (!statuses.length) return;
+        const jams = String(det.jam_ke ?? '').split(',').map((h) => h.trim()).filter(Boolean);
+        jams.forEach((rawJam) => {
+          const jam = String(Number(rawJam) || rawJam);
+          // Satu slot kelas/JP hanya dihitung sekali walau laporannya terduplikasi.
+          const slotKey = `${tglStr}|${kelas.toLowerCase()}|${jam}`;
+          if (piketSeen.has(slotKey)) return;
+          piketSeen.add(slotKey);
+
+          // Identitas guru: nama yang ditulis guru piket, lalu jadwal kelas/JP.
+          const namaTercatat = String(det.nama_guru || '').trim();
+          const normNama = namaTercatat.toLowerCase();
+          const jadwalHit = jadwalSlotNip.get(`${hari.toLowerCase()}|${jam}|${kelas.toLowerCase()}`);
+          const nip = (normNama && (nameToNipMap[normNama] || nameToNipMap[normNama.split(',')[0].trim()])) || jadwalHit?.nip || '';
+          const nama = namaTercatat || jadwalHit?.nama || '';
+          if (!nip && !nama) return;
+          const key = ensurePiketKey(nama, nip);
+          const prog = kelasProgramMap[kelas] || 'Reguler';
+          const entry = (type: string) => ({
+            tanggal: tglStr, hari, kelas, program: prog, mapel: '-', jam_ke: jam,
+            waktu: findWaktu(prog, hari, jam) || jam,
+            type, sumber: 'Piket',
+            keterangan: pelapor ? `Dicatat guru piket: ${pelapor}` : 'Dicatat guru piket',
+            izin: findIzin(nip, nip ? nipToNameMap[nip] || nama : nama, tglStr),
+          });
+          statuses.forEach((status) => {
+            const st = statsPiket[key];
+            if (status === 'terlambat') { st.terlambat++; st.details.push(entry('Terlambat')); }
+            else if (status === 'kosong' || status === 'kelas kosong') { st.kosong++; st.details.push(entry('Jam Kosong')); }
+            else if (status.includes('tanpa pendampingan')) { st.tanpa++; st.details.push(entry('Tanpa Pendampingan')); }
+            else if (status.includes('dengan pendampingan')) { st.dengan++; st.details.push(entry('Dengan Pendampingan')); }
+            else if (status === 'digabung') { st.digabung++; st.details.push(entry('Digabung')); }
+            else if (status.includes('daring')) { st.daring++; st.details.push(entry('Daring')); }
+          });
+        });
+      });
+    });
+    const allPiketStats = Object.values(statsPiket);
+    const topPiket = (field: 'kosong' | 'tanpa' | 'dengan' | 'digabung' | 'daring' | 'terlambat') =>
+      allPiketStats
+        .filter((item) => item[field] > 0)
+        .sort((a, b) => b[field] - a[field])
+        .slice(0, 10)
+        .map((item) => ({ ...item, count: item[field], total_jp: item.total_jp || 0 }));
+
     const allStats = Object.values(stats);
 
     const sortBy = (arr: TeacherStats[], field: keyof TeacherStats) =>
@@ -544,6 +639,15 @@ export class KinerjaGuruService {
         ),
         piket: addTotalJP(wrap([...allStats], 'piket')),
         daring: addTotalJP(wrap([...allStats], 'daring')),
+      },
+      // Versi guru piket - berdampingan dengan `data` (versi jurnal); satuan selalu "kali".
+      dataPiket: {
+        jamKosong: topPiket('kosong'),
+        penugasanTanpa: topPiket('tanpa'),
+        penugasanDengan: topPiket('dengan'),
+        digabung: topPiket('digabung'),
+        terlambat: topPiket('terlambat'),
+        daring: topPiket('daring'),
       },
       akses: {
         cetakRekap: canCetak,

@@ -41,6 +41,8 @@ export interface RekapKinerjaReportInput {
   pembuatNama?: string;
   pembuatNip?: string;
   allTeachersCount?: number;
+  /** true = hitungan kejadian (mis. versi guru piket), meski kategorinya Terlambat. */
+  satuanKejadian?: boolean;
 }
 
 function esc(v: unknown): string {
@@ -95,7 +97,7 @@ export function generateRekapKinerjaHtml(input: RekapKinerjaReportInput): string
     year: 'numeric',
   });
 
-  const isMenitCategory = kategoriKey === 'terlambat' || kategoriKey === 'keluarSebelumWaktu';
+  const isMenitCategory = !input.satuanKejadian && (kategoriKey === 'terlambat' || kategoriKey === 'keluarSebelumWaktu');
   const unitLabel = isMenitCategory ? 'Menit' : 'kali';
 
   // Helper filter details matching category

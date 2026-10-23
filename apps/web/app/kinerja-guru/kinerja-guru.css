@@ -118,6 +118,79 @@
     overflow: hidden;
 }
 
+/* Dua versi berdampingan: jurnal & guru piket */
+.kg-dual-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+}
+.kg-dual-panel {
+    border: 1px solid var(--n-border);
+    border-radius: 12px;
+    padding: 14px;
+    min-width: 0;
+    transition: border-color .2s, box-shadow .2s;
+}
+.kg-dual-panel.active {
+    border-color: #3083FF;
+    box-shadow: 0 0 0 2px rgba(48, 131, 255, 0.12);
+}
+.kg-dual-head {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin-bottom: 10px;
+}
+.kg-dual-title {
+    font-weight: 700;
+    font-size: 0.9rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+.kg-dual-sub {
+    font-size: 0.75rem;
+    color: var(--n-muted);
+}
+.kg-dual-chart { height: 360px; }
+.kg-dual-panel .empty-state { height: 200px; }
+.kg-table-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+.kg-sumber-toggle {
+    display: inline-flex;
+    background: var(--n-soft);
+    border-radius: 99px;
+    padding: 3px;
+    gap: 2px;
+}
+.kg-sumber-toggle button {
+    border: 0;
+    background: transparent;
+    color: var(--n-muted);
+    font-size: 0.78rem;
+    font-weight: 600;
+    padding: 6px 12px;
+    border-radius: 99px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+.kg-sumber-toggle button.active {
+    background: #3083FF;
+    color: #fff;
+}
+@media (max-width: 900px) {
+    .kg-dual-grid { grid-template-columns: 1fr; }
+    .kg-dual-chart { height: 320px; }
+}
+.dark .kg-dual-panel { border-color: rgba(26, 115, 232, 0.45); }
+
 .loading-state, .empty-state {
     display: flex;
     flex-direction: column;

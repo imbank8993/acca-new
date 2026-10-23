@@ -1,0 +1,82 @@
+{
+  "metrics": {
+    "320": {
+      "viewport": 320,
+      "document": 320
+    },
+    "390": {
+      "viewport": 390,
+      "document": 390
+    },
+    "768": {
+      "viewport": 768,
+      "document": 768
+    },
+    "1280": {
+      "viewport": 1280,
+      "document": 1280
+    }
+  },
+  "editorMetrics": {
+    "320": {
+      "viewport": 320,
+      "document": 320
+    },
+    "390": {
+      "viewport": 390,
+      "document": 390
+    },
+    "768": {
+      "viewport": 768,
+      "document": 768
+    },
+    "1280": {
+      "viewport": 1280,
+      "document": 1280
+    }
+  },
+  "listMetrics": {
+    "320": {
+      "viewport": 320,
+      "document": 320
+    },
+    "390": {
+      "viewport": 390,
+      "document": 390
+    },
+    "768": {
+      "viewport": 768,
+      "document": 768
+    },
+    "1280": {
+      "viewport": 1280,
+      "document": 1280
+    }
+  },
+  "passed": [
+    "shared desktop FAB opens create modal",
+    "mobile bottomnav FAB registration opens create modal",
+    "event search and reset filter",
+    "320–1280 event list and light/dark styles",
+    "native-size PDF canvas",
+    "signer selection and title",
+    "mm precision and modifier arrow keys",
+    "drag position independent of zoom",
+    "QR minimum physical size",
+    "QR resizing at fit/200%",
+    "QR size slider",
+    "out-of-range coordinates remain synchronized",
+    "keyboard QR resize preserves edge anchor",
+    "name and school width handles",
+    "individual Excel identity layers",
+    "320–1280 editor layout",
+    "create event",
+    "template upload",
+    "Excel mapping and chosen identities",
+    "issue selected participants",
+    "PDF and verification links",
+    "private attachment default and publication toggle",
+    "320–1280 layout",
+    "valid/revoked/invalid verification"
+  ]
+}

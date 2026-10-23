@@ -41,7 +41,9 @@ async function fetchSession(): Promise<Response> {
                 headers: { 'Cache-Control': 'no-cache' },
                 signal: AbortSignal.timeout(10_000),
             });
-            if ((response.status !== 429 && response.status < 500) || attempt === 2) return response;
+            const retryable = response.status === 429 || response.status >= 500 ||
+                (process.env.NODE_ENV === 'development' && response.status === 404);
+            if (!retryable || attempt === 2) return response;
         } catch (error) {
             if (attempt === 2) throw error;
         }

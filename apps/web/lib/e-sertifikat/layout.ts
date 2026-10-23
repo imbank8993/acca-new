@@ -4,6 +4,19 @@ export const PT_PER_MM = 72 / 25.4;
 export const mmToPt = (value: number) => value * PT_PER_MM;
 export const ptToMm = (value: number) => value / PT_PER_MM;
 export const roundPoint = (value: number) => Math.round(value * 10000) / 10000;
+export const MIN_QR_MM = 20;
+export function fitLayerPlacement(placement: TextPlacement, patch: Partial<TextPlacement>, page: { width: number; height: number }, qr = false): Partial<TextPlacement> {
+    const width = Math.min(qr ? Math.min(page.width, page.height) : page.width, Math.max(qr ? mmToPt(MIN_QR_MM) : 1, patch.width ?? placement.width));
+    const height = qr ? width : (patch.size ?? placement.size) * 1.3;
+    return { ...patch, width: roundPoint(width),
+        x: roundPoint(Math.max(0, Math.min(page.width - width, patch.x ?? placement.x))),
+        y: roundPoint(Math.max(0, Math.min(page.height - height, patch.y ?? placement.y))) };
+}
+export function resizeLayerWidth(placement: TextPlacement, page: { width: number; height: number }, deltaX: number, deltaY: number, qr = false) {
+    const maximum = qr ? Math.min(page.width - placement.x, page.height - placement.y) : page.width - placement.x;
+    const delta = qr && Math.abs(deltaY) > Math.abs(deltaX) ? deltaY : deltaX;
+    return Math.min(maximum, Math.max(qr ? mmToPt(MIN_QR_MM) : 1, placement.width + delta));
+}
 export function pointPlacement(item: TextPlacement, page: { width: number; height: number }, alreadyPoints: boolean): TextPlacement {
     return alreadyPoints ? { ...item } : { ...item, x: item.x * page.width / 100, y: item.y * page.height / 100, width: item.width * page.width / 100 };
 }

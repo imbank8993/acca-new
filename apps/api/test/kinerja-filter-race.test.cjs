@@ -20,7 +20,7 @@ assert(loader && effect);
 function harness() {
   const requests = [], updates = [], loading = [], cleared = [], errors = [];
   const state = { requestId: { current: 0 }, AbortController, URLSearchParams, console,
-    setData: value => updates.push(value), setCanCetakRekap: () => {}, setLoading: value => loading.push(value),
+    setData: value => updates.push(value), setDataPiket: () => {}, EMPTY_PIKET: {}, setCanCetakRekap: () => {}, setLoading: value => loading.push(value),
     setDataError: value => errors.push(value),
     setInterval: () => 1, clearInterval: id => cleared.push(id),
     fetch: (url, options) => new Promise(resolve => requests.push({ url, signal: options.signal,
