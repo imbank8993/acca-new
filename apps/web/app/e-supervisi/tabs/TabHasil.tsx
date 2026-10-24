@@ -96,6 +96,18 @@ export default function TabHasil({ user, tahunAjaranId }: { user: User, tahunAja
         }
     };
 
+    // Belum ada tahun ajaran yang memiliki dokumen/penugasan supervisi.
+    // (Versi lama menampilkan loader selamanya pada keadaan ini.)
+    if (!tahunAjaranId) {
+        return (
+            <div className="sv-card sv-empty">
+                <i className="bi bi-calendar-x"></i>
+                <h3>Belum Ada Data Supervisi</h3>
+                <p>Belum ada tahun ajaran yang memiliki dokumen atau penugasan supervisi. Tambahkan dokumen &amp; indikator di tab <b>Dokumen dan Indikator</b>, lalu tetapkan supervisor di tab <b>Supervisor</b>.</p>
+            </div>
+        );
+    }
+
     if (loading) {
         return <PageLoader label="Memuat data rekapitulasi…" minHeight="300px" />;
     }
