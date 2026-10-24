@@ -7,10 +7,11 @@ import type { User } from '@/lib/types';
 import dynamic from 'next/dynamic';
 import Swal from 'sweetalert2';
 import { cachedGet, invalidateSvCache } from '../svCache';
+import { bakukanMentah, hitungHasil, indikatorDinilai, pilihanSkor } from '@/lib/e-supervisi/penilaian';
 
 const PremiumPDFViewer = dynamic(() => import('../components/PremiumPDFViewer'), { ssr: false });
 
-export default function TabSupervisi({ user, tahunAjaranId }: { user: User, tahunAjaranId: number | null }) {
+export default function TabSupervisi({ user, tahunAjaranId, isAdmin = false }: { user: User, tahunAjaranId: number | null, isAdmin?: boolean }) {
     const [penugasans, setPenugasans] = useState<any[]>([]);
     const [selectedPenugasan, setSelectedPenugasan] = useStickyState<any>(null, 'esv_selectedPenugasan');
     const [tahap, setTahap] = useStickyState('administrasi', 'sv_active_tab');
@@ -26,7 +27,13 @@ export default function TabSupervisi({ user, tahunAjaranId }: { user: User, tahu
     // Form state
     const [scores, setScores] = useState<Record<number, { nilai_mentah: string, catatan: string }>>({});
     const [isSaving, setIsSaving] = useState(false);
+    const [saveError, setSaveError] = useState<string | null>(null);
     const saveTimeout = React.useRef<NodeJS.Timeout | null>(null);
+    // Skor yang menunggu disimpan + penugasan pemiliknya, supaya bisa
+    // di-flush sebelum berpindah guru / menutup layar (tidak hilang, dan tidak
+    // pernah tersimpan ke penugasan yang salah).
+    const pendingSave = React.useRef<{ penugasanId: number; scores: Record<number, any> } | null>(null);
+    const isLocked = selectedPenugasan?.status === 'terkunci';
 
     useEffect(() => {
         if (tahunAjaranId && user.nip) {
@@ -42,6 +49,8 @@ export default function TabSupervisi({ user, tahunAjaranId }: { user: User, tahu
     }, [tahunAjaranId]);
     
     useEffect(() => {
+        setScores({});
+        setSaveError(null);
         if (selectedPenugasan) {
             fetchUnggahan();
             fetchNilai();
@@ -51,7 +60,7 @@ export default function TabSupervisi({ user, tahunAjaranId }: { user: User, tahu
             setPreviewUrl(null);
             setSelectedDocId(null);
         }
-    }, [selectedPenugasan]);
+    }, [selectedPenugasan?.id]);
 
     useEffect(() => {
         if (dokumen.length > 0) {
@@ -76,23 +85,23 @@ export default function TabSupervisi({ user, tahunAjaranId }: { user: User, tahu
 
     const fetchPenugasan = async (force = false) => {
         try {
-            const role = user.role || '';
-            const isAdmin = role.includes('ADMIN') || role.includes('KAMAD');
+            // Tab Penilaian hanya memuat guru yang DITUGASKAN kepada pengguna ini.
+            // (Dulu KAMAD ikut dimuati seluruh penugasan, padahal server menolak
+            // nilainya — skor terlihat "tersimpan" padahal tidak.) Admin tetap
+            // melihat semua karena server mengizinkan admin menilai.
             const url = isAdmin
                 ? `/api/e-supervisi/penugasan?tahun_ajaran_id=${tahunAjaranId}`
-                : `/api/e-supervisi/penugasan?tahun_ajaran_id=${tahunAjaranId}&supervisor_nip=${user.nip}`;
+                : `/api/e-supervisi/penugasan?tahun_ajaran_id=${tahunAjaranId}&supervisor_nip=${encodeURIComponent(user.nip || '')}`;
             if (force) invalidateSvCache('/api/e-supervisi/penugasan');
             const json = await cachedGet(url);
             if (json.ok) {
                 setPenugasans(json.data);
                 // Only set default if we don't already have a valid selectedPenugasan from session storage
                 if (json.data.length > 0) {
-                    setSelectedPenugasan((prev: any) => {
-                        if (prev && json.data.find((p: any) => p.id === prev.id)) {
-                            return prev;
-                        }
-                        return json.data[0];
-                    });
+                    // Selalu pakai objek TERBARU dari server (status kunci & progres).
+                    setSelectedPenugasan((prev: any) => json.data.find((p: any) => p.id === prev?.id) || json.data[0]);
+                } else {
+                    setSelectedPenugasan(null);
                 }
             }
         } catch (e) {
@@ -128,7 +137,7 @@ export default function TabSupervisi({ user, tahunAjaranId }: { user: User, tahu
     
     const fetchUnggahan = async () => {
         try {
-            const json = await cachedGet(`/api/e-supervisi/unggahan?tahun_ajaran_id=${tahunAjaranId}&guru_nip=${selectedPenugasan.guru_nip}`);
+            const json = await cachedGet(`/api/e-supervisi/unggahan?tahun_ajaran_id=${tahunAjaranId}&guru_nip=${encodeURIComponent(selectedPenugasan.guru_nip)}`);
             if (json.ok) setUnggahan(json.data);
         } catch (e) {
             console.error(e);
@@ -137,7 +146,10 @@ export default function TabSupervisi({ user, tahunAjaranId }: { user: User, tahu
 
     const fetchNilai = async () => {
         try {
-            const json = await cachedGet(`/api/e-supervisi/nilai?penugasan_id=${selectedPenugasan.id}`, 15_000);
+            const penugasanId = selectedPenugasan.id;
+            const json = await cachedGet(`/api/e-supervisi/nilai?penugasan_id=${penugasanId}`, 15_000);
+            // Abaikan respons yang datang terlambat setelah pengguna pindah guru.
+            if (penugasanId !== selectedIdRef.current) return;
             if (json.ok) {
                 const loadedScores: Record<number, any> = {};
                 json.data.forEach((n: any) => {
@@ -153,91 +165,109 @@ export default function TabSupervisi({ user, tahunAjaranId }: { user: User, tahu
         }
     };
     
-    const saveData = async (currentScores: Record<number, any>) => {
-        setIsSaving(true);
+    const selectedIdRef = React.useRef<number | null>(null);
+    selectedIdRef.current = selectedPenugasan?.id ?? null;
+
+    const saveData = async (penugasanId: number, currentScores: Record<number, any>) => {
         const payloadScores = Object.keys(currentScores).map(id => ({
             indikator_id: Number(id),
-            nilai_mentah: currentScores[Number(id)].nilai_mentah,
-            catatan: currentScores[Number(id)].catatan
+            nilai_mentah: currentScores[Number(id)].nilai_mentah ?? '',
+            catatan: currentScores[Number(id)].catatan ?? ''
         })).filter(s => s.nilai_mentah !== '' || s.catatan !== '');
-        
-        if (payloadScores.length > 0) {
-            try {
-                await fetch('/api/e-supervisi/nilai', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        penugasan_id: selectedPenugasan.id,
-                        scored_by: user.nip,
-                        scores: payloadScores
-                    })
-                });
-                // Data nilai/rekap/progres berubah — buang cache agar tab lain memuat data terbaru
-                invalidateSvCache('/api/e-supervisi/nilai');
-                invalidateSvCache('/api/e-supervisi/rekap');
-                invalidateSvCache('/api/e-supervisi/penugasan');
-            } catch (e) {
-                console.error('Failed to auto-save', e);
+        if (payloadScores.length === 0) return;
+
+        setIsSaving(true);
+        try {
+            const res = await fetch('/api/e-supervisi/nilai', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ penugasan_id: penugasanId, scores: payloadScores })
+            });
+            const json = await res.json().catch(() => ({}));
+            if (!res.ok || json.ok === false) {
+                throw new Error(json.message || json.error || `Server menolak penyimpanan (${res.status})`);
             }
+            setSaveError(null);
+            // Data nilai/rekap/progres berubah — buang cache agar tab lain memuat data terbaru
+            invalidateSvCache('/api/e-supervisi/nilai');
+            invalidateSvCache('/api/e-supervisi/rekap');
+            invalidateSvCache('/api/e-supervisi/penugasan');
+        } catch (e: any) {
+            // Dulu kegagalan ditelan diam-diam dan layar tetap menulis
+            // "Tersimpan otomatis". Sekarang supervisor diberi tahu.
+            const msg = e?.message || 'Gagal menyimpan nilai';
+            setSaveError(msg);
+            Swal.fire({ icon: 'error', title: 'Nilai belum tersimpan', text: msg, toast: true, position: 'top-end', timer: 5000, showConfirmButton: false });
+        } finally {
+            setIsSaving(false);
         }
-        setIsSaving(false);
     };
 
+    /** Simpan segera skor yang masih menunggu debounce. */
+    const flushSave = async () => {
+        if (saveTimeout.current) {
+            clearTimeout(saveTimeout.current);
+            saveTimeout.current = null;
+        }
+        const p = pendingSave.current;
+        pendingSave.current = null;
+        if (p) await saveData(p.penugasanId, p.scores);
+    };
+
+    useEffect(() => () => { flushSave(); }, []); // simpan sisa saat komponen ditutup
+
     const handleScoreChange = (id: number, field: 'nilai_mentah' | 'catatan', value: string) => {
+        if (!selectedPenugasan || isLocked) return;
+        const penugasanId = selectedPenugasan.id;
         setScores(prev => {
             const next = { ...prev, [id]: { ...prev[id] || { nilai_mentah: '', catatan: '' }, [field]: value } };
+            pendingSave.current = { penugasanId, scores: next };
             if (saveTimeout.current) clearTimeout(saveTimeout.current);
-            saveTimeout.current = setTimeout(() => {
-                saveData(next);
-            }, 800);
+            saveTimeout.current = setTimeout(() => { flushSave(); }, 800);
             return next;
         });
     };
-    
-    const calculateTotalScore = () => {
-        let total = 0;
-        let maxTotal = 0;
-        
-        const processIndicator = (ind: any) => {
-            const config = ind.skala_config || {};
-            const hasSub = ind.sub_indikators && ind.sub_indikators.length > 0;
-            
-            if (config.tipe === 'group' || hasSub) {
-                if (hasSub) {
-                    ind.sub_indikators.forEach(processIndicator);
-                }
-                return;
-            }
-            
-            const val = scores[ind.id]?.nilai_mentah;
-            let max = 4;
-            let current = 0;
-            
-            if (config.tipe === 'huruf' || config.tipe === 'yatidak') {
-                max = 100;
-                if (val === 'A' || val === '100' || val === 'Ya') current = 100;
-                else if (val === 'B') current = 85;
-                else if (val === 'C') current = 70;
-                else if (val === 'D') current = 50;
-                else if (val === '0' || val === 'Tidak') current = 0;
-            } else {
-                max = config.max || 4;
-                current = Number(val) || 0;
-            }
-            
-            total += current;
-            maxTotal += max;
-        };
 
-        semuaDokumen.forEach(doc => {
-            doc.indikators?.forEach(processIndicator);
+    const pilihPenugasan = async (p: any) => {
+        await flushSave();
+        setSelectedPenugasan(p);
+    };
+
+    const handleKunci = async () => {
+        if (!selectedPenugasan) return;
+        await flushSave();
+        const ringkas = hasilSementara;
+        const confirm = await Swal.fire({
+            title: 'Kunci & Finalkan Nilai?',
+            html: `Nilai <b>${selectedPenugasan.guru_nama}</b> akan dikunci${ringkas.dinilai < ringkas.total ? `<br/><span style="color:#b45309">Baru ${ringkas.dinilai} dari ${ringkas.total} indikator yang dinilai.</span>` : ''}.<br/>Setelah dikunci, nilai dan dokumen guru tidak dapat diubah kecuali dibuka oleh pengelola.`,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Ya, Kunci',
+            cancelButtonText: 'Batal',
         });
-        
-        if (maxTotal === 0) return '0.00';
-        return ((total / maxTotal) * 100).toFixed(2);
+        if (!confirm.isConfirmed) return;
+        try {
+            const res = await fetch('/api/e-supervisi/penugasan', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: selectedPenugasan.id, status: 'terkunci' }),
+            });
+            const json = await res.json().catch(() => ({}));
+            if (!res.ok || json.ok === false) throw new Error(json.message || json.error || 'Gagal mengunci nilai');
+            invalidateSvCache('/api/e-supervisi/rekap');
+            await fetchPenugasan(true);
+            Swal.fire({ icon: 'success', title: 'Nilai dikunci', toast: true, position: 'top-end', timer: 2500, showConfirmButton: false });
+        } catch (e: any) {
+            Swal.fire('Gagal', e.message, 'error');
+        }
     };
     
-
+    // Nilai sementara dihitung dengan rumus yang SAMA dengan server & rekap.
+    const dinilaiMap = React.useMemo(() => indikatorDinilai(semuaDokumen), [semuaDokumen]);
+    const hasilSementara = hitungHasil(
+        dinilaiMap,
+        Object.entries(scores).map(([id, v]) => ({ indikator_id: Number(id), nilai_mentah: (v as any)?.nilai_mentah ?? null })),
+    );
 
     if (penugasans.length === 0) {
         return <div className="sv-card sv-empty">
@@ -292,8 +322,8 @@ export default function TabSupervisi({ user, tahunAjaranId }: { user: User, tahu
                                     <td data-label="Aksi">
                                         <button 
                                             className="sv-btn sv-btn-primary"
-                                            onClick={() => {
-                                                setSelectedPenugasan(p);
+                                            onClick={async () => {
+                                                await pilihPenugasan(p);
                                                 setIsFullscreen(true);
                                             }}
                                             style={{width: '100%', justifyContent: 'center'}}
@@ -319,7 +349,7 @@ export default function TabSupervisi({ user, tahunAjaranId }: { user: User, tahu
                                 <select 
                                     className="sv-select" 
                                     value={selectedPenugasan?.id || ''} 
-                                    onChange={(e) => setSelectedPenugasan(penugasans.find(p => p.id === Number(e.target.value)))}
+                                    onChange={(e) => pilihPenugasan(penugasans.find(p => p.id === Number(e.target.value)))}
                                     style={{padding: '6px 12px', fontSize: '14px', background: 'var(--n-bg)', border: '1px solid var(--n-border)', borderRadius: '6px', minWidth: '200px'}}
                                 >
                                     {penugasans.map(p => (
@@ -335,10 +365,20 @@ export default function TabSupervisi({ user, tahunAjaranId }: { user: User, tahu
                         </div>
                         <div className="esv-fs-headerRight" style={{display: 'flex', alignItems: 'center', gap: '16px'}}>
                             <div style={{background: 'var(--n-primary)', color: 'white', padding: '6px 16px', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)', display: 'flex', flexDirection: 'column', alignItems: 'center'}}>
-                                <div style={{fontSize: '11px', opacity: 0.9, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px'}}>Total Skor</div>
-                                <div style={{fontSize: '20px', fontWeight: 700, lineHeight: '1.2'}}>{calculateTotalScore()}</div>
+                                <div style={{fontSize: '11px', opacity: 0.9, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px'}}>Nilai Akhir</div>
+                                <div style={{fontSize: '20px', fontWeight: 700, lineHeight: '1.2'}}>{hasilSementara.rata_rata === null ? '-' : hasilSementara.rata_rata.toFixed(2)}</div>
+                                <div style={{fontSize: '10px', opacity: 0.9}}>{hasilSementara.predikat} · {hasilSementara.dinilai}/{hasilSementara.total} indikator</div>
                             </div>
-                            <button className="sv-btn sv-btn-outline" onClick={() => { setIsFullscreen(false); fetchPenugasan(); }} style={{background: 'var(--n-card)'}}>
+                            {isLocked ? (
+                                <span className="sv-badge" style={{background: 'rgba(100,116,139,0.15)', color: 'var(--n-muted)', padding: '8px 12px'}}>
+                                    <i className="bi bi-lock-fill"></i> Terkunci
+                                </span>
+                            ) : (
+                                <button className="sv-btn sv-btn-outline" onClick={handleKunci} style={{background: 'var(--n-card)'}} title="Kunci nilai sebagai nilai final">
+                                    <i className="bi bi-lock"></i> Kunci Nilai
+                                </button>
+                            )}
+                            <button className="sv-btn sv-btn-outline" onClick={async () => { await flushSave(); setIsFullscreen(false); fetchPenugasan(true); }} style={{background: 'var(--n-card)'}}>
                                 <i className="bi bi-x-lg"></i> Tutup
                             </button>
                         </div>
@@ -347,6 +387,14 @@ export default function TabSupervisi({ user, tahunAjaranId }: { user: User, tahu
                     <div className="esv-fs-body" style={{flex: 1, display: 'flex', overflow: 'hidden'}}>
                         <div className="esv-fs-left" style={{width: '45%', flexShrink: 0, borderRight: '1px solid var(--n-border)', overflowY: 'auto', padding: '24px', background: 'var(--n-card)', display: 'flex', flexDirection: 'column'}}>
                             <div style={{fontWeight: 600, fontSize: '18px', marginBottom: '24px'}}>Borang Penilaian</div>
+                            {isLocked && (
+                                <div style={{background: 'rgba(100,116,139,0.1)', border: '1px solid var(--n-border)', borderRadius: '8px', padding: '10px 14px', marginBottom: '16px', fontSize: '13px', color: 'var(--n-muted)'}}>
+                                    <i className="bi bi-lock-fill"></i> Nilai guru ini sudah dikunci (final). Hubungi pengelola E-Supervisi bila perlu dibuka kembali.
+                                </div>
+                            )}
+                            {dokumen.length === 0 && (
+                                <div className="sv-empty" style={{padding: '24px'}}>Belum ada dokumen/indikator pada tahap ini.</div>
+                            )}
                             
                             <div style={{marginBottom: '20px'}}>
                                 <label style={{fontWeight: 600, display: 'block', marginBottom: '8px'}}>Pilih Dokumen:</label>
@@ -393,31 +441,11 @@ export default function TabSupervisi({ user, tahunAjaranId }: { user: User, tahu
                                                         const config = indicator.skala_config || { min: 1, max: 4 };
                                                         const hasSubIndicators = indicator.sub_indikators && indicator.sub_indikators.length > 0;
                                                         const isGroup = config.tipe === 'group' || hasSubIndicators;
-                                                        const isLocked = selectedPenugasan?.status === 'terkunci';
                                                         
-                                                        // Determine options
-                                                        let options: any[] = [];
-                                                        if (config.tipe === 'huruf') {
-                                                            options = [
-                                                                { label: 'A', value: 'A' },
-                                                                { label: 'B', value: 'B' },
-                                                                { label: 'C', value: 'C' },
-                                                                { label: 'D', value: 'D' }
-                                                            ];
-                                                        } else if (config.tipe === 'yatidak') {
-                                                            options = [
-                                                                { label: 'Ya', value: '100' },
-                                                                { label: 'Tidak', value: '0' }
-                                                            ];
-                                                        } else if (!isGroup) {
-                                                            const min = config.min || 1;
-                                                            const max = config.max || 4;
-                                                            options = Array.from({length: max - min + 1}, (_, i) => ({
-                                                                label: String(min + i),
-                                                                value: String(min + i)
-                                                            }));
-                                                        }
-                                                        
+                                                        const options = isGroup ? [] : pilihanSkor(config);
+                                                        // Data lama Ya/Tidak tersimpan sebagai '100'/'0' — dibakukan agar tetap tercentang.
+                                                        const nilaiTerpilih = bakukanMentah(config, val.nilai_mentah) ?? '';
+
                                                         return (
                                                             <tr key={indicator.id} style={{background: isGroup ? 'rgba(0,0,0,0.02)' : 'transparent'}}>
                                                                 <td data-label="No" style={{width: '40px', textAlign: 'center', color: 'var(--n-muted)'}}>{isChild ? '' : index + 1}</td>
@@ -436,7 +464,7 @@ export default function TabSupervisi({ user, tahunAjaranId }: { user: User, tahu
                                                                                         type="radio" 
                                                                                         name={`score_${indicator.id}`} 
                                                                                         value={opt.value} 
-                                                                                        checked={String(val.nilai_mentah) === opt.value}
+                                                                                        checked={nilaiTerpilih === opt.value}
                                                                                         onChange={(e) => handleScoreChange(indicator.id, 'nilai_mentah', e.target.value)}
                                                                                         style={{display: 'none'}}
                                                                                         disabled={isLocked}
@@ -486,6 +514,8 @@ export default function TabSupervisi({ user, tahunAjaranId }: { user: User, tahu
                             <div style={{marginTop: 'auto', textAlign: 'center', padding: '16px 0 0 0', opacity: 0.6}}>
                                 {isSaving ? (
                                     <span style={{fontSize: '13px', color: 'var(--n-muted)'}}><i className="bi bi-arrow-repeat"></i> Menyimpan otomatis...</span>
+                                ) : saveError ? (
+                                    <span style={{fontSize: '13px', color: '#ef4444', opacity: 1}}><i className="bi bi-exclamation-triangle"></i> Belum tersimpan: {saveError}</span>
                                 ) : (
                                     <span style={{fontSize: '13px', color: 'var(--n-muted)'}}><i className="bi bi-cloud-check"></i> Tersimpan otomatis</span>
                                 )}

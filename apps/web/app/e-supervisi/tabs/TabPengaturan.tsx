@@ -8,6 +8,13 @@ import * as XLSX from 'xlsx';
 import { cachedGet, invalidateSvCache } from '../svCache';
 import FilterToolbar, { FilterSelect, FilterSearch, FilterActions } from '@/components/ui/FilterToolbar';
 import { Button } from '@/components/ui/Button';
+import { normalisasiSkala } from '@/lib/e-supervisi/penilaian';
+
+/** Pesan galat dari respons NestJS (`message`) maupun route Next (`error`). */
+const pesanGalat = (json: any, fallback: string) => {
+    const m = json?.message ?? json?.error;
+    return Array.isArray(m) ? m.join(', ') : (m || fallback);
+};
 
 // ==============================
 // DOKUMEN & INDIKATOR
@@ -109,8 +116,10 @@ export function DokumenSettings({
         setNamaDokumen(doc.nama_dokumen);
         setDeskripsi(doc.deskripsi || '');
         setButuhDokumen(doc.butuh_dokumen !== undefined ? doc.butuh_dokumen : true);
-        setIndikators(doc.indikators || []);
-        setModalTahunAjaranId(doc.tahun_ajaran_id || tahunAjaranId);
+        // Salinan dalam: sebelumnya formulir menyunting objek di cache secara
+        // langsung, sehingga perubahan yang DIBATALKAN tetap tampil di tabel.
+        setIndikators(JSON.parse(JSON.stringify(doc.indikators || [])));
+        setModalTahunAjaranId(doc.tahun_ajaran_id ? Number(doc.tahun_ajaran_id) : tahunAjaranId);
         setIsModalOpen(true);
     };
 
@@ -153,7 +162,7 @@ export function DokumenSettings({
                 target.skala_config.opsi = { "Ya": 100, "Tidak": 0 };
             }
         } else if (field === 'min' || field === 'max') {
-            target.skala_config = { ...target.skala_config, [field]: Number(value) };
+            target.skala_config = { ...target.skala_config, [field]: value === '' ? '' : Number(value) };
         } else {
             target[field] = value;
         }
@@ -171,9 +180,27 @@ export function DokumenSettings({
     };
 
     const saveDokumen = async () => {
-        if (!namaDokumen) return Swal.fire('Error', 'Nama dokumen wajib diisi', 'error');
+        if (!namaDokumen.trim()) return Swal.fire('Error', 'Nama dokumen wajib diisi', 'error');
+        if (!String(tahap || '').trim()) return Swal.fire('Error', 'Tahap penilaian wajib diisi', 'error');
         if (!modalTahunAjaranId) return Swal.fire('Error', 'Tahun ajaran belum dipilih', 'error');
-        
+        // Validasi sama dengan server, supaya kesalahan terlihat sebelum dikirim.
+        for (let i = 0; i < indikators.length; i++) {
+            const ind = indikators[i];
+            const subs = ind.sub_indikators || [];
+            if (!String(ind.nama_indikator || '').trim()) return Swal.fire('Periksa Indikator', `Nama indikator ${i + 1} masih kosong`, 'warning');
+            if (subs.length === 0) {
+                const cek = normalisasiSkala(ind.skala_config);
+                if (typeof cek === 'string') return Swal.fire('Periksa Indikator', `Indikator ${i + 1}: ${cek}`, 'warning');
+                if (cek.tipe === 'group') return Swal.fire('Periksa Indikator', `Indikator ${i + 1} bertipe "Hanya Label" tetapi belum punya sub-indikator`, 'warning');
+            }
+            for (let j = 0; j < subs.length; j++) {
+                if (!String(subs[j].nama_indikator || '').trim()) return Swal.fire('Periksa Indikator', `Nama sub-indikator ${i + 1}.${j + 1} masih kosong`, 'warning');
+                const cek = normalisasiSkala(subs[j].skala_config);
+                if (typeof cek === 'string') return Swal.fire('Periksa Indikator', `Sub-indikator ${i + 1}.${j + 1}: ${cek}`, 'warning');
+            }
+        }
+
+
         try {
             const res = await fetch('/api/e-supervisi/dokumen', {
                 method: 'POST',
@@ -188,8 +215,8 @@ export function DokumenSettings({
                     tahun_ajaran_id: modalTahunAjaranId
                 })
             });
-            const json = await res.json();
-            if (!json.ok) throw new Error(json.error || 'Gagal menyimpan dokumen');
+            const json = await res.json().catch(() => ({}));
+            if (!res.ok || !json.ok) throw new Error(pesanGalat(json, 'Gagal menyimpan dokumen'));
             setIsModalOpen(false);
             if (onDataAdded && modalTahunAjaranId) {
                 onDataAdded(modalTahunAjaranId);
@@ -204,13 +231,17 @@ export function DokumenSettings({
     const deleteDokumen = async (id: number) => {
         const result = await Swal.fire({
             title: 'Hapus Dokumen?',
-            text: 'Tindakan ini tidak dapat dibatalkan.',
+            text: 'Dokumen beserta indikatornya tidak lagi tampil di borang, unggahan, maupun rekap nilai.',
             icon: 'warning',
             showCancelButton: true,
             confirmButtonText: 'Ya, Hapus'
         });
         if (result.isConfirmed) {
-            await fetch(`/api/e-supervisi/dokumen?id=${id}`, { method: 'DELETE' });
+            const res = await fetch(`/api/e-supervisi/dokumen?id=${id}`, { method: 'DELETE' });
+            const json = await res.json().catch(() => ({}));
+            if (!res.ok || json.ok === false) Swal.fire('Gagal', pesanGalat(json, 'Gagal menghapus dokumen'), 'error');
+            invalidateSvCache('/api/e-supervisi/rekap');
+            invalidateSvCache('/api/e-supervisi/penugasan');
             fetchDokumen(true);
         }
     };
@@ -332,6 +363,7 @@ export function DokumenSettings({
 
                 let okCount = 0;
                 let failCount = 0;
+                const alasan: string[] = [];
                 for (const d of docsToSave) {
                     try {
                         const res = await fetch('/api/e-supervisi/dokumen', {
@@ -339,16 +371,18 @@ export function DokumenSettings({
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ ...d, tahun_ajaran_id: tahunAjaranId })
                         });
-                        const json = await res.json();
-                        if (json.ok) okCount++; else failCount++;
+                        const json = await res.json().catch(() => ({}));
+                        if (res.ok && json.ok) okCount++;
+                        else { failCount++; alasan.push(`${d.nama_dokumen}: ${pesanGalat(json, 'gagal')}`); }
                     } catch {
                         failCount++;
+                        alasan.push(`${d.nama_dokumen}: gangguan jaringan`);
                     }
                 }
                 if (failCount === 0) {
                     Swal.fire('Berhasil', `${okCount} dokumen berhasil diimpor`, 'success');
                 } else {
-                    Swal.fire('Selesai dengan Catatan', `${okCount} dokumen berhasil, ${failCount} gagal diimpor`, 'warning');
+                    Swal.fire('Selesai dengan Catatan', `${okCount} dokumen berhasil, ${failCount} gagal diimpor.\n${alasan.slice(0, 5).join('\n')}`, 'warning');
                 }
                 fetchDokumen(true);
             } catch(err) {
@@ -583,11 +617,11 @@ export function DokumenSettings({
                                                 <>
                                                     <div className="sv-form-group" style={{width: '100px'}}>
                                                         <label>Min</label>
-                                                        <input type="number" className="sv-input" value={ind.skala_config.min || 1} onChange={e => updateIndikator(i, 'min', e.target.value)} />
+                                                        <input type="number" className="sv-input" value={ind.skala_config.min ?? 1} onChange={e => updateIndikator(i, 'min', e.target.value)} />
                                                     </div>
                                                     <div className="sv-form-group" style={{width: '100px'}}>
                                                         <label>Max</label>
-                                                        <input type="number" className="sv-input" value={ind.skala_config.max || 4} onChange={e => updateIndikator(i, 'max', e.target.value)} />
+                                                        <input type="number" className="sv-input" value={ind.skala_config.max ?? 4} onChange={e => updateIndikator(i, 'max', e.target.value)} />
                                                     </div>
                                                 </>
                                             )}
@@ -616,10 +650,10 @@ export function DokumenSettings({
                                             {sub.skala_config?.tipe === 'angka' && (
                                                 <>
                                                     <div className="sv-form-group" style={{width: '80px', margin: 0}}>
-                                                        <input type="number" className="sv-input" value={sub.skala_config.min || 1} onChange={e => updateIndikator(i, 'min', e.target.value, subI)} placeholder="Min" />
+                                                        <input type="number" className="sv-input" value={sub.skala_config.min ?? 1} onChange={e => updateIndikator(i, 'min', e.target.value, subI)} placeholder="Min" />
                                                     </div>
                                                     <div className="sv-form-group" style={{width: '80px', margin: 0}}>
-                                                        <input type="number" className="sv-input" value={sub.skala_config.max || 4} onChange={e => updateIndikator(i, 'max', e.target.value, subI)} placeholder="Max" />
+                                                        <input type="number" className="sv-input" value={sub.skala_config.max ?? 4} onChange={e => updateIndikator(i, 'max', e.target.value, subI)} placeholder="Max" />
                                                     </div>
                                                 </>
                                             )}
@@ -755,7 +789,8 @@ export function PenugasanSettings({
         try {
             // Daftar guru jarang berubah — cache lebih lama (5 menit)
             const json = await cachedGet(`/api/master/guru?limit=1000`, 300_000);
-            if (json.ok) setGuruList(json.data);
+            // Guru tanpa NIP tidak bisa ditugaskan (penugasan diikat ke NIP).
+            if (json.ok) setGuruList((json.data || []).filter((g: any) => g.nip && g.nip !== '-'));
             
             const supJson = await cachedGet(`/api/e-supervisi/supervisor-list`, 300_000);
             if (supJson.ok) setSupervisorList(supJson.data);
@@ -764,65 +799,68 @@ export function PenugasanSettings({
         }
     };
 
+    const kirimPenugasan = async (guru_nip: string) => {
+        const res = await fetch('/api/e-supervisi/penugasan', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ guru_nip, supervisor_nip: selectedSupervisor, tahun_ajaran_id: modalTahunAjaranId })
+        });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok || !json.ok) throw new Error(pesanGalat(json, 'Gagal menyimpan'));
+    };
+
     const savePenugasan = async () => {
         if (selectedGurus.length === 0 || !selectedSupervisor || !modalTahunAjaranId) {
             return Swal.fire('Error', 'Pilih supervisor, setidaknya 1 guru, dan pastikan tahun ajaran terpilih', 'error');
         }
-        try {
-            if (isEditMode) {
-                const initialNips = Object.keys(initialGurusMap);
-                const additions = selectedGurus.filter(nip => !initialNips.includes(nip));
-                const deletions = initialNips.filter(nip => !selectedGurus.includes(nip));
+        if (selectedGurus.includes(selectedSupervisor)) {
+            return Swal.fire('Periksa Pilihan', 'Supervisor tidak boleh menilai dirinya sendiri. Hapus centang nama supervisor dari daftar guru.', 'warning');
+        }
+        const initialNips = Object.keys(initialGurusMap);
+        const additions = isEditMode ? selectedGurus.filter(nip => !initialNips.includes(nip)) : selectedGurus;
+        const deletions = isEditMode ? initialNips.filter(nip => !selectedGurus.includes(nip)) : [];
 
-                for (const nip of additions) {
-                    const res = await fetch('/api/e-supervisi/penugasan', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ guru_nip: nip, supervisor_nip: selectedSupervisor, tahun_ajaran_id: modalTahunAjaranId })
-                    });
-                    const json = await res.json();
-                    if (!json.ok) throw new Error(json.error);
-                }
-                for (const nip of deletions) {
-                    const id = initialGurusMap[nip];
-                    await fetch(`/api/e-supervisi/penugasan?id=${id}`, { method: 'DELETE' });
-                }
-                
-                setIsModalOpen(false);
-                if (onDataAdded && modalTahunAjaranId) {
-                    onDataAdded(modalTahunAjaranId);
-                }
-                setTimeout(() => fetchPenugasan(true), 500);
-                setIsEditMode(false);
-                setSelectedGurus([]);
-                setSelectedSupervisor('');
-                setInitialGurusMap({});
-                Swal.fire('Berhasil', 'Penugasan diperbarui', 'success');
-            } else {
-                let successCount = 0;
-                for (const nip of selectedGurus) {
-                    const res = await fetch('/api/e-supervisi/penugasan', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ guru_nip: nip, supervisor_nip: selectedSupervisor, tahun_ajaran_id: modalTahunAjaranId })
-                    });
-                    if (res.ok) successCount++;
-                }
-                if (successCount > 0) {
-                    setIsModalOpen(false);
-                    if (onDataAdded && modalTahunAjaranId) {
-                        onDataAdded(modalTahunAjaranId);
-                    }
-                    setTimeout(() => fetchPenugasan(true), 500);
-                    setSelectedGurus([]);
-                    setSelectedSupervisor('');
-                    Swal.fire('Berhasil', `${successCount} Penugasan ditambahkan`, 'success');
-                } else {
-                    Swal.fire('Error', 'Gagal menyimpan', 'error');
-                }
-            }
-        } catch (e) {
-            Swal.fire('Error', 'Terjadi kesalahan jaringan', 'error');
+        if (deletions.length > 0) {
+            const konfirmasi = await Swal.fire({
+                title: 'Hapus Penugasan?',
+                html: `${deletions.length} guru dihapus dari supervisor ini.<br/><b>Seluruh nilai supervisi guru tersebut ikut terhapus permanen.</b>`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Ya, Simpan',
+                cancelButtonText: 'Batal',
+            });
+            if (!konfirmasi.isConfirmed) return;
+        }
+
+        const gagal: string[] = [];
+        let berhasil = 0;
+        for (const nip of additions) {
+            try { await kirimPenugasan(nip); berhasil++; }
+            catch (e: any) { gagal.push(`${nip}: ${e.message}`); }
+        }
+        for (const nip of deletions) {
+            try {
+                const res = await fetch(`/api/e-supervisi/penugasan?id=${initialGurusMap[nip]}`, { method: 'DELETE' });
+                const json = await res.json().catch(() => ({}));
+                if (!res.ok || json.ok === false) throw new Error(pesanGalat(json, 'gagal dihapus'));
+                berhasil++;
+            } catch (e: any) { gagal.push(`${nip}: ${e.message}`); }
+        }
+
+        invalidateSvCache('/api/e-supervisi/rekap');
+        if (berhasil > 0 || (isEditMode && gagal.length === 0)) {
+            setIsModalOpen(false);
+            if (onDataAdded && modalTahunAjaranId) onDataAdded(modalTahunAjaranId);
+            setIsEditMode(false);
+            setSelectedGurus([]);
+            setSelectedSupervisor('');
+            setInitialGurusMap({});
+        }
+        fetchPenugasan(true);
+        if (gagal.length === 0) {
+            Swal.fire('Berhasil', isEditMode ? 'Penugasan diperbarui' : `${berhasil} penugasan ditambahkan`, 'success');
+        } else {
+            Swal.fire(berhasil > 0 ? 'Sebagian Tersimpan' : 'Gagal Menyimpan', gagal.slice(0, 6).join('\n'), berhasil > 0 ? 'warning' : 'error');
         }
     };
 
@@ -835,7 +873,7 @@ export function PenugasanSettings({
     };
     
     const selectAllGurus = (filteredList: any[]) => {
-        const nips = filteredList.map(g => g.nip && g.nip !== '-' ? g.nip : g.id);
+        const nips = filteredList.map(g => g.nip);
         const allSelected = nips.every(n => selectedGurus.includes(n));
         if (allSelected) {
             setSelectedGurus(selectedGurus.filter(n => !nips.includes(n)));
@@ -849,12 +887,16 @@ export function PenugasanSettings({
     const deletePenugasan = async (id: number) => {
         const result = await Swal.fire({
             title: 'Hapus Penugasan?',
+            text: 'Seluruh nilai supervisi guru ini pada tahun ajaran tersebut ikut terhapus permanen.',
             icon: 'warning',
             showCancelButton: true,
             confirmButtonText: 'Ya, Hapus'
         });
         if (result.isConfirmed) {
-            await fetch(`/api/e-supervisi/penugasan?id=${id}`, { method: 'DELETE' });
+            const res = await fetch(`/api/e-supervisi/penugasan?id=${id}`, { method: 'DELETE' });
+            const json = await res.json().catch(() => ({}));
+            if (!res.ok || json.ok === false) Swal.fire('Gagal', pesanGalat(json, 'Gagal menghapus penugasan'), 'error');
+            invalidateSvCache('/api/e-supervisi/rekap');
             fetchPenugasan(true);
         }
     };
@@ -862,23 +904,29 @@ export function PenugasanSettings({
     const toggleLock = async (id: number, currentStatus: string) => {
         const newStatus = currentStatus === 'terkunci' ? 'aktif' : 'terkunci';
         try {
-            await fetch('/api/e-supervisi/penugasan', {
+            const res = await fetch('/api/e-supervisi/penugasan', {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ id, status: newStatus })
             });
+            const json = await res.json().catch(() => ({}));
+            if (!res.ok || json.ok === false) throw new Error(pesanGalat(json, 'Gagal mengubah status'));
+            invalidateSvCache('/api/e-supervisi/rekap');
             fetchPenugasan(true);
             Swal.fire('Berhasil', `Nilai telah ${newStatus === 'terkunci' ? 'dikunci' : 'dibuka'}`, 'success');
-        } catch (e) {
-            Swal.fire('Error', 'Gagal mengubah status', 'error');
+        } catch (e: any) {
+            Swal.fire('Error', e.message || 'Gagal mengubah status', 'error');
         }
     };
 
     const editPenugasan = (group: any) => {
         setIsEditMode(true);
         setSelectedSupervisor(group.supervisor_nip);
-        setSelectedGurus(group.gurus.map((g: any) => g.nip));
-        setModalTahunAjaranId(group.gurus[0]?.tahun_ajaran_id || tahunAjaranId);
+        // Baris penugasan memakai `guru_nip` (bukan `nip`). Dulu `g.nip` yang
+        // dibaca — selalu undefined — sehingga menyimpan dari mode edit
+        // menghapus SEMUA guru supervisor ini beserta nilainya.
+        setSelectedGurus(group.gurus.map((g: any) => g.guru_nip));
+        setModalTahunAjaranId(group.gurus[0]?.tahun_ajaran_id ? Number(group.gurus[0].tahun_ajaran_id) : tahunAjaranId);
         
         const initMap: Record<string, number> = {};
         group.gurus.forEach((g: any) => initMap[g.guru_nip] = g.id);
@@ -1076,11 +1124,17 @@ export function PenugasanSettings({
                                                     {g.guru_nama.charAt(0).toUpperCase()}
                                                 </div>
                                                 <div>
-                                                    <div style={{fontWeight: 600, fontSize: '14px', color: 'var(--n-ink)'}}>{g.guru_nama}</div>
-                                                    <div style={{fontSize: '12px', color: 'var(--n-muted)'}}>{g.guru_nip}</div>
+                                                    <div style={{fontWeight: 600, fontSize: '14px', color: 'var(--n-ink)'}}>
+                                                        {g.guru_nama}
+                                                        {g.status === 'terkunci' && <span className="sv-badge" style={{marginLeft: '8px', fontSize: '11px', background: 'rgba(100,116,139,0.15)', color: 'var(--n-muted)'}}><i className="bi bi-lock-fill"></i> Terkunci</span>}
+                                                    </div>
+                                                    <div style={{fontSize: '12px', color: 'var(--n-muted)'}}>{g.guru_nip} · Progres {g.progres ?? 0}%</div>
                                                 </div>
                                             </div>
                                             <div style={{display: 'flex', gap: '12px'}}>
+                                                <button onClick={() => toggleLock(g.id, g.status)} style={{background: 'transparent', border: 'none', color: g.status === 'terkunci' ? '#64748b' : '#0284c7', cursor: 'pointer', fontSize: '1.1rem', padding: '4px'}} title={g.status === 'terkunci' ? 'Buka Kunci Nilai' : 'Kunci Nilai'}>
+                                                    <i className={`bi ${g.status === 'terkunci' ? 'bi-unlock' : 'bi-lock'}`}></i>
+                                                </button>
                                                 <button onClick={() => editPenugasan(group)} style={{background: 'transparent', border: 'none', color: '#f59e0b', cursor: 'pointer', fontSize: '1.1rem', padding: '4px', transition: 'transform 0.2s'}} title="Edit" onMouseOver={e => e.currentTarget.style.transform = 'scale(1.2)'} onMouseOut={e => e.currentTarget.style.transform = 'scale(1)'}>
                                                     <i className="bi bi-pencil"></i>
                                                 </button>
@@ -1133,7 +1187,7 @@ export function PenugasanSettings({
                             <select className="sv-select" value={selectedSupervisor} onChange={e => setSelectedSupervisor(e.target.value)} disabled={isEditMode}>
                                 <option value="">-- Pilih Supervisor --</option>
                                 {supervisorList.map(g => {
-                                    const value = g.nip && g.nip !== '-' ? g.nip : g.id;
+                                    const value = g.nip;
                                     return <option key={`sup-${g.id}`} value={value}>{g.nama_lengkap} {g.nip ? `(${g.nip})` : ''}</option>;
                                 })}
                             </select>
@@ -1151,8 +1205,9 @@ export function PenugasanSettings({
                             </label>
                             <div style={{maxHeight: '200px', overflowY: 'auto', border: '1px solid var(--n-border)', borderRadius: '8px', padding: '12px', background: 'var(--n-bg)', marginTop: '8px'}}>
                                 {(() => {
-                                    const filtered = guruList.filter(g => g.nama_lengkap.toLowerCase().includes(guruSearch.toLowerCase()));
-                                    const allFilteredSelected = filtered.length > 0 && filtered.every(g => selectedGurus.includes(g.nip && g.nip !== '-' ? g.nip : g.id));
+                                    const q = guruSearch.toLowerCase();
+                                    const filtered = guruList.filter(g => String(g.nama_lengkap || '').toLowerCase().includes(q) || String(g.nip || '').includes(q));
+                                    const allFilteredSelected = filtered.length > 0 && filtered.every(g => selectedGurus.includes(g.nip));
                                     
                                     return (
                                         <>
@@ -1167,7 +1222,7 @@ export function PenugasanSettings({
                                                 </label>
                                             )}
                                             {filtered.map(g => {
-                                                const value = g.nip && g.nip !== '-' ? g.nip : g.id;
+                                                const value = g.nip;
                                                 return (
                                                     <label key={`guru-${g.id}`} style={{display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', cursor: 'pointer'}}>
                                                         <input 

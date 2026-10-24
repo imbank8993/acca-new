@@ -31,8 +31,10 @@ export async function cachedGet(url: string, ttlMs: number = DEFAULT_TTL): Promi
 
     const p = fetch(url, { cache: 'no-store' })
         .then(async (r) => {
-            const json = await r.json();
-            store.set(key, { ts: Date.now(), data: json });
+            const json = await r.json().catch(() => ({ ok: false, error: 'Respons server tidak valid' }));
+            // Respons gagal (403/500) tidak disimpan, supaya galat sesaat tidak
+            // "menempel" selama TTL dan bisa langsung dicoba ulang.
+            if (r.ok && json?.ok !== false) store.set(key, { ts: Date.now(), data: json });
             inflight.delete(key);
             return json;
         })

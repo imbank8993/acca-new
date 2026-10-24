@@ -1,53 +1,45 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { unregisterUpload } from '@/lib/storage/file-registry';
 import { nestFetchAsUser } from '@/lib/nest-api';
 import { extractRequestToken } from '@/lib/app-jwt';
-import { POST as handleUpload } from '@/app/api/upload/route';
+import { POST as handleUpload, DELETE as handleDeleteUpload } from '@/app/api/upload/route';
 
 export const dynamic = 'force-dynamic';
 
+/** Berkas supervisi ditampilkan di penampil PDF supervisor, jadi hanya PDF yang diterima. */
+const MAKS_UKURAN = 20 * 1024 * 1024; // 20 MB
+
+const gagal = (error: string, status: number) => NextResponse.json({ ok: false, error }, { status });
+
 export async function POST(request: NextRequest) {
     try {
-        /**
-         * `nestFetchAsUser` menerima TOKEN, bukan request. Di sini sebelumnya
-         * `request` yang dioper, sehingga header yang terkirim ke NestJS
-         * berbunyi `Bearer [object Object]` — panggilan pengecekan berkas lama
-         * dan penyimpanan record berjalan tanpa identitas yang sah. Ditangkap
-         * type-check sebagai TS2345, dan sekaligus memberi route ini gerbang
-         * sesi yang sebelumnya tidak ada sama sekali.
-         */
         const token = extractRequestToken(request);
-        if (!token) {
-            return NextResponse.json({ ok: false, error: 'Unauthorized' }, { status: 401 });
-        }
+        if (!token) return gagal('Unauthorized', 401);
 
         const formData = await request.formData();
-        const file = formData.get('file') as File;
-        const guru_nip = formData.get('guru_nip') as string;
-        const tahun_ajaran_id = formData.get('tahun_ajaran_id') as string;
-        const dokumen_id = formData.get('dokumen_id') as string;
+        const file = formData.get('file');
+        const guru_nip = String(formData.get('guru_nip') || '').trim();
+        const tahun_ajaran_id = String(formData.get('tahun_ajaran_id') || '').trim();
+        const dokumen_id = String(formData.get('dokumen_id') || '').trim();
 
-        if (!file || !guru_nip || !tahun_ajaran_id || !dokumen_id) {
-            return NextResponse.json({ ok: false, error: 'Data tidak lengkap' }, { status: 400 });
+        if (!(file instanceof File) || !guru_nip || !/^\d+$/.test(tahun_ajaran_id) || !/^\d+$/.test(dokumen_id)) {
+            return gagal('Data tidak lengkap', 400);
+        }
+        const isPdf = /\.pdf$/i.test(file.name) && (!file.type || file.type === 'application/pdf');
+        if (!isPdf) return gagal('Dokumen supervisi harus berformat PDF', 400);
+        if (file.size <= 0 || file.size > MAKS_UKURAN) return gagal('Ukuran berkas maksimal 20 MB', 400);
+
+        // Periksa hak & kelayakan SEBELUM berkas dikirim ke penyimpanan:
+        // NIP harus milik sesi, dokumen milik tahun ajaran tsb, dan penilaian
+        // belum dikunci. Sebelumnya berkas lama orang lain bisa dicabut dari
+        // registri hanya dengan mengirim guru_nip milik orang tersebut.
+        const cek = await nestFetchAsUser('/e-supervisi/unggahan/cek', token, {
+            method: 'POST',
+            body: JSON.stringify({ guru_nip, tahun_ajaran_id: Number(tahun_ajaran_id), dokumen_id: Number(dokumen_id) }),
+        });
+        if (cek.status !== 200 && cek.status !== 201) {
+            return gagal(cek.body?.message || cek.body?.error || 'Unggahan ditolak', cek.status || 400);
         }
 
-        // Check existing record via NestJS
-        const { body: existingBody } = await nestFetchAsUser(
-            `/e-supervisi/unggahan?guru_nip=${encodeURIComponent(guru_nip)}&tahun_ajaran_id=${tahun_ajaran_id}`,
-            token
-        );
-        const existingList = existingBody?.data || [];
-        const existingRecord = existingList.find((r: any) => String(r.dokumen_id) === String(dokumen_id));
-
-        if (existingRecord && existingRecord.file_url) {
-            try {
-                await unregisterUpload(existingRecord.file_url);
-            } catch (e) {
-                console.error('Failed to unregister old file:', e);
-            }
-        }
-        
-        // Delegate file upload to central upload route handler
         const uploadFormData = new FormData();
         uploadFormData.append('file', file);
         uploadFormData.append('folder', `e-supervisi/${tahun_ajaran_id}/${guru_nip}/${dokumen_id}`);
@@ -55,44 +47,51 @@ export async function POST(request: NextRequest) {
         // Header cookie ikut disalin supaya `extractRequestToken` di
         // /api/upload menemukan sesi pemanggil; handler-nya dipanggil langsung
         // sebagai fungsi, jadi tidak ada request asli yang membawa cookie.
+        const authHeaders = {
+            cookie: request.headers.get('cookie') || '',
+            authorization: request.headers.get('authorization') || '',
+        };
         const uploadReq = new NextRequest(new URL('/api/upload', request.url), {
             method: 'POST',
-            headers: { cookie: request.headers.get('cookie') || '' },
+            headers: authHeaders,
             body: uploadFormData,
         });
 
         const uploadRes = await handleUpload(uploadReq);
         const uploadJson = await uploadRes.json();
-
         if (!uploadRes.ok || !uploadJson.ok || !uploadJson.publicUrl) {
-            throw new Error(uploadJson.error || 'Gagal mengunggah berkas');
+            return gagal(uploadJson.error || 'Gagal mengunggah berkas', uploadRes.status >= 400 ? uploadRes.status : 502);
         }
+        const publicUrl: string = uploadJson.publicUrl;
 
-        const publicUrl = uploadJson.publicUrl;
-        
-        // Save database record via NestJS
-        const { status: recordStatus, body: recordBody } = await nestFetchAsUser(
-            '/e-supervisi/unggahan/record',
-            token,
-            {
-                method: 'POST',
-                body: JSON.stringify({
-                    guru_nip,
-                    tahun_ajaran_id: parseInt(tahun_ajaran_id),
-                    dokumen_id: parseInt(dokumen_id),
-                    file_url: publicUrl,
-                    file_name: file.name,
-                    size_bytes: file.size,
-                })
-            }
-        );
-        
+        // Simpan catatan unggahan. Backend juga menghapus berkas lama yang digantikan.
+        const { status: recordStatus, body: recordBody } = await nestFetchAsUser('/e-supervisi/unggahan/record', token, {
+            method: 'POST',
+            body: JSON.stringify({
+                guru_nip,
+                tahun_ajaran_id: Number(tahun_ajaran_id),
+                dokumen_id: Number(dokumen_id),
+                file_url: publicUrl,
+                file_name: file.name,
+                size_bytes: file.size,
+            }),
+        });
+
         if (recordStatus !== 200 && recordStatus !== 201) {
-            throw new Error(recordBody?.message || 'Gagal menyimpan catatan unggahan di backend NestJS');
+            // Catatan gagal: jangan tinggalkan berkas yatim di penyimpanan.
+            try {
+                const delUrl = new URL('/api/upload', request.url);
+                delUrl.searchParams.set('file_url', publicUrl);
+                await handleDeleteUpload(new NextRequest(delUrl, { method: 'DELETE', headers: authHeaders }));
+            } catch (e) {
+                console.error('[e-supervisi/upload] Gagal membersihkan berkas setelah pencatatan gagal:', e);
+            }
+            return gagal(recordBody?.message || 'Gagal menyimpan catatan unggahan', recordStatus || 500);
         }
 
         return NextResponse.json({ ok: true, data: recordBody?.data });
     } catch (error: any) {
-        return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
+        console.error('[e-supervisi/upload]', error);
+        return gagal('Terjadi kesalahan saat mengunggah dokumen', 500);
     }
 }

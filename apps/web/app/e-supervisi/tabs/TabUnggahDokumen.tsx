@@ -16,12 +16,24 @@ export default function TabUnggahDokumen({ user, tahunAjaranId }: { user: User, 
     const [unggahan, setUnggahan] = useState<any[]>([]);
     const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({});
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+    // Penilaian guru ini sudah dikunci supervisor/pengelola → dokumen final.
+    const [terkunci, setTerkunci] = useState(false);
 
     useEffect(() => {
         if (tahunAjaranId && user.nip) {
             fetchUnggahan();
+            fetchStatusKunci();
         }
     }, [tahunAjaranId, user.nip]);
+
+    const fetchStatusKunci = async () => {
+        try {
+            const json = await cachedGet(`/api/e-supervisi/penugasan?tahun_ajaran_id=${tahunAjaranId}&guru_nip=${encodeURIComponent(user.nip || '')}`);
+            setTerkunci(Boolean(json.ok && (json.data || []).some((p: any) => p.guru_nip === user.nip && p.status === 'terkunci')));
+        } catch {
+            setTerkunci(false);
+        }
+    };
 
     useEffect(() => {
         if (tahunAjaranId) {
@@ -33,7 +45,7 @@ export default function TabUnggahDokumen({ user, tahunAjaranId }: { user: User, 
     const fetchUnggahan = async (force = false) => {
         try {
             if (force) invalidateSvCache('/api/e-supervisi/unggahan');
-            const json = await cachedGet(`/api/e-supervisi/unggahan?tahun_ajaran_id=${tahunAjaranId}&guru_nip=${user.nip}`);
+            const json = await cachedGet(`/api/e-supervisi/unggahan?tahun_ajaran_id=${tahunAjaranId}&guru_nip=${encodeURIComponent(user.nip || '')}`);
             if (json.ok) {
                 setUnggahan(json.data);
             }
@@ -70,6 +82,15 @@ export default function TabUnggahDokumen({ user, tahunAjaranId }: { user: User, 
 
     const handleUpload = (file: File, docId: number) => {
         if (!tahunAjaranId || !user.nip) return Swal.fire('Error', 'Sesi tidak valid atau Tahun Ajaran belum aktif', 'error');
+        if (terkunci) return Swal.fire('Terkunci', 'Penilaian supervisi Anda sudah dikunci; dokumen tidak dapat diubah lagi.', 'info');
+        if (uploadProgress[docId.toString()] !== undefined) return; // masih mengunggah
+        // Penampil dokumen supervisor hanya membuka PDF.
+        if (!/\.pdf$/i.test(file.name) || (file.type && file.type !== 'application/pdf')) {
+            return Swal.fire('Format tidak didukung', 'Unggah dokumen dalam format PDF.', 'warning');
+        }
+        if (file.size > 20 * 1024 * 1024) {
+            return Swal.fire('Berkas terlalu besar', 'Ukuran dokumen maksimal 20 MB.', 'warning');
+        }
         
         const formData = new FormData();
         formData.append('file', file);
@@ -90,10 +111,13 @@ export default function TabUnggahDokumen({ user, tahunAjaranId }: { user: User, 
         };
         
         xhr.onload = () => {
-            if (xhr.status === 200) {
+            let json: any = null;
+            try { json = JSON.parse(xhr.responseText); } catch { json = null; }
+            if (!json) {
+                Swal.fire('Error', xhr.status === 413 ? 'Berkas terlalu besar untuk server' : 'Terjadi kesalahan pada server', 'error');
+            } else {
                 try {
-                    const json = JSON.parse(xhr.responseText);
-                    if (json.ok) {
+                    if (xhr.status === 200 && json.ok) {
                         Swal.fire({
                             title: 'Sukses',
                             text: 'Dokumen berhasil diunggah',
@@ -106,13 +130,12 @@ export default function TabUnggahDokumen({ user, tahunAjaranId }: { user: User, 
                         setUnggahan(prev => [...prev.filter(u => u.dokumen_id !== docId), json.data]);
                         invalidateSvCache('/api/e-supervisi/unggahan');
                     } else {
-                        Swal.fire('Error', json.error || 'Gagal mengunggah dokumen', 'error');
+                        Swal.fire('Gagal Mengunggah', json.error || json.message || 'Gagal mengunggah dokumen', 'error');
+                        if (xhr.status === 403) fetchStatusKunci();
                     }
                 } catch (e) {
                     Swal.fire('Error', 'Gagal memproses respons server', 'error');
                 }
-            } else {
-                Swal.fire('Error', 'Terjadi kesalahan pada server', 'error');
             }
             setUploadProgress(prev => {
                 const newProgress = { ...prev };
@@ -162,7 +185,7 @@ export default function TabUnggahDokumen({ user, tahunAjaranId }: { user: User, 
                         timer: 3000
                     });
                 } else {
-                    throw new Error(json.error);
+                    throw new Error(json.message || json.error);
                 }
             } catch (e: any) {
                 Swal.fire('Error', e.message || 'Gagal menghapus dokumen', 'error');
@@ -180,6 +203,14 @@ export default function TabUnggahDokumen({ user, tahunAjaranId }: { user: User, 
 
     return (
         <div className="sv-card">
+            {terkunci && (
+                <div style={{background: 'rgba(100,116,139,0.1)', border: '1px solid var(--n-border)', borderRadius: '10px', padding: '10px 14px', marginBottom: '12px', fontSize: '13px', color: 'var(--n-muted)'}}>
+                    <i className="bi bi-lock-fill"></i> Penilaian supervisi Anda sudah dikunci. Dokumen tetap dapat dilihat tetapi tidak dapat diganti atau dihapus.
+                </div>
+            )}
+            <div style={{fontSize: '12px', color: 'var(--n-muted)', marginBottom: '8px'}}>
+                <i className="bi bi-info-circle"></i> Format dokumen: PDF, maksimal 20 MB.
+            </div>
             <div className="sv-stage-tabs">
                 {[...new Set(semuaDokumen.map(d => d.tahap))].map((t: any) => (
                     <button key={t} className={`sv-stage-tab ${tahap === t ? 'active' : ''}`} onClick={() => setTahap(t)}>{t}</button>
@@ -244,11 +275,13 @@ export default function TabUnggahDokumen({ user, tahunAjaranId }: { user: User, 
                                                 type="file" 
                                                 id={`file-${doc.id}`} 
                                                 style={{display: 'none'}} 
-                                                accept=".pdf,.doc,.docx"
+                                                accept=".pdf,application/pdf"
+                                                disabled={terkunci || isUploading}
                                                 onChange={(e) => {
-                                                    if (e.target.files && e.target.files[0]) {
-                                                        handleUpload(e.target.files[0], doc.id);
-                                                    }
+                                                    const f = e.target.files?.[0];
+                                                    // Dikosongkan agar memilih berkas yang sama lagi tetap memicu unggah.
+                                                    e.target.value = '';
+                                                    if (f) handleUpload(f, doc.id);
                                                 }}
                                             />
                                             {uploaded ? (
@@ -256,13 +289,15 @@ export default function TabUnggahDokumen({ user, tahunAjaranId }: { user: User, 
                                                     <button onClick={() => setPreviewUrl(uploaded.file_url)} title="Lihat Dokumen" style={{background: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6', width: '36px', height: '36px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', cursor: 'pointer', transition: 'all 0.2s'}}>
                                                         <i className="bi bi-eye"></i>
                                                     </button>
-                                                    <label htmlFor={`file-${doc.id}`} title="Ganti Dokumen" style={{background: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6', width: '36px', height: '36px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: isUploading ? 'not-allowed' : 'pointer', transition: 'all 0.2s'}}>
+                                                    {!terkunci && <label htmlFor={`file-${doc.id}`} title="Ganti Dokumen" style={{background: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6', width: '36px', height: '36px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: isUploading ? 'not-allowed' : 'pointer', transition: 'all 0.2s'}}>
                                                         <i className="bi bi-arrow-repeat"></i>
-                                                    </label>
-                                                    <button onClick={() => handleDelete(uploaded.id)} title="Hapus Dokumen" style={{background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', width: '36px', height: '36px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', cursor: 'pointer', transition: 'all 0.2s'}}>
+                                                    </label>}
+                                                    {!terkunci && <button onClick={() => handleDelete(uploaded.id)} title="Hapus Dokumen" style={{background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', width: '36px', height: '36px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', cursor: 'pointer', transition: 'all 0.2s'}}>
                                                         <i className="bi bi-trash"></i>
-                                                    </button>
+                                                    </button>}
                                                 </>
+                                            ) : terkunci ? (
+                                                <span style={{fontSize: '13px', color: 'var(--n-muted)'}}><i className="bi bi-lock"></i> Terkunci</span>
                                             ) : (
                                                 <label htmlFor={`file-${doc.id}`} style={{background: 'var(--n-primary)', color: 'white', padding: '8px 16px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: isUploading ? 'not-allowed' : 'pointer', fontSize: '14px', fontWeight: 500, transition: 'all 0.2s'}}>
                                                     <i className="bi bi-cloud-arrow-up"></i> Unggah

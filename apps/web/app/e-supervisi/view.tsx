@@ -43,6 +43,10 @@ export default function ESupervisiPage({ user }: { user?: User }) {
     const [tahunAjaranList, setTahunAjaranList] = useState<any[]>([]);
     const [allTahunAjaran, setAllTahunAjaran] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
+    // Hak akses yang diputuskan SERVER (Hak Akses Fitur + penugasan supervisor).
+    const [akses, setAkses] = useState<{ kelola: boolean; pantau: boolean; admin: boolean; supervisor: boolean }>({
+        kelola: false, pantau: false, admin: false, supervisor: false,
+    });
 
     useEffect(() => {
         fetchTahunAjaran();
@@ -50,15 +54,20 @@ export default function ESupervisiPage({ user }: { user?: User }) {
 
     const fetchTahunAjaran = async () => {
         try {
-            const res = await fetch('/api/e-supervisi/tahun-ajaran');
+            const res = await fetch('/api/e-supervisi/tahun-ajaran', { cache: 'no-store' });
             const json = await res.json();
-            const { allTa, docs, assignments } = json.data || {};
-            
-            const usedIds = new Set<number>();
-            docs?.forEach((d: any) => { if (d.tahun_ajaran_id) usedIds.add(d.tahun_ajaran_id); });
-            assignments?.forEach((a: any) => { if (a.tahun_ajaran_id) usedIds.add(a.tahun_ajaran_id); });
+            const { docs, assignments } = json.data || {};
+            if (json.data?.akses) setAkses(json.data.akses);
+            // ID tahun ajaran (BigInt) dikirim server sebagai STRING. Disamakan
+            // ke number supaya pembandingan dengan nilai filter tidak meleset
+            // (dulu pilihan tahun ajaran selalu kembali ke yang pertama).
+            const allTa = (json.data?.allTa || []).map((ta: any) => ({ ...ta, id: Number(ta.id) }));
 
-            if (allTa && allTa.length > 0) {
+            const usedIds = new Set<number>();
+            docs?.forEach((d: any) => { if (d.tahun_ajaran_id) usedIds.add(Number(d.tahun_ajaran_id)); });
+            assignments?.forEach((a: any) => { if (a.tahun_ajaran_id) usedIds.add(Number(a.tahun_ajaran_id)); });
+
+            if (allTa.length > 0) {
                 setAllTahunAjaran(allTa);
                 // Filter: ONLY keep years that have supervisi data
                 const filteredTa = allTa.filter((ta: any) => usedIds.has(ta.id));
@@ -67,7 +76,7 @@ export default function ESupervisiPage({ user }: { user?: User }) {
                 if (filteredTa.length > 0) {
                     // Try to keep current selection if valid, else fallback to first available
                     setTahunAjaranId(prevId => {
-                        if (prevId && filteredTa.find((t: any) => t.id === prevId)) return prevId;
+                        if (prevId && filteredTa.find((t: any) => t.id === Number(prevId))) return Number(prevId);
                         return filteredTa[0].id;
                     });
                 } else {
@@ -84,39 +93,53 @@ export default function ESupervisiPage({ user }: { user?: User }) {
     const allowedTabs = useMemo<TabItem<MainTab>[]>(() => {
         if (!user) return [];
         const roles = (user.role || '').split(',').map(r => r.trim());
+        // Gabungan izin halaman (peran) dan hak yang diputuskan server: pengelola
+        // (WKM Akademik / Hak Akses Fitur) melihat tab pengaturan, dan guru yang
+        // DITUNJUK sebagai supervisor melihat tab Penilaian meski perannya GURU.
+        const dariServer = (key: MainTab) =>
+            key === 'dokumen' || key === 'supervisor' ? akses.kelola
+                : key === 'supervisi' ? akses.supervisor || akses.admin
+                    : key === 'hasil' ? akses.pantau
+                        : false;
         return MAIN_TABS
-            .filter(tab => hasPermission(user.permissions || [], tab.req, tab.action as any, false, roles))
+            .filter(tab => dariServer(tab.key) || hasPermission(user.permissions || [], tab.req, tab.action as any, false, roles))
             .map(tab => ({
                 key: tab.key,
                 label: tab.label,
                 shortLabel: tab.shortLabel,
                 icon: tab.icon,
             }));
-    }, [user]);
+    }, [user, akses]);
 
     useEffect(() => {
+        // Tunggu hak akses dari server, kalau tidak tab dari URL (mis. Indikator
+        // untuk WKM) langsung tergeser sebelum aksesnya diketahui.
+        if (loading) return;
         if (allowedTabs.length > 0 && !allowedTabs.find(t => t.key === activeTab)) {
             // Only set if we don't have a valid active tab
             setActiveTab(allowedTabs[0].key);
         }
-    }, [allowedTabs, activeTab, setActiveTab]);
+    }, [allowedTabs, activeTab, setActiveTab, loading]);
 
     if (!user) return <div className="sv-container">Anda harus login untuk mengakses halaman ini.</div>;
-    if (allowedTabs.length === 0) return <div className="sv-container">Anda tidak memiliki akses ke modul E-Supervisi. Pastikan Anda memiliki role yang sesuai.</div>;
     if (loading) return <PageLoader label="Memuat…" />;
+    if (allowedTabs.length === 0) return <div className="sv-container">Anda tidak memiliki akses ke modul E-Supervisi. Pastikan Anda memiliki role yang sesuai.</div>;
+
+    // Jangan pernah merender tab yang tidak diizinkan, walau URL memintanya.
+    const tabAktif: MainTab = allowedTabs.find(t => t.key === activeTab) ? activeTab : allowedTabs[0].key;
 
     return (
         <MaintenanceBanner pageKey="maintenance_e_supervisi">
             <div className="sv-container">
                 <Tabs<MainTab>
                     tabs={allowedTabs}
-                    activeTab={activeTab}
+                    activeTab={tabAktif}
                     onChange={(key) => setActiveTab(key)}
                     ariaLabel="Navigasi E-Supervisi"
                     variant="slider"
                 />
 
-                {activeTab !== 'dokumen' && activeTab !== 'supervisor' && (
+                {tabAktif !== 'dokumen' && tabAktif !== 'supervisor' && (
                     <FilterToolbar alwaysExpanded>
                         <FilterSelect
                             label="Tahun Ajaran"
@@ -136,7 +159,7 @@ export default function ESupervisiPage({ user }: { user?: User }) {
                     </FilterToolbar>
                 )}
 
-                {activeTab === 'dokumen' && (
+                {tabAktif === 'dokumen' && (
                     <DokumenSettings 
                         tahunAjaranId={tahunAjaranId} 
                         setTahunAjaranId={setTahunAjaranId}
@@ -145,7 +168,7 @@ export default function ESupervisiPage({ user }: { user?: User }) {
                         onDataAdded={(id: number) => { setTahunAjaranId(id); fetchTahunAjaran(); }} 
                     />
                 )}
-                {activeTab === 'supervisor' && (
+                {tabAktif === 'supervisor' && (
                     <PenugasanSettings 
                         tahunAjaranId={tahunAjaranId} 
                         setTahunAjaranId={setTahunAjaranId}
@@ -154,9 +177,9 @@ export default function ESupervisiPage({ user }: { user?: User }) {
                         onDataAdded={(id: number) => { setTahunAjaranId(id); fetchTahunAjaran(); }} 
                     />
                 )}
-                {activeTab === 'unggah' && <TabUnggahDokumen user={user} tahunAjaranId={tahunAjaranId} />}
-                {activeTab === 'supervisi' && <TabSupervisi user={user} tahunAjaranId={tahunAjaranId} />}
-                {activeTab === 'hasil' && <TabHasil user={user} tahunAjaranId={tahunAjaranId} />}
+                {tabAktif === 'unggah' && <TabUnggahDokumen user={user} tahunAjaranId={tahunAjaranId} />}
+                {tabAktif === 'supervisi' && <TabSupervisi user={user} tahunAjaranId={tahunAjaranId} isAdmin={akses.admin} />}
+                {tabAktif === 'hasil' && <TabHasil user={user} tahunAjaranId={tahunAjaranId} />}
             </div>
         </MaintenanceBanner>
     );
