@@ -126,6 +126,19 @@ test('nilai dan unggahan guru lain tidak bisa dibaca guru yang tidak terkait', a
   await assert.rejects(fixture().service.getUnggahan({ nip: 'G9', roles: ['GURU'] }, 'G1', 7), e => e.getStatus() === 403);
 });
 
+test('nilai indikator nonaktif tidak dimuat ulang dan tidak menghalangi autosave indikator aktif', async () => {
+  const f = fixture({ penugasan: [P()], nilai: [
+    { indikator_id: 10, nilai_mentah: '3', catatan: '' },
+    { indikator_id: 13, nilai_mentah: '4', catatan: 'Riwayat indikator dihapus' },
+  ] });
+  const user = { nip: 'S1', roles: ['GURU'] };
+  const loaded = await f.service.getNilai(user, 5);
+  assert.equal(loaded.data.length, 1);
+  assert.equal(loaded.data[0].indikator_id, 10);
+  await f.service.upsertNilai(user, { penugasan_id: 5, scores: loaded.data });
+  assert.equal(f.writes.filter(w => w[0] === 'nilai.upsert').length, 1);
+});
+
 test('rekap dan daftar penugasan guru biasa dibatasi pada dirinya; pimpinan melihat semua', async () => {
   const f = fixture({ penugasan: [P()] });
   await f.service.getRekap({ nip: 'G1', roles: ['GURU'] }, 7);

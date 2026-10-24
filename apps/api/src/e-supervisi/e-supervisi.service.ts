@@ -253,7 +253,11 @@ export class ESupervisiService {
       where: { penugasan_id },
       include: { sv_indikator: { select: { nama_indikator: true } } },
     });
-    const mapped = data.map((d: any) => {
+    // Riwayat indikator yang dinonaktifkan tetap disimpan, tetapi jangan
+    // dimuat ke formulir lalu terkirim lagi saat autosave indikator aktif.
+    const dokumens = await this.dokumenTa(penugasan.tahun_ajaran_id);
+    const aktifIds = new Set(dokumens.flatMap((d: any) => d.sv_indikator.map((i: any) => i.id)));
+    const mapped = data.filter((d: any) => aktifIds.has(d.indikator_id)).map((d: any) => {
       const { sv_indikator, ...rest } = d;
       return { ...rest, indikator: sv_indikator };
     });
