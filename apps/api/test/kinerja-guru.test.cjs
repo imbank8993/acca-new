@@ -275,3 +275,39 @@ test('missing, inactive, ambiguous and non-teaching timetable slots do not assig
   const result = await f.service.getStats('2020-01', '2020-01');
   assert.equal(result.dataPiket.jamKosong.length, 0);
 });
+
+test('October piket labels with parent classes resolve elective Daring slots and deduplicate canonical labels', async () => {
+  const kelas = 'XI Matematika Lanjut 1';
+  const laporan = [{ tanggal: new Date('2026-10-09'), laporan_piket_detail: [
+    { nama_kelas: `${kelas} (XI C)`, jam_ke: '03, 4', nama_guru: 'Guru B', status_kehadiran: 'Daring' },
+    { nama_kelas: kelas, jam_ke: '3', nama_guru: 'Guru B', status_kehadiran: 'Daring' },
+  ] }];
+  const f = fixture({ laporan_piket: laporan, master_kelas: [{ nama: kelas }, { nama: 'XI C' }] });
+  f.service.jadwalService.getJadwal = async () => ({ data: [3, 4].map(jam_ke => ({
+    nip: '1', nama_guru: 'Guru A', hari: 'Jumat', jam_ke: String(jam_ke), kelas, mata_pelajaran: 'Matematika Lanjut',
+  })) });
+  const result = await f.service.getStats('2026-10', '2026-10');
+  assert.equal(result.dataPiket.daring.length, 1);
+  assert.equal(result.dataPiket.daring[0].nip, '1');
+  assert.equal(result.dataPiket.daring[0].count, 2);
+  assert(result.dataPiket.daring[0].details.every(d => d.mapel === 'Matematika Lanjut' && d.type === 'Daring'));
+  const dashboard = await f.service.getDashboardSummary('2026-10', '2026-10');
+  assert.equal(JSON.stringify(dashboard.dataPiket.daring), JSON.stringify([{ nama: 'Guru A' }]));
+});
+
+test('elective label fallback never replaces an ambiguous exact slot or guesses unknown classes', async () => {
+  const kelas = 'XI Biologi 3';
+  const f = fixture({ master_kelas: [{ nama: kelas }, { nama: 'XI A' }],
+    laporan_piket: [{ tanggal: new Date('2026-10-08'), laporan_piket_detail: [
+      { nama_kelas: `${kelas} (XI A)`, jam_ke: '1', status_kehadiran: 'Daring' },
+      { nama_kelas: `${kelas} (Kelas Tidak Dikenal)`, jam_ke: '2', status_kehadiran: 'Daring' },
+    ] }],
+  });
+  f.service.jadwalService.getJadwal = async () => ({ data: [
+    { nip: '1', hari: 'Kamis', jam_ke: '1', kelas },
+    { nip: '1', hari: 'Kamis', jam_ke: '1', kelas: `${kelas} (XI A)` },
+    { nip: '2', hari: 'Kamis', jam_ke: '1', kelas: `${kelas} (XI A)` },
+    { nip: '1', hari: 'Kamis', jam_ke: '2', kelas },
+  ] });
+  assert.equal((await f.service.getStats('2026-10', '2026-10')).dataPiket.daring.length, 0);
+});

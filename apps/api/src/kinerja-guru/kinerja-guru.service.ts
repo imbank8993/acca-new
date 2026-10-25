@@ -132,6 +132,7 @@ export class KinerjaGuruService {
       select: { nama: true, program: true, tingkat: true },
     });
     const kelasProgramMap: Record<string, string> = {};
+    const knownClassNames = new Set(kelasRows.map(k => (k.nama || '').trim().toLowerCase()));
     kelasRows.forEach((k) => {
       if (k.nama) kelasProgramMap[k.nama.trim()] = k.program || 'Reguler';
     });
@@ -594,12 +595,23 @@ export class KinerjaGuruService {
         const jams = String(det.jam_ke ?? '').split(',').map((h) => h.trim()).filter(Boolean);
         jams.forEach((rawJam) => {
           const jam = String(Number(rawJam) || rawJam);
-          // Satu slot kelas/JP hanya dihitung sekali walau laporannya terduplikasi.
-          const slotKey = `${tglStr}|${kelas.toLowerCase()}|${jam}`;
-          if (piketSeen.has(slotKey)) return;
           const namaTercatat = String(det.nama_guru || '').trim();
-          const jadwalHit = jadwalSlotNip.get(`${hari.toLowerCase()}|${jam}|${kelas.toLowerCase()}`);
+          let scheduleClass = kelas.toLowerCase();
+          const slotPrefix = `${hari.toLowerCase()}|${jam}|`;
+          // Laporan lama menambahkan kelas asal pada label kelas pilihan,
+          // mis. "XI Biologi 3 (XI A)". Resolusi tetap ke jadwal efektif,
+          // bukan ke nama guru pada laporan atau jadwal kelas asal.
+          if (!jadwalSlotNip.has(slotPrefix + scheduleClass)) {
+            const label = /^(.*?)\s+\(([^()]+)\)$/.exec(scheduleClass);
+            if (label && knownClassNames.has(label[1].trim()) && knownClassNames.has(label[2].trim())) {
+              scheduleClass = label[1].trim();
+            }
+          }
+          const jadwalHit = jadwalSlotNip.get(slotPrefix + scheduleClass);
           if (!jadwalHit) return;
+          // Label lama dan nama kanonis menunjuk slot yang sama.
+          const slotKey = `${tglStr}|${scheduleClass}|${jam}`;
+          if (piketSeen.has(slotKey)) return;
           piketSeen.add(slotKey);
           const { nip, nama, mapel } = jadwalHit;
           const key = ensurePiketKey(nama, nip);

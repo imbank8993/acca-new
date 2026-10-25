@@ -4,7 +4,7 @@ const fs = require('node:fs');
 const vm = require('node:vm');
 const ts = require('typescript');
 
-function endpoint(user, { missingProfile = false } = {}) {
+function endpoint(user, { missingProfile = false, examOverrides = {} } = {}) {
     const queries = [];
     const now = Date.now();
     const exams = ['active', 'upcoming', 'completed'].map((category, index) => ({
@@ -17,7 +17,7 @@ function endpoint(user, { missingProfile = false } = {}) {
             id: 'attempt', status: category === 'completed' ? 'submitted' : 'in_progress',
             total_score: 87, started_at: null, finished_at: null,
         }],
-        cbt_exam_targets: [], cbt_exam_participants: [],
+        cbt_exam_targets: [], cbt_exam_participants: [], ...examOverrides,
     }));
     const prisma = new Proxy({}, { get(_target, model) {
         return {
@@ -71,4 +71,48 @@ test('student without CBT identity cannot load other students attempts', async (
 
 test('dashboard exams remain unavailable without authentication', async () => {
     assert.equal((await endpoint(null).get()).status, 401);
+});
+
+test('published ASAS, ASAT and AM are active during their window even with scheduled status', async () => {
+    for (const role of ['SISWA', 'GURU', 'ADMIN']) {
+        for (const exam_type of ['pas', 'pat', 'am']) {
+            const response = await endpoint({ roles: [role], authId: 'profile' }, { examOverrides: {
+                exam_type, status: 'scheduled', is_published: true,
+                start_time: new Date(Date.now() - 3600000),
+                end_time: new Date(Date.now() + 3600000),
+                cbt_exam_attempts: [],
+            } }).get();
+            assert.equal(response.body.counts.active, 3);
+            assert.equal(response.body.counts.upcoming, 0);
+            assert.equal(response.body.hasActiveExam, true);
+            assert(response.body.exams.all.every(exam => exam.category === 'active'));
+        }
+    }
+});
+
+test('scheduled assessments remain upcoming before start and completed after end or explicit finish', async () => {
+    for (const role of ['SISWA', 'GURU', 'ADMIN']) {
+        for (const [overrides, category] of [
+            [{ start_time: new Date(Date.now() + 3600000), end_time: new Date(Date.now() + 7200000) }, 'upcoming'],
+            [{ start_time: new Date(Date.now() - 7200000), end_time: new Date(Date.now() - 3600000) }, 'completed'],
+            [{ status: 'finished', start_time: null, end_time: null }, 'completed'],
+        ]) {
+            const response = await endpoint({ roles: [role], authId: 'profile' }, { examOverrides: {
+                exam_type: 'pas', status: 'scheduled', is_published: true, cbt_exam_attempts: [], ...overrides,
+            } }).get();
+            assert.equal(response.body.counts[category], 3);
+            assert.equal(response.body.hasActiveExam, false);
+        }
+    }
+});
+
+test('unpublished scheduled assessments are never presented as active to staff', async () => {
+    for (const role of ['GURU', 'ADMIN']) {
+        const response = await endpoint({ roles: [role], authId: 'profile' }, { examOverrides: {
+            exam_type: 'pas', status: 'scheduled', is_published: false,
+            start_time: new Date(Date.now() - 3600000), end_time: new Date(Date.now() + 3600000),
+        } }).get();
+        assert.equal(response.body.counts.active, 0);
+        assert.equal(response.body.counts.upcoming, 3);
+    }
 });

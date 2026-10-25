@@ -15,7 +15,7 @@ import { useFileViewer } from '@/components/useFileViewer';
 import { getProxiedImageUrl } from '@/lib/image-utils';
 import { useTimezone } from '@/hooks/use-timezone';
 import { Tab, type TabItem } from '@/components/ui/Tab';
-import FilterToolbar, { FilterField, FilterSearch, FilterActions } from '@/components/ui/FilterToolbar';
+import FilterToolbar, { FilterField, FilterSearch, FilterActions, FilterSelect } from '@/components/ui/FilterToolbar';
 import { Button } from '@/components/ui/Button';
 import { ActionButton, ActionGroup } from '@/components/ui/ActionButtons';
 import { Modal, ModalHeader, ModalBody, ModalFooter } from '@/components/ui/Modal';
@@ -26,6 +26,9 @@ interface PiketDetail {
     nama_kelas: string;
     nama_guru: string;
     status_kehadiran: string;
+    status_tambahan_1?: string | null;
+    status_tambahan_2?: string | null;
+    status_tambahan_3?: string | null;
     dokumentasi_url: string | null;
 }
 
@@ -56,14 +59,16 @@ interface DokumentasiItem {
     nama_kelas: string;
     nama_guru: string;
     dokumentasi_url: string;
+    statuses: string[];
 }
 
 function DokumentasiTab({ reports, loading, isAdminOrOpJurnal }: { reports: PiketReport[]; loading: boolean; isAdminOrOpJurnal: boolean }) {
     const [searchDoc, setSearchDoc] = useState('');
     const [filterDateDoc, setFilterDateDoc] = useState('');
+    const [filterStatusDoc, setFilterStatusDoc] = useState('');
     const [currentDocPage, setCurrentDocPage] = useState(1);
     const [itemsPerDocPage, setItemsPerDocPage] = useState(10);
-    const [lightboxMeta, setLightboxMeta] = useState<{ url: string; kelas: string; guru: string; tanggal: string; guruPiket: string } | null>(null);
+    const [lightboxMeta, setLightboxMeta] = useState<{ url: string; kelas: string; guru: string; tanggal: string; guruPiket: string; statuses: string[] } | null>(null);
 
     // Flatten all dokumentasi items from reports
     const allDocs = reports.flatMap(r =>
@@ -77,6 +82,12 @@ function DokumentasiTab({ reports, loading, isAdminOrOpJurnal }: { reports: Pike
                 nama_kelas: d.nama_kelas,
                 nama_guru: d.nama_guru || '–',
                 dokumentasi_url: d.dokumentasi_url!,
+                statuses: Array.from(new Map(
+                    [d.status_kehadiran, d.status_tambahan_1, d.status_tambahan_2, d.status_tambahan_3]
+                        .map(value => (value || '').trim())
+                        .filter(value => value && value !== '-')
+                        .map(value => [value.toLowerCase(), value] as const)
+                ).values()),
             }))
     );
 
@@ -85,9 +96,11 @@ function DokumentasiTab({ reports, loading, isAdminOrOpJurnal }: { reports: Pike
         const matchSearch =
             doc.nama_kelas.toLowerCase().includes(searchDoc.toLowerCase()) ||
             doc.nama_guru.toLowerCase().includes(searchDoc.toLowerCase()) ||
-            doc.piket_guru.toLowerCase().includes(searchDoc.toLowerCase());
+            doc.piket_guru.toLowerCase().includes(searchDoc.toLowerCase()) ||
+            doc.statuses.some(status => status.toLowerCase().includes(searchDoc.toLowerCase()));
         const matchDate = filterDateDoc === '' || docDate === filterDateDoc;
-        return matchSearch && matchDate;
+        const matchStatus = !filterStatusDoc || doc.statuses.some(status => status.toLowerCase() === filterStatusDoc);
+        return matchSearch && matchDate && matchStatus;
     });
 
     const totalPages = Math.ceil(filteredDocs.length / itemsPerDocPage);
@@ -154,16 +167,28 @@ function DokumentasiTab({ reports, loading, isAdminOrOpJurnal }: { reports: Pike
                 <FilterField label="Tanggal" icon="calendar-date" bare width="180px">
                     <DatePicker value={filterDateDoc} onChange={v => { setFilterDateDoc(v); setCurrentDocPage(1); }} />
                 </FilterField>
+                <FilterSelect
+                    label="Status Kehadiran"
+                    value={filterStatusDoc}
+                    onChange={value => { setFilterStatusDoc(value); setCurrentDocPage(1); }}
+                    options={[
+                        { value: '', label: 'Semua Status' },
+                        ...Array.from(new Map(allDocs.flatMap(doc => doc.statuses.map(status => [status.toLowerCase(), status] as const))).entries())
+                            .sort((a, b) => a[1].localeCompare(b[1], 'id'))
+                            .map(([value, label]) => ({ value, label }))
+                    ]}
+                    width="240px"
+                />
                 <FilterSearch
                     value={searchDoc}
                     onChange={v => { setSearchDoc(v); setCurrentDocPage(1); }}
-                    placeholder="Kelas, guru, piket..."
+                    placeholder="Kelas, guru, piket, status..."
                 />
-                {(filterDateDoc || searchDoc) && (
+                {(filterDateDoc || filterStatusDoc || searchDoc) && (
                     <FilterActions>
                         <Button
                             variant="cancel"
-                            onClick={() => { setFilterDateDoc(''); setSearchDoc(''); setCurrentDocPage(1); }}
+                            onClick={() => { setFilterDateDoc(''); setFilterStatusDoc(''); setSearchDoc(''); setCurrentDocPage(1); }}
                             leftIcon={<i className="bi bi-x-lg" />}
                         >
                             Reset
@@ -210,6 +235,7 @@ function DokumentasiTab({ reports, loading, isAdminOrOpJurnal }: { reports: Pike
                                         guru: doc.nama_guru,
                                         tanggal: formatTanggal(doc.piket_date),
                                         guruPiket: doc.piket_guru,
+                                        statuses: doc.statuses,
                                     })}
                                 >
                                     <div className="doc-card-img-wrap">
@@ -236,6 +262,9 @@ function DokumentasiTab({ reports, loading, isAdminOrOpJurnal }: { reports: Pike
                                         <div className="doc-card-guru-wrap">
                                             <i className="bi bi-person-fill"></i>
                                             <span className="doc-card-guru-text">{doc.nama_guru}</span>
+                                        </div>
+                                        <div className="doc-status-list" aria-label="Status kehadiran">
+                                            {doc.statuses.map(status => <span key={status} className="doc-status-badge">{status}</span>)}
                                         </div>
                                         {/* Piket guru avatar */}
                                         <div className="doc-piket-avatar">
@@ -321,6 +350,9 @@ function DokumentasiTab({ reports, loading, isAdminOrOpJurnal }: { reports: Pike
                             <img src={getProxiedImageUrl(lightboxMeta.url)} alt={lightboxMeta.kelas} className="doc-lightbox-img" />
                         </div>
                         <div className="doc-lightbox-footer">
+                            <div className="doc-status-list" aria-label="Status kehadiran">
+                                {lightboxMeta.statuses.map(status => <span key={status} className="doc-status-badge">{status}</span>)}
+                            </div>
                             <div className="doc-lb-info">
                                 <span><i className="bi bi-calendar3"></i> {lightboxMeta.tanggal}</span>
                                 <span className="doc-lb-piket-avatar">
@@ -452,6 +484,20 @@ export default function PiketPage({ user, initialTab }: { user?: User; initialTa
             </div>
 
             <style jsx global>{`
+                .doc-status-list {
+                    display: flex;
+                    flex-wrap: wrap;
+                    gap: 6px;
+                }
+                .doc-status-badge {
+                    display: inline-block;
+                    padding: 4px 8px;
+                    border-radius: 6px;
+                    background: var(--n-soft, #eff6ff);
+                    color: var(--n-primary, #2563eb);
+                    font-size: 0.75rem;
+                    line-height: 1.4;
+                }
                 .piket-container {
                     display: flex;
                     flex-direction: column;

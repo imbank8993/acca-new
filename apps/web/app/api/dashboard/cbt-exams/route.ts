@@ -167,7 +167,7 @@ export async function GET(request: NextRequest) {
                     cbtUrl: `/api/sso/cbt`
                 };
 
-                if (isAttemptCompleted || (endTime && endTime < now) || exam.status === 'completed') {
+                if (isAttemptCompleted || (endTime && endTime < now) || exam.status === 'completed' || exam.status === 'finished') {
                     completed.push({ ...formatted, category: 'completed' });
                 } else if (startTime && startTime > now) {
                     upcoming.push({ ...formatted, category: 'upcoming' });
@@ -326,11 +326,13 @@ export async function GET(request: NextRequest) {
                     cbtUrl: `/api/sso/cbt`
                 };
 
-                if (exam.status === 'completed' || (endTime && endTime < now)) {
+                // ASAS/ASAT/AM tetap berstatus scheduled setelah diaktifkan
+                // melalui is_published; jendela waktunya menentukan kapan aktif.
+                if (exam.status === 'completed' || exam.status === 'finished' || (endTime && endTime < now)) {
                     completed.push({ ...formatted, category: 'completed' });
                 } else if (startTime && startTime > now) {
                     upcoming.push({ ...formatted, category: 'upcoming' });
-                } else if (exam.status === 'active' && exam.is_published) {
+                } else if ((exam.status === 'active' || exam.status === 'scheduled') && exam.is_published) {
                     active.push({ ...formatted, category: 'active' });
                 } else {
                     upcoming.push({ ...formatted, category: 'upcoming' });
