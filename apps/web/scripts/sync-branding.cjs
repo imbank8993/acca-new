@@ -18,7 +18,7 @@ async function main() {
     const symbol = await fs.readFile(path.join(publicRoot, config.symbol));
     const wordmark = await fs.readFile(path.join(publicRoot, config.wordmark));
     const darkWordmark = await fs.readFile(path.join(publicRoot, config.wordmarkDark));
-    const version = crypto.createHash('sha256').update(symbol).update(wordmark).update(darkWordmark).digest('hex').slice(0, 12);
+    const version = crypto.createHash('sha256').update('symbol-preview-v2').update(symbol).update(wordmark).update(darkWordmark).digest('hex').slice(0, 12);
     const out = path.join(publicRoot, 'branding');
     await fs.mkdir(out, { recursive: true });
     const brand = {
@@ -36,9 +36,10 @@ async function main() {
         await sharp({ create: { width: size, height: size, channels: 4, background: '#ffffff' } })
             .composite([{ input: mark, gravity: 'centre' }]).png().toFile(path.join(publicRoot, brand[key]));
     }
-    const socialWordmark = await sharp(wordmark).resize({ width: 960, height: 230, fit: 'inside' }).png().toBuffer();
+    // Pratinjau tautan memakai simbol sidebar kecil, tanpa tulisan logo lebar.
+    const socialSymbol = await sharp(symbol).resize({ width: 360, height: 360, fit: 'inside' }).png().toBuffer();
     await sharp({ create: { width: 1200, height: 630, channels: 4, background: '#ffffff' } })
-        .composite([{ input: socialWordmark, gravity: 'centre' }]).png().toFile(path.join(publicRoot, brand.shareImage));
+        .composite([{ input: socialSymbol, gravity: 'centre' }]).png().toFile(path.join(publicRoot, brand.shareImage));
 
     // Legacy URLs are still used by PDF generators and previously shared links.
     await writeIfChanged(path.join(publicRoot, 'logo-icon.png'), symbol);

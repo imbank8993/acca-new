@@ -34,6 +34,9 @@ test('global and shared-link previews use the new public brand image without lea
     }
     assert.equal(share.robots.index, false);
     assert.equal(root.icons.apple, branding.APP_BRAND.appleIcon);
+    const visibleLogo = await sharp(path.join('apps/web/public', branding.APP_BRAND.shareImage))
+        .flatten({ background: '#ffffff' }).trim({ background: '#ffffff' }).toBuffer({ resolveWithObject: true });
+    assert(visibleLogo.info.width < visibleLogo.info.height, 'Shared links must use the compact symbol, not the wide ACCA wordmark');
 });
 
 test('legacy logo URLs, Next favicon, installation icons and report logo agree with the sidebar source', async () => {
