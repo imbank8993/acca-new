@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { extractRequestToken } from '@/lib/app-jwt';
 import { nestFetchAsUser } from '@/lib/nest-api';
+import { getPublicOrigin } from '@/lib/public-url';
 
 /**
  * Endpoint SSO WordPress untuk ACCA.
@@ -17,7 +18,7 @@ export async function GET(req: NextRequest) {
             return NextResponse.json({ ok: false, error: 'Unauthorized: Sesi tidak ditemukan.' }, { status: 401 });
         }
         // Jika diakses langsung via URL browser tapi belum login, arahkan ke login
-        const loginUrl = new URL('/login', req.url);
+        const loginUrl = new URL('/login', getPublicOrigin());
         loginUrl.searchParams.set('redirect', '/wordpress');
         return NextResponse.redirect(loginUrl);
     }
@@ -30,7 +31,7 @@ export async function GET(req: NextRequest) {
             return NextResponse.json({ ok: false, error: errorMsg }, { status });
         }
         // Jika navigasi langsung dan ditolak (misal siswa), arahkan ke dashboard dengan pesan error
-        const dashUrl = new URL('/dashboard', req.url);
+        const dashUrl = new URL('/dashboard', getPublicOrigin());
         dashUrl.searchParams.set('error', encodeURIComponent(errorMsg));
         return NextResponse.redirect(dashUrl);
     }
@@ -44,5 +45,5 @@ export async function GET(req: NextRequest) {
         return NextResponse.redirect(body.sso_url);
     }
 
-    return NextResponse.redirect(new URL('/dashboard', req.url));
+    return NextResponse.redirect(new URL('/dashboard', getPublicOrigin()));
 }

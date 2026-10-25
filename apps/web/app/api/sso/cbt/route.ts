@@ -4,6 +4,7 @@ import { cookies } from 'next/headers';
 import { verifyAppSession } from '@/lib/app-jwt';
 import { fetchUserAccessByAuthId, fetchUserAccessByUsername } from '@/lib/nest-api';
 import { prisma } from '@/lib/prisma';
+import { getPublicOrigin } from '@/lib/public-url';
 
 // Tanpa nilai cadangan: rahasia bersama yang ikut terbaca di repo bisa dipakai
 // menempa token SSO ke aplikasi CBT. Bila env-nya kosong, SSO ditolak.
@@ -12,7 +13,7 @@ const SSO_SECRET = new TextEncoder().encode(process.env.CBT_SSO_SECRET || '');
 export async function GET(req: Request) {
     if (!process.env.CBT_SSO_SECRET) {
         console.error('[sso/cbt] CBT_SSO_SECRET belum diset');
-        return NextResponse.redirect(new URL('/dashboard?error=sso-misconfig', req.url));
+        return NextResponse.redirect(new URL('/dashboard?error=sso-misconfig', getPublicOrigin()));
     }
 
     try {
@@ -34,7 +35,7 @@ export async function GET(req: Request) {
             if (req.headers.get('accept')?.includes('application/json')) {
                 return NextResponse.json({ error: 'sso-no-session', details: 'No token' }, { status: 401 });
             }
-            return NextResponse.redirect(new URL('/login?error=sso-no-session', req.url));
+            return NextResponse.redirect(new URL('/login?error=sso-no-session', getPublicOrigin()));
         }
 
         const claims = await verifyAppSession(tokenStr);
@@ -42,7 +43,7 @@ export async function GET(req: Request) {
             if (req.headers.get('accept')?.includes('application/json')) {
                 return NextResponse.json({ error: 'sso-no-session', details: 'No authUser' }, { status: 401 });
             }
-            return NextResponse.redirect(new URL('/login?error=sso-no-session', req.url));
+            return NextResponse.redirect(new URL('/login?error=sso-no-session', getPublicOrigin()));
         }
         const authUser = { id: claims.authId, email: claims.email };
 
@@ -59,7 +60,7 @@ export async function GET(req: Request) {
                     details: 'DB User not found via NestJS internal API' 
                 }, { status: 401 });
             }
-            return NextResponse.redirect(new URL('/login?error=sso-no-session', req.url));
+            return NextResponse.redirect(new URL('/login?error=sso-no-session', getPublicOrigin()));
         }
 
         const dbUser = userAccess.user;
@@ -73,7 +74,7 @@ export async function GET(req: Request) {
             if (req.headers.get('accept')?.includes('application/json')) {
                 return NextResponse.json({ error: 'sso-forbidden', details: 'Akses ke Aplikasi CBT tidak diizinkan untuk peran Anda.' }, { status: 403 });
             }
-            return NextResponse.redirect(new URL('/dashboard?error=sso-forbidden', req.url));
+            return NextResponse.redirect(new URL('/dashboard?error=sso-forbidden', getPublicOrigin()));
         }
 
         // Role mapping
@@ -139,6 +140,6 @@ export async function GET(req: Request) {
             return NextResponse.json({ error: 'sso-failed' }, { status: 500 });
         }
         
-        return NextResponse.redirect(new URL('/dashboard?error=sso-failed', req.url));
+        return NextResponse.redirect(new URL('/dashboard?error=sso-failed', getPublicOrigin()));
     }
 }

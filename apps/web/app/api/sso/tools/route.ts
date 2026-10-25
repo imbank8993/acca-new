@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { SignJWT } from 'jose';
 import { cookies } from 'next/headers';
 import { verifyAppSession, decodeSessionCookie } from '@/lib/app-jwt';
+import { getPublicOrigin } from '@/lib/public-url';
 
 // Shared secret with ACCA TOOLS (Flask). MUST match TOOLS_SSO_SECRET there.
 const SSO_SECRET = new TextEncoder().encode(process.env.TOOLS_SSO_SECRET || '');
@@ -29,7 +30,7 @@ async function getSessionUser() {
 
 export async function GET(req: Request) {
     if (!process.env.TOOLS_SSO_SECRET) {
-        return NextResponse.redirect(new URL('/dashboard?error=tools-sso-misconfig', req.url));
+        return NextResponse.redirect(new URL('/dashboard?error=tools-sso-misconfig', getPublicOrigin()));
     }
 
     try {
@@ -55,6 +56,6 @@ export async function GET(req: Request) {
         return NextResponse.redirect(`${TOOLS_URL}/auth/sso?token=${token}`);
     } catch (error) {
         console.error('Tools SSO error:', error);
-        return NextResponse.redirect(new URL('/dashboard?error=tools-sso-failed', req.url));
+        return NextResponse.redirect(new URL('/dashboard?error=tools-sso-failed', getPublicOrigin()));
     }
 }
