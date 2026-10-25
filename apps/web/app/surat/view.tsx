@@ -511,6 +511,7 @@ export default function SuratPage() {
     const [profilSekolah, setProfilSekolah] = useState<any>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
+    const pdfLoadId = useRef(0);
 
     useEffect(() => {
         // Prefill tanggal_ttd with local today's date (YYYY-MM-DD)
@@ -691,6 +692,8 @@ export default function SuratPage() {
     const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
+        // Memungkinkan memilih ulang berkas yang sama setelah kegagalan baca.
+        e.target.value = '';
         const ext = file.name.split('.').pop()?.toLowerCase();
         if (ext !== 'pdf') {
             e.target.value = '';
@@ -703,55 +706,47 @@ export default function SuratPage() {
             });
         }
         setPdfFile(file);
+        setPdfDoc(null);
+        setNumPages(0);
+        setViewportDims({ width: 0, height: 0 });
         setPlacement(null);
+        setIsSuccess(false);
         await loadPdfDocument(file);
     };
 
-    const loadPdfJsIfNeeded = (): Promise<void> => {
-        if ((window as any).pdfjsLib) return Promise.resolve();
-        return new Promise((resolve) => {
-            const script = document.createElement('script');
-            script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
-            script.async = true;
-            script.onload = () => {
-                const lib = (window as any).pdfjsLib;
-                if (lib) {
-                    lib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-                }
-                resolve();
-            };
-            script.onerror = () => resolve();
-            document.body.appendChild(script);
-        });
+    const loadPdfJsIfNeeded = async () => {
+        const pdfjs = await import('pdfjs-dist');
+        // Paket dan worker versi yang sama, tersedia dari aplikasi sendiri.
+        pdfjs.GlobalWorkerOptions.workerSrc = '/api/public/e-sertifikat-worker';
+        return pdfjs;
     };
 
     const loadPdfDocument = async (file: File) => {
-        await loadPdfJsIfNeeded();
-        if (!(window as any).pdfjsLib) {
-            Swal.fire({ icon: 'error', title: 'Gagal', text: 'PDF Engine gagal dimuat. Silakan refresh halaman.' });
-            return;
-        }
+        const loadId = ++pdfLoadId.current;
         setProcessing(true);
         try {
-            const reader = new FileReader();
-            reader.onload = async function (ev) {
-                try {
-                    const arr = new Uint8Array(ev.target?.result as ArrayBuffer);
-                    const pdf = await (window as any).pdfjsLib.getDocument({ data: arr }).promise;
-                    setPdfDoc(pdf); 
-                    setNumPages(pdf.numPages); 
-                    setCurrentPage(1);
-                } catch (e) {
-                    console.error('[PDF] Load Error:', e);
-                    Swal.fire('Error', 'Gagal memproses file PDF.', 'error');
-                }
-            };
-            reader.readAsArrayBuffer(file);
-        } catch (e) { 
-            console.error('[PDF] Reader Error:', e);
-            Swal.fire('Error', 'Gagal membaca PDF.', 'error'); 
-        } finally { 
-            setProcessing(false); 
+            const pdfjs = await loadPdfJsIfNeeded();
+            const arr = new Uint8Array(await file.arrayBuffer());
+            if (loadId !== pdfLoadId.current) return;
+            const pdf = await pdfjs.getDocument({ data: arr, isEvalSupported: false }).promise;
+            if (loadId !== pdfLoadId.current) {
+                await pdf.destroy();
+                return;
+            }
+            setPdfDoc(pdf);
+            setNumPages(pdf.numPages);
+            setCurrentPage(1);
+        } catch (e: any) {
+            if (loadId !== pdfLoadId.current) return;
+            console.error('[PDF] Load Error:', e);
+            setPdfFile(null);
+            setPdfDoc(null);
+            setNumPages(0);
+            Swal.fire('Gagal membaca PDF', e?.name === 'PasswordException'
+                ? 'PDF dilindungi sandi. Gunakan salinan PDF tanpa sandi untuk ditandatangani.'
+                : 'Dokumen PDF tidak dapat dibuka. Pastikan berkas tidak rusak, lalu pilih ulang berkasnya.', 'error');
+        } finally {
+            if (loadId === pdfLoadId.current) setProcessing(false);
         }
     };
 

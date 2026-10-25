@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { POST as handleUpload } from '@/app/api/upload/route';
 
 // Delegate to the main upload API
 // This route exists for backward compatibility with existing code
@@ -15,11 +16,11 @@ export async function POST(request: NextRequest) {
     if (authHeader) headers['Authorization'] = authHeader;
 
     const formData = await request.formData();
-    const response = await fetch(uploadUrl.toString(), {
+    const response = await handleUpload(new NextRequest(uploadUrl, {
         method: 'POST',
         headers,
         body: formData
-    });
+    }));
 
     const result = await response.json();
     return NextResponse.json(result, { status: response.status });

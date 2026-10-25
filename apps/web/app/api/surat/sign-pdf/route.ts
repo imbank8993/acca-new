@@ -4,6 +4,8 @@ import { extractRequestToken } from '@/lib/app-jwt';
 import { nestFetchAsUser } from '@/lib/nest-api';
 import { getApiUser } from '@/lib/api-auth';
 import QRCode from 'qrcode';
+import { POST as handleUpload } from '@/app/api/upload/route';
+import { getPublicOrigin } from '@/lib/public-url';
 
 export const dynamic = 'force-dynamic';
 
@@ -122,6 +124,11 @@ export async function POST(req: NextRequest) {
 
         // ─── STEP 1: DAFTAR KE DATABASE ───
         const penandatanganId = suratData.penandatangan_id || suratData.pejabat_id || null;
+        // Pilihan /surat/guru memakai ID master_guru (angka), sedangkan
+        // penandatangan_id berelasi ke auth_users.id (UUID). Simpan ID guru
+        // pada pejabat_id dan identitasnya pada kolom nama/NIP.
+        const penandatanganAuthId = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(penandatanganId || ''))
+            ? String(penandatanganId) : null;
         const penandatanganNama = suratData.penandatangan_nama || suratData.pejabat_nama || '';
         const penandatanganJabatan = suratData.penandatangan_jabatan || suratData.pejabat_jabatan || '';
         const penandatanganNip = suratData.penandatangan_nip || suratData.pejabat_nip || '';
@@ -137,15 +144,15 @@ export async function POST(req: NextRequest) {
             perkara: String(suratData.perkara || '').slice(0, 500),
             kepada: String(suratData.kepada || '').slice(0, 500),
             tempat_ttd: String(kabupatenKota || '').slice(0, 255),
-            tanggal_ttd: safeTanggalTtd,
+            tanggal_ttd: `${safeTanggalTtd}T00:00:00.000Z`,
             created_by: authenticatedUserId,
             status: 'DRAFT',
             jenis_surat: String(suratData.jenis_surat || 'EXTERNAL').slice(0, 100),
-            pejabat_id: penandatanganId,
+            pejabat_id: penandatanganId == null ? null : String(penandatanganId),
             pejabat_nama: String(penandatanganNama || '').slice(0, 255),
             pejabat_jabatan: String(penandatanganJabatan || '').slice(0, 255),
             pejabat_nip: String(penandatanganNip || '').slice(0, 50),
-            penandatangan_id: penandatanganId,
+            penandatangan_id: penandatanganAuthId,
             penandatangan_nama: String(penandatanganNama || '').slice(0, 255),
             penandatangan_jabatan: String(penandatanganJabatan || '').slice(0, 255),
             penandatangan_nip: String(penandatanganNip || '').slice(0, 50),
@@ -163,18 +170,7 @@ export async function POST(req: NextRequest) {
         const suratId = createBody.data.id;
 
         // Tentukan baseUrl server yang terpercaya, JANGAN percaya baseUrl mentah dari klien
-        let serverOrigin = process.env.NEXT_PUBLIC_APP_URL || '';
-        if (!serverOrigin || serverOrigin.includes('localhost')) {
-            const host = req.headers.get('host') || '';
-            const proto = req.headers.get('x-forwarded-proto') || 'https';
-            if (host) {
-                serverOrigin = `${proto}://${host}`;
-            }
-        }
-        if (!serverOrigin || serverOrigin.includes('localhost')) {
-            serverOrigin = 'https://acca.icgowa.sch.id';
-        }
-        const cleanBaseUrl = serverOrigin.replace(/\/$/, '');
+        const cleanBaseUrl = getPublicOrigin();
         const verificationUrl = `${cleanBaseUrl}/surat/scan/${suratId}`;
 
         console.log(`[Sign-PDF] Database ID Created: ${suratId}`);
@@ -435,11 +431,11 @@ export async function POST(req: NextRequest) {
         const authHeader = req.headers.get('authorization');
         if (authHeader) forwardHeaders['Authorization'] = authHeader;
 
-        const uploadRes = await fetch(uploadApiUrl.toString(), {
+        const uploadRes = await handleUpload(new NextRequest(uploadApiUrl, {
             method: 'POST',
             headers: forwardHeaders,
             body: uploadFormData,
-        });
+        }));
 
         if (!uploadRes.ok) {
             const errTxt = await uploadRes.text();
