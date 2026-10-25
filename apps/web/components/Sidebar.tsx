@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useMemo, useRef } from 'react'
+import { APP_BRAND } from '@/lib/branding'
 import type { User, PageNode } from '@/lib/types'
 import { useModalBlur } from './ModalBlurProvider'
 import { swalError } from '@/lib/swal-premium'
@@ -653,14 +654,14 @@ export default function Sidebar({
             >
               {!isCollapsed ? (
                 <>
-                  <img src="/logo-sidebar.png" alt="ACCA Logo" className="brand-logo-img light-logo" />
-                  <img src="/logo-sidebar-dark.png" alt="ACCA Logo" className="brand-logo-img dark-logo" />
+                  <img src={APP_BRAND.wordmark} alt="ACCA Logo" className="brand-logo-img light-logo" />
+                  <img src={APP_BRAND.wordmarkDark} alt="ACCA Logo" className="brand-logo-img dark-logo" />
                 </>
               ) : (
                 // Satu berkas untuk terang & gelap: marka transparan dengan biru
                 // yang sama persis (#1D6BF3) seperti logo lebar, jadi terbaca di
                 // kedua latar tanpa perlu varian kedua.
-                <img src="/logo-sidebar-kecil.webp" alt="ACCA Logo" className="brand-logo-img" />
+                <img src={APP_BRAND.logo} alt="ACCA Logo" className="brand-logo-img" />
               )}
             </button>
             {/* Tombol lipat/perbesar sidebar dioperasikan langsung dengan menekan logo di atas. */}

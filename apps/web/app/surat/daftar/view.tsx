@@ -11,6 +11,7 @@ import { createPortal } from 'react-dom';
 import Swal from 'sweetalert2';
 import '../../surat/surat.css';
 import { getPublicOrigin } from '@/lib/public-url';
+import { APP_BRAND } from '@/lib/branding';
 
 interface SuratItem {
     id: string;
@@ -473,7 +474,7 @@ function DaftarSuratContent({ hideHeader = false }: { hideHeader?: boolean }) {
                                         style={{ width: '84px', height: '84px', border: '1px solid #e2e8f0', background: 'white', display: 'block' }}
                                     />
                                     <img
-                                        src="/logo-sidebar-kecil.webp" alt="Logo"
+                                        src={APP_BRAND.logo} alt="Logo"
                                         style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '20px', height: '20px', borderRadius: '4px', background: 'white', padding: '1.5px', boxShadow: '0 2px 6px rgba(0,0,0,0.1)', objectFit: 'contain' }}
                                     />
                                 </div>

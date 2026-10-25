@@ -8,19 +8,33 @@ import "./arabic-font.css";
 import { ModalBlurProvider } from "@/components/ModalBlurProvider";
 import { AppUpdateChecker } from "@/components/AppUpdateChecker";
 import { AlertProvider } from "@/components/ui/AlertProvider";
+import { APP_BRAND } from "@/lib/branding";
+import { getPublicOrigin } from "@/lib/public-url";
 
 export const metadata: Metadata = {
+  metadataBase: new URL(getPublicOrigin()),
   title: "ACCA - Academic Center & Administration",
   description: "MAN Insan Cendekia Gowa - Academic Center & Administration Application",
   icons: {
     icon: [
-      { url: "/icon.svg", type: "image/svg+xml" },
-      { url: "/logo-icon.png", type: "image/png" }
+      { url: APP_BRAND.icon, type: "image/png", sizes: "192x192" },
+      { url: APP_BRAND.appIcon, type: "image/png", sizes: "512x512" }
     ],
-    shortcut: "/icon.svg",
-    apple: "/logo-icon.png",
+    shortcut: APP_BRAND.icon,
+    apple: APP_BRAND.appleIcon,
   },
   manifest: "/manifest.json",
+  openGraph: {
+    type: "website",
+    siteName: APP_BRAND.name,
+    title: "ACCA - Academic Center & Administration",
+    description: "MAN Insan Cendekia Gowa - Academic Center & Administration Application",
+    images: [{ url: APP_BRAND.shareImage, width: 1200, height: 630, alt: "Logo ACCA" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    images: [APP_BRAND.shareImage],
+  },
   formatDetection: {
     telephone: false,
     date: false,

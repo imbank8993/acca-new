@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import Link from 'next/link';
+import { APP_BRAND } from '@/lib/branding';
 import FilterToolbar, { FilterSearch, FilterSelect, FilterActions } from '@/components/ui/FilterToolbar';
 import { Spinner } from '@/components/ui/Spinner';
 import { Tab } from '@/components/ui/Tab';
@@ -375,12 +376,12 @@ export default function MonitoringLaporanView() {
                     <Link href="/monitoring/laporan" className="mon-lap-brand" title="Portal Monitoring Laporan ACCA">
                         {/* Logo ACCA lebar tetapi proporsional */}
                         <img
-                            src="/logo-sidebar.png"
+                            src={APP_BRAND.wordmark}
                             alt="Logo ACCA"
                             className="mon-lap-logo-img light-logo"
                         />
                         <img
-                            src="/logo-sidebar-dark.png"
+                            src={APP_BRAND.wordmarkDark}
                             alt="Logo ACCA"
                             className="mon-lap-logo-img dark-logo"
                         />

@@ -3,11 +3,23 @@ import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
 import { resolveShareToken } from '@/lib/informasi/share';
 import ShareLinkClient from './ShareLinkClient';
+import { APP_BRAND } from '@/lib/branding';
 
 export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
     title: 'Informasi Dibagikan - ACCA',
+    openGraph: {
+        type: 'website',
+        siteName: APP_BRAND.name,
+        title: 'Informasi Dibagikan - ACCA',
+        description: 'Informasi dari MAN Insan Cendekia Gowa.',
+        images: [{ url: APP_BRAND.shareImage, width: 1200, height: 630, alt: 'Logo ACCA' }],
+    },
+    twitter: {
+        card: 'summary_large_image',
+        images: [APP_BRAND.shareImage],
+    },
     // Publik (lihat publicPaths di middleware.ts) supaya link di WA bisa dibuka
     // tanpa login. Aksesnya bersandar pada token acak, jadi jangan diindeks.
     robots: { index: false, follow: false },

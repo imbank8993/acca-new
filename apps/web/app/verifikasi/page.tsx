@@ -5,6 +5,7 @@ import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import '../surat/surat.css';
 import { getPublicOrigin } from '@/lib/public-url';
+import { APP_BRAND } from '@/lib/branding';
 
 interface SuratVerified {
     found: boolean;
@@ -133,7 +134,7 @@ function VerifikasiContent() {
                         <div className="verify-container" style={{ margin: 0, width: '100%', maxWidth: 'none' }}>
                             <div className="verify-header">
                                 <div className="verify-logo">
-                                    <img src="/logo-icon.png" alt={madrasahName} />
+                                    <img src={APP_BRAND.logo} alt={madrasahName} />
                                 </div>
                                 <h1>Verifikasi Dokumen</h1>
                                 <p>{madrasahName}</p>
@@ -235,7 +236,7 @@ function VerifikasiContent() {
                 <div className="verify-container">
                     <div className="verify-header">
                         <div className="verify-logo">
-                            <img src="/logo-icon.png" alt={madrasahName} />
+                            <img src={APP_BRAND.logo} alt={madrasahName} />
                         </div>
                         <h1>Verifikasi Dokumen</h1>
                         <p>{madrasahName}</p>
