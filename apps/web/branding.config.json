@@ -1,6 +1,7 @@
 {
   "name": "ACCA",
   "symbol": "logo-sidebar-kecil.png",
+  "favicon": "favicon.svg",
   "wordmark": "logo-sidebar.png",
   "wordmarkDark": "logo-sidebar-dark.png"
 }

@@ -3145,7 +3145,7 @@
     justify-content: space-between;
     align-items: center;
     padding: 1.25rem 1.5rem;
-    background: var(--banner-bg, linear-gradient(135deg, var(--n-primary) 0%, #c2185b 100%));
+    background: var(--srt-primary, #3083ff);
     color: white;
 }
 
@@ -5829,6 +5829,47 @@ div:where(.swal2-popup).swal-compact {
 .dark .scan-error p,
 .dark .scan-help p {
     color: #94a3b8 !important;
+}
+
+/* Public letter verification: compact metadata and a width-fitted PDF on phones. */
+.scan-page-wrap .scan-header-bar { padding: 12px 0; border: 0; background: transparent; box-shadow: none; margin-bottom: 20px; }
+.scan-page-wrap .scan-letter-header { background: #3083ff; justify-content: center; padding: 18px 20px; }
+.scan-page-wrap .scan-nomor { font-family: inherit; background: transparent; border: 0; padding: 0; margin: 0; color: #fff; overflow-wrap: anywhere; line-height: 1.5; text-align: center; }
+.scan-page-wrap .scan-info-item { min-width: 0; }
+.scan-page-wrap .scan-value { overflow-wrap: anywhere; line-height: 1.6; }
+.scan-page-wrap .scan-info-subject { grid-column: 1 / -1; }
+.scan-page-wrap .scan-info-subject h1 { margin: 0; font-size: 1.05rem; line-height: 1.5; }
+.scan-secondary-details { border-top: 1px solid var(--srt-border); margin-top: 20px; padding-top: 12px; }
+.scan-secondary-details summary { color: var(--srt-muted); cursor: pointer; font-size: .78rem; font-weight: 600; min-height: 40px; padding: 8px 0; }
+.scan-secondary-details .scan-info-item { margin-top: 12px; }
+.scan-page-wrap .scan-verify-id { display: block; overflow-wrap: anywhere; line-height: 1.6; font-size: .7rem; }
+.scan-page-wrap .scan-pdf-col, .scan-page-wrap .scan-info-col { min-width: 0; }
+.scan-page-wrap .scan-btn { min-height: 44px; justify-content: center; }
+.dark .scan-page-wrap .scan-header-bar { background: transparent !important; border: 0 !important; box-shadow: none !important; }
+.dark .scan-page-wrap .scan-letter-header { background: #3083ff !important; }
+.dark .scan-page-wrap .scan-nomor { background: transparent !important; border: 0 !important; color: #fff !important; }
+
+@media (max-width: 600px) {
+    .scan-page-wrap { padding: 12px 14px 28px; }
+    .scan-page-wrap .scan-header-bar { flex-direction: row; gap: 8px; padding: 0; margin-bottom: 20px; text-align: left; }
+    .scan-page-wrap .scan-header-left { justify-content: flex-start; }
+    .scan-page-wrap .scan-btn-back { padding: 8px 12px; min-height: 44px; font-size: .78rem; }
+    .scan-page-wrap .scan-system-badge { padding: 6px 9px; font-size: .62rem; gap: 4px; }
+    .scan-page-wrap .scan-verification-header { gap: 8px; align-items: flex-start; }
+    .scan-page-wrap .scan-timestamp { font-size: .68rem; }
+    .scan-page-wrap .scan-valid-badge { padding: 7px 10px; font-size: .65rem; }
+    .scan-page-wrap .scan-letter-body { padding: 18px; }
+    .scan-page-wrap .scan-info-grid, .scan-info-col .scan-info-grid { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+    .scan-page-wrap .scan-info-item label { font-size: .62rem; letter-spacing: .05em; }
+    .scan-page-wrap .scan-value { font-size: .85rem; }
+    .scan-page-wrap .scan-info-subject h1 { font-size: 1rem; }
+    .scan-page-wrap .scan-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+    .scan-page-wrap .scan-actions .scan-btn { padding: 10px 8px; font-size: .78rem; white-space: nowrap; }
+    .scan-page-wrap .scan-2col-layout { gap: 20px; }
+    .scan-page-wrap .scan-pdf-col .scan-pdf-header { padding: 12px; }
+    .verify-page .verify-container { min-width: 0; padding: 16px; }
+    .verify-page .info-row { grid-template-columns: minmax(0, 1fr); gap: 6px; }
+    .verify-page .info-row > span { overflow-wrap: anywhere; }
 }
 
 

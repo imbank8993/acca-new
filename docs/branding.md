@@ -3,6 +3,7 @@
 Logo aplikasi memakai tiga sumber pada `apps/web/branding.config.json`:
 
 - `symbol`: lambang biru transparan, saat ini `public/logo-sidebar-kecil.png`.
+- `favicon`: ikon tab browser, saat ini `public/favicon.svg`. Sama dengan favicon ACCA-CBT: transparan, biru pada tema terang, dan putih pada tema gelap.
 - `wordmark`: logo lengkap untuk latar terang, saat ini `public/logo-sidebar.png`.
 - `wordmarkDark`: logo lengkap untuk latar gelap, saat ini `public/logo-sidebar-dark.png`.
 

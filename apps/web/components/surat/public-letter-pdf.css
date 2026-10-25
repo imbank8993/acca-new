@@ -1,0 +1,22 @@
+.letter-pdf-preview { min-width: 0; background: #eef2f7; }
+.letter-pdf-toolbar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; padding: 8px 12px; background: #fff; border-bottom: 1px solid #e2e8f0; color: #334155; }
+.letter-pdf-count { font-size: .75rem; font-weight: 600; }
+.letter-pdf-zoom { display: flex; gap: 4px; }
+.letter-pdf-toolbar button, .letter-pdf-message button { min-height: 40px; min-width: 40px; padding: 6px 10px; border: 1px solid #dbe4f0; border-radius: 8px; background: #f8fafc; color: #1e40af; font: inherit; font-size: .75rem; cursor: pointer; }
+.letter-pdf-toolbar button:disabled { opacity: .4; cursor: default; }
+.letter-pdf-preview button:focus-visible { outline: 3px solid #3083ff; outline-offset: 2px; }
+.letter-pdf-pages { display: grid; justify-items: start; gap: 20px; padding: 12px; overflow: auto; max-height: calc(100svh - 210px); }
+.letter-pdf-page { margin: 0 auto; max-width: none; }
+.letter-pdf-sheet { background: #fff; min-height: 100px; box-shadow: 0 2px 8px #0f172a12; }
+.letter-pdf-sheet canvas { display: block; width: 100%; height: auto; min-height: 100px; }
+.letter-pdf-page figcaption { text-align: center; margin-top: 8px; font-size: .7rem; color: #64748b; }
+.letter-pdf-message { margin: 0; padding: 28px 16px; color: #475569; font-size: .85rem; text-align: center; }
+.dark .letter-pdf-preview, .dark .letter-pdf-pages { background: #101b30; }
+.dark .letter-pdf-toolbar { background: #0b1329; color: #cbd5e1; border-color: #334155; }
+.dark .letter-pdf-toolbar button, .dark .letter-pdf-message button { background: #17233b; color: #93c5fd; border-color: #334155; }
+.dark .letter-pdf-message, .dark .letter-pdf-page figcaption { color: #94a3b8; }
+@media (max-width: 600px) {
+    .letter-pdf-pages { max-height: none; gap: 16px; }
+    .letter-pdf-toolbar { gap: 6px; padding: 8px 10px; }
+    .letter-pdf-toolbar button { min-height: 44px; }
+}

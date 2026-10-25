@@ -17,10 +17,11 @@ export const metadata: Metadata = {
   description: "MAN Insan Cendekia Gowa - Academic Center & Administration Application",
   icons: {
     icon: [
+      { url: APP_BRAND.favicon, type: "image/svg+xml" },
       { url: APP_BRAND.icon, type: "image/png", sizes: "192x192" },
       { url: APP_BRAND.appIcon, type: "image/png", sizes: "512x512" }
     ],
-    shortcut: APP_BRAND.icon,
+    shortcut: APP_BRAND.favicon,
     apple: APP_BRAND.appleIcon,
   },
   manifest: "/manifest.json",

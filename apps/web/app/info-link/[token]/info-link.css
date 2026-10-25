@@ -24,7 +24,7 @@
     gap: 14px;
     padding: 20px;
     border-radius: 18px;
-    background: linear-gradient(135deg, #3083ff 0%, #c2185b 100%);
+    background: #3083ff;
     color: #fff;
     box-shadow: 0 6px 20px rgba(48, 131, 255, 0.25);
 }

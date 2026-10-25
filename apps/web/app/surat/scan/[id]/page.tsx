@@ -3,6 +3,7 @@ import MaintenanceBanner from '@/components/MaintenanceBanner';
 import { Spinner } from '@/components/ui/Spinner';
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import PublicLetterPdfPreview from '@/components/surat/PublicLetterPdfPreview';
 import '../../surat.css';
 
 interface SuratDetail {
@@ -127,7 +128,7 @@ function ScanVerificationPage() {
     return (
         <div className="scan-page-wrap animate-srt-fade-in">
             {/* Verification Page Header */}
-            <header className="scan-header-bar" style={{ padding: '0.85rem 1.5rem', borderRadius: '12px' }}>
+            <header className="scan-header-bar">
                 <div className="scan-header-left">
                     <a href="/" className="scan-btn-back">
                         <i className="bi bi-arrow-left"></i>
@@ -159,15 +160,15 @@ function ScanVerificationPage() {
 
                     {/* Letter Info Card */}
                     <div className="scan-letter-card">
-                        <div className="scan-letter-header" style={{ justifyContent: 'center', padding: '0.85rem 1.5rem' }}>
-                            <span className="scan-nomor" style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', width: '100%', textAlign: 'center', letterSpacing: '0.02em', margin: 0 }}>{surat.nomor_surat || '-'}</span>
+                        <div className="scan-letter-header">
+                            <span className="scan-nomor">{surat.nomor_surat || '-'}</span>
                         </div>
 
                         <div className="scan-letter-body">
                             <div className="scan-info-grid">
-                                <div className="scan-info-item">
+                                <div className="scan-info-item scan-info-subject">
                                     <label>Perihal</label>
-                                    <span className="scan-value scan-value-lg">{surat.perkara || '-'}</span>
+                                    <h1 className="scan-value scan-value-lg">{surat.perkara || '-'}</h1>
                                 </div>
                                 <div className="scan-info-item">
                                     <label>Penandatangan</label>
@@ -183,6 +184,9 @@ function ScanVerificationPage() {
                                     <label>Tempat & Tanggal</label>
                                     <span className="scan-value">{surat.tempat_ttd || '-'}, {formatDate(surat.tanggal_ttd)}</span>
                                 </div>
+                            </div>
+                            <details className="scan-secondary-details">
+                                <summary>Detail verifikasi</summary>
                                 <div className="scan-info-item">
                                     <label>Dibuat</label>
                                     <span className="scan-value">{formatDate(surat.created_at)}</span>
@@ -191,16 +195,16 @@ function ScanVerificationPage() {
                                     <label>ID Verifikasi</label>
                                     <span className="scan-verify-id">SRT-{surat.id}</span>
                                 </div>
-                            </div>
+                            </details>
                         </div>
                     </div>
 
                     {/* Actions */}
                     <div className="scan-actions">
                         {surat.file_url && (
-                            <a href={surat.file_url} target="_blank" rel="noopener noreferrer" className="scan-btn scan-btn-success">
+                            <a href={`/api/public/surat/file?id=${encodeURIComponent(surat.id)}&download=1`} className="scan-btn scan-btn-success">
                                 <i className="bi bi-download"></i>
-                                Download PDF
+                                Unduh PDF
                             </a>
                         )}
                         <button onClick={() => navigator.clipboard.writeText(window.location.href)} className="scan-btn scan-btn-secondary">
@@ -217,11 +221,7 @@ function ScanVerificationPage() {
                             <h3><i className="bi bi-file-earmark-pdf"></i> Dokumen Surat</h3>
                         </div>
                         <div className="scan-pdf-viewer">
-                            <iframe
-                                src={surat.file_url}
-                                title="Preview Surat"
-                                className="scan-pdf-iframe"
-                            />
+                            <PublicLetterPdfPreview letterId={surat.id} />
                         </div>
                     </div>
                 )}

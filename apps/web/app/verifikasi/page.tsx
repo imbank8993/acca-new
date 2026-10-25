@@ -6,6 +6,7 @@ import { useSearchParams } from 'next/navigation';
 import '../surat/surat.css';
 import { getPublicOrigin } from '@/lib/public-url';
 import { APP_BRAND } from '@/lib/branding';
+import PublicLetterPdfPreview from '@/components/surat/PublicLetterPdfPreview';
 
 interface SuratVerified {
     found: boolean;
@@ -65,10 +66,21 @@ function VerifikasiContent() {
         try {
             const res = await fetch(`/api/surat/verify?letter_id=${letterId}`);
             const json = await res.json();
-            setData(json);
-            if (!json.ok) {
-                setError(json.error || 'Gagal memverifikasi');
+            const letter = json.letter || json.surat;
+            if (!res.ok || !json.ok || !json.valid || !letter) {
+                setData(null);
+                setError(json.error || 'Dokumen belum dipublikasikan atau tidak dapat diverifikasi.');
+                return;
             }
+            setError(null);
+            setData({ ...json, found: true, verified_at: json.verified_at || new Date().toISOString(), letter: {
+                ...letter,
+                alamat: letter.alamat || letter.alamat_tujuan || '',
+                penandatangan: letter.penandatangan || {
+                    nama: letter.penandatangan_nama || letter.pejabat_nama || '-',
+                    jabatan: letter.penandatangan_jabatan || letter.pejabat_jabatan || '',
+                },
+            } });
         } catch (e: any) {
             setError(e.message);
         } finally {
@@ -218,16 +230,12 @@ function VerifikasiContent() {
                     <div className="scan-pdf-col">
                         <div className="scan-pdf-header">
                             <h3><i className="bi bi-file-earmark-pdf"></i> Preview Dokumen Asli</h3>
-                            <a href={letter.file_url} target="_blank" rel="noopener noreferrer" className="verify-home-link" style={{ margin: 0, padding: '0.4rem 0.8rem', fontSize: '0.8rem' }}>
+                            <a href={`/api/public/surat/file?id=${encodeURIComponent(letter.id)}&download=1`} className="verify-home-link" style={{ margin: 0, padding: '0.4rem 0.8rem', fontSize: '0.8rem' }}>
                                 <i className="bi bi-download"></i> Download
                             </a>
                         </div>
                         <div className="scan-pdf-viewer">
-                            <iframe
-                                src={letter.file_url}
-                                title="Preview Surat"
-                                className="scan-pdf-iframe"
-                            />
+                            <PublicLetterPdfPreview letterId={letter.id} />
                         </div>
                     </div>
                 </div>

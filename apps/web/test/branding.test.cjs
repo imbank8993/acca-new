@@ -34,6 +34,8 @@ test('global and shared-link previews use the new public brand image without lea
     }
     assert.equal(share.robots.index, false);
     assert.equal(root.icons.apple, branding.APP_BRAND.appleIcon);
+    assert.equal(root.icons.icon[0].url, branding.APP_BRAND.favicon);
+    assert.equal(root.icons.icon[0].type, 'image/svg+xml');
     const visibleLogo = await sharp(path.join('apps/web/public', branding.APP_BRAND.shareImage))
         .flatten({ background: '#ffffff' }).trim({ background: '#ffffff' }).toBuffer({ resolveWithObject: true });
     assert(visibleLogo.info.width < visibleLogo.info.height, 'Shared links must use the compact symbol, not the wide ACCA wordmark');
@@ -46,8 +48,14 @@ test('legacy logo URLs, Next favicon, installation icons and report logo agree w
     }
     const dataUri = 'data:image/png;base64,' + source.toString('base64');
     assert.equal(logo.APP_LOGO_DATA_URI, dataUri);
-    for (const name of ['apps/web/app/icon.svg', 'apps/web/public/icon.svg', 'apps/web/public/Logo.svg']) {
-        assert(fs.readFileSync(name, 'utf8').includes(dataUri));
+    assert(fs.readFileSync('apps/web/public/Logo.svg', 'utf8').includes(dataUri));
+    const favicon = fs.readFileSync('apps/web/public/favicon.svg', 'utf8');
+    assert.match(favicon, /prefers-color-scheme: dark/);
+    assert.match(favicon, /fill: #FFFFFF/);
+    assert.match(favicon, /fill: #3083FF/);
+    assert.doesNotMatch(favicon, /<image|<rect/);
+    for (const name of ['apps/web/app/icon.svg', 'apps/web/public/icon.svg', path.join('apps/web/public', branding.APP_BRAND.favicon)]) {
+        assert.equal(fs.readFileSync(name, 'utf8'), favicon);
     }
     const manifest = JSON.parse(fs.readFileSync('apps/web/public/manifest.json', 'utf8'));
     for (const entry of manifest.icons) {
