@@ -383,7 +383,7 @@ function JurnalContent({ user }: { user?: any }) {
                                                 }}
                                             >
                                                 <span className="sk__menuIcon"><i className="bi bi-download" style={{ color: '#3b82f6' }} /></span>
-                                                <span className="sk__menuLabel">Export</span>
+                                                <span className="sk__menuLabel">Export PDF</span>
                                             </button>
                                         )}
 
@@ -410,11 +410,11 @@ function JurnalContent({ user }: { user?: any }) {
                                     variant="outline"
                                     size="md"
                                     onClick={() => setShowExportModal(true)}
-                                    icon="export"
+                                    icon="pdf"
                                     className="sk__btnDesktopOnly"
-                                    title="Export Data"
+                                    title="Export Jurnal PDF A4"
                                 >
-                                    Export
+                                    Export PDF
                                 </Button>
                             )}
                             {canDo('create') && (

@@ -14,6 +14,7 @@
 
 import React, { type ReactNode } from 'react'
 import { CalendarDays } from 'lucide-react'
+import { liburBerlakuUntukKelas, normalizeJamKe, JAM_SEMUA } from '@/lib/libur'
 
 export interface KolomJadwal {
   /** Judul kolom di <thead>. */
@@ -212,7 +213,7 @@ export function SectionHeader({
  * `jam_ke` kosong atau 'Semua' berarti sehari penuh.
  */
 export const cariLiburPenuh = (liburHariIni: any[]) =>
-  liburHariIni.find(l => !l.jam_ke || l.jam_ke === 'Semua')
+  liburHariIni.find(l => normalizeJamKe(l.jam_ke) === JAM_SEMUA && liburBerlakuUntukKelas(l))
 
 /** Pemberitahuan hari libur sehari penuh. */
 export function LiburSehariPenuh({ libur, jenis }: { libur: any; jenis: string }) {

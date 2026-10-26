@@ -23,6 +23,7 @@ interface ExportModalProps {
     initialTahunAjaran?: string;
     lockMode?: boolean;
     simpleMode?: boolean;
+    format?: 'xlsx' | 'pdf';
     onSuccess?: () => void;
 }
 
@@ -71,7 +72,7 @@ const getInitialMode = (props: { initialMode?: 'GURU' | 'WALI' | 'ADMIN', isAdmi
 
 export default function ExportModal({
     isOpen, onClose, userRole, nip, namaGuru, isSubstitute = false, teacherClasses = [], permissions = [], isAdmin = false, roles = [],
-    initialMode, initialKelas, initialTahunAjaran, lockMode = false, simpleMode = false, onSuccess
+    initialMode, initialKelas, initialTahunAjaran, lockMode = false, simpleMode = false, format = 'pdf', onSuccess
 }: ExportModalProps) {
     const [academicYears, setAcademicYears] = useState<string[]>([]);
     const [academicYear, setAcademicYear] = useState(initialTahunAjaran || '');
@@ -162,7 +163,7 @@ export default function ExportModal({
         `;
 
         const result = await Swal.fire({
-            title: 'Export Absensi',
+            title: format === 'pdf' ? 'Export Absensi PDF A4' : 'Export Absensi',
             html: `
                 ${styleBlock}
                 <div style="text-align:left">
@@ -204,7 +205,7 @@ export default function ExportModal({
                 </script>
             `,
             showCancelButton: true,
-            confirmButtonText: 'Export',
+            confirmButtonText: format === 'pdf' ? 'Unduh PDF' : 'Export',
             cancelButtonText: 'Batal',
             confirmButtonColor: '#3b82f6',
             width: '500px',
@@ -290,8 +291,6 @@ export default function ExportModal({
             return;
         }
 
-        const XLSX = await import('xlsx-js-style');
-
         let finalSessions = sessions.filter((s: any) => s.status_sesi === 'FINAL' || s.sesi_id?.startsWith('rekap-'));
 
         // Filter by selected classes if specified
@@ -306,7 +305,6 @@ export default function ExportModal({
         if (Array.isArray(body.months) && body.months.length > 0) {
             const allowedM = new Set(body.months.map((m: any) => Number(m)));
             finalSessions = finalSessions.filter((s: any) => {
-                if (s.sesi_id?.startsWith('rekap-')) return true;
                 const parts = (s.tanggal || '').split('-');
                 if (parts.length >= 2) {
                     const m = parseInt(parts[1], 10);
@@ -316,6 +314,31 @@ export default function ExportModal({
             });
         }
 
+        if (!finalSessions.length) {
+            Swal.fire('Kosong', 'Tidak ada absensi final untuk pilihan kelas dan bulan tersebut.', 'info');
+            return;
+        }
+
+        if (format === 'pdf') {
+            const [{ createAbsensiPdf }, { getTimezone }] = await Promise.all([
+                import('@/lib/absensi-pdf'), import('@/lib/timezone'),
+            ]);
+            const doc = createAbsensiPdf({ sessions: finalSessions, ketidakhadiran, holidays }, {
+                tahunAjaran: body.year, timezone: await getTimezone(), mode: body.mode,
+                namaGuru: body.mode === 'GURU' ? namaGuru : undefined,
+                nip: body.mode === 'GURU' ? nip : undefined,
+            });
+            const classes = Array.from(new Set(finalSessions.map((s: any) => s.kelas)));
+            const className = (classes.length === 1 ? String(classes[0]) : 'Semua_Kelas').replace(/[^\w-]+/g, '_');
+            const teacher = body.mode === 'GURU' && namaGuru ? `_${namaGuru.replace(/[^\p{L}\p{N}-]+/gu, '_')}` : '';
+            doc.save(`Absensi_${className}${teacher}_${String(body.year).replace('/', '-')}.pdf`);
+            onClose();
+            if (onSuccess) onSuccess();
+            Swal.fire({ icon: 'success', title: 'Berhasil', text: 'PDF A4 berhasil diunduh', timer: 1500, showConfirmButton: false });
+            return;
+        }
+
+        const XLSX = await import('xlsx-js-style');
         const finalAllSessions = allSessions.filter((s: any) => s.status_sesi === 'FINAL');
         const classesInExport: string[] = Array.from(new Set(finalSessions.map((s: any) => s.kelas || 'Tanpa Kelas')));
 
@@ -1230,8 +1253,8 @@ export default function ExportModal({
         >
             <ModalHeader
                 id="modal-export-absensi-title"
-                icon="file-earmark-excel-fill"
-                title="Export Data Absensi"
+                icon={format === 'pdf' ? 'file-earmark-pdf' : 'file-earmark-excel-fill'}
+                title={format === 'pdf' ? 'Export Absensi PDF A4' : 'Export Data Absensi'}
                 subtitle={exportMode === 'GURU' && namaGuru ? `${namaGuru}${nip ? ` (${nip})` : ''}` : undefined}
                 onClose={onClose}
             />
@@ -1374,7 +1397,7 @@ export default function ExportModal({
                     isLoading={exporting}
                     icon="download"
                 >
-                    {exporting ? 'Mengexport...' : 'Download Excel'}
+                    {exporting ? (format === 'pdf' ? 'Menyiapkan PDF...' : 'Mengexport...') : (format === 'pdf' ? 'Unduh PDF' : 'Download Excel')}
                 </Button>
             </ModalFooter>
 

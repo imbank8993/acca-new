@@ -6348,6 +6348,11 @@ body.dark .rm-form-footer,
   min-width: 0;
 }
 
+.kehadiran-page .dh-header,
+.kehadiran-page .dh-backBtn {
+  border-width: 1px;
+}
+
 @media (max-width: 767.98px) {
   .kh-page-wrap {
     gap: 14px;

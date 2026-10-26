@@ -3,8 +3,9 @@
 import React from 'react'
 import { CalendarCheck, CalendarRange, CalendarX, MapPin } from 'lucide-react'
 import Spinner from '@/components/ui/Spinner'
+import { jadwalTanpaLibur, liburPenuhJadwal } from '@/lib/jadwal-libur'
 import {
-  JadwalHariIni, JadwalPekan, LiburSehariPenuh, SectionHeader, cariLiburPenuh,
+  JadwalHariIni, JadwalPekan, LiburSehariPenuh, SectionHeader,
   kolomJam, kolomNomor, kolomPukul, kolomTeks, type TampilanJadwal,
 } from './parts'
 
@@ -44,14 +45,16 @@ const tampilan: TampilanJadwal = {
 const ikonJudul = { color: 'var(--n-primary)', display: 'inline', verticalAlign: 'middle' } as const
 
 export default function JadwalPbmTab({
-  jadwalHariIni,
-  jadwalMingguIni,
+  jadwalHariIni: jadwalAsli,
+  jadwalMingguIni: pekanAsli,
   liburHariIni,
   loadingJadwal,
   getWeekOrder,
   isToday,
 }: JadwalPbmTabProps) {
-  const libur = cariLiburPenuh(liburHariIni)
+  const libur = liburPenuhJadwal(jadwalAsli, liburHariIni)
+  const jadwalHariIni = jadwalTanpaLibur(jadwalAsli, liburHariIni)
+  const jadwalMingguIni = pekanAsli.filter(row => !isToday(row.hari) || jadwalTanpaLibur([row], liburHariIni).length > 0)
 
   return (
     <div className="tjp">

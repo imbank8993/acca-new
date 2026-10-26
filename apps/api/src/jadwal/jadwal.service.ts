@@ -297,7 +297,7 @@ export class JadwalService {
         select: { hari: true, jam_ke: true, program: true, mulai: true, selesai: true },
       }),
       this.prisma.master_kelas.findMany({
-        select: { nama: true, program: true },
+        select: { nama: true, program: true, tingkat: true },
       }),
     ]);
 
@@ -334,6 +334,7 @@ export class JadwalService {
         hari: item.hari,
         jam_ke: item.jam_ke,
         kelas: item.kelas,
+        tingkat: masterKelasList.find(k => k.nama === item.kelas)?.tingkat ?? null,
         mata_pelajaran: item.mata_pelajaran,
         mapel: item.mapel || item.mata_pelajaran || '',
         ruang: item.ruang,

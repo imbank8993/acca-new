@@ -2,9 +2,10 @@
 
 import { useEffect, useMemo, useRef, useState, type TouchEvent } from 'react'
 import { createPortal } from 'react-dom'
-import * as XLSX from 'xlsx'
+import { createJadwalPdf } from '@/lib/jadwal-pdf'
+import type { GuruMapelEntry } from '@/app/jadwal/lib/parseJadwalExcel'
 import Spinner from '@/components/ui/Spinner'
-import { FileSpreadsheet, X, AlertTriangle, CalendarX, Search, ChevronLeft, ChevronRight } from 'lucide-react'
+import { FileText, X, AlertTriangle, CalendarX, Search, ChevronLeft, ChevronRight } from 'lucide-react'
 import { FilterToolbar, FilterSearch, FilterSelect } from '@/components/ui/FilterToolbar'
 import { useTimezone } from '@/hooks/use-timezone'
 
@@ -55,6 +56,7 @@ function sortColumns(cols: string[], classSet: Set<string>): string[] {
 }
 
 export default function JadwalLengkapModal({ open, onClose, type = 'mengajar' }: { open: boolean; onClose: () => void; type?: 'mengajar' | 'piket' }) {
+    const [exporting, setExporting] = useState(false)
     const [rows, setRows] = useState<JadwalRow[]>([])
     const [loading, setLoading] = useState(false)
     const [loaded, setLoaded] = useState(false)
@@ -241,41 +243,20 @@ export default function JadwalLengkapModal({ open, onClose, type = 'mengajar' }:
         if (delta < 0) goNextCol(); else goPrevCol()
     }
 
-    const exportExcel = () => {
-        const wb = XLSX.utils.book_new()
-        daysPresent.forEach(day => {
-            let dayRows = rows.filter(r => r.hari === day)
-            if (selectedKelas !== 'semua') {
-                dayRows = dayRows.filter(r => r.kelas === selectedKelas || colKeyOf(r) === selectedKelas)
-            }
-            if (search.trim() !== '') {
-                const q = search.toLowerCase().trim()
-                dayRows = dayRows.filter(r => {
-                    const nama = (r.nama_guru || '').toLowerCase()
-                    const mapel = mapelOf(r).toLowerCase()
-                    const kelas = (r.kelas || '').toLowerCase()
-                    const ruang = (r.ruang || '').toLowerCase()
-                    return nama.includes(q) || mapel.includes(q) || kelas.includes(q) || ruang.includes(q)
-                })
-            }
-            const cols = sortColumns([...new Set(dayRows.map(colKeyOf))], classSet)
-            const jams = [...new Set(dayRows.map(r => parseInt(r.jam_ke)).filter(n => !isNaN(n)))].sort((a, b) => a - b)
-            const aoa: any[][] = [['Hari', 'Jam ke-', 'Waktu', ...cols]]
-            jams.forEach(jam => {
-                const row: any[] = [day, jam, waktuMap[`${day}|${jam}`] || '']
-                cols.forEach(c => {
-                    const entries = dayRows.filter(r => parseInt(r.jam_ke) === jam && colKeyOf(r) === c)
-                    row.push(entries.map(e => {
-                        const kelasNote = e.kelas && e.kelas !== c ? ` [${e.kelas}]` : ''
-                        return `${mapelOf(e)} (${e.nama_guru})${kelasNote}`
-                    }).join(' ; '))
-                })
-                aoa.push(row)
-            })
-            const ws = XLSX.utils.aoa_to_sheet(aoa)
-            XLSX.utils.book_append_sheet(wb, ws, day.slice(0, 31))
-        })
-        XLSX.writeFile(wb, `Jadwal_${type === 'piket' ? 'Piket' : 'PBM'}_Lengkap${berlaku ? '_' + berlaku : ''}.xlsx`)
+    const exportPdf = async () => {
+        setExporting(true)
+        try {
+            const res = await fetch('/api/settings/guru-mapel?limit=10000')
+            const json = await res.json()
+            if (!res.ok || !json.ok || !Array.isArray(json.data)) throw new Error('Gagal memuat keterangan kode guru dan mapel. Silakan coba lagi.')
+            const master: GuruMapelEntry[] = json.data
+            createJadwalPdf(rows, { type, berlaku, waktuMap, master, selectedKelas, search, sortColumns })
+                .save(`Jadwal_${type === 'piket' ? 'Piket' : 'PBM'}_Lengkap${berlaku ? '_' + berlaku : ''}.pdf`)
+        } catch (e: any) {
+            window.alert(e.message || 'Gagal membuat PDF jadwal.')
+        } finally {
+            setExporting(false)
+        }
     }
 
     if (!open || typeof document === 'undefined') return null
@@ -290,7 +271,7 @@ export default function JadwalLengkapModal({ open, onClose, type = 'mengajar' }:
                     </div>
                     <div className="jl__headActions">
                         {loaded && rows.length > 0 && (
-                            <button className="jl__btnExport" onClick={exportExcel} title="Unduh sebagai Excel"><FileSpreadsheet size={16} /></button>
+                            <button className="jl__btnExport" onClick={exportPdf} disabled={exporting} aria-label="Unduh jadwal PDF" title={exporting ? 'Menyiapkan PDF…' : 'Unduh sebagai PDF'}><FileText size={16} /></button>
                         )}
                         <button className="jl__close" onClick={onClose} aria-label="Tutup"><X size={18} /></button>
                     </div>

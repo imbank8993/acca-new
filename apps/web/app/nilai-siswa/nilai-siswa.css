@@ -4,6 +4,11 @@
    bingkai #1a73e8 di mode gelap. Kartu bersih & modern.
 ========================================================= */
 
+.nilai-page .dh-header,
+.nilai-page .dh-backBtn {
+  border-width: 1px;
+}
+
 /* ── Kartu Mapel & Header Card ──────────────────────────── */
 .nilai-page__mapel-card {
   background: var(--n-card, #ffffff);

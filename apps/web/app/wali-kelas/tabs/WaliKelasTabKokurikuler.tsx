@@ -7,7 +7,9 @@ import { Modal, ModalHeader, ModalBody, ModalViewFooter } from '@/components/ui/
 import { Spinner } from '@/components/ui/Spinner';
 import DatePicker from '@/components/ui/DatePicker';
 import { useTahunAjaranFilter } from '@/hooks/use-tahun-ajaran-filter';
-import { FilterToolbar, FilterSelect, FilterSearch } from '@/components/ui/FilterToolbar';
+import { FilterToolbar, FilterSelect, FilterSearch, FilterActions } from '@/components/ui/FilterToolbar';
+import ReportPdfButton from '../components/ReportPdfButton';
+import { loadKokurikulerReport } from '@/lib/wali-kelas-report-data';
 import { ActionGroup, ActionButton } from '@/components/ui/ActionButtons';
 import { Button } from '@/components/ui/Button';
 import { isUserAdmin } from '@/lib/auth-client';
@@ -150,7 +152,7 @@ export default function WaliKelasTabKokurikuler({ user }: WaliKelasTabProps) {
     return (
         <div className="wkk-wrap">
             {/* Toolbar */}
-            <FilterToolbar>
+            <FilterToolbar actionsInline>
                 {ta.years.length > 0 && (
                     <FilterSelect
                         label="Tahun Ajaran"
@@ -176,6 +178,12 @@ export default function WaliKelasTabKokurikuler({ user }: WaliKelasTabProps) {
                     options={kelasList.map(k => ({ value: k, label: k }))}
                 />
                 <FilterSearch value={searchQuery} onChange={setSearchQuery} placeholder="Cari nama/NISN siswa..." />
+                <FilterActions>
+                    <ReportPdfButton disabled={loading || !selectedKelas || !monthRange || !siswa.length}
+                        filename={`Laporan_Kokurikuler_${selectedKelas}_${monthRange?.start.slice(0, 7)}`}
+                        contextKey={JSON.stringify([selectedKelas, ta.selected, selectedMonth, searchQuery])}
+                        load={signal => loadKokurikulerReport({ kelas: selectedKelas, tahun: ta.selected, bulan: monthRange?.start.slice(0, 7) || '', query: searchQuery, wali: user?.nama }, signal)} />
+                </FilterActions>
             </FilterToolbar>
 
             {/* Content */}

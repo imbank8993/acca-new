@@ -562,6 +562,36 @@ export class WaliKelasService {
     return { ok: true };
   }
 
+  async getKokurikulerReport(query: any, user: any) {
+    const { kelas, tahun_ajaran, bulan } = query;
+    if (typeof kelas !== 'string' || !kelas.trim() || typeof tahun_ajaran !== 'string' || !/^20\d{2}\/20\d{2}$/.test(tahun_ajaran)
+      || typeof bulan !== 'string' || !/^20\d{2}-(0[1-9]|1[0-2])$/.test(bulan)) {
+      throw new BadRequestException('Kelas, tahun ajaran, dan bulan wajib valid');
+    }
+    const [awal, akhir] = tahun_ajaran.split('/').map(Number);
+    if (akhir !== awal + 1 || bulan < `${awal}-07` || bulan > `${akhir}-06`) {
+      throw new BadRequestException('Bulan harus berada dalam tahun ajaran terpilih');
+    }
+    const { isAdmin, nip } = this.resolveUser(user);
+    if (!isAdmin && (!nip || !await this.prisma.wali_kelas.findFirst({
+      where: { nip, nama_kelas: kelas, tahun_ajaran, aktif: true }, select: { id: true },
+    }))) throw new ForbiddenException('Anda bukan wali kelas untuk kelas dan tahun ajaran ini');
+    const [year, month] = bulan.split('-').map(Number);
+    const roster = await this.prisma.siswa_kelas.findMany({
+      where: { kelas, tahun_ajaran, aktif: true, semester: month >= 7 ? 'Ganjil' : 'Genap' },
+      select: { nisn: true, nama_siswa: true }, orderBy: { nama_siswa: 'asc' },
+    });
+    const students = [...new Map(roster.map(s => [s.nisn, s])).values()];
+    const logs = students.length ? await this.prisma.log_kokurikuler_siswa.findMany({
+      where: { nisn: { in: students.map(s => s.nisn) }, tanggal: { gte: new Date(Date.UTC(year, month - 1, 1)), lt: new Date(Date.UTC(year, month, 1)) } },
+      select: { nisn: true, tanggal: true, nama_kegiatan: true, status: true, catatan: true, is_custom: true },
+      orderBy: [{ tanggal: 'asc' }, { nama_kegiatan: 'asc' }],
+    }) : [];
+    return { ok: true, data: students.map(s => ({ nisn: s.nisn, nama: s.nama_siswa, kelas,
+      kegiatan: logs.filter(l => l.nisn === s.nisn).map(l => ({ ...l, tanggal: l.tanggal.toISOString().slice(0, 10) })),
+    })) };
+  }
+
   async getEkskul(query: any, user: any) {
     const { kelas, tahun_ajaran, semester } = query;
     if (!kelas || !tahun_ajaran || !semester) {

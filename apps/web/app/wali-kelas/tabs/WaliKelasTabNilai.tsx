@@ -3,7 +3,9 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import Pagination from '@/components/ui/Pagination';
 import { useTahunAjaranFilter } from '@/hooks/use-tahun-ajaran-filter';
-import FilterToolbar, { FilterSelect, FilterSearch } from '@/components/ui/FilterToolbar';
+import FilterToolbar, { FilterSelect, FilterSearch, FilterActions } from '@/components/ui/FilterToolbar';
+import ReportPdfButton from '../components/ReportPdfButton';
+import { loadNilaiReport } from '@/lib/wali-kelas-report-data';
 import { Spinner } from '@/components/ui/Spinner';
 import DetailHeader from '@/components/ui/DetailHeader';
 import { isUserAdmin } from '@/lib/auth-client';
@@ -502,7 +504,7 @@ export default function WaliKelasTabNilai({ user }: { user?: any }) {
         return (
             <div className="wkn-wrap">
                 {/* Toolbar */}
-                <FilterToolbar>
+                <FilterToolbar actionsInline>
                     {ta.years.length > 0 && (
                         <FilterSelect
                             label="Tahun Ajaran"
@@ -522,7 +524,15 @@ export default function WaliKelasTabNilai({ user }: { user?: any }) {
                             options={allKelas.map(k => ({ value: k, label: k }))}
                         />
                     )}
+                    <FilterSelect label="Semester" icon="clock-history" value={selectedSemester} onChange={setSelectedSemester}
+                        options={[{ value: '1', label: 'Ganjil' }, { value: '2', label: 'Genap' }]} />
                     <FilterSearch value={searchQuery} onChange={setSearchQuery} placeholder="Cari nama/NISN..." />
+                    <FilterActions>
+                        <ReportPdfButton disabled={loading || !myClass || !ta.selected || !students.length}
+                            filename={`Laporan_Nilai_${myClass}_${ta.selected}_${selectedSemester}`}
+                            contextKey={JSON.stringify([myClass, ta.selected, selectedSemester, searchQuery])}
+                            load={signal => loadNilaiReport({ kelas: myClass, tahun: ta.selected, semester: selectedSemester, query: searchQuery, wali: user?.nama }, signal)} />
+                    </FilterActions>
                 </FilterToolbar>
 
                 {/* Student List */}
@@ -685,7 +695,7 @@ export default function WaliKelasTabNilai({ user }: { user?: any }) {
                 ) : (
                     <div className="nilai-page__content">
                         {/* Filters Toolbar */}
-                        <FilterToolbar className="nilai-page__filter-toolbar">
+                        <FilterToolbar className="nilai-page__filter-toolbar" actionsInline>
                             <FilterSelect
                                 label="Sumber Nilai"
                                 icon="funnel"
@@ -727,6 +737,14 @@ export default function WaliKelasTabNilai({ user }: { user?: any }) {
                                     ]}
                                 />
                             )}
+                            <FilterActions>
+                                <ReportPdfButton disabled={nilaiLoading || !nilaiData || !selectedTahunAjaran || !selectedSemester}
+                                    filename={`Laporan_Nilai_${selectedNisn}_${selectedTahunAjaran}_${selectedSemester}`}
+                                    contextKey={JSON.stringify([selectedNisn, selectedTahunAjaran, selectedSemester, selectedMapel, selectedSumber])}
+                                    load={signal => loadNilaiReport({ kelas: regularKelas, tahun: selectedTahunAjaran, semester: selectedSemester,
+                                        mapel: selectedMapel, sumber: selectedSumber, wali: user?.nama,
+                                        student: { nisn: selectedNisn, nama: selectedSiswaInfo?.nama_siswa || nilaiData?.siswa?.nama_lengkap || 'Siswa' } }, signal)} />
+                            </FilterActions>
                         </FilterToolbar>
 
                         {selectedSumber !== 'guru' && nilaiData?.cbt_linkage === 'ambiguous' && (

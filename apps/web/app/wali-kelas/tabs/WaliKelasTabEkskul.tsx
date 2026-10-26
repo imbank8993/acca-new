@@ -6,7 +6,8 @@ import { getActiveSettings } from '@/lib/settings-client';
 import { isUserAdmin } from '@/lib/auth-client';
 import { useTahunAjaranFilter } from '@/hooks/use-tahun-ajaran-filter';
 import { FilterToolbar, FilterSelect, FilterSearch, FilterActions } from '@/components/ui/FilterToolbar';
-import { Button } from '@/components/ui/Button';
+import ReportPdfButton from '../components/ReportPdfButton';
+import { loadEkskulReport } from '@/lib/wali-kelas-report-data';
 
 interface WaliKelasTabProps { user?: any; }
 
@@ -87,124 +88,6 @@ export default function WaliKelasTabEkskul({ user }: WaliKelasTabProps) {
     useEffect(() => { loadKelasList(); }, [loadKelasList]);
     useEffect(() => { if (selectedKelas && activeTa) loadData(); }, [selectedKelas, activeTa, activeSem, loadData]);
 
-    const handleExport = async () => {
-        if (!data || data.length === 0) return;
-        const XLSX = await import('xlsx-js-style');
-        const wb = XLSX.utils.book_new();
-
-        // Sheet 1: Siswa
-        const wsSiswa = XLSX.utils.aoa_to_sheet([]);
-        const headerSiswa = [
-            { v: 'NO', t: 's', s: { font: { bold: true, color: { rgb: "FFFFFF" } }, fill: { fgColor: { rgb: "059669" } }, alignment: { horizontal: 'center', vertical: 'center' } } },
-            { v: 'NISN', t: 's', s: { font: { bold: true, color: { rgb: "FFFFFF" } }, fill: { fgColor: { rgb: "059669" } }, alignment: { horizontal: 'center', vertical: 'center' } } },
-            { v: 'NAMA SISWA', t: 's', s: { font: { bold: true, color: { rgb: "FFFFFF" } }, fill: { fgColor: { rgb: "059669" } }, alignment: { horizontal: 'center', vertical: 'center' } } },
-            { v: 'NAMA EKSTRAKURIKULER', t: 's', s: { font: { bold: true, color: { rgb: "FFFFFF" } }, fill: { fgColor: { rgb: "059669" } }, alignment: { horizontal: 'center', vertical: 'center' } } }
-        ];
-        XLSX.utils.sheet_add_aoa(wsSiswa, [headerSiswa], { origin: 'A1' });
-
-        let rowIdx = 2; 
-        const mergesSiswa: any[] = [];
-        const sortedDataSiswa = [...data].sort((a, b) => a.nama.localeCompare(b.nama));
-        
-        let studentCounter = 1;
-        sortedDataSiswa.forEach(s => {
-            const sortedEkskul = [...s.ekskul].sort((a, b) => a.nama_ekskul.localeCompare(b.nama_ekskul));
-            const ekskulList = sortedEkskul.length > 0 ? sortedEkskul.map(e => e.nama_ekskul) : ['-'];
-            
-            const startRow = rowIdx;
-            ekskulList.forEach((ekName, i) => {
-                const isFirst = i === 0;
-                XLSX.utils.sheet_add_aoa(wsSiswa, [[
-                    isFirst ? studentCounter : '',
-                    isFirst ? s.nisn : '',
-                    isFirst ? s.nama : '',
-                    ekName
-                ]], { origin: `A${rowIdx}` });
-                rowIdx++;
-            });
-            if (ekskulList.length > 1) {
-                mergesSiswa.push({ s: { r: startRow - 1, c: 0 }, e: { r: rowIdx - 2, c: 0 } });
-                mergesSiswa.push({ s: { r: startRow - 1, c: 1 }, e: { r: rowIdx - 2, c: 1 } });
-                mergesSiswa.push({ s: { r: startRow - 1, c: 2 }, e: { r: rowIdx - 2, c: 2 } });
-            }
-            studentCounter++;
-        });
-        
-        const rangeSiswa = XLSX.utils.decode_range(wsSiswa['!ref'] || 'A1:D1');
-        for (let R = rangeSiswa.s.r; R <= rangeSiswa.e.r; R++) {
-            for (let C = rangeSiswa.s.c; C <= rangeSiswa.e.c; C++) {
-                const cellRef = XLSX.utils.encode_cell({ c: C, r: R });
-                if (!wsSiswa[cellRef]) wsSiswa[cellRef] = { v: '', t: 's' };
-                if (!wsSiswa[cellRef].s) wsSiswa[cellRef].s = {};
-                wsSiswa[cellRef].s.border = { top: { style: 'thin' }, bottom: { style: 'thin' }, left: { style: 'thin' }, right: { style: 'thin' } };
-                if (R > 0 && C < 3) wsSiswa[cellRef].s.alignment = { vertical: 'center' };
-            }
-        }
-        
-        if (mergesSiswa.length > 0) wsSiswa['!merges'] = mergesSiswa;
-        wsSiswa['!cols'] = [{ wch: 5 }, { wch: 15 }, { wch: 35 }, { wch: 30 }];
-        XLSX.utils.book_append_sheet(wb, wsSiswa, "Siswa");
-
-        // Sheet 2: Ekskul
-        const wsEkskul = XLSX.utils.aoa_to_sheet([]);
-        const headerEkskul = [
-            { v: 'NO', t: 's', s: { font: { bold: true, color: { rgb: "FFFFFF" } }, fill: { fgColor: { rgb: "4F46E5" } }, alignment: { horizontal: 'center', vertical: 'center' } } },
-            { v: 'NAMA EKSTRAKURIKULER', t: 's', s: { font: { bold: true, color: { rgb: "FFFFFF" } }, fill: { fgColor: { rgb: "4F46E5" } }, alignment: { horizontal: 'center', vertical: 'center' } } },
-            { v: 'NAMA SISWA', t: 's', s: { font: { bold: true, color: { rgb: "FFFFFF" } }, fill: { fgColor: { rgb: "4F46E5" } }, alignment: { horizontal: 'center', vertical: 'center' } } },
-            { v: 'NISN', t: 's', s: { font: { bold: true, color: { rgb: "FFFFFF" } }, fill: { fgColor: { rgb: "4F46E5" } }, alignment: { horizontal: 'center', vertical: 'center' } } }
-        ];
-        XLSX.utils.sheet_add_aoa(wsEkskul, [headerEkskul], { origin: 'A1' });
-
-        const ekskulMap = new Map<string, any[]>();
-        data.forEach(s => {
-            s.ekskul.forEach(e => {
-                if (!ekskulMap.has(e.nama_ekskul)) ekskulMap.set(e.nama_ekskul, []);
-                ekskulMap.get(e.nama_ekskul)!.push(s);
-            });
-        });
-        const sortedEkskulNames = Array.from(ekskulMap.keys()).sort();
-
-        let rowIdxEk = 2;
-        const mergesEkskul: any[] = [];
-        let ekCounter = 1;
-        sortedEkskulNames.forEach(ekName => {
-            const students = ekskulMap.get(ekName)!.sort((a, b) => a.nama.localeCompare(b.nama));
-            const startRow = rowIdxEk;
-            students.forEach((s, i) => {
-                const isFirst = i === 0;
-                XLSX.utils.sheet_add_aoa(wsEkskul, [[
-                    isFirst ? ekCounter : '',
-                    isFirst ? ekName : '',
-                    s.nama,
-                    s.nisn
-                ]], { origin: `A${rowIdxEk}` });
-                rowIdxEk++;
-            });
-            if (students.length > 1) {
-                mergesEkskul.push({ s: { r: startRow - 1, c: 0 }, e: { r: rowIdxEk - 2, c: 0 } });
-                mergesEkskul.push({ s: { r: startRow - 1, c: 1 }, e: { r: rowIdxEk - 2, c: 1 } });
-            }
-            ekCounter++;
-        });
-
-        const rangeEkskul = XLSX.utils.decode_range(wsEkskul['!ref'] || 'A1:D1');
-        for (let R = rangeEkskul.s.r; R <= rangeEkskul.e.r; R++) {
-            for (let C = rangeEkskul.s.c; C <= rangeEkskul.e.c; C++) {
-                const cellRef = XLSX.utils.encode_cell({ c: C, r: R });
-                if (!wsEkskul[cellRef]) wsEkskul[cellRef] = { v: '', t: 's' };
-                if (!wsEkskul[cellRef].s) wsEkskul[cellRef].s = {};
-                wsEkskul[cellRef].s.border = { top: { style: 'thin' }, bottom: { style: 'thin' }, left: { style: 'thin' }, right: { style: 'thin' } };
-                if (R > 0 && C < 2) wsEkskul[cellRef].s.alignment = { vertical: 'center' };
-            }
-        }
-
-        if (mergesEkskul.length > 0) wsEkskul['!merges'] = mergesEkskul;
-        wsEkskul['!cols'] = [{ wch: 5 }, { wch: 30 }, { wch: 35 }, { wch: 15 }];
-        XLSX.utils.book_append_sheet(wb, wsEkskul, "Ekskul");
-
-        XLSX.writeFile(wb, `Data_Ekstrakurikuler_${selectedKelas}_${activeTa?.replace(/\//g, '-') || 'TA'}.xlsx`);
-    };
-
     return (
         <div className="wke-wrap">
             {/* Toolbar Filters & Search */}
@@ -240,9 +123,10 @@ export default function WaliKelasTabEkskul({ user }: WaliKelasTabProps) {
                 />
                 <FilterSearch value={searchQuery} onChange={setSearchQuery} placeholder="Cari nama/NISN..." />
                 <FilterActions>
-                    <Button variant="outline" icon="export" onClick={handleExport} disabled={loading || data.length === 0} className="ftb-btn-icon-mobile">
-                        Export
-                    </Button>
+                    <ReportPdfButton disabled={loading || !selectedKelas || !activeTa || !data.length}
+                        filename={`Laporan_Ekstrakurikuler_${selectedKelas}_${activeTa}_${activeSem}`}
+                        contextKey={JSON.stringify([selectedKelas, activeTa, activeSem, searchQuery])}
+                        load={signal => loadEkskulReport({ kelas: selectedKelas, tahun: activeTa, semester: activeSem, query: searchQuery, wali: user?.nama }, signal)} />
                 </FilterActions>
             </FilterToolbar>
 

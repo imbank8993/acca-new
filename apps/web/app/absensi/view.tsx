@@ -2185,7 +2185,7 @@ export default function AbsensiPage({ user }: { user?: any }) {
                                         disabled={!adminTa.selected}
                                         leftIcon={<i className="bi bi-download" />}
                                     >
-                                        Export Rekap
+                                        Export PDF
                                     </Button>
                                 </FilterActions>
                             </FilterToolbar>
@@ -2586,7 +2586,7 @@ export default function AbsensiPage({ user }: { user?: any }) {
                                     setIsExportModalOpen(true);
                                 }}
                             >
-                                Export
+                                Export PDF
                             </Button>
 
                             <Button
@@ -2880,6 +2880,7 @@ export default function AbsensiPage({ user }: { user?: any }) {
                         initialMode={exportInitialMode}
                         lockMode={exportLockMode}
                         initialTahunAjaran={adminTa.selected}
+                        format="pdf"
                     />
                 )}
             <CatatanSiswaModal

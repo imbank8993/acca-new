@@ -42,4 +42,9 @@ export class WaliKelasController {
   async getEkskul(@Query() query: any, @Request() req: any) {
     return await this.waliKelasService.getEkskul(query, req.user);
   }
+
+  @Get('kokurikuler')
+  async getKokurikuler(@Query() query: any, @Request() req: any) {
+    return this.waliKelasService.getKokurikulerReport(query, req.user);
+  }
 }

@@ -133,8 +133,8 @@ export default function ExportModal({
         >
             <ModalHeader
                 id="modal-export-jurnal-title"
-                icon="file-earmark-excel-fill"
-                title="Export Data Jurnal"
+                icon="file-earmark-pdf"
+                title="Export Jurnal PDF A4"
                 subtitle={exportMode === 'GURU' && user?.nama ? `${user.nama}${user?.nip ? ` (${user.nip})` : ''}` : undefined}
                 onClose={onClose}
             />
@@ -225,7 +225,7 @@ export default function ExportModal({
                     isLoading={exporting}
                     icon="download"
                 >
-                    {exporting ? 'Mengexport...' : 'Download Excel'}
+                    {exporting ? 'Menyiapkan PDF...' : 'Unduh PDF'}
                 </Button>
             </ModalFooter>
 

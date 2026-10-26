@@ -1,6 +1,5 @@
 'use client';
 
-import * as XLSX from 'xlsx-js-style';
 import Swal from 'sweetalert2';
 import { Journal } from '../types';
 
@@ -81,7 +80,7 @@ const askExportFilters = async (kelasChoices: string[], tahunAjaran: string): Pr
         </style>`;
 
     const result = await Swal.fire({
-        title: 'Opsi Export',
+        title: 'Export Jurnal PDF A4',
         html: `
             ${styleBlock}
             <div style="text-align:left">
@@ -96,7 +95,7 @@ const askExportFilters = async (kelasChoices: string[], tahunAjaran: string): Pr
             </div>
         `,
         showCancelButton: true,
-        confirmButtonText: 'Export',
+        confirmButtonText: 'Unduh PDF',
         cancelButtonText: 'Batal',
         confirmButtonColor: '#3083FF',
         focusConfirm: false,
@@ -378,98 +377,12 @@ export const executeExport = async (
         };
     });
 
-    const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.json_to_sheet(exportRows);
-
-    const keys = exportRows.length > 0 ? Object.keys(exportRows[0]) : [];
-    const range = XLSX.utils.decode_range(ws['!ref'] || 'A1');
-
-    // Header & Cell styling
-    const headerStyle = {
-        font: { bold: true, color: { rgb: "FFFFFF" }, sz: 11, name: "Calibri" },
-        fill: { fgColor: { rgb: "0038A8" } }, // ACCA Blue
-        alignment: { horizontal: "center", vertical: "center", wrapText: true },
-        border: {
-            top: { style: "thin", color: { rgb: "D1D5DB" } },
-            bottom: { style: "medium", color: { rgb: "002673" } },
-            left: { style: "thin", color: { rgb: "D1D5DB" } },
-            right: { style: "thin", color: { rgb: "D1D5DB" } }
-        }
-    };
-
-    const cellStyleCenter = {
-        font: { sz: 10, name: "Calibri" },
-        alignment: { horizontal: "center", vertical: "center" },
-        border: {
-            top: { style: "thin", color: { rgb: "E5E7EB" } },
-            bottom: { style: "thin", color: { rgb: "E5E7EB" } },
-            left: { style: "thin", color: { rgb: "E5E7EB" } },
-            right: { style: "thin", color: { rgb: "E5E7EB" } }
-        }
-    };
-
-    const cellStyleLeft = {
-        font: { sz: 10, name: "Calibri" },
-        alignment: { horizontal: "left", vertical: "center", wrapText: true },
-        border: {
-            top: { style: "thin", color: { rgb: "E5E7EB" } },
-            bottom: { style: "thin", color: { rgb: "E5E7EB" } },
-            left: { style: "thin", color: { rgb: "E5E7EB" } },
-            right: { style: "thin", color: { rgb: "E5E7EB" } }
-        }
-    };
-
-    const centeredKeys = new Set([
-        'no', 'hari', 'tanggal', 'jam ke', 'jam_ke', 'kelas',
-        'kategori kehadiran', 'kategori_kehadiran', 'status kehadiran'
-    ]);
-
-    for (let R = range.s.r; R <= range.e.r; ++R) {
-        for (let C = range.s.c; C <= range.e.c; ++C) {
-            const cellRef = XLSX.utils.encode_cell({ c: C, r: R });
-            if (!ws[cellRef]) continue;
-
-            if (R === 0) {
-                ws[cellRef].s = headerStyle;
-            } else {
-                const headerKey = (keys[C] || '').toLowerCase();
-                if (centeredKeys.has(headerKey)) {
-                    ws[cellRef].s = cellStyleCenter;
-                } else {
-                    ws[cellRef].s = cellStyleLeft;
-                }
-
-                if (headerKey.includes('nip') || headerKey.includes('nisn')) {
-                    ws[cellRef].t = 's';
-                    ws[cellRef].z = '@';
-                }
-            }
-        }
-    }
-
-    // Row heights
-    ws['!rows'] = [{ hpt: 26 }];
-    for (let i = 1; i <= exportRows.length; i++) {
-        ws['!rows'].push({ hpt: 22 });
-    }
-
-    // Auto-size columns with padding
-    ws['!cols'] = keys.map((key) => {
-        let maxLen = key.length;
-        exportRows.forEach(row => {
-            const val = (row as any)[key] != null ? String((row as any)[key]) : '';
-            if (val.length > maxLen) maxLen = Math.min(val.length, 50);
-        });
-        const colWidth = Math.max(maxLen + 4, 10);
-        return { wch: colWidth };
-    });
-
-    const sheetName = mode === 'GURU' ? 'Jurnal Guru' : (mode === 'WALI' ? 'Jurnal Kelas' : 'Data Jurnal');
-    XLSX.utils.book_append_sheet(wb, ws, sheetName);
-    XLSX.writeFile(wb, `${filename}.xlsx`);
+    const { createJurnalPdf } = await import('@/lib/jurnal-pdf');
+    const pdf = createJurnalPdf(exportRows, { mode, tahunAjaran, namaGuru: user?.nama, nip: user?.nip });
+    pdf.save(filename.replace(/[/\\?%*:|"<>]/g, '_') + '.pdf');
     } catch (e: any) {
         console.error('Jurnal export gagal:', e);
-        Swal.fire('Gagal Export', e?.message || 'Terjadi kesalahan saat membuat file Excel.', 'error');
+        Swal.fire('Gagal Export', e?.message || 'Terjadi kesalahan saat membuat PDF.', 'error');
     }
 };
 

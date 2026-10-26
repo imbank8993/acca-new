@@ -606,7 +606,9 @@ export class AbsensiService {
 
   async exportAbsensi(apiUser: any, body: any) {
     const { months, year, mode, kelas, guruOption, nip } = body;
-    const targetMonths = months || [new Date().getMonth() + 1];
+    const targetMonths = Array.isArray(months) && months.length === 0
+      ? Array.from({ length: 12 }, (_, i) => i + 1)
+      : months || [new Date().getMonth() + 1];
 
     const getYearFromAcad = (acad: string, m: number) => {
       if (!acad || typeof acad !== 'string' || !acad.includes('/')) return parseInt(acad as any, 10);
@@ -657,7 +659,7 @@ export class AbsensiService {
       const classesToFetch =
         apiUser.isAdmin && mode === 'ADMIN' && (!kelas || kelas === 'ALL')
           ? (await this.prisma.master_kelas.findMany({ select: { nama: true } })).map((k) => k.nama)
-          : [targetKelas];
+          : Array.isArray(targetKelas) ? targetKelas : [targetKelas];
 
       const whereStudent: any = { kelas: { in: classesToFetch }, aktif: true };
       if (year) whereStudent.tahun_ajaran = year;
@@ -730,8 +732,11 @@ export class AbsensiService {
                   let maxVal = -1;
                   let winner = 'HADIR';
                   for (const p of priority) {
-                    if ((statusCount[p] || 0) > maxVal) {
-                      maxVal = statusCount[p];
+                    const count = statusCount[p] || 0;
+                    if (count > maxVal) {
+                      // Kategori kosong tetap bernilai 0; undefined membuat
+                      // perbandingan berikutnya selalu false dan mengunci ALPHA.
+                      maxVal = count;
                       winner = p;
                     }
                   }

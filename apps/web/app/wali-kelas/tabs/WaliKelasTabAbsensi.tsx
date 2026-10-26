@@ -324,11 +324,12 @@ export default function WaliKelasTabAbsensi({ user }: WaliKelasTabProps) {
                 <FilterActions>
                     <Button
                         variant="outline"
-                        icon="export"
+                        icon="pdf"
+                        aria-label="Export PDF A4"
                         onClick={() => setShowExportModal(true)}
                         className="ftb-btn-icon-mobile"
                     >
-                        Export
+                        Export PDF
                     </Button>
                 </FilterActions>
             </FilterToolbar>
@@ -593,6 +594,7 @@ export default function WaliKelasTabAbsensi({ user }: WaliKelasTabProps) {
                     initialTahunAjaran={ta.selected}
                     lockMode={!isAdmin}
                     simpleMode={true}
+                    format="pdf"
                 />
             )}
 

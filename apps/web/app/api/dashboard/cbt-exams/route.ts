@@ -4,6 +4,16 @@ import { getApiUser, unauthorizedResponse } from '@/lib/api-auth';
 
 export const dynamic = 'force-dynamic';
 
+/** Ujian selesai terbaru di depan; waktu pengumpulan dipakai untuk siswa. */
+function waktuSelesai(exam: { end_time?: string | Date | null; start_time?: string | Date | null; attempt?: { finished_at?: string | Date | null } | null }): number {
+    for (const value of [exam.attempt?.finished_at, exam.end_time, exam.start_time]) {
+        if (!value) continue;
+        const timestamp = new Date(value).getTime();
+        if (Number.isFinite(timestamp)) return timestamp;
+    }
+    return 0;
+}
+
 export async function GET(request: NextRequest) {
     const user = await getApiUser(request);
     if (!user) return unauthorizedResponse();
@@ -176,6 +186,8 @@ export async function GET(request: NextRequest) {
                 }
             }
 
+            completed.sort((a, b) => waktuSelesai(b) - waktuSelesai(a));
+
             return NextResponse.json({
                 ok: true,
                 role: 'SISWA',
@@ -338,6 +350,8 @@ export async function GET(request: NextRequest) {
                     upcoming.push({ ...formatted, category: 'upcoming' });
                 }
             }
+
+            completed.sort((a, b) => waktuSelesai(b) - waktuSelesai(a));
 
             return NextResponse.json({
                 ok: true,

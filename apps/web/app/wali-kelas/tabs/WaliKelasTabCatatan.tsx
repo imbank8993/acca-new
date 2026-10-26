@@ -6,7 +6,9 @@ import { useTahunAjaranFilter } from '@/hooks/use-tahun-ajaran-filter';
 import { useModalBlur } from '@/components/ModalBlurProvider';
 import { Modal, ModalHeader, ModalBody, ModalViewFooter } from '@/components/ui/Modal';
 import type { CatatanSiswa } from '@/lib/types';
-import { FilterToolbar, FilterSelect, FilterInput, FilterSearch } from '@/components/ui/FilterToolbar';
+import { FilterToolbar, FilterSelect, FilterInput, FilterSearch, FilterActions } from '@/components/ui/FilterToolbar';
+import ReportPdfButton from '../components/ReportPdfButton';
+import { loadCatatanReport } from '@/lib/wali-kelas-report-data';
 import { Spinner } from '@/components/ui/Spinner';
 import { isUserAdmin } from '@/lib/auth-client';
 
@@ -44,6 +46,14 @@ export default function WaliKelasTabCatatan({ user }: WaliKelasTabProps) {
         };
         init();
     }, [getTzDate]);
+
+    useEffect(() => {
+        const firstYear = Number.parseInt(ta.selected.split('/')[0], 10);
+        const month = Number.parseInt(bulan.slice(5, 7), 10);
+        if (!Number.isFinite(firstYear) || !month) return;
+        const adjusted = `${month >= 7 ? firstYear : firstYear + 1}-${String(month).padStart(2, '0')}`;
+        if (adjusted !== bulan) setBulan(adjusted);
+    }, [ta.selected, bulan]);
 
     const loadKelasList = useCallback(async () => {
         if (!nip && !isAdmin) return;
@@ -98,7 +108,7 @@ export default function WaliKelasTabCatatan({ user }: WaliKelasTabProps) {
         } finally {
             setLoading(false);
         }
-    }, [selectedKelas, bulan, jenisFilter]);
+    }, [selectedKelas, bulan, jenisFilter, ta.selected]);
 
     useEffect(() => { loadItems(); }, [loadItems]);
 
@@ -116,7 +126,7 @@ export default function WaliKelasTabCatatan({ user }: WaliKelasTabProps) {
 
     return (
         <div className="wktc-wrap">
-            <FilterToolbar>
+            <FilterToolbar actionsInline>
                 {ta.years.length > 0 && (
                     <FilterSelect
                         label="Tahun Ajaran"
@@ -143,6 +153,8 @@ export default function WaliKelasTabCatatan({ user }: WaliKelasTabProps) {
                     type="month"
                     value={bulan}
                     onChange={setBulan}
+                    min={ta.range?.start.slice(0, 7)}
+                    max={ta.range?.end.slice(0, 7)}
                 />
                 <FilterSelect
                     label="Jenis"
@@ -161,6 +173,12 @@ export default function WaliKelasTabCatatan({ user }: WaliKelasTabProps) {
                     onChange={setSearchQuery}
                     placeholder="Cari siswa, mapel, catatan..."
                 />
+                <FilterActions>
+                    <ReportPdfButton disabled={loading || !selectedKelas || !ta.selected || !bulan}
+                        filename={`Laporan_Catatan_Pembelajaran_${selectedKelas}_${bulan}`}
+                        contextKey={JSON.stringify([selectedKelas, ta.selected, bulan, jenisFilter, searchQuery])}
+                        load={signal => loadCatatanReport({ kelas: selectedKelas, tahun: ta.selected, bulan, jenis: jenisFilter, query: searchQuery, wali: user?.nama }, signal)} />
+                </FilterActions>
             </FilterToolbar>
 
             <div className="wktc-list">
