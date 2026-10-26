@@ -23,6 +23,7 @@ import BandingPage from './banding/view';
 import GenerateJurnalTab from './components/GenerateJurnalTab';
 import JurnalInputPage from './input/view';
 import RekapJurnalTab from './components/RekapJurnalTab';
+import KehadiranGuruTab from './components/KehadiranGuruTab';
 import { checkFeatureAccess, parseKonfigurasiAksesClient } from '@/lib/feature-access-client';
 import './jurnal.css';
 
@@ -654,6 +655,8 @@ export default function JurnalPage({ user }: { user?: any }) {
     const isSiswa = roles.includes('SISWA') || role === 'SISWA' || roles.includes('PENGURUS_KELAS') || role === 'PENGURUS_KELAS' || roles.includes('PENGURUS KELAS');
     const canViewDaftarJurnal = isAdmin || isGuru || isSiswa;
     const canViewRekap = !isSiswa;
+    const attendanceRoles: string[] = Array.isArray(user?.roles) ? roles : role.split(/[,|]/).map(r => r.trim()).filter(Boolean);
+    const canViewKehadiran = !attendanceRoles.includes('SISWA') && attendanceRoles.some(r => !['ORANG_TUA', 'ORANGTUA', 'TAMU'].includes(r));
 
     const [inputConfig, setInputConfig] = useState<any>(null);
     const [reviewConfig, setReviewConfig] = useState<any>(null);
@@ -695,7 +698,7 @@ export default function JurnalPage({ user }: { user?: any }) {
     const [bandingPending, setBandingPending] = useState(0);
 
     const availableTabs = useMemo(() => {
-        const list: { key: 'jurnal' | 'input' | 'rekap' | 'banding_saya' | 'review_banding' | 'generate'; label: string; icon: string }[] = [];
+        const list: { key: 'jurnal' | 'input' | 'rekap' | 'kehadiran_guru' | 'banding_saya' | 'review_banding' | 'generate'; label: string; icon: string }[] = [];
         if (canViewDaftarJurnal) {
             list.push({ key: 'jurnal', label: 'Daftar Jurnal', icon: 'journal-text' });
         }
@@ -704,6 +707,9 @@ export default function JurnalPage({ user }: { user?: any }) {
         }
         if (canViewRekap) {
             list.push({ key: 'rekap', label: 'Rekap Jurnal', icon: 'bar-chart' });
+        }
+        if (canViewKehadiran) {
+            list.push({ key: 'kehadiran_guru', label: 'Kehadiran Guru', icon: 'person-check' });
         }
         if (isGuru) {
             list.push({ key: 'banding_saya', label: 'Banding Saya', icon: 'person-badge' });
@@ -719,13 +725,13 @@ export default function JurnalPage({ user }: { user?: any }) {
             list.push({ key: 'generate', label: 'Generate', icon: 'magic' });
         }
         return list;
-    }, [canViewDaftarJurnal, canInput, canViewRekap, isGuru, canReview, canGenerate, bandingPending]);
+    }, [canViewDaftarJurnal, canInput, canViewRekap, canViewKehadiran, isGuru, canReview, canGenerate, bandingPending]);
 
     const allowedTabKeys = useMemo(() => availableTabs.map(t => t.key), [availableTabs]);
 
     const [activeTab, setActiveTab] = useTabParam<
-        'jurnal' | 'input' | 'rekap' | 'banding_saya' | 'review_banding' | 'generate'
-    >('jurnal', ['jurnal', 'input', 'rekap', 'banding_saya', 'review_banding', 'generate'] as const);
+        'jurnal' | 'input' | 'rekap' | 'kehadiran_guru' | 'banding_saya' | 'review_banding' | 'generate'
+    >('jurnal', ['jurnal', 'input', 'rekap', 'kehadiran_guru', 'banding_saya', 'review_banding', 'generate'] as const);
 
     // Fallback if activeTab is not permitted for the user's role
     useEffect(() => {
@@ -832,6 +838,7 @@ export default function JurnalPage({ user }: { user?: any }) {
                         <RekapJurnalTab user={user} />
                     </Suspense>
                 )}
+                {activeTab === 'kehadiran_guru' && canViewKehadiran && <KehadiranGuruTab />}
                 {activeTab === 'banding_saya' && isGuru && (
                     <BandingPage user={user} activeTabProp="saya" hideHeaderTab={true} />
                 )}

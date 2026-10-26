@@ -78,6 +78,74 @@ export class JurnalService {
     private readonly jadwalService: JadwalService,
   ) {}
 
+  /** Ringkasan operasional izin harian, tanpa alasan pribadi atau lampiran. */
+  async getKehadiranGuru(tanggal?: string) {
+    if (tanggal !== undefined && tanggal !== '') {
+      if (typeof tanggal !== 'string' || !/^(20\d{2}|2100)-\d{2}-\d{2}$/.test(tanggal)) {
+        throw new BadRequestException('Tanggal harus berformat YYYY-MM-DD');
+      }
+      const parsed = new Date(`${tanggal}T00:00:00.000Z`);
+      if (Number.isNaN(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== tanggal) {
+        throw new BadRequestException('Tanggal tidak valid');
+      }
+    }
+
+    const setting = await this.prisma.site_settings.findUnique({
+      where: { key: 'timezone' }, select: { value: true },
+    });
+    const timezone = ['Asia/Jakarta', 'Asia/Makassar', 'Asia/Jayapura'].includes(setting?.value || '')
+      ? setting!.value! : 'Asia/Makassar';
+    const hariIni = new Date().toLocaleDateString('en-CA', { timeZone: timezone });
+    const selectedDate = tanggal || hariIni;
+    // izin_guru memakai kolom DATE, bukan waktu kejadian: bandingkan tanggal utuh.
+    const date = new Date(`${selectedDate}T00:00:00.000Z`);
+    const teachers = await this.prisma.master_guru.findMany({
+      where: {
+        aktif: true,
+        OR: [{ jenis_pegawai: { equals: 'GURU', mode: 'insensitive' } }, { jenis_pegawai: '' }],
+      },
+      select: { id: true, nip: true, nama_lengkap: true },
+    });
+    const permits = teachers.length ? await this.prisma.izin_guru.findMany({
+      where: {
+        nip: { in: teachers.map(t => t.nip).filter(Boolean) },
+        status: 'disetujui',
+        jenis: { in: ['izin', 'sakit', 'dinas_luar'] },
+        tanggal_mulai: { lte: date },
+        tanggal_selesai: { gte: date },
+      },
+      select: { id: true, nip: true, jenis: true, tanggal_mulai: true, tanggal_selesai: true },
+      orderBy: [{ tanggal_mulai: 'asc' }, { id: 'asc' }],
+    }) : [];
+    const teacherByNip = new Map(teachers.map(t => [t.nip, t]));
+    type DailyPermit = { id: string; jenis: string; tanggal_mulai: string; tanggal_selesai: string };
+    const grouped = new Map<string, { id: string; nama: string; izin: DailyPermit[] }>();
+    for (const permit of permits) {
+      const teacher = teacherByNip.get(permit.nip);
+      if (!teacher) continue;
+      let row = grouped.get(permit.nip);
+      if (!row) {
+        row = { id: teacher.id.toString(), nama: teacher.nama_lengkap, izin: [] };
+        grouped.set(permit.nip, row);
+      }
+      row.izin.push({
+        id: permit.id, jenis: permit.jenis,
+        tanggal_mulai: permit.tanggal_mulai.toISOString().slice(0, 10),
+        tanggal_selesai: permit.tanggal_selesai.toISOString().slice(0, 10),
+      });
+    }
+    const guru = [...grouped.values()].sort((a, b) => a.nama.localeCompare(b.nama, 'id'));
+    const countJenis = (jenis: string) => guru.filter(g => g.izin.some(i => i.jenis === jenis)).length;
+    return {
+      tanggal: selectedDate,
+      hari_ini: hariIni,
+      timezone,
+      diperbarui_pada: new Date().toISOString(),
+      ringkasan: { total: guru.length, izin: countJenis('izin'), sakit: countJenis('sakit'), dinas_luar: countJenis('dinas_luar') },
+      guru,
+    };
+  }
+
   /**
    * Apakah pemanggil pengelola jurnal (lihat & ubah milik siapa pun)?
    *

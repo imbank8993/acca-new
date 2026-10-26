@@ -136,11 +136,19 @@
 
 .ia-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
     gap: 16px;
 }
 
+@media (max-width: 767.98px) {
+    .ia-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
 .ia-folder-card {
+    min-width: 0;
     background: var(--n-card);
     border: 1px solid var(--n-border);
     border-radius: 16px;
@@ -178,11 +186,12 @@
     margin: 0;
     flex: 1;
     min-width: 0;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    line-height: 1.45;
 }
 .ia-folder-count {
+    flex-shrink: 0;
     font-size: 0.72rem;
     font-weight: 700;
     background: var(--n-surface);
@@ -192,6 +201,7 @@
 }
 
 .ia-share-btn {
+    flex-shrink: 0;
     width: 32px;
     height: 32px;
     border-radius: 8px;
@@ -244,21 +254,25 @@
     align-items: center;
 }
 .ia-file-info {
+    flex: 1;
     display: flex;
     flex-direction: column;
+    gap: 2px;
     min-width: 0;
 }
 .ia-file-title {
     font-size: 0.84rem;
     font-weight: 600;
     color: var(--n-ink);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    line-height: 1.5;
 }
 .ia-file-meta {
     font-size: 0.72rem;
     color: var(--n-muted);
+    line-height: 1.5;
+    overflow-wrap: anywhere;
 }
 
 .ia-share-btn--file {

@@ -14,6 +14,8 @@ import {
 } from '@nestjs/common';
 import { JurnalService } from './jurnal.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { PegawaiGuard } from '../auth/pegawai.guard';
+import { PageAccessGuard, RequiresPage } from '../auth/page-access.guard';
 import {
   FeatureAccess,
   FeatureAccessGuard,
@@ -27,6 +29,13 @@ import {
 @UseGuards(JwtAuthGuard)
 export class JurnalController {
   constructor(private readonly jurnalService: JurnalService) {}
+
+  @Get('kehadiran-guru')
+  @UseGuards(PegawaiGuard, PageAccessGuard)
+  @RequiresPage('jurnal')
+  async getKehadiranGuru(@Query('tanggal') tanggal?: string) {
+    return { ok: true, data: await this.jurnalService.getKehadiranGuru(tanggal) };
+  }
 
   // --- Pengaturan ---
   @Get('pengaturan')
