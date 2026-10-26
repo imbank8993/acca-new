@@ -28,3 +28,13 @@ test('libur umum tetap menutup semua jadwal dan master tingkat didahulukan', () 
   assert.equal(liburPenuhJadwal([], [h]), h);
   assert.equal(jadwalTanpaLibur([{ kelas: 'Kelas Khusus', tingkat: 12, jam_ke: 1 }], [holiday]).length, 0);
 });
+
+test('jadwal libur tetap ada dengan tanda dan tidak dihitung sebagai JP efektif', () => {
+ const { tandaiLibur, jumlahEfektif } = load('apps/web/lib/jadwal-libur.ts', { './libur': libur });
+ const result = tandaiLibur(rows, [holiday]);
+ assert.equal(result.length, 2);
+ assert.equal(result[0].libur_info, undefined);
+ assert.equal(result[1].libur_info, holiday);
+ assert.equal(jumlahEfektif(result), 1);
+ assert.equal(rows[1].libur_info, undefined);
+});

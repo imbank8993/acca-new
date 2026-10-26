@@ -13,7 +13,7 @@
  */
 
 import React, { type ReactNode } from 'react'
-import { CalendarDays } from 'lucide-react'
+import { CalendarDays, CalendarOff } from 'lucide-react'
 import { liburBerlakuUntukKelas, normalizeJamKe, JAM_SEMUA } from '@/lib/libur'
 
 export interface KolomJadwal {
@@ -79,13 +79,32 @@ function TabelJadwal({
         </thead>
         <tbody>
           {rows.map((item, idx) => (
-            <tr key={item.id ?? idx} className="db__jadwalTR">
-              {columns.map(c => <td key={c.header} className={c.tdClass}>{c.cell(item, idx)}</td>)}
+            <tr key={item.id ?? idx} className={`db__jadwalTR${item.libur_info ? ' db__jadwalTR--libur' : ''}`}>
+              {columns.map((c, ci) => (
+                <td key={c.header} className={c.tdClass}>
+                  {c.cell(item, idx)}
+                  {ci === columns.length - 1 && <TandaTidakEfektif libur={item.libur_info} />}
+                </td>
+              ))}
             </tr>
           ))}
         </tbody>
       </table>
     </div>
+  )
+}
+
+/**
+ * Tanda baris jadwal yang tidak efektif karena libur kelas/tingkat tertentu
+ * (diisi oleh `tandaiLibur`). Barisnya tetap tampil sebagai informasi.
+ */
+export function TandaTidakEfektif({ libur }: { libur?: { keterangan?: string | null } }) {
+  if (!libur) return null
+  return (
+    <span className="db__tidakEfektif" title={libur.keterangan || undefined}>
+      <CalendarOff size={12} aria-hidden="true" />
+      Tidak efektif{libur.keterangan ? ` · ${libur.keterangan}` : ''}
+    </span>
   )
 }
 
@@ -97,7 +116,7 @@ function KartuTimeline({
   children: ReactNode
 }) {
   return (
-    <div className="db__mingguRowTimeline">
+    <div className={`db__mingguRowTimeline${item.libur_info ? ' db__timelineLibur' : ''}`}>
       <div className="db__timelineLeft">
         <span className="db__timelineWaktu">{item.waktu_display || '-'}</span>
         <span className={`db__timelineJamBadge${piket ? ' db__timelineJamBadgePiket' : ''}`}>
@@ -105,7 +124,10 @@ function KartuTimeline({
         </span>
       </div>
       <div className="db__timelineDivider"></div>
-      <div className="db__timelineRight">{children}</div>
+      <div className="db__timelineRight">
+        {children}
+        <TandaTidakEfektif libur={item.libur_info} />
+      </div>
     </div>
   )
 }
@@ -164,7 +186,7 @@ export function JadwalPekan({
             <div className="db__mingguDayHeader">
               <span className="db__mingguDayName">{hari}</span>
               {hariIni && <span className="db__mingguDayBadge">Hari Ini</span>}
-              <span className="db__mingguDayCount">{isiHari.length} {satuan}</span>
+              <span className="db__mingguDayCount">{isiHari.filter(j => !j.libur_info).length} {satuan}</span>
             </div>
             <div className="db__mingguDayBody">
               <div className="db__mingguCardsMobile">

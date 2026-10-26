@@ -9,9 +9,28 @@ function konteks(row: JadwalRow): KelasContext {
   return { kelas: row.kelas, tingkat: row.tingkat ?? (prefix ? tingkat[prefix] ?? prefix : undefined) }
 }
 
-export function jadwalTanpaLibur<T extends JadwalRow>(rows: T[], libur: LiburRow[]): T[] {
-  return rows.filter(row => !libur.some(l => liburBerlakuUntukKelas(l, konteks(row)) && liburMencakupJam(l, row.jam_ke)))
+/** Libur yang membuat satu baris jadwal tidak efektif, bila ada. */
+export function liburUntukJadwal(row: JadwalRow, libur: LiburRow[]): LiburRow | undefined {
+  return libur.find(l => liburBerlakuUntukKelas(l, konteks(row)) && liburMencakupJam(l, row.jam_ke))
 }
+
+export function jadwalTanpaLibur<T extends JadwalRow>(rows: T[], libur: LiburRow[]): T[] {
+  return rows.filter(row => !liburUntukJadwal(row, libur))
+}
+
+/**
+ * Semua baris tetap ditampilkan; baris yang terkena libur kelas/tingkat tertentu
+ * diberi `libur_info` supaya bisa ditandai "tidak efektif" (bukan disembunyikan).
+ */
+export function tandaiLibur<T extends JadwalRow>(rows: T[], libur: LiburRow[]): Array<T & { libur_info?: LiburRow }> {
+  return rows.map(row => {
+    const info = liburUntukJadwal(row, libur)
+    return info ? { ...row, libur_info: info } : row
+  })
+}
+
+/** Jumlah JP yang benar-benar berjalan (tanpa yang tidak efektif). */
+export const jumlahEfektif = (rows: Array<{ libur_info?: LiburRow }>) => rows.filter(r => !r.libur_info).length
 
 /** Banner khusus kelas hanya boleh menggantikan daftar jika seluruh kelas libur. */
 export function liburPenuhJadwal(rows: JadwalRow[], libur: LiburRow[]): LiburRow | undefined {

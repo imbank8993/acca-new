@@ -1686,3 +1686,25 @@
     color: var(--n-ink) !important;
 }
 
+/* Jam yang tidak efektif karena libur kelas/tingkat tertentu: tetap tampil sebagai tanda. */
+.db__jadwalTR--libur td { color: var(--n-muted); background: rgba(220, 38, 38, 0.035); }
+.db__jadwalTR--libur .db__tdJamBadge,
+.db__timelineLibur .db__timelineJamBadge { opacity: 0.45; }
+.db__timelineLibur .db__timelineWaktu,
+.db__timelineLibur .db__timelineRight > :not(.db__tidakEfektif) { opacity: 0.55; }
+.db__tidakEfektif {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 10px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  line-height: 1.4;
+  color: #b91c1c;
+  background: rgba(220, 38, 38, 0.1);
+  vertical-align: middle;
+}
+.db__timelineRight .db__tidakEfektif { margin: 4px 0 0; align-self: flex-start; font-size: 0.64rem; }
+.dark .db__tidakEfektif { color: #fca5a5; background: rgba(248, 113, 113, 0.14); }

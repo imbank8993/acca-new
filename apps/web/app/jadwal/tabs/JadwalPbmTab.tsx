@@ -3,7 +3,7 @@
 import React from 'react'
 import { CalendarCheck, CalendarRange, CalendarX, MapPin } from 'lucide-react'
 import Spinner from '@/components/ui/Spinner'
-import { jadwalTanpaLibur, liburPenuhJadwal } from '@/lib/jadwal-libur'
+import { jumlahEfektif, liburPenuhJadwal, tandaiLibur } from '@/lib/jadwal-libur'
 import {
   JadwalHariIni, JadwalPekan, LiburSehariPenuh, SectionHeader,
   kolomJam, kolomNomor, kolomPukul, kolomTeks, type TampilanJadwal,
@@ -53,8 +53,9 @@ export default function JadwalPbmTab({
   isToday,
 }: JadwalPbmTabProps) {
   const libur = liburPenuhJadwal(jadwalAsli, liburHariIni)
-  const jadwalHariIni = jadwalTanpaLibur(jadwalAsli, liburHariIni)
-  const jadwalMingguIni = pekanAsli.filter(row => !isToday(row.hari) || jadwalTanpaLibur([row], liburHariIni).length > 0)
+  // Jam yang terkena libur kelas/tingkat tertentu tetap tampil, ditandai "tidak efektif".
+  const jadwalHariIni = tandaiLibur(jadwalAsli, liburHariIni)
+  const jadwalMingguIni = pekanAsli.map(row => isToday(row.hari) ? tandaiLibur([row], liburHariIni)[0] : row)
 
   return (
     <div className="tjp">
@@ -62,7 +63,7 @@ export default function JadwalPbmTab({
         <SectionHeader
           icon={<CalendarCheck size={18} style={ikonJudul} />}
           judul="PBM Hari Ini"
-          badge={`${jadwalHariIni.length} JP`}
+          badge={`${jumlahEfektif(jadwalHariIni)} JP`}
         />
 
         {loadingJadwal ? (
@@ -83,7 +84,7 @@ export default function JadwalPbmTab({
         <SectionHeader
           icon={<CalendarRange size={18} style={ikonJudul} />}
           judul="PBM Pekan Ini"
-          badge={`${jadwalMingguIni.length} JP`}
+          badge={`${jumlahEfektif(jadwalMingguIni)} JP`}
         />
 
         {jadwalMingguIni.length > 0 ? (
