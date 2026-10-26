@@ -1,4 +1,5 @@
 const fs=require('node:fs'),vm=require('node:vm'),ts=require('typescript'),assert=require('node:assert/strict');
+new TextDecoder('utf-8',{fatal:true}).decode(fs.readFileSync('apps/web/app/jadwal/components/JadwalLengkapModal.tsx'));
 const box={exports:{}};vm.runInNewContext(ts.transpileModule(fs.readFileSync('apps/web/lib/jadwal-pdf.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,esModuleInterop:true,target:ts.ScriptTarget.ES2022}}).outputText,{module:box,exports:box.exports,require,console});
 const rows=[],master=[],waktuMap={};
 for(let g=1;g<=18;g++)master.push({nip:String(g),nama_guru:`Guru ${g} Nama Lengkap, S.Pd., M.Pd.`,kode_guru:String(g),nama_mapel:`Mata Pelajaran ${g}`,kode_mapel:`MP${g}`});

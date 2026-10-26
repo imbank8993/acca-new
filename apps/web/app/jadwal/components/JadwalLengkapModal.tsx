@@ -271,7 +271,7 @@ export default function JadwalLengkapModal({ open, onClose, type = 'mengajar' }:
                     </div>
                     <div className="jl__headActions">
                         {loaded && rows.length > 0 && (
-                            <button className="jl__btnExport" onClick={exportPdf} disabled={exporting} aria-label="Unduh jadwal PDF" title={exporting ? 'Menyiapkan PDF…' : 'Unduh sebagai PDF'}><FileText size={16} /></button>
+                            <button className="jl__btnExport" onClick={exportPdf} disabled={exporting} aria-label="Unduh jadwal PDF" title={exporting ? 'Menyiapkan PDFâ€¦' : 'Unduh sebagai PDF'}><FileText size={16} /></button>
                         )}
                         <button className="jl__close" onClick={onClose} aria-label="Tutup"><X size={18} /></button>
                     </div>
