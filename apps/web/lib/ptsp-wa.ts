@@ -58,26 +58,29 @@ export function processPtspWaQueue(limit = 20): Promise<PtspWaProcessResult> {
 async function doProcess(limit: number): Promise<PtspWaProcessResult> {
     const result: PtspWaProcessResult = { ok: true, processed: 0, success: 0, failed: 0, errors: [] }
 
-    const claimed = await prisma.$queryRawUnsafe<ClaimedRow[]>(
-        `UPDATE ptsp_wa_log
-            SET retry_count = COALESCE(retry_count, 0) + 1,
-                wa_sent_at = now()
-          WHERE id IN (
-                SELECT id FROM ptsp_wa_log
-                 WHERE wa_sent IS NOT TRUE
-                   AND COALESCE(retry_count, 0) < $1
-                   AND message_sent IS NOT NULL AND message_sent <> ''
-                   AND no_wa IS NOT NULL AND no_wa <> '' AND no_wa !~ '^0+$'
-                   AND created_at > now() - ($2 || ' hours')::interval
-                   AND (wa_sent_at IS NULL OR wa_sent_at < now() - ($3 || ' seconds')::interval)
-                 ORDER BY created_at ASC
-                 LIMIT $4
-                 FOR UPDATE SKIP LOCKED)
-        RETURNING id, short_code, no_wa, message_sent, retry_count`,
-        MAX_ATTEMPTS, String(MAX_AGE_HOURS), String(RETRY_DELAY_SECONDS), limit,
-    )
+    for (let attempt = 0; attempt < limit; attempt++) {
+        // Claim immediately before sending; a waiting batch must not outlive its lease.
+        const claimed = await prisma.$queryRawUnsafe<ClaimedRow[]>(
+            `UPDATE ptsp_wa_log
+                SET retry_count = COALESCE(retry_count, 0) + 1,
+                    wa_sent_at = now()
+              WHERE id IN (
+                    SELECT id FROM ptsp_wa_log
+                     WHERE wa_sent IS NOT TRUE
+                       AND COALESCE(retry_count, 0) < $1
+                       AND message_sent IS NOT NULL AND message_sent <> ''
+                       AND no_wa IS NOT NULL AND no_wa <> '' AND no_wa !~ '^0+$'
+                       AND created_at > now() - ($2 || ' hours')::interval
+                       AND (wa_sent_at IS NULL OR wa_sent_at < now() - ($3 || ' seconds')::interval)
+                     ORDER BY created_at ASC
+                     LIMIT $4
+                     FOR UPDATE SKIP LOCKED)
+            RETURNING id, short_code, no_wa, message_sent, retry_count`,
+            MAX_ATTEMPTS, String(MAX_AGE_HOURS), String(RETRY_DELAY_SECONDS), 1,
+        )
 
-    for (const row of claimed) {
+        const row = claimed[0]
+        if (!row) break
         result.processed++
         let ok = false
         let detail = ''

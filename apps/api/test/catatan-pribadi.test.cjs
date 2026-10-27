@@ -15,3 +15,7 @@ test('atomic note updates reject a concurrent stale version and isolate ownershi
  const row=(await db.query('SELECT * FROM notes')).rows[0];assert.equal(row.version,2);
  }finally{await db.close();}
 });
+
+test('deployment migration creates notes table idempotently before app startup',async()=>{
+ const db=new PGlite();try{await db.exec('CREATE TABLE public.users (id bigint primary key);');const sql=fs.readFileSync('apps/api/prisma/sql/20261027_create_catatan_pribadi.sql','utf8');await db.exec(sql);await db.exec(sql);const result=await db.query("SELECT to_regclass('public.catatan_pribadi') as name");assert.equal(result.rows[0].name,'catatan_pribadi');const deploy=fs.readFileSync('.github/workflows/deploy.yml','utf8');assert(deploy.indexOf('20261027_create_catatan_pribadi.sql')<deploy.indexOf('docker compose up -d'));}finally{await db.close();}
+});

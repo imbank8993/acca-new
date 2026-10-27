@@ -1,0 +1,11 @@
+const {test}=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),ts=require('typescript');
+function load(file,imports){const m={exports:{}};vm.runInNewContext(ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,{module:m,exports:m.exports,require:n=>imports[n],console,URL});return m.exports;}
+test('queue claims just before each send, merges concurrent runs and records outcomes without real messages',async()=>{
+ const claims=[],updates=[],sent=[];let left=[{id:1n,short_code:'A',no_wa:'081',message_sent:'one',retry_count:1},{id:2n,short_code:'B',no_wa:'082',message_sent:'two',retry_count:2}];
+ const api=load('apps/web/lib/ptsp-wa.ts',{'./prisma':{prisma:{$queryRawUnsafe:async(sql,...args)=>{claims.push({sql,args});return left.length?[left.shift()]:[];},$executeRawUnsafe:async(sql,...args)=>updates.push({sql,args})}},'./wa-sender':{sendWhatsApp:async(msg,feature,_,phone)=>{sent.push({msg,feature,phone});return{ok:msg==='one',error:msg==='two'?'simulated failure':undefined};}}});
+ const first=api.processPtspWaQueue(20),second=api.processPtspWaQueue(20);assert.equal(first,second);const result=await first;assert.equal(result.success,1);assert.equal(result.failed,1);assert.equal(sent.length,2);assert(claims.every(c=>c.args.at(-1)===1));assert.match(claims[0].sql,/FOR UPDATE SKIP LOCKED/);assert.match(updates[0].sql,/wa_sent = true/);assert.match(updates[1].sql,/wa_sent = false/);
+});
+test('manual PTSP queue processing validates session and staff role before sending',async()=>{
+ let user=null,calls=0;const api=load('apps/web/app/api/ptsp/notify-wa/route.ts',{'@/lib/api-auth':{getApiUser:async()=>user},'next/server':{NextResponse:{json:(body,init={})=>({body,status:init.status||200})}},'@/lib/ptsp-wa':{processPtspWaQueue:async()=>{calls++;return{ok:true};}}});
+ const request={url:'https://acca.icgowa.sch.id/api/ptsp/notify-wa'};assert.equal((await api.GET(request)).status,401);user={roles:['SISWA']};assert.equal((await api.GET(request)).status,403);assert.equal(calls,0);user={roles:['PTSP']};assert.equal((await api.GET(request)).status,200);assert.equal(calls,1);
+});

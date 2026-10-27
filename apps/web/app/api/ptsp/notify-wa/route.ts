@@ -1,4 +1,4 @@
-import { extractRequestToken } from '@/lib/app-jwt';
+import { getApiUser } from '@/lib/api-auth';
 import { NextRequest, NextResponse } from 'next/server';
 import { processPtspWaQueue } from '@/lib/ptsp-wa';
 
@@ -11,8 +11,13 @@ export const dynamic = 'force-dynamic';
  * Baileys hanya hidup di sini. Antrean juga diproses otomatis tiap 1 menit (instrumentation.ts).
  */
 export async function GET(request: NextRequest) {
-  if (!extractRequestToken(request)) {
+  const user = await getApiUser(request);
+  if (!user) {
     return NextResponse.json({ ok: false, error: 'Unauthorized' }, { status: 401 });
+  }
+
+  if (!user.roles.some(role => ['ADMIN', 'ADMINISTRATOR', 'PTSP', 'OP_LAYANAN'].includes(role))) {
+    return NextResponse.json({ ok: false, error: 'Akses ditolak' }, { status: 403 });
   }
 
   const { searchParams } = new URL(request.url);
