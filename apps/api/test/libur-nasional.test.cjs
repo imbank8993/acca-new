@@ -77,3 +77,8 @@ test('deskripsi tak dikenal → lainnya (tidak dicentang otomatis)', () => {
     assert.equal(klasifikasi('Sesuatu', ''), 'lainnya');
     assert.equal(klasifikasi('Hari Ibu', 'Observance\nTo hide observances, go to Google Calendar Settings > Holidays in Indonesia'), 'peringatan');
 });
+
+test('national synchronization rejects invalid calendar dates and excessive ranges before writes',async()=>{
+ const box={exports:{}};vm.runInNewContext(ts.transpileModule(fs.readFileSync('apps/api/src/libur/libur.service.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,experimentalDecorators:true}}).outputText,{module:box,exports:box.exports,require:n=>n==='@nestjs/common'?{Injectable:()=>x=>x,BadRequestException:Error,NotFoundException:Error,BadGatewayException:Error}:n==='./libur-nasional'?moduleBox.exports:{}});
+ const s=new box.exports.LiburService({});await assert.rejects(s.sinkronNasional({items:[{tanggal:'2026-02-31',keterangan:'invalid'}]}));await assert.rejects(s.sinkronNasional({items:[{tanggal_mulai:'2026-01-01',tanggal_selesai:'9999-12-31',keterangan:'excessive'}]}));
+});

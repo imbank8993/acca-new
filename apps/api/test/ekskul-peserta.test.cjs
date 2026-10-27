@@ -1,0 +1,11 @@
+const {test}=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),ts=require('typescript');
+const m={exports:{}};vm.runInNewContext(ts.transpileModule(fs.readFileSync('apps/api/src/ekskul/ekskul.service.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,experimentalDecorators:true}}).outputText,{module:m,exports:m.exports,require:n=>n==='@nestjs/common'?{Injectable:()=>x=>x,BadRequestException:Error,ForbiddenException:Error,NotFoundException:Error}:{}});
+const id='11111111-1111-4111-8111-111111111111',other='22222222-2222-4222-8222-222222222222';
+test('coach cannot add or inspect candidates for another extracurricular',async()=>{
+ let reads=0;const s=new m.exports.EkskulService({ekskul_pembina:{findFirst:async({where})=>where.ekskul_id===id?{id:'coach'}:null},master_siswa:{findMany:async()=>{reads++;return[];}}},{});
+ await assert.rejects(s.tambahPesertaEkskul('coach',false,{ekskul_id:other,tahun_ajaran:'2026/2027',semester:1,siswa_ids:['1']}));await assert.rejects(s.getKandidatPeserta('coach',false,{ekskul_id:other,tahun_ajaran:'2026/2027',semester:'1'}));assert.equal(reads,0);
+ for(const semester of [0,3])await assert.rejects(s.tambahPesertaEkskul('coach',false,{ekskul_id:id,tahun_ajaran:'2026/2027',semester,siswa_ids:['1']}));
+});
+test('bulk participant add creates missing students, reactivates inactive and preserves active membership',async()=>{
+ let created,reactivated;const existing=[{id:'old1',siswa_id:1n,aktif:false},{id:'old2',siswa_id:2n,aktif:true}];const db={ekskul_pembina:{findFirst:async()=>({id:'coach'})},master_siswa:{findMany:async()=>[{id:1n},{id:2n},{id:3n}]},ekskul_siswa:{findMany:async()=>existing},$transaction:async fn=>fn({ekskul_siswa:{createMany:async args=>{created=args;},updateMany:async args=>{reactivated=args;}}})};const s=new m.exports.EkskulService(db,{});const result=await s.tambahPesertaEkskul('coach',false,{ekskul_id:id,tahun_ajaran:'2026/2027',semester:1,siswa_ids:['1','2','3','3']});assert.equal(result.created,1);assert.equal(result.reactivated,1);assert.equal(result.sudah_aktif,1);assert.equal(created.data.length,1);assert.equal(created.data[0].siswa_id,3n);assert.equal(created.skipDuplicates,true);assert.equal(reactivated.where.id.in[0],'old1');
+});
