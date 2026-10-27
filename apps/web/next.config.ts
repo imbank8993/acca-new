@@ -148,6 +148,22 @@ const nextConfig: NextConfig = {
         ]
       },
       {
+        // Gambar & font statis di /public. Aturan /:path* di atas memberi SEMUA
+        // respons no-store, termasuk artwork login dan logo, sehingga browser
+        // mengunduh ulang semuanya setiap refresh (halaman login sempat
+        // menampilkan warna dasar panel cukup lama). Aturan yang cocok belakangan
+        // menimpa header yang sama, jadi ini harus tetap DI BAWAH /:path*.
+        // Dikecualikan: api/ dan _next/ (punya aturan sendiri), uploads/ (berkas
+        // unggahan), branding/ (logo yang bisa diganti admin, harus segera tampil).
+        // Berkas yang tidak ber-?v= tetap segar paling lambat 1 hari; SWR membuat
+        // versi lama tetap dipakai sambil diperbarui di latar belakang.
+        source: '/:path((?!api/|_next/|uploads/|branding/).*\\.(?:png|jpe?g|webp|gif|svg|ico|woff2?|ttf|otf))',
+        headers: [
+          { key: 'Cache-Control', value: 'public, max-age=86400, stale-while-revalidate=604800' },
+          { key: 'Vary', value: 'Accept-Encoding' },
+        ]
+      },
+      {
         // Next.js hashed static assets: immutable cache (overrides /:path* for _next/static)
         source: '/_next/static/:path*',
         headers: [

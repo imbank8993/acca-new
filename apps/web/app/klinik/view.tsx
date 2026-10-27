@@ -1371,11 +1371,12 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
       });
       const json = await safeJson(res);
       if (!res.ok || !json.ok) throw new Error(json.error || 'Gagal menghapus peserta. Silakan coba lagi.');
-      const removed = new Set<number>(json.removed_siswa_ids || siswaIds);
+      // Dibandingkan sebagai teks: server mengembalikan id BIGINT sebagai string.
+      const removed = new Set<string>(((json.removed_siswa_ids || siswaIds) as unknown[]).map(String));
       const updateSlot = (s: KlinikSlot): KlinikSlot => s.id === slotId ? {
         ...s,
         status: json.status || s.status,
-        klinik_peserta: (s.klinik_peserta || []).filter(p => !removed.has(Number(p.siswa_id))),
+        klinik_peserta: (s.klinik_peserta || []).filter(p => !removed.has(String(p.siswa_id))),
       } : s;
       setSlots(current => current.map(updateSlot));
       setShowParticipantsModal(current => current ? updateSlot(current) : null);

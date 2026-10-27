@@ -208,6 +208,34 @@ async function resolveUserRecord(db: PrismaDbAdapter, authId?: string, nip?: str
     return null;
 }
 
+/**
+ * ID BIGINT sebagai teks kanonik ("00123" → "123"), atau null bila bukan
+ * bilangan bulat positif. Adapter DB mengembalikan BIGINT sebagai string, jadi
+ * perbandingan ID harus dilakukan pada bentuk ini — bukan Number(), yang tidak
+ * pernah sama (===) dengan string dari database.
+ */
+function idTeks(v: unknown): string | null {
+    const t = String(v ?? '').trim();
+    if (!/^\d+$/.test(t)) return null;
+    const kanon = t.replace(/^0+(?=\d)/, '');
+    return kanon === '0' ? null : kanon;
+}
+
+/** Dua ID BIGINT menunjuk baris yang sama, apa pun tipenya (string/number). */
+function samaId(a: unknown, b: unknown): boolean {
+    const x = idTeks(a);
+    return x !== null && x === idTeks(b);
+}
+
+/** Daftar ID unik & valid dalam bentuk teks kanonik (lihat `idTeks`). */
+function daftarIdTeks(nilai: unknown): string[] {
+    const arr = Array.isArray(nilai) ? nilai : [];
+    return [...new Set(arr.map(idTeks).filter((v): v is string => v !== null))];
+}
+
+/** ID users/siswa: BIGINT yang dari DB datang sebagai string. */
+type IdBigint = string | number;
+
 /** Identitas siswa pada tabel `users` (NISN disimpan di nip/username). */
 function identitasSiswa(u: any): string {
     return u?.nip || u?.username || '';
@@ -334,7 +362,7 @@ function salahTargetKelas(targetKelas: string[] | null | undefined, kelas: strin
 async function validasiAnggotaSeangkatan(
     db: PrismaDbAdapter,
     identitasPengaju: string,
-    anggotaIds: number[]
+    anggotaIds: IdBigint[]
 ): Promise<string | null> {
     if (anggotaIds.length === 0) return null;
 
@@ -377,7 +405,7 @@ async function validasiAnggotaSeangkatan(
  */
 async function validasiPesertaTunjukan(
     db: PrismaDbAdapter,
-    siswaIds: number[],
+    siswaIds: IdBigint[],
     targetKelas: string[] | null | undefined
 ): Promise<string | null> {
     if (siswaIds.length === 0) return null;
@@ -674,7 +702,7 @@ const STATUS_DITUGASKAN = 'ditugaskan';
 async function bangunBarisPeserta(
     db: PrismaDbAdapter,
     slotId: string,
-    siswaIds: number[],
+    siswaIds: IdBigint[],
     status: string = 'registered'
 ) {
     const { data: userRows } = await db
@@ -702,7 +730,7 @@ async function kabariPesertaTunjukan(
     db: PrismaDbAdapter,
     opsi: {
         slotId: string;
-        siswaIds: number[];
+        siswaIds: IdBigint[];
         mapel: string;
         namaGuru: string;
         tanggal: string;
@@ -853,7 +881,7 @@ export async function handleGet(req: any, action: string, searchParams: URLSearc
                     slot.initiator_nama = namaMap.get(slot.initiator_siswa_id) || null;
                     // Kelasnya sudah tersimpan di barisnya sendiri sbg peserta.
                     slot.initiator_kelas = (slot.klinik_peserta || [])
-                        .find((p: any) => p.siswa_id === slot.initiator_siswa_id)?.kelas || null;
+                        .find((p: any) => samaId(p.siswa_id, slot.initiator_siswa_id))?.kelas || null;
                 }
             }
         }
@@ -971,11 +999,10 @@ export async function handlePost(req: any, action: string, payload: any, db: Pri
             const pengajuanSiswa = isSiswaCreator && !user.roles.includes('GURU');
 
             // Anggota kelompok yang ditunjuk siswa pengaju (users.id), tanpa dirinya sendiri.
-            const anggotaIds: number[] = [...new Set(
-                (Array.isArray(payload.anggota) ? payload.anggota : [])
-                    .map((v: any) => Number(v))
-                    .filter((v: number) => Number.isFinite(v) && v !== userRecord.id)
-            )] as number[];
+            // Teks kanonik, bukan Number(): userRecord.id dari DB berupa string,
+            // jadi `v !== userRecord.id` versi lama tidak pernah menyaring pengaju.
+            const anggotaIds: string[] = daftarIdTeks(payload.anggota)
+                .filter(v => !samaId(v, userRecord.id));
 
             // Kelompok siswa: pengaju tidak mengisi kuota. Kuotanya diberi ruang
             // di atas jumlah anggota awal supaya siswa lain masih bisa "Gabung".
@@ -1081,7 +1108,7 @@ export async function handlePost(req: any, action: string, payload: any, db: Pri
                 // sedangkan peserta yang DITUNJUK guru adalah penugasan — sama
                 // seperti sesi bentukan admin, mereka tidak boleh mengundurkan
                 // diri sendiri lewat cancel_registration.
-                status: p.siswa_id === userRecord.id ? 'registered' : STATUS_DITUGASKAN,
+                status: samaId(p.siswa_id, userRecord.id) ? 'registered' : STATUS_DITUGASKAN,
             }));
 
             if (pesertaRows.length > 0) {
@@ -1148,11 +1175,7 @@ export async function handlePost(req: any, action: string, payload: any, db: Pri
                 throw new HttpException({ ok: false, error: 'Guru pengampu tidak ditemukan' }, 400);
             }
 
-            const pesertaIds: number[] = [...new Set(
-                (Array.isArray(payload.anggota) ? payload.anggota : [])
-                    .map((v: any) => Number(v))
-                    .filter((v: number) => Number.isFinite(v))
-            )] as number[];
+            const pesertaIds: string[] = daftarIdTeks(payload.anggota);
 
             // Penunjukan peserta bersifat opsional: admin boleh menunjuk peserta langsung,
             // atau mengosongkannya agar siswa mengklaim / mendaftar sendiri.
@@ -1322,9 +1345,15 @@ export async function handlePost(req: any, action: string, payload: any, db: Pri
             if (slotErr || !slot) throw new Error('Slot tidak ditemukan');
             if (slot.status !== 'open') throw new Error('Slot tidak tersedia untuk pendaftaran (Status: ' + slot.status + ')');
 
+            // samaId, bukan Number(...) !== callerRecord.id: id dari DB berupa
+            // string, jadi siswa yang mengirim id-nya sendiri dulu dianggap
+            // "mendaftarkan orang lain" dan ditolak.
             const mendaftarkanOrangLain =
-                payload.siswa_id != null && Number(payload.siswa_id) !== callerRecord.id;
-            if (mendaftarkanOrangLain && !isAdminUser(user) && slot.guru_id !== callerRecord.id) {
+                payload.siswa_id != null && !samaId(payload.siswa_id, callerRecord.id);
+            if (mendaftarkanOrangLain && idTeks(payload.siswa_id) === null) {
+                throw new HttpException({ ok: false, error: 'ID siswa tidak valid' }, 400);
+            }
+            if (mendaftarkanOrangLain && !isAdminUser(user) && !samaId(slot.guru_id, callerRecord.id)) {
                 throw new ForbiddenException('Anda hanya dapat mendaftarkan diri sendiri');
             }
             if (!mendaftarkanOrangLain && !user.roles.includes('SISWA')) {
@@ -1336,7 +1365,7 @@ export async function handlePost(req: any, action: string, payload: any, db: Pri
             let pesertaRecord: any = callerRecord;
             if (mendaftarkanOrangLain) {
                 const { data: target } = await db.from('users')
-                    .select('id, nama, nip, username').eq('id', Number(payload.siswa_id)).maybeSingle();
+                    .select('id, nama, nip, username').eq('id', idTeks(payload.siswa_id)).maybeSingle();
                 if (!target) throw new Error('Siswa yang didaftarkan tidak ditemukan');
                 siswa_id = target.id;
                 nama_siswa = target.nama;
@@ -1411,7 +1440,8 @@ export async function handlePost(req: any, action: string, payload: any, db: Pri
                     || !Number.isSafeInteger(Number(id)) || Number(id) <= 0)) {
                 throw new HttpException({ ok: false, error: 'Pilih peserta yang valid untuk dihapus' }, 400);
             }
-            const targetIds = [...new Set(rawIds.map(Number))];
+            // Teks kanonik: dibandingkan dengan id dari DB (string).
+            const targetIds = daftarIdTeks(rawIds);
             const callerRecord = await resolveUserRecord(db, user.authId, user.nip);
             if (!callerRecord) throw new ForbiddenException('User tidak ditemukan');
 
@@ -1423,12 +1453,12 @@ export async function handlePost(req: any, action: string, payload: any, db: Pri
             // Siswa pengaju kelompok adalah penanggung jawab pengajuan — mereka
             // tidak boleh keluar dari kelompoknya sendiri. Jika ingin membatalkan,
             // mereka harus membatalkan/menghapus jadwalnya via delete_slot.
-            if (slot.initiator_type === 'SISWA' && targetIds.includes(slot.initiator_siswa_id)) {
+            if (slot.initiator_type === 'SISWA' && targetIds.some(id => samaId(id, slot.initiator_siswa_id))) {
                 throw new ForbiddenException('Pengaju kelompok tidak dapat keluar dari sesi. Batalkan atau hapus pengajuan jadwal bila tidak jadi dilaksanakan.');
             }
 
-            const pengelolaSesi = can(user, 'klinik.kelola_sesi') || slot.guru_id === callerRecord.id;
-            const bolehBatal = pengelolaSesi || (targetIds.length === 1 && targetIds[0] === callerRecord.id);
+            const pengelolaSesi = can(user, 'klinik.kelola_sesi') || samaId(slot.guru_id, callerRecord.id);
+            const bolehBatal = pengelolaSesi || (targetIds.length === 1 && samaId(targetIds[0], callerRecord.id));
             if (!bolehBatal) {
                 throw new ForbiddenException('Anda hanya dapat membatalkan pendaftaran Anda sendiri');
             }
@@ -1509,7 +1539,7 @@ export async function handlePost(req: any, action: string, payload: any, db: Pri
                 throw new Error('Sesi ini sudah tidak dapat diedit');
             }
 
-            const isCreator = (slot.guru_id === userRecord.id) || (slot.initiator_type === 'SISWA' && slot.initiator_siswa_id === userRecord.id);
+            const isCreator = samaId(slot.guru_id, userRecord.id) || (slot.initiator_type === 'SISWA' && samaId(slot.initiator_siswa_id, userRecord.id));
             if (!pengelola && !isCreator) {
                 throw new ForbiddenException('Anda tidak memiliki akses untuk mengedit jadwal ini');
             }
@@ -1535,14 +1565,11 @@ export async function handlePost(req: any, action: string, payload: any, db: Pri
             // `|| KUOTA_GURU_DEFAULT` dulu diam-diam mereset kuota ke 5 ketika field
             // tidak dikirim (mis. admin mengedit sesi kelompok) — pertahankan nilai lama.
             let maxSiswa = Number(updateData.max_siswa) || slot.max_siswa || KUOTA_GURU_DEFAULT;
-            let anggotaIds: number[] = [];
+            // Teks kanonik (lihat idTeks) supaya bisa dibandingkan dgn siswa_id dari DB.
+            let anggotaIds: string[] = [];
 
             if (sesiAdmin) {
-                anggotaIds = [...new Set(
-                    updateData.anggota
-                        .map((v: any) => Number(v))
-                        .filter((v: number) => Number.isFinite(v))
-                )] as number[];
+                anggotaIds = daftarIdTeks(updateData.anggota);
                 if (anggotaIds.length > 0) {
                     const { count: jumlahAkun } = await db
                         .from('users').select('id', { count: 'exact', head: true }).in('id', anggotaIds);
@@ -1552,11 +1579,8 @@ export async function handlePost(req: any, action: string, payload: any, db: Pri
                 }
                 maxSiswa = Math.max(Number(updateData.max_siswa) || 0, anggotaIds.length, PESERTA_MINIMAL);
             } else if (kelompokSiswa) {
-                anggotaIds = [...new Set(
-                    updateData.anggota
-                        .map((v: any) => Number(v))
-                        .filter((v: number) => Number.isFinite(v) && v !== slot.initiator_siswa_id)
-                )] as number[];
+                anggotaIds = daftarIdTeks(updateData.anggota)
+                    .filter(v => !samaId(v, slot.initiator_siswa_id));
                 if (anggotaIds.length < 1) {
                     throw new HttpException({ ok: false, error: 'Pilih minimal 1 teman kelompok' }, 400);
                 }
@@ -1587,11 +1611,7 @@ export async function handlePost(req: any, action: string, payload: any, db: Pri
                 }
 
                 if (sesiGuru) {
-                    anggotaIds = [...new Set(
-                        updateData.anggota
-                            .map((v: any) => Number(v))
-                            .filter((v: number) => Number.isFinite(v))
-                    )] as number[];
+                    anggotaIds = daftarIdTeks(updateData.anggota);
                     if (anggotaIds.length > maxSiswa) {
                         throw new HttpException({
                             ok: false,
@@ -1634,7 +1654,7 @@ export async function handlePost(req: any, action: string, payload: any, db: Pri
                 // pernah setuju. Trigger notifikasi mengirim undangan ke guru baru.
                 // Tidak berlaku untuk sesi bentukan admin: di sana penugasan guru
                 // memang keputusan madrasah, bukan permintaan yang perlu disetujui.
-                if (kelompokSiswa && guruRecord.id !== slot.guru_id) {
+                if (kelompokSiswa && !samaId(guruRecord.id, slot.guru_id)) {
                     slotPatch.status = 'pending_guru';
                     slotPatch.catatan_penolakan = null;
                 }
@@ -1647,8 +1667,16 @@ export async function handlePost(req: any, action: string, payload: any, db: Pri
             if (kelompokSiswa || sesiAdmin || sesiGuru) {
                 // Pengaju kelompok siswa selalu ikut dan tidak bisa dikeluarkan.
                 // Sesi bentukan admin tidak punya pengaju — daftarnya apa adanya.
-                const idsFinal = new Set<number>(
-                    kelompokSiswa ? [...anggotaIds, slot.initiator_siswa_id] : anggotaIds);
+                // SEMUA ID dibandingkan sebagai teks kanonik. Versi lama mencampur
+                // number (anggotaIds) dengan string dari DB (siswa_id peserta,
+                // initiator_siswa_id): tidak ada yang pernah cocok, sehingga setiap
+                // simpan menganggap SEMUA peserta lama "dibuang" lalu menambahkan
+                // ulang semuanya — gagal 409 bila ada yang sudah diabsen, atau
+                // bentrok unique (slot_id, siswa_id) dengan pendaftar mandiri
+                // SETELAH penugasan lama terlanjur dihapus.
+                const idPengaju = kelompokSiswa ? idTeks(slot.initiator_siswa_id) : null;
+                const idsFinal = new Set<string>(
+                    idPengaju ? [...anggotaIds, idPengaju] : anggotaIds);
                 const { data: semuaPeserta } = await db
                     .from('klinik_peserta').select('id, siswa_id, nama_siswa, kehadiran, status').eq('slot_id', slot_id);
 
@@ -1663,8 +1691,8 @@ export async function handlePost(req: any, action: string, payload: any, db: Pri
                 // Yang dibandingkan untuk "sudah ada" tetap SELURUH peserta:
                 // menunjuk siswa yang sudah mendaftar sendiri tidak boleh
                 // menghasilkan baris kedua (slot_id+siswa_id unik).
-                const idsLama = new Set((semuaPeserta || []).map((p: any) => p.siswa_id));
-                const dibuang = pesertaLama.filter((p: any) => !idsFinal.has(p.siswa_id));
+                const idsLama = new Set((semuaPeserta || []).map((p: any) => idTeks(p.siswa_id)));
+                const dibuang = pesertaLama.filter((p: any) => !idsFinal.has(idTeks(p.siswa_id) || ''));
                 const ditambah = [...idsFinal].filter(id => !idsLama.has(id));
 
                 // Kehadiran menempel pada baris peserta, jadi membuang peserta yang
@@ -1713,7 +1741,7 @@ export async function handlePost(req: any, action: string, payload: any, db: Pri
             const { data: slot } = await db.from('klinik_slots').select('*').eq('id', slot_id).single();
             if (!slot) throw new Error('Jadwal tidak ditemukan');
 
-            const isCreator = (slot.guru_id === userRecord.id) || (slot.initiator_type === 'SISWA' && slot.initiator_siswa_id === userRecord.id);
+            const isCreator = samaId(slot.guru_id, userRecord.id) || (slot.initiator_type === 'SISWA' && samaId(slot.initiator_siswa_id, userRecord.id));
             const canDelete = can(user, 'klinik.kelola_sesi') || (isCreator && STATUS_PENGAJUAN.includes(slot.status));
 
             if (!canDelete) {
@@ -1775,7 +1803,7 @@ export async function handlePatch(req: any, action: string, id: any, payload: an
             // Hanya guru pengampu yang ditunjuk. Admin diizinkan sbg jalan keluar
             // manual kalau gurunya berhalangan lama, bukan sebagai alur normal.
             const callerRecord = await resolveUserRecord(db, user.authId, user.nip);
-            if (!isAdminUser(user) && (!callerRecord || slot.guru_id !== callerRecord.id)) {
+            if (!isAdminUser(user) && (!callerRecord || !samaId(slot.guru_id, callerRecord.id))) {
                 throw new ForbiddenException('Hanya guru pengampu yang ditunjuk yang dapat memproses pengajuan ini');
             }
 
@@ -1860,7 +1888,7 @@ export async function handlePatch(req: any, action: string, id: any, payload: an
             const { data: slotOwner } = await db.from('klinik_slots')
                 .select('guru_id, status').eq('id', slot_id).single();
             const callerRecord = await resolveUserRecord(db, user.authId, user.nip);
-            if (!isAdminUser(user) && (!callerRecord || slotOwner?.guru_id !== callerRecord.id)) {
+            if (!isAdminUser(user) && (!callerRecord || !samaId(slotOwner?.guru_id, callerRecord.id))) {
                 throw new ForbiddenException('Hanya guru pengampu sesi ini yang dapat mengisi laporan');
             }
             if (slotOwner?.status === 'paid') {
@@ -2073,7 +2101,7 @@ export async function handlePatch(req: any, action: string, id: any, payload: an
             if (!slot) {
                 throw new HttpException({ ok: false, error: 'Sesi tidak ditemukan' }, 404);
             }
-            if (!can(user, 'klinik.kelola_sesi') && (!callerRecord || slot.guru_id !== callerRecord.id)) {
+            if (!can(user, 'klinik.kelola_sesi') && (!callerRecord || !samaId(slot.guru_id, callerRecord.id))) {
                 throw new ForbiddenException('Hanya guru pengampu sesi ini yang dapat mengisi absensi');
             }
             if (slot.status === 'paid' || slot.status === 'cancelled') {
@@ -2083,14 +2111,20 @@ export async function handlePatch(req: any, action: string, id: any, payload: an
                 }, 409);
             }
 
+            // ID dibandingkan sebagai TEKS. Adapter DB mengembalikan BIGINT sebagai
+            // string ("123"), sedangkan klien bisa mengirim string atau number.
+            // Versi lama memakai Number(...) di satu sisi dan string di sisi lain,
+            // sehingga `sah.has(...)` tidak pernah cocok: semua entri "diabaikan
+            // diam-diam", tidak ada baris yang diubah, tapi respons tetap ok —
+            // guru melihat "berhasil" padahal absensinya tidak tersimpan.
             const masukan = (Array.isArray(payload.entries) ? payload.entries : [])
                 .map((e: any) => ({
-                    siswa_id: Number(e?.siswa_id),
+                    siswa_id: idTeks(e?.siswa_id),
                     // String kosong dari <select> diperlakukan sama dengan null:
                     // "belum diabsen", yang berbeda dari 'A' (alpa).
                     kehadiran: e?.kehadiran ? String(e.kehadiran).toUpperCase() : null,
                 }))
-                .filter((e: any) => Number.isFinite(e.siswa_id));
+                .filter((e: any) => e.siswa_id !== null);
 
             if (masukan.some((e: any) => e.kehadiran && !KEHADIRAN_VALID.includes(e.kehadiran))) {
                 throw new HttpException({
@@ -2101,15 +2135,23 @@ export async function handlePatch(req: any, action: string, id: any, payload: an
 
             const { data: pesertaSlot } = await db.from('klinik_peserta')
                 .select('siswa_id').eq('slot_id', slotId);
-            const sah = new Set((pesertaSlot || []).map((p: any) => p.siswa_id));
+            const sah = new Set((pesertaSlot || []).map((p: any) => idTeks(p.siswa_id)).filter(Boolean));
 
             // Dikelompokkan per nilai supaya 30 peserta tetap 1–5 query, bukan 30.
-            const perNilai = new Map<string, number[]>();
+            const perNilai = new Map<string, string[]>();
+            let diabaikan = 0;
             for (const e of masukan) {
-                if (!sah.has(e.siswa_id)) continue; // siswa_id asing diabaikan diam-diam
+                if (!sah.has(e.siswa_id)) { diabaikan++; continue; } // bukan peserta sesi ini
                 const kunci = e.kehadiran || '';
                 if (!perNilai.has(kunci)) perNilai.set(kunci, []);
                 perNilai.get(kunci)!.push(e.siswa_id);
+            }
+
+            if (masukan.length > 0 && perNilai.size === 0) {
+                throw new HttpException({
+                    ok: false,
+                    error: 'Tidak ada peserta yang cocok dengan sesi ini. Muat ulang halaman lalu coba lagi.',
+                }, 409);
             }
 
             const waktu = new Date().toISOString();
@@ -2125,7 +2167,7 @@ export async function handlePatch(req: any, action: string, id: any, payload: an
 
             return {
                 ok: true,
-                data: { diproses: [...perNilai.values()].reduce((n, ids) => n + ids.length, 0) },
+                data: { diproses: [...perNilai.values()].reduce((n, ids) => n + ids.length, 0), diabaikan },
             };
         }
 

@@ -13,7 +13,9 @@ import Swal from 'sweetalert2'
 export default function LoginPage() {
   return (
     <Suspense fallback={
-      <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f8fafc' }}>
+      // Tanpa warna latar sendiri: <html> sudah diwarnai sesuai tema oleh skrip
+      // dark-mode-init di layout akar, jadi mode gelap tidak berkedip putih.
+      <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <Spinner variant="buble" />
       </div>
     }>
@@ -1124,7 +1126,7 @@ function LoginContent() {
           cursor: pointer;
           text-decoration: none;
         }
-        .lp-forgot-link:hover { text-decoration: underline; color: #DB2777; }
+        .lp-forgot-link:hover { text-decoration: underline; color: #1d6bf3; }
 
         .lp-modal-overlay {
           position: fixed;
@@ -1355,7 +1357,10 @@ function LoginContent() {
         .lp-brand {
           flex: 1;
           position: relative;
-          background: linear-gradient(155deg, var(--n-primary) 0%, var(--n-primary) 40%, #DB2777 150%);
+          /* Warna dasar = warna rata-rata artwork. Dulu gradien biru ke magenta
+             (#DB2777): artwork menutupnya penuh, jadi magenta itu hanya terlihat
+             selama artwork belum tampil, dan itulah kilatan ungu saat refresh. */
+          background: linear-gradient(155deg, #0aa8fb 0%, #0384f0 100%);
           display: flex;
           flex-direction: column;
           align-items: center;
@@ -1382,7 +1387,10 @@ function LoginContent() {
           width: 400px;
           height: 400px;
           border-radius: 50%;
-          background: radial-gradient(circle, rgba(220,38,220,0.18) 0%, transparent 70%);
+          /* Biru langit, bukan magenta. Lapisan ini berada DI ATAS artwork
+             (pseudo-element setelah .lp-brand-art dalam urutan gambar), jadi
+             dulu sudut kanan-bawah panel selalu bernoda magenta di kedua mode. */
+          background: radial-gradient(circle, rgba(56,189,248,0.14) 0%, transparent 70%);
           bottom: -80px;
           right: -60px;
           pointer-events: none;
@@ -1402,7 +1410,17 @@ function LoginContent() {
           display: block;
           position: absolute;
           inset: 0;
-          background: url('/login-kiri-light.webp?v=1') center center / cover no-repeat;
+          /* Dua lapis: artwork asli di atas, pratinjau buram 24px (LQIP, ~200
+             byte, ditanam sebagai data URI) di bawahnya. Saat refresh yang
+             tampil seketika adalah versi buram gambar yang sama, lalu artwork
+             tajam menimpanya begitu siap.
+             v=2: berkas diperkecil dari 3686x3686 (~54 MB sekali di-decode) jadi
+             1600x1600, sama alasannya dengan versi gelap (lihat v=5 di bawah).
+             URL artwork juga dipakai preload di app/login/layout.tsx; ubah
+             keduanya bersamaan. */
+          background:
+            url('/login-kiri-light.webp?v=2') center center / cover no-repeat,
+            url('data:image/webp;base64,UklGRq4AAABXRUJQVlA4IKIAAAAQBgCdASoYABgAPjESiEKiISEYDAYAIAMEoAnTKEcDe1/QAAI+WesHX/8fEJAhqN6PB4i/QHIed6gA/lbTctAQoZmdY+d6J//CmNQMbPYP/LfR/+uXKWuuOjQ2/6B41g7jSfUh/7x0I57ggu/ot156EJowEk1zbCgzRzetFNRjOiz2rh07tcszk7fQ6uYxd0W1AstLdMRONu4ZCJVBTz/gAAA=') center center / cover no-repeat;
           pointer-events: none;
         }
 
@@ -1528,7 +1546,8 @@ function LoginContent() {
         .lp-icon {
           width: 52px;
           height: 52px;
-          background: linear-gradient(135deg, var(--n-primary) 0%, var(--n-primary) 30%, #DB2777 125%);
+          /* Biru, tanpa ekor magenta — sepaham dengan .lp-btn di bawah. */
+          background: linear-gradient(135deg, var(--n-primary) 0%, #1d6bf3 100%);
           border-radius: 16px;
           display: inline-flex;
           align-items: center;
@@ -1769,7 +1788,7 @@ function LoginContent() {
             flex: 0 0 auto;
             padding: 20px 24px 16px;
             min-height: 280px;
-            background: linear-gradient(135deg, var(--n-primary) 0%, var(--n-primary) 40%, #DB2777 130%);
+            background: linear-gradient(135deg, #0aa8fb 0%, #0384f0 100%);
           }
           /* Padding TIDAK perlu ditandingi lagi di sini: aturan .dark .lp-brand
              sudah tidak menyetel padding sama sekali, jadi nilai .lp-brand di
@@ -1861,7 +1880,11 @@ function LoginContent() {
            dirender di mode gelap. Cache-buster dinaikkan supaya pengguna lama
            tidak tetap memakai berkas raksasa dari cache. */
         .dark .lp-brand-art {
-          background-image: url('/login-kiri.webp?v=5');
+          /* Dua lapis seperti versi terang: artwork + LQIP. Posisi & ukuran
+             tiap lapis diwarisi dari .lp-brand-art. */
+          background-image:
+            url('/login-kiri.webp?v=5'),
+            url('data:image/webp;base64,UklGRpYAAABXRUJQVlA4IIoAAABQBQCdASoYABgAPjEWiUOiISEUBAAgAwSgCdMxx4T6rJ3QCzazLEGdUsR0tDkJeR0PFgAA/v+nH5m9cSjZNymforJkn4ik2Yj+/zf4rl/op/CzMe4HEdPGd47BwCggy8tJp/Q6HTz/A4ZzFHLv6rNqRDCaZrV6HmoOG0IuB6SGU+gYDKUYGBAAAAA=');
           opacity: 0.95;
         }
 
