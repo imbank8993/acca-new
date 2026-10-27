@@ -1,3 +1,4 @@
+import { PresenceService } from '../presence/presence.service';
 import type { Prisma } from '@prisma/client';
 import { lockAccountWrites, revokeSessions, countUsableAdmins } from '../auth/session-security';
 import {
@@ -46,6 +47,7 @@ export class UsersService {
   constructor(
     private prisma: PrismaService,
     private orangtuaService: OrangtuaService,
+    private readonly presence: PresenceService,
   ) {}
 
   private accountTransaction<T>(run: (tx: Prisma.TransactionClient) => Promise<T>): Promise<T> {
@@ -1184,7 +1186,11 @@ export class UsersService {
     return conditions.length > 0 ? { OR: conditions } : null;
   }
 
-  async heartbeat(user: any, location?: string) {
+  async heartbeat(user: any, location?: string, connection?: { session: string; tabId: string; sequence: number; online: boolean }) {
+    if (connection && user.id) {
+      this.presence.update(String(user.id), connection.session, connection.tabId, connection.sequence, connection.online);
+      if (!connection.online) return { success: true };
+    }
     const locName = (location || '').trim().substring(0, 255) || null;
     const where = this.getUserWhereClause(user);
     if (where) {
@@ -1196,6 +1202,11 @@ export class UsersService {
         },
       });
     }
+    return { success: true };
+  }
+
+  logoutPresence(user: any, session: string) {
+    this.presence.logout(String(user.id), session);
     return { success: true };
   }
 

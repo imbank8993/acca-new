@@ -1,3 +1,4 @@
+import { PresenceService } from '../presence/presence.service';
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -5,7 +6,7 @@ import { PrismaService } from '../prisma/prisma.service';
 export class MonitoringService {
   private readonly logger = new Logger(MonitoringService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService, private readonly presence: PresenceService) {}
 
   async getActivityLogs(page: number, limit: number) {
     try {
@@ -154,8 +155,9 @@ export class MonitoringService {
       }
 
       const now = new Date();
+      const onlineUsers = this.presence.onlineUsers();
       const processedUsers = users.map((user: any) => {
-        let isOnline = false;
+        const isOnline = onlineUsers.has(String(user.id));
         let lastSeenText = user.created_at
           ? `Terdaftar sejak ${new Date(user.created_at).toLocaleDateString('id-ID')}`
           : 'Belum pernah login';
@@ -168,9 +170,6 @@ export class MonitoringService {
           const lastSeenDate = new Date(user.last_seen);
           const diffMinutes = (now.getTime() - lastSeenDate.getTime()) / 1000 / 60;
 
-          if (diffMinutes <= 5) {
-            isOnline = true;
-          }
 
           if (diffMinutes < 1) lastSeenText = 'Baru saja';
           else if (diffMinutes < 60) lastSeenText = `${Math.floor(diffMinutes)} menit lalu`;

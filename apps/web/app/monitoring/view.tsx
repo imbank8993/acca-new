@@ -215,7 +215,7 @@ export default function MonitoringPage() {
         setLoading(true);
         setError(null);
         try {
-            const res = await fetch('/api/monitoring/users');
+            const res = await fetch('/api/monitoring/users', { cache: 'no-store' });
             const data = await res.json();
             if (data.success) setUsers(data.data || []);
             else setError(data.error || 'Failed to fetch users');
@@ -229,7 +229,7 @@ export default function MonitoringPage() {
 
     useEffect(() => {
         fetchData();
-        const interval = setInterval(fetchData, 15000);
+        const interval = setInterval(fetchData, 5000);
         return () => clearInterval(interval);
     }, []);
 

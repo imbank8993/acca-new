@@ -56,6 +56,7 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { BankDataModule } from './bank-data/bank-data.module';
 import { AuditModule } from './audit/audit.module';
 import { SsoModule } from './sso/sso.module';
+import { CatatanPribadiModule } from './catatan-pribadi/catatan-pribadi.module';
 
 @Module({
   imports: [
@@ -114,6 +115,7 @@ import { SsoModule } from './sso/sso.module';
     BankDataModule,
     AuditModule,
     SsoModule,
+    CatatanPribadiModule,
     ThrottlerModule.forRoot([{
       ttl: 60000,
       limit: 120,

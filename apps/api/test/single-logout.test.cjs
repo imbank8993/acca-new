@@ -10,6 +10,8 @@ function load(file, imports, env = {}) {
 function server(env = { NODE_ENV: 'production' }) {
     const { logoutResponse } = load('apps/web/lib/single-logout.ts', {
         'node:crypto': { randomUUID: () => 'public-event-marker' },
+        './app-jwt': { extractRequestToken: () => '' },
+        './nest-api': { nestFetchAsUser: async () => ({ status: 200, body: { success: true } }) },
         'next/server': { NextResponse: { json: (body, init = {}) => ({ body, status: init.status || 200, headers: init.headers, cookies: { values: [], set(...args) { this.values.push(args); } } }) } },
     }, env);
     return (origin = 'https://acca.icgowa.sch.id', site = 'same-origin', query = '') => logoutResponse({
@@ -17,8 +19,8 @@ function server(env = { NODE_ENV: 'production' }) {
         nextUrl: new URL('http://internal-web:3006/api/auth/logout' + query), cookies: { getAll: () => [{ name: 'sb-old-session.1' }] },
     });
 }
-test('production logout clears local cookies, returns all three endpoints and publishes a non-secret event', () => {
-    const response = server()();
+test('production logout clears local cookies, returns all three endpoints and publishes a non-secret event', async () => {
+    const response = await server()();
     assert.equal(response.status, 200); assert.equal(response.body.targets.length, 3);
     assert.equal(response.body.targets[0].url, 'https://acca-cbt.icgowa.sch.id/api/auth/single-logout');
     assert.equal(response.body.targets[1].url, 'https://acca-tools.icgowa.sch.id/auth/single-logout');
@@ -30,34 +32,34 @@ test('production logout clears local cookies, returns all three endpoints and pu
     assert.equal(response.headers['Cache-Control'], 'no-store');
 });
 
-test('preparing logout preserves ACCA cookies and does not wake other tabs', () => {
-    const response = server()('https://acca.icgowa.sch.id', 'same-origin', '?phase=prepare');
+test('preparing logout preserves ACCA cookies and does not wake other tabs', async () => {
+    const response = await server()('https://acca.icgowa.sch.id', 'same-origin', '?phase=prepare');
     assert.equal(response.status, 200);
     assert.equal(response.body.targets.length, 3);
     assert.equal(response.cookies.values.length, 0);
     assert.equal(response.headers['Cache-Control'], 'no-store');
 });
-test('untrusted or cross-site requests cannot log users out', () => {
+test('untrusted or cross-site requests cannot log users out', async () => {
     for (const [origin, site] of [['https://evil.invalid', 'same-site'], ['https://acca.icgowa.sch.id.evil.invalid', 'same-site'], ['https://acca.icgowa.sch.id', 'cross-site']]) {
-        const response = server()(origin, site);
+        const response = await server()(origin, site);
         assert.equal(response.status, 403); assert.equal(response.cookies.values.length, 0);
     }
 });
-test('explicitly disabled integration reports that remote sessions were not closed', () => {
+test('explicitly disabled integration reports that remote sessions were not closed', async () => {
     for (const env of [{ NODE_ENV: 'development', SINGLE_LOGOUT_ENABLED: 'false' }, { NODE_ENV: 'production', SINGLE_LOGOUT_ENABLED: 'false' }]) {
-        const response = server(env)();
+        const response = await server(env)();
         assert.equal(response.body.targets.length, 0); assert(!response.cookies.values.some(item => item[0] === 'acca_logout_at'));
         assert.equal(response.body.integrationDisabled, true);
     }
 });
 
-test('development reports disabled integration instead of silently claiming complete logout', () => {
-    const response = server({ NODE_ENV: 'development' })('http://internal-web:3006');
+test('development reports disabled integration instead of silently claiming complete logout', async () => {
+    const response = await server({ NODE_ENV: 'development' })('http://internal-web:3006');
     assert.equal(response.body.targets.length, 0);
     assert.equal(response.body.integrationDisabled, true);
 });
-test('invalid configuration still clears ACCA and explicitly reports incomplete logout', () => {
-    const response = server({ NODE_ENV: 'production', CBT_URL: 'not a URL' })();
+test('invalid configuration still clears ACCA and explicitly reports incomplete logout', async () => {
+    const response = await server({ NODE_ENV: 'production', CBT_URL: 'not a URL' })();
     assert.equal(response.body.configurationError, true);
     assert(response.cookies.values.some(item => item[0] === 'acca_session'));
 });

@@ -1,3 +1,5 @@
+import { extractRequestToken } from './app-jwt';
+import { nestFetchAsUser } from './nest-api';
 import { NextRequest, NextResponse } from 'next/server';
 import { randomUUID } from 'node:crypto';
 
@@ -24,7 +26,7 @@ function logoutTargets(): LogoutTarget[] {
     ];
 }
 
-export function logoutResponse(request: NextRequest) {
+export async function logoutResponse(request: NextRequest) {
     // A browser supplies Origin on cross-origin POST/DELETE. Reject CSRF before clearing anything.
     const origin = request.headers.get('origin');
     const ownOrigins = new Set([request.nextUrl.origin]);
@@ -41,6 +43,8 @@ export function logoutResponse(request: NextRequest) {
     // Discover destinations without clearing ACCA or waking sibling tabs. The
     // coordinator finishes remote logout before committing the local logout.
     if (request.nextUrl.searchParams.get('phase') === 'prepare') return response;
+    const token = extractRequestToken(request);
+    if (token) await nestFetchAsUser('/users/presence/logout', token, { method: 'POST', signal: AbortSignal.timeout(5000) });
     const clear = { path: '/', expires: new Date(0), sameSite: 'lax' as const, httpOnly: true };
     const names = new Set(['acca_session', 'acca_refresh_token', 'bypass_access', 'sb-access-token.0', 'sb-refresh-token.0']);
     for (const cookie of request.cookies.getAll()) if (cookie.name.startsWith('sb-')) names.add(cookie.name);

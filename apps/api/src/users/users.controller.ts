@@ -1,3 +1,4 @@
+import { createHash } from 'crypto';
 import {
   Body,
   Controller,
@@ -161,9 +162,24 @@ export class UsersController {
     return this.usersService.updateProfileSiswa(req.user, body);
   }
 
+  private presenceSession(req: any) {
+    return createHash('sha256').update(String(req.headers.authorization || '')).digest('hex');
+  }
+
   @Post('heartbeat')
-  async heartbeat(@Request() req: any, @Body() body: { location?: string }) {
-    return this.usersService.heartbeat(req.user, body?.location);
+  async heartbeat(@Request() req: any, @Body() body: { location?: string; tabId?: string; sequence?: number; online?: boolean }) {
+    if (typeof body?.tabId !== 'string' || !/^[a-zA-Z0-9-]{1,80}$/.test(body.tabId)
+      || !Number.isSafeInteger(body.sequence) || body.sequence! < 0 || typeof body.online !== 'boolean') {
+      throw new BadRequestException('Data koneksi tidak valid');
+    }
+    return this.usersService.heartbeat(req.user, body.location, {
+      session: this.presenceSession(req), tabId: body.tabId, sequence: body.sequence!, online: body.online,
+    });
+  }
+
+  @Post('presence/logout')
+  logoutPresence(@Request() req: any) {
+    return this.usersService.logoutPresence(req.user, this.presenceSession(req));
   }
 
   @Post('bulk-replace')

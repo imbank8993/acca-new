@@ -1,0 +1,7 @@
+const {test}=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),ts=require('typescript');
+test('pagination reads server metadata and requests notes beyond the first twelve',async()=>{
+ const states=[],refs=[],calls=[];let si=0,ri=0;
+ const react={useState:initial=>{const i=si++;if(!(i in states))states[i]=typeof initial==='function'?initial():initial;return[states[i],value=>states[i]=typeof value==='function'?value(states[i]):value];},useRef:initial=>{const i=ri++;return refs[i]||=( {current:initial});},useCallback:fn=>fn,useEffect:()=>{}};
+ const box={exports:{}};vm.runInNewContext(ts.transpileModule(fs.readFileSync('apps/web/app/catatan-saya/hooks/use-catatan.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,{module:box,exports:box.exports,require:()=>react,URLSearchParams,AbortController,setTimeout,clearTimeout,console,fetch:async url=>{calls.push(url);return{ok:true,json:async()=>({data:Array.from({length:12},(_,i)=>({id:i+1})),meta:{total:35,total_pages:3,page:1,limit:12}})};}});
+ const render=()=>{si=ri=0;return box.exports.useCatatan({autoFetch:false});};let api=render();await api.fetchNotes();api=render();assert.equal(api.pagination.total,35);assert.equal(api.pagination.totalPages,3);api.setPage(2);await new Promise(r=>setImmediate(r));assert(calls[1].includes('page=2'));
+});

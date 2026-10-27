@@ -43,7 +43,7 @@ export const MENU_GROUPS: MenuGroupDef[] = [
     key: 'beranda',
     label: 'Beranda',
     icon: 'fa-house',
-    pages: ['dashboard', 'jadwal', 'informasi', 'agenda-madrasah', 'notulensi-rapat', 'dokumen'],
+    pages: ['dashboard', 'jadwal', 'informasi', 'agenda-madrasah', 'notulensi-rapat', 'dokumen', 'catatan-saya'],
   },
   {
     key: 'akademik',
@@ -165,6 +165,7 @@ export const PAGE_LABELS: Record<string, string> = {
   'wordpress-app': 'Website WordPress',
   'sanggar-kurikulum': 'Registrasi Sanggar',
   'observasi-kelas': 'Observasi Kelas',
+  'catatan-saya': 'Catatan Saya',
 }
 
 function humanize(id: string): string {

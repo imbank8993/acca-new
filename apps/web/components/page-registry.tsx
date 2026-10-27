@@ -70,6 +70,7 @@ const FormDashboardPage = lazy(() => import('@/app/form/view'))
 const FormBuilderPage = lazy(() => import('@/app/form/builder/view'))
 const FormResponsesPage = lazy(() => import('@/app/form/responses/view'))
 const AuditLogPage = lazy(() => import('@/app/audit-log/view'))
+const CatatanSayaPage = lazy(() => import('@/app/catatan-saya/view'))
 
 /**
  * Halaman utilitas yang boleh diakses walau tidak ada di pagesArray user.
@@ -80,6 +81,7 @@ const AuditLogPage = lazy(() => import('@/app/audit-log/view'))
  * (route khususnya sendiri) dan di API NestJS.
  */
 export const SPECIAL_PAGES = [
+    'catatan-saya',
     'jurnal-banding', 'surat', 'surat-daftar', 'permintaan-surat',
     'profile', 'ProfileSaya', 'dashboard', 'jadwal',
     'sanggar-kurikulum', 'form/builder', 'form/responses', 'informasi/kelola',
@@ -196,6 +198,9 @@ export const PAGE_COMPONENTS: Record<string, (user: User, onRefreshUser: () => P
     // KEUANGAN MODUL BARU
     'keuangan': (user) => <KeuanganPage user={user} />,
     'Keuangan': (user) => <KeuanganPage user={user} />,
+
+    // CATATAN SAYA — catatan pribadi seluruh user
+    'catatan-saya': (user) => <CatatanSayaPage user={user} />,
 
 }
 

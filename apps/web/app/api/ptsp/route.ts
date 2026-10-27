@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse, after } from 'next/server';
 import { extractRequestToken } from '@/lib/app-jwt';
 import { nestFetchAsUser } from '@/lib/nest-api';
 import { deleteFile } from '@/lib/storage';
@@ -33,6 +33,18 @@ export async function POST(request: NextRequest) {
         method: 'POST',
         body: JSON.stringify(body),
     });
+    // Perubahan status mengantrekan notifikasi WA di API; kirim segera setelah respons
+    // dikembalikan agar petugas tidak menunggu provider WhatsApp.
+    if ((status === 200 || status === 201) && body && 'status' in (body.data || {})) {
+        after(async () => {
+            try {
+                const { processPtspWaQueue } = await import('@/lib/ptsp-wa');
+                await processPtspWaQueue(10);
+            } catch (err) {
+                console.error('[PTSP-WA] Gagal memproses antrean setelah update status:', err);
+            }
+        });
+    }
     return NextResponse.json(result, { status });
 }
 

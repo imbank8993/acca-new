@@ -1,0 +1,1280 @@
+/* =========================================================
+   CATATAN SAYA — PREMIUM STYLESHEET
+   Fitur Catatan Pribadi & Draft Agenda ACCA
+   Support: Responsive (Desktop + Mobile), Dark Mode, Animations
+   ========================================================= */
+
+:root {
+  /* Design Tokens - Light Theme */
+  --catatan-bg: #f8fafc;
+  --catatan-card-bg: #ffffff;
+  --catatan-border: #e2e8f0;
+  --catatan-text: #0f172a;
+  --catatan-text-secondary: #64748b;
+  --catatan-accent: #2563eb;
+  --catatan-accent-hover: #1d4ed8;
+  --catatan-accent-light: rgba(37, 99, 235, 0.08);
+  --catatan-pin-color: #f59e0b;
+  --catatan-pin-bg: rgba(245, 158, 11, 0.12);
+  --catatan-success: #10b981;
+  --catatan-danger: #ef4444;
+  --catatan-shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --catatan-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.06), 0 2px 4px -2px rgba(0, 0, 0, 0.04);
+  --catatan-shadow-hover: 0 10px 20px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.05);
+  --catatan-radius: 16px;
+  --catatan-radius-sm: 8px;
+  --catatan-radius-lg: 20px;
+}
+
+/* Dark Mode Tokens */
+.dark {
+  --catatan-bg: #070d1d;
+  --catatan-card-bg: #0b1329;
+  --catatan-border: rgba(26, 115, 232, 0.28);
+  --catatan-text: #f1f5f9;
+  --catatan-text-secondary: #94a3b8;
+  --catatan-accent: #3b82f6;
+  --catatan-accent-hover: #60a5fa;
+  --catatan-accent-light: rgba(59, 130, 246, 0.16);
+  --catatan-pin-color: #fbbf24;
+  --catatan-pin-bg: rgba(251, 191, 36, 0.18);
+  --catatan-success: #34d399;
+  --catatan-danger: #f87171;
+  --catatan-shadow-sm: 0 2px 4px 0 rgba(0, 0, 0, 0.35);
+  --catatan-shadow: 0 4px 20px rgba(0, 0, 0, 0.45);
+  --catatan-shadow-hover: 0 12px 28px rgba(0, 0, 0, 0.65), 0 0 16px rgba(26, 115, 232, 0.25);
+}
+
+/* =========================================================
+   ANIMATIONS
+   ========================================================= */
+
+@keyframes catatan-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes catatan-pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.65;
+    transform: scale(0.96);
+  }
+}
+
+@keyframes catatan-shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.catatan-animate-in {
+  animation: catatan-fade-in 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* =========================================================
+   LAYOUT
+   ========================================================= */
+
+.catatan-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 24px;
+  color: var(--catatan-text);
+  box-sizing: border-box;
+}
+
+@media (max-width: 768px) {
+  .catatan-page {
+    padding: 16px 12px;
+    gap: 16px;
+  }
+}
+
+/* Top Header */
+.catatan-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding-bottom: 4px;
+}
+
+.catatan-header__title-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.catatan-header__title {
+  font-size: 1.45rem;
+  font-weight: 700;
+  color: var(--catatan-text);
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+
+.catatan-header__subtitle {
+  font-size: 0.85rem;
+  color: var(--catatan-text-secondary);
+  margin: 0;
+}
+
+.catatan-header__actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* View Toggle (Grid / List / Kalender) */
+.catatan-view-toggle {
+  display: inline-flex;
+  background: var(--catatan-border);
+  border-radius: 12px;
+  padding: 3px;
+  gap: 3px;
+  box-sizing: border-box;
+}
+
+.catatan-view-toggle__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: 9px;
+  border: none;
+  background: transparent;
+  color: var(--catatan-text-secondary);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.catatan-view-toggle__btn:hover {
+  color: var(--catatan-text);
+}
+
+.catatan-view-toggle__btn--active {
+  background: var(--catatan-card-bg);
+  color: var(--catatan-accent);
+  box-shadow: var(--catatan-shadow-sm);
+}
+
+.dark .catatan-view-toggle {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(26, 115, 232, 0.25);
+}
+
+.dark .catatan-view-toggle__btn--active {
+  background: var(--catatan-accent);
+  color: #ffffff;
+  box-shadow: 0 0 10px rgba(59, 130, 246, 0.4);
+}
+
+/* =========================================================
+   CARDS GRID
+   ========================================================= */
+
+.catatan-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+  width: 100%;
+}
+
+@media (max-width: 1080px) {
+  .catatan-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+  }
+}
+
+@media (max-width: 640px) {
+  .catatan-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+}
+
+/* Note Card Base */
+.catatan-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 18px;
+  border-radius: var(--catatan-radius);
+  background-color: var(--catatan-card-bg);
+  border: 1px solid var(--catatan-border);
+  box-shadow: var(--catatan-shadow);
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 0.2s ease;
+  cursor: pointer;
+  overflow: hidden;
+  min-height: 170px;
+}
+
+.catatan-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--catatan-shadow-hover);
+  border-color: var(--catatan-accent);
+}
+
+/* Pinned Note Distinction */
+.catatan-card--pinned {
+  border-color: var(--catatan-pin-color) !important;
+  box-shadow: 0 0 0 1px var(--catatan-pin-color), var(--catatan-shadow);
+}
+
+.dark .catatan-card--pinned {
+  box-shadow: 0 0 16px rgba(251, 191, 36, 0.22), var(--catatan-shadow);
+}
+
+.catatan-card__pin-icon {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--catatan-pin-color);
+  background: var(--catatan-pin-bg);
+  font-size: 0.82rem;
+  z-index: 2;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+/* Card Color Variants — Light & Dark Modes */
+.catatan-card--default { background-color: var(--catatan-card-bg); }
+.dark .catatan-card--default { background-color: #0b1329; }
+
+.catatan-card--red { background-color: #fef2f2; border-color: #fecaca; }
+.dark .catatan-card--red { background-color: #2b1115; border-color: rgba(239, 68, 68, 0.35); }
+
+.catatan-card--orange { background-color: #fff7ed; border-color: #fed7aa; }
+.dark .catatan-card--orange { background-color: #2b180d; border-color: rgba(249, 115, 22, 0.35); }
+
+.catatan-card--yellow { background-color: #fefce8; border-color: #fef08a; }
+.dark .catatan-card--yellow { background-color: #2b250d; border-color: rgba(234, 179, 8, 0.35); }
+
+.catatan-card--green { background-color: #f0fdf4; border-color: #bbf7d0; }
+.dark .catatan-card--green { background-color: #0d2817; border-color: rgba(34, 197, 94, 0.35); }
+
+.catatan-card--teal { background-color: #f0fdfa; border-color: #99f6e4; }
+.dark .catatan-card--teal { background-color: #0c2725; border-color: rgba(20, 184, 166, 0.35); }
+
+.catatan-card--blue { background-color: #eff6ff; border-color: #bfdbfe; }
+.dark .catatan-card--blue { background-color: #0f1c38; border-color: rgba(59, 130, 246, 0.35); }
+
+.catatan-card--purple { background-color: #faf5ff; border-color: #e9d5ff; }
+.dark .catatan-card--purple { background-color: #231238; border-color: rgba(168, 85, 247, 0.35); }
+
+.catatan-card--pink { background-color: #fdf2f8; border-color: #fbcfe8; }
+.dark .catatan-card--pink { background-color: #2b1025; border-color: rgba(236, 72, 153, 0.35); }
+
+.catatan-card--brown { background-color: #faf5f0; border-color: #e7d8c9; }
+.dark .catatan-card--brown { background-color: #261b11; border-color: rgba(180, 120, 70, 0.35); }
+
+.catatan-card--gray { background-color: #f8fafc; border-color: #e2e8f0; }
+.dark .catatan-card--gray { background-color: #141b2b; border-color: rgba(148, 163, 184, 0.28); }
+
+/* Card Content Elements */
+.catatan-card__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.catatan-card__title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--catatan-text);
+  line-height: 1.35;
+  margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  word-break: break-word;
+  padding-right: 28px;
+}
+
+.catatan-card__preview {
+  font-size: 0.85rem;
+  color: var(--catatan-text-secondary);
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  word-break: break-word;
+  flex: 1;
+  min-height: 3.8em;
+  margin: 0;
+}
+
+/* Labels Row */
+.catatan-card__labels {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.catatan-card__label {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  background: var(--catatan-accent-light);
+  color: var(--catatan-accent);
+  border: 1px solid rgba(37, 99, 235, 0.16);
+  line-height: 1.3;
+}
+
+.dark .catatan-card__label {
+  border-color: rgba(59, 130, 246, 0.35);
+}
+
+/* Agenda Badge */
+.catatan-card__agenda-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  background: rgba(16, 185, 129, 0.1);
+  color: #059669;
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  white-space: nowrap;
+}
+
+.dark .catatan-card__agenda-badge {
+  background: rgba(16, 185, 129, 0.18);
+  color: #34d399;
+  border-color: rgba(52, 211, 153, 0.35);
+}
+
+/* Card Bottom Meta */
+.catatan-card__meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.74rem;
+  color: var(--catatan-text-secondary);
+  margin-top: auto;
+  padding-top: 10px;
+  border-top: 1px solid var(--catatan-border);
+}
+
+/* Hover-Reveal Action Buttons */
+.catatan-card__actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  opacity: 0;
+  transform: translateY(2px);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.catatan-card:hover .catatan-card__actions {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (hover: none) {
+  .catatan-card__actions {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.catatan-card__action-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  border: 1px solid var(--catatan-border);
+  background: var(--catatan-card-bg);
+  color: var(--catatan-text-secondary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 0.78rem;
+  transition: all 0.15s ease;
+}
+
+.catatan-card__action-btn:hover {
+  background: var(--catatan-accent-light);
+  color: var(--catatan-accent);
+  border-color: var(--catatan-accent);
+}
+
+.catatan-card__action-btn--danger:hover {
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--catatan-danger);
+  border-color: var(--catatan-danger);
+}
+
+.dark .catatan-card__action-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(26, 115, 232, 0.3);
+}
+
+/* =========================================================
+   LIST VIEW (DESKTOP TABLE)
+   Follows sk__table Pattern
+   ========================================================= */
+
+.catatan-table-wrap {
+  width: 100%;
+  background: var(--catatan-card-bg);
+  border: 1px solid var(--catatan-border);
+  border-radius: var(--catatan-radius);
+  box-shadow: var(--catatan-shadow);
+  overflow: hidden;
+  overflow-x: auto;
+}
+
+.catatan-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 760px;
+  font-size: 0.85rem;
+}
+
+.catatan-table th {
+  background: var(--catatan-bg);
+  color: var(--catatan-text-secondary);
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 12px 16px;
+  text-align: left;
+  border-bottom: 1px solid var(--catatan-border);
+  white-space: nowrap;
+}
+
+.catatan-table td {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--catatan-border);
+  color: var(--catatan-text);
+  vertical-align: middle;
+}
+
+.catatan-table tr:last-child td {
+  border-bottom: none;
+}
+
+.catatan-table tbody tr {
+  transition: background-color 0.15s ease;
+  cursor: pointer;
+}
+
+.catatan-table tbody tr:hover td {
+  background: rgba(37, 99, 235, 0.04);
+}
+
+/* Pinned Table Row */
+.catatan-table__row--pinned td {
+  background: rgba(245, 158, 11, 0.05);
+}
+
+.catatan-table__row--pinned td:first-child {
+  border-left: 3px solid var(--catatan-pin-color);
+}
+
+.catatan-table__cell-title {
+  font-weight: 700;
+  color: var(--catatan-text);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.catatan-table__cell-preview {
+  font-size: 0.78rem;
+  color: var(--catatan-text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 260px;
+}
+
+.dark .catatan-table-wrap {
+  background: #0b1329;
+  border-color: rgba(26, 115, 232, 0.35);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.45);
+}
+
+.dark .catatan-table th {
+  background: rgba(37, 99, 235, 0.12);
+  color: #93c5fd;
+  border-bottom-color: rgba(26, 115, 232, 0.3);
+}
+
+.dark .catatan-table td {
+  border-bottom-color: rgba(26, 115, 232, 0.18);
+  color: #f1f5f9;
+}
+
+.dark .catatan-table tbody tr:hover td {
+  background: rgba(26, 115, 232, 0.08);
+}
+
+.dark .catatan-table__row--pinned td {
+  background: rgba(251, 191, 36, 0.08);
+}
+
+/* =========================================================
+   EDITOR
+   ========================================================= */
+
+.catatan-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+}
+
+/* Type Selector: Catatan Bebas vs Draft Agenda */
+.catatan-editor__type-selector {
+  display: inline-flex;
+  background: var(--catatan-border);
+  border-radius: 12px;
+  padding: 3px;
+  gap: 3px;
+  align-self: flex-start;
+}
+
+.catatan-editor__type-btn {
+  padding: 7px 16px;
+  border-radius: 9px;
+  border: none;
+  background: transparent;
+  color: var(--catatan-text-secondary);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.catatan-editor__type-btn--active {
+  background: var(--catatan-card-bg);
+  color: var(--catatan-accent);
+  box-shadow: var(--catatan-shadow-sm);
+}
+
+.dark .catatan-editor__type-selector {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(26, 115, 232, 0.25);
+}
+
+.dark .catatan-editor__type-btn--active {
+  background: var(--catatan-accent);
+  color: #ffffff;
+}
+
+/* Agenda Fields Container */
+.catatan-editor__agenda-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+  padding: 14px;
+  border-radius: 12px;
+  background: var(--catatan-bg);
+  border: 1px solid var(--catatan-border);
+}
+
+.dark .catatan-editor__agenda-fields {
+  background: rgba(11, 19, 41, 0.6);
+  border-color: rgba(26, 115, 232, 0.3);
+}
+
+/* Large Borderless Title Input */
+.catatan-editor__title-input {
+  width: 100%;
+  border: none;
+  background: transparent;
+  font-size: 1.45rem;
+  font-weight: 700;
+  color: var(--catatan-text);
+  padding: 6px 0;
+  outline: none;
+  border-bottom: 2px solid transparent;
+  transition: border-color 0.2s ease;
+  line-height: 1.3;
+}
+
+.catatan-editor__title-input:focus {
+  border-bottom-color: var(--catatan-accent);
+}
+
+.catatan-editor__title-input::placeholder {
+  color: var(--catatan-text-secondary);
+  opacity: 0.6;
+}
+
+/* Block Editor Area */
+.catatan-editor__blocks {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 180px;
+  max-height: 480px;
+  overflow-y: auto;
+  padding-right: 4px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--catatan-border) transparent;
+}
+
+.catatan-editor__blocks::-webkit-scrollbar {
+  width: 5px;
+}
+
+.catatan-editor__blocks::-webkit-scrollbar-thumb {
+  background: var(--catatan-border);
+  border-radius: 10px;
+}
+
+/* Block Item */
+.catatan-editor__block {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  position: relative;
+  width: 100%;
+}
+
+.catatan-editor__block-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: 8px;
+  background: var(--catatan-bg);
+  border: 1px solid var(--catatan-border);
+  margin-bottom: 8px;
+}
+
+.dark .catatan-editor__block-toolbar {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(26, 115, 232, 0.25);
+}
+
+.catatan-editor__block-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--catatan-text-secondary);
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.catatan-editor__block-btn:hover {
+  background: var(--catatan-accent-light);
+  color: var(--catatan-accent);
+}
+
+.catatan-editor__block-btn--active {
+  background: var(--catatan-accent-light);
+  color: var(--catatan-accent);
+  border-color: rgba(37, 99, 235, 0.3);
+}
+
+/* Checklist Item */
+.catatan-editor__checklist-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 4px 0;
+}
+
+.catatan-editor__checklist-item--checked .catatan-editor__block-input {
+  text-decoration: line-through;
+  opacity: 0.55;
+}
+
+.catatan-editor__checklist-checkbox {
+  width: 18px;
+  height: 18px;
+  border-radius: 5px;
+  cursor: pointer;
+  accent-color: var(--catatan-accent);
+  flex-shrink: 0;
+}
+
+.catatan-editor__block-input {
+  width: 100%;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--catatan-text);
+  font-size: 0.92rem;
+  line-height: 1.5;
+  padding: 6px 8px;
+  border-radius: 6px;
+  outline: none;
+  transition: all 0.15s ease;
+}
+
+.catatan-editor__block-input:focus {
+  background: var(--catatan-bg);
+  border-color: var(--catatan-border);
+}
+
+.dark .catatan-editor__block-input:focus {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(59, 130, 246, 0.4);
+}
+
+/* Save Status Indicator */
+.catatan-editor__save-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.catatan-editor__save-status--saving {
+  color: var(--catatan-accent);
+  background: var(--catatan-accent-light);
+  animation: catatan-pulse 1.4s infinite ease-in-out;
+}
+
+.catatan-editor__save-status--saved {
+  color: var(--catatan-success);
+  background: rgba(16, 185, 129, 0.1);
+}
+
+.catatan-editor__save-status--error {
+  color: var(--catatan-danger);
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.dark .catatan-editor__save-status--saved {
+  background: rgba(52, 211, 153, 0.15);
+}
+
+.dark .catatan-editor__save-status--error {
+  background: rgba(248, 113, 113, 0.15);
+}
+
+/* Labels Manager */
+.catatan-editor__labels {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  padding-top: 4px;
+}
+
+.catatan-editor__label-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  background: var(--catatan-accent-light);
+  color: var(--catatan-accent);
+  border: 1px solid rgba(37, 99, 235, 0.2);
+}
+
+.catatan-editor__label-chip-remove {
+  border: none;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+  opacity: 0.7;
+}
+
+.catatan-editor__label-chip-remove:hover {
+  opacity: 1;
+}
+
+/* Color Picker */
+.catatan-editor__warna-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  padding: 6px 0;
+}
+
+.catatan-editor__warna-option {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 2px solid var(--catatan-border);
+  position: relative;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+}
+
+.catatan-editor__warna-option:hover {
+  transform: scale(1.15);
+}
+
+.catatan-editor__warna-option--active {
+  border-color: var(--catatan-accent) !important;
+  box-shadow: 0 0 0 3px var(--catatan-accent-light);
+  transform: scale(1.1);
+}
+
+.catatan-editor__warna-option--active::after {
+  content: "✓";
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: var(--catatan-accent);
+}
+
+/* =========================================================
+   CALENDAR (BULANAN)
+   ========================================================= */
+
+.catatan-kalender {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  width: 100%;
+  background: var(--catatan-card-bg);
+  border: 1px solid var(--catatan-border);
+  border-radius: var(--catatan-radius-lg);
+  padding: 22px;
+  box-shadow: var(--catatan-shadow);
+  box-sizing: border-box;
+}
+
+@media (max-width: 640px) {
+  .catatan-kalender {
+    padding: 14px 10px;
+    gap: 14px;
+    border-radius: var(--catatan-radius);
+  }
+}
+
+.dark .catatan-kalender {
+  background: #0b1329;
+  border-color: rgba(26, 115, 232, 0.35);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.45);
+}
+
+/* Calendar Header */
+.catatan-kalender__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.catatan-kalender__title {
+  font-size: 1.28rem;
+  font-weight: 700;
+  color: var(--catatan-text);
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+.catatan-kalender__nav {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.catatan-kalender__nav-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--catatan-border);
+  background: var(--catatan-card-bg);
+  color: var(--catatan-text);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.catatan-kalender__nav-btn:hover {
+  background: var(--catatan-accent-light);
+  border-color: var(--catatan-accent);
+  color: var(--catatan-accent);
+}
+
+.dark .catatan-kalender__nav-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(26, 115, 232, 0.3);
+  color: #f1f5f9;
+}
+
+.dark .catatan-kalender__nav-btn:hover {
+  background: rgba(59, 130, 246, 0.2);
+  border-color: #3b82f6;
+  color: #93c5fd;
+}
+
+/* 7-Column Grid */
+.catatan-kalender__grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+  width: 100%;
+}
+
+@media (max-width: 768px) {
+  .catatan-kalender__grid {
+    gap: 4px;
+  }
+}
+
+/* Day Names: Sen, Sel, Rab, Kam, Jum, Sab, Min */
+.catatan-kalender__day-header {
+  padding: 10px 4px;
+  text-align: center;
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--catatan-text-secondary);
+}
+
+/* Date Cell */
+.catatan-kalender__cell {
+  position: relative;
+  min-height: 104px;
+  padding: 8px;
+  border-radius: 12px;
+  border: 1px solid var(--catatan-border);
+  background: var(--catatan-card-bg);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  transition: background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+  box-sizing: border-box;
+}
+
+@media (max-width: 768px) {
+  .catatan-kalender__cell {
+    min-height: 70px;
+    padding: 4px;
+    border-radius: 8px;
+  }
+}
+
+.dark .catatan-kalender__cell {
+  background: rgba(11, 19, 41, 0.75);
+  border-color: rgba(26, 115, 232, 0.22);
+}
+
+/* Cell States */
+.catatan-kalender__cell--today {
+  border-color: var(--catatan-accent) !important;
+  background: var(--catatan-accent-light) !important;
+  box-shadow: 0 0 0 1px var(--catatan-accent);
+}
+
+.dark .catatan-kalender__cell--today {
+  background: rgba(59, 130, 246, 0.15) !important;
+  box-shadow: 0 0 12px rgba(59, 130, 246, 0.3);
+}
+
+.catatan-kalender__cell--other-month {
+  opacity: 0.32;
+  background: var(--catatan-bg);
+}
+
+.dark .catatan-kalender__cell--other-month {
+  opacity: 0.25;
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.catatan-kalender__cell--has-agenda {
+  border-color: rgba(37, 99, 235, 0.35);
+}
+
+.catatan-kalender__cell--clickable {
+  cursor: pointer;
+}
+
+.catatan-kalender__cell--clickable:hover {
+  background: rgba(37, 99, 235, 0.05);
+  border-color: var(--catatan-accent);
+}
+
+.dark .catatan-kalender__cell--clickable:hover {
+  background: rgba(59, 130, 246, 0.12);
+  border-color: #3b82f6;
+}
+
+/* Date Number */
+.catatan-kalender__date-number {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--catatan-text);
+  line-height: 1;
+}
+
+.catatan-kalender__cell--today .catatan-kalender__date-number {
+  color: var(--catatan-accent);
+}
+
+/* Agenda Item inside Cell */
+.catatan-kalender__agenda-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--catatan-accent);
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.catatan-kalender__agenda-title {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--catatan-text);
+  background: var(--catatan-accent-light);
+  padding: 2px 5px;
+  border-radius: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+  border-left: 2px solid var(--catatan-accent);
+  line-height: 1.25;
+}
+
+.dark .catatan-kalender__agenda-title {
+  background: rgba(59, 130, 246, 0.18);
+  color: #f1f5f9;
+}
+
+.catatan-kalender__agenda-count {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: var(--catatan-accent);
+  background: rgba(37, 99, 235, 0.12);
+  border-radius: 4px;
+  padding: 1px 4px;
+  text-align: center;
+  margin-top: auto;
+  align-self: flex-start;
+}
+
+/* Calendar Date Popup / Popover */
+.catatan-kalender__popup {
+  position: absolute;
+  z-index: 50;
+  background: var(--catatan-card-bg);
+  border: 1px solid var(--catatan-border);
+  border-radius: 14px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.2);
+  padding: 14px;
+  width: 290px;
+  max-width: 90vw;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  animation: catatan-fade-in 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.dark .catatan-kalender__popup {
+  background: #0b1329;
+  border-color: rgba(26, 115, 232, 0.4);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.7);
+}
+
+.catatan-kalender__popup-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--catatan-border);
+  padding-bottom: 8px;
+}
+
+.catatan-kalender__popup-title {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--catatan-text);
+  margin: 0;
+}
+
+.catatan-kalender__popup-close {
+  border: none;
+  background: transparent;
+  color: var(--catatan-text-secondary);
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+}
+
+.catatan-kalender__popup-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.catatan-kalender__popup-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--catatan-bg);
+  font-size: 0.78rem;
+  color: var(--catatan-text);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.catatan-kalender__popup-item:hover {
+  background: var(--catatan-accent-light);
+  color: var(--catatan-accent);
+}
+
+.dark .catatan-kalender__popup-item {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+/* =========================================================
+   EXPORT DIALOG
+   ========================================================= */
+
+.catatan-export {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+}
+
+.catatan-export__option {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.catatan-export__option-label {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--catatan-text);
+}
+
+.catatan-export__note-selector {
+  max-height: 220px;
+  overflow-y: auto;
+  border: 1.5px solid var(--catatan-border);
+  border-radius: 12px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: var(--catatan-bg);
+}
+
+.dark .catatan-export__note-selector {
+  background: rgba(11, 19, 41, 0.5);
+  border-color: rgba(26, 115, 232, 0.3);
+}
+
+.catatan-export__note-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--catatan-card-bg);
+  border: 1px solid var(--catatan-border);
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.catatan-export__note-item:hover {
+  background: var(--catatan-accent-light);
+}
+
+.dark .catatan-export__note-item {
+  background: #0b1329;
+  border-color: rgba(26, 115, 232, 0.25);
+}
+
+/* =========================================================
+   CONFLICT RESOLUTION DIALOG
+   ========================================================= */
+
+.catatan-conflict-box {
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  border-radius: 12px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.dark .catatan-conflict-box {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: rgba(248, 113, 113, 0.35);
+}

@@ -350,6 +350,8 @@ export class AccessService {
     const pageOverrides = parseOverrides(user.page_overrides);
     pageOverrides.add.forEach((p) => pages.add(p));
     pageOverrides.remove.forEach((p) => pages.delete(p));
+    // Catatan pribadi tersedia untuk setiap akun yang sudah terautentikasi.
+    pages.add('catatan-saya');
 
     // Jaring pengaman untuk role khusus yang barisnya belum di-seed.
     if (roles.includes('OP_AGENDA')) pages.add('agenda-madrasah');
@@ -466,6 +468,7 @@ export class AccessService {
       const overrides = parseOverrides(user.page_overrides);
       overrides.add.forEach((p) => pages.add(p));
       overrides.remove.forEach((p) => pages.delete(p));
+      pages.add('catatan-saya');
       if (roles.includes('OP_AGENDA')) pages.add('agenda-madrasah');
       if (roles.includes('OP_FORM')) pages.add('form');
       const upperUserRoles = roles.map((r) => r.toUpperCase());

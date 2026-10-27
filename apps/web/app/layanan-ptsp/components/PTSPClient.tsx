@@ -78,7 +78,7 @@ const PTSP_SERVICE_OPTIONS = [
     { id: 'ganti-ijazah', label: 'Pengganti Ijazah' }, { id: 'izin-magang', label: 'Permohonan Magang' },
     { id: 'mutasi-siswa', label: 'Mutasi Siswa' }, { id: 'pengaduan', label: 'Pengaduan Masyarakat' },
 ];
-const DEFAULT_PTSP_CONFIG = { enabledServices: PTSP_SERVICE_OPTIONS.map(x => x.id), waEnabled: true, waMessageTemplate: 'Halo {nama}, permohonan {layanan} Anda berhasil diterima. Kode lacak: {kode_lacak}. Gunakan kode tersebut untuk memantau status permohonan.', waNotificationsEnabled: true };
+const DEFAULT_PTSP_CONFIG = { enabledServices: PTSP_SERVICE_OPTIONS.map(x => x.id), waEnabled: true, waMessageTemplate: 'Halo {nama}, permohonan {layanan} Anda berhasil diterima. Kode lacak: {kode_lacak}. Gunakan kode tersebut untuk memantau status permohonan.', waNotificationsEnabled: true, waStatusTemplate: 'Halo {nama}, status permohonan {layanan} Anda dengan kode lacak {kode_lacak} kini: *{status}*.{catatan}' };
 
 function getStatusBadgeClass(pct: number): string {
     if (pct === 0) return 'ptsp-badge-danger';
@@ -369,7 +369,9 @@ export default function PTSPClient({ user }: { user: any }) {
                     <div style={{ borderTop: '1px solid var(--n-border,#e2e8f0)', paddingTop: 18, marginTop: 18 }}>
                         <h3 style={{ fontSize: 14, fontWeight: 700, margin: '0 0 10px' }}>Notifikasi status PTSP</h3>
                         <label className="ptsp-settings-section-toggle"><input type="checkbox" checked={config.waNotificationsEnabled} onChange={e => setConfig(old => ({ ...old, waNotificationsEnabled: e.target.checked }))} /><span>Aktifkan notifikasi status melalui WhatsApp</span></label>
-                        <small style={{ display: 'block', color: 'var(--n-muted,#64748b)', marginTop: 6 }}>Pilih provider, nomor tujuan, dan akun PTSP di Pengaturan Umum → WhatsApp.</small>
+                        <textarea value={config.waStatusTemplate} disabled={!config.waNotificationsEnabled} onChange={e => setConfig(old => ({ ...old, waStatusTemplate: e.target.value }))} rows={4} maxLength={1000} style={{ width: '100%', resize: 'vertical', padding: 11, border: '1px solid var(--n-border,#cbd5e1)', borderRadius: 10, font: 'inherit', opacity: config.waNotificationsEnabled ? 1 : 0.6 }} />
+                        <small style={{ display: 'block', color: 'var(--n-muted,#64748b)', marginTop: 6 }}>Dikirim ke pemohon saat status diubah ke Proses, Selesai, atau Ditolak. Gunakan {'{nama}'}, {'{layanan}'}, {'{kode_lacak}'}, {'{status}'}, dan {'{catatan}'} (catatan petugas, otomatis kosong bila tidak ada).</small>
+                        <small style={{ display: 'block', color: 'var(--n-muted,#64748b)', marginTop: 6 }}>Akun pengirim WhatsApp PTSP diatur di Pengaturan Umum → Akun WhatsApp.</small>
                     </div>
                 </ModalBody>
                 <ModalFooter>

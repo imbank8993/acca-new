@@ -15,12 +15,28 @@ export const PTSP_TABLES: Record<string, string> = {
   ptsp_pengaduan: 'Pengaduan',
 };
 
+/** Zona waktu madrasah; tanggal/jam PTSP ditampilkan dalam WITA apa pun TZ server. */
+const PTSP_TIMEZONE = 'Asia/Makassar';
+/** Tabel PTSP yang kolom tanggal_mulai/tanggal_selesai-nya timestamptz (berisi jam). */
+const PTSP_TIMESTAMP_TABLES = ['ptsp_peminjaman_sarana', 'ptsp_sosialisasi'];
+
 const DEFAULT_CONFIG = {
   enabledServices: ['buku-tamu', 'sosialisasi', 'izin-siswa', 'peminjaman-sarana', 'izin-penelitian', 'legalisir', 'ganti-ijazah', 'izin-magang', 'mutasi-siswa', 'pengaduan'],
   waEnabled: true,
   waMessageTemplate: 'Halo {nama}, permohonan {layanan} Anda berhasil diterima. Kode lacak: {kode_lacak}. Gunakan kode tersebut untuk memantau status permohonan.',
   waNotificationsEnabled: true,
+  waStatusTemplate: 'Halo {nama}, status permohonan {layanan} Anda dengan kode lacak {kode_lacak} kini: *{status}*.{catatan}',
 };
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** Label status PTSP yang dikirim ke pemohon (0 ditolak, 1 menunggu, 2–99 diproses, 100 selesai). */
+function ptspStatusLabel(status: number): string {
+  if (status === 0) return 'Ditolak';
+  if (status === 1) return 'Menunggu Verifikasi';
+  if (status === 100) return 'Selesai';
+  return 'Sedang Diproses';
+}
 
 const TRACKING_COLS = [
   'id',
@@ -66,6 +82,7 @@ export class PtspService {
         waEnabled: legacy.waEnabled !== false,
         waMessageTemplate: typeof legacy.waMessageTemplate === 'string' ? legacy.waMessageTemplate.slice(0, 1000) : DEFAULT_CONFIG.waMessageTemplate,
         waNotificationsEnabled: notificationsRow?.value !== 'false',
+        waStatusTemplate: typeof legacy.waStatusTemplate === 'string' && legacy.waStatusTemplate.trim() ? legacy.waStatusTemplate.slice(0, 1000) : DEFAULT_CONFIG.waStatusTemplate,
       };
     } catch { return DEFAULT_CONFIG; }
   }
@@ -80,6 +97,7 @@ export class PtspService {
       enabledServices,
       waEnabled: input?.waEnabled === true,
       waMessageTemplate: typeof input?.waMessageTemplate === 'string' ? input.waMessageTemplate.trim().slice(0, 1000) : DEFAULT_CONFIG.waMessageTemplate,
+      waStatusTemplate: typeof input?.waStatusTemplate === 'string' && input.waStatusTemplate.trim() ? input.waStatusTemplate.trim().slice(0, 1000) : DEFAULT_CONFIG.waStatusTemplate,
     });
     await this.prisma.site_settings.upsert({
       where: { key: 'ptsp_service_config' },
@@ -111,9 +129,16 @@ export class PtspService {
       if (typeof v === 'bigint') {
         out[k] = Number(v);
       } else if (['created_at', 'updated_at'].includes(k) && v instanceof Date) {
-        out[k] = v.toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' });
+        out[k] = v.toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short', timeZone: PTSP_TIMEZONE });
       } else if (['tanggal_mulai', 'tanggal_selesai', 'tanggal_lahir'].includes(k) && v instanceof Date) {
-        out[k] = v.toISOString().split('T')[0];
+        // Kolom @db.Date dikembalikan Prisma sebagai 00:00 UTC (tanggalnya tetap sama di WITA).
+        // Kolom timestamptz (peminjaman sarana & sosialisasi) wajib dibaca dalam WITA beserta jamnya,
+        // agar jam pagi (< 08:00 WITA) tidak tampil sebagai tanggal sehari sebelumnya.
+        const datePart = v.toLocaleDateString('en-CA', { timeZone: PTSP_TIMEZONE });
+        // Format ISO ber-offset (+08:00) agar tetap bisa di-parse `new Date()` di halaman Layanan PTSP.
+        out[k] = PTSP_TIMESTAMP_TABLES.includes(table)
+          ? `${datePart}T${v.toLocaleTimeString('en-GB', { timeZone: PTSP_TIMEZONE, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })}:00+08:00`
+          : datePart;
       } else if (k === 'is_edited') {
         out[k] = v ? 'Ya' : 'Tidak';
       } else if (k === 'edit_count') {
@@ -219,6 +244,9 @@ export class PtspService {
     // Keep the related row in the dedicated PTSP database in sync.
     const statusVal = updatePayload.status !== undefined ? updatePayload.status : null;
     const catatanVal = updatePayload.catatan_admin !== undefined ? updatePayload.catatan_admin : null;
+    // Baris master (tracking) & baris formulir terkait, untuk notifikasi WA perubahan status.
+    let masterRow: any = isTracking ? updated : null;
+    let childRow: any = isTracking ? null : updated;
 
     try {
       if (!isTracking) {
@@ -232,6 +260,7 @@ export class PtspService {
             },
           });
           if (master) {
+            masterRow = master;
             await this.prisma.ptsp_master_tracking.update({
               where: { id: master.id },
               data: {
@@ -255,6 +284,7 @@ export class PtspService {
             where: { tracking_token: { in: trackingTokens } },
           });
           if (child) {
+            childRow = child;
             await childDelegate.update({
               where: { id: child.id },
               data: {
@@ -270,11 +300,59 @@ export class PtspService {
       console.error('[PTSP sync error]', syncErr);
     }
 
+    // Antrekan notifikasi WA ke pemohon bila status berubah. Pengiriman dilakukan oleh
+    // pemroses antrean di acca-new web (lib/ptsp-wa.ts) yang dipicu route /api/ptsp.
+    if (statusVal !== null && Number(existing.status) !== Number(statusVal)) {
+      try {
+        await this.queueStatusNotification(Number(statusVal), masterRow, childRow, table, updated.catatan_admin ?? catatanVal);
+      } catch (waErr) {
+        console.error('[PTSP WA queue error]', waErr);
+      }
+    }
+
     return {
       ok: true,
       message: 'Data berhasil diperbarui',
       data: this.buildRow(updated, table),
     };
+  }
+
+  /** Tulis pesan notifikasi perubahan status ke ptsp_wa_log (wa_sent=false). */
+  private async queueStatusNotification(status: number, master: any, child: any, table: string, catatan: string | null) {
+    if (status === 1) return; // kembali ke "menunggu" tidak perlu dikabarkan
+    const tableName = String(master?.table_name || table);
+    if (tableName === 'ptsp_buku_tamu') return; // buku tamu tidak punya alur status
+    if (!master?.short_code) return;
+
+    const config = await this.getConfig();
+    if (!config.waNotificationsEnabled) return;
+
+    const phone = String(master.no_wa || child?.wa || '').trim();
+    if (!phone || /^0+$/.test(phone)) return;
+
+    const name = String(child?.nama_siswa || child?.nama || 'Pemohon');
+    const note = String(catatan || '').trim();
+    const message = config.waStatusTemplate
+      .split('{nama}').join(name)
+      .split('{layanan}').join(String(master.service_type || 'PTSP'))
+      .split('{kode_lacak}').join(String(master.short_code))
+      .split('{status}').join(ptspStatusLabel(status))
+      .split('{catatan}').join(note ? `\nCatatan petugas: ${note}` : '');
+
+    const trackingId = UUID_RE.test(String(master.tracking_token || '')) ? String(master.tracking_token) : String(master.id);
+    await this.prisma.ptsp_wa_log.create({
+      data: {
+        tracking_id: trackingId,
+        short_code: String(master.short_code).slice(0, 50),
+        no_wa: phone.slice(0, 30),
+        service_type: String(master.service_type || '').slice(0, 100) || null,
+        status_changed: status,
+        catatan_admin: note || null,
+        message_sent: message,
+        wa_sent: false,
+        retry_count: 0,
+      },
+    });
   }
 
   async deleteTableData(user: any, table: string, id: any) {

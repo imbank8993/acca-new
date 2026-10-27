@@ -16,6 +16,7 @@ describe('UsersService Profile Siswa Security & Validation', () => {
     service = new UsersService(
       prismaMock as any,
       {} as any, // orangtuaService
+      {} as any, // presenceService
     );
   });
 

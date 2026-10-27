@@ -2,7 +2,7 @@ import { clearUserCache } from './auth-client';
 import type { LogoutTarget } from './single-logout';
 
 let logoutInProgress = false;
-export function setLogoutInProgress(value: boolean) { logoutInProgress = value; }
+export function setLogoutInProgress(value: boolean) { logoutInProgress = value; if (value && typeof window !== 'undefined') window.dispatchEvent(new Event('acca:logout-start')); }
 export function isLogoutInProgress() { return logoutInProgress; }
 
 export async function logoutAcrossApplications(): Promise<string[]> {
