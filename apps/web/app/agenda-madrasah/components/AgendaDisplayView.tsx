@@ -4,7 +4,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { Button } from '@/components/ui/Button';
 import { Spinner } from '@/components/ui/Spinner';
-import { JAM_SEMUA, labelLingkup, normalizeJamKe, normalizeLingkup } from '@/lib/libur';
+import { JAM_SEMUA, isCutiBersama, labelLingkup, normalizeJamKe, normalizeLingkup } from '@/lib/libur';
 import '../agenda.css';
 import { fetchAgendaList, formatWaktuAgenda } from '@/lib/agenda';
 import SasaranAgenda from './SasaranAgenda';
@@ -315,6 +315,10 @@ export default function AgendaDisplayView({ headerTabs }: { headerTabs?: React.R
                                 const isHoliday = holidayList.length > 0;
                                 const isFullHoliday = holidayList.some(isLiburPenuhSekolah);
                                 const isPartialHoliday = isHoliday && !isFullHoliday;
+                                // Ungu hanya bila SEMUA libur penuh di tanggal itu cuti bersama;
+                                // bertumpuk dengan libur nasional → tetap merah.
+                                const isCutiBersamaDay = isFullHoliday &&
+                                    holidayList.filter(isLiburPenuhSekolah).every(h => isCutiBersama(h.nama));
                                 const dow = (firstDayOfWeek + i) % 7;
                                 const isWeekend = dow === 0 || dow === 6; // 0 = Sunday, 6 = Saturday
 
@@ -322,7 +326,7 @@ export default function AgendaDisplayView({ headerTabs }: { headerTabs?: React.R
                                     <button
                                         key={day}
                                         type="button"
-                                        className={`ag-cell ${isToday ? 'is-today' : ''} ${isSelected ? 'is-selected' : ''} ${isFullHoliday ? 'is-full-holiday' : ''} ${isPartialHoliday ? 'is-partial-holiday' : ''} ${isWeekend ? 'is-weekend' : ''} ${hasEvent ? 'has-event' : ''}`}
+                                        className={`ag-cell ${isToday ? 'is-today' : ''} ${isSelected ? 'is-selected' : ''} ${isFullHoliday ? 'is-full-holiday' : ''} ${isPartialHoliday ? 'is-partial-holiday' : ''} ${isCutiBersamaDay ? 'is-cuti-bersama' : ''} ${isWeekend ? 'is-weekend' : ''} ${hasEvent ? 'has-event' : ''}`}
                                         onClick={() => {
                                             setSelectedDay(dateStr);
                                             setActiveTab('selected');
@@ -347,6 +351,7 @@ export default function AgendaDisplayView({ headerTabs }: { headerTabs?: React.R
                             <div className="ag-legend-item"><span className="ag-legend-box is-active-box" /> <span>Hari Aktif</span></div>
                             <div className="ag-legend-item"><span className="ag-legend-box is-partial-box" /> <span>PBM tidak efektif</span></div>
                             <div className="ag-legend-item"><span className="ag-legend-box is-holiday-box" /> <span>Hari Libur</span></div>
+                            <div className="ag-legend-item"><span className="ag-legend-box is-cuti-box" /> <span>Cuti Bersama</span></div>
                         </div>
                     </div>
                 </div>
@@ -356,7 +361,7 @@ export default function AgendaDisplayView({ headerTabs }: { headerTabs?: React.R
                     <div className="ag-card ag-details-card">
                         <div className="ag-details-header" style={{ padding: (holidayMap[displayDay]?.length) ? '20px 24px' : '0', borderBottom: (holidayMap[displayDay]?.length) ? '1px solid var(--n-border, #e2e8f0)' : 'none' }}>
                             {(holidayMap[displayDay] || []).map((h, hi) => (
-                                <div className="ag-holiday-notice" key={hi}>
+                                <div className={`ag-holiday-notice ${isCutiBersama(h.nama) ? 'is-cuti' : ''}`} key={hi}>
                                     <i className="bi bi-info-circle-fill"></i>
                                     <span>
                                         {h.nama}

@@ -72,6 +72,8 @@ jobs:
 
             docker compose run --rm --no-deps acca-api node node_modules/prisma/build/index.js db execute --schema apps/api/prisma/schema.prisma --file apps/api/prisma/sql/20261027_create_catatan_pribadi.sql
 
+            docker compose run --rm --no-deps acca-api node node_modules/prisma/build/index.js db execute --schema apps/api/prisma/schema.prisma --file apps/api/prisma/sql/20261027_catatan_list.sql
+
             echo "🔄 Restart aplikasi..."
             docker compose up -d --remove-orphans
             sh scripts/check-deployment-health.sh

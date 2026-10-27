@@ -254,3 +254,12 @@ export function rentangTanggal(start: string, end: string): string[] {
     }
     return out;
 }
+
+/**
+ * Cuti bersama dikenali dari keterangannya. Entri hasil sinkron Google Calendar
+ * selalu berjudul "Cuti Bersama …"; entri manual cukup memakai frasa yang sama.
+ * Dipakai kalender agenda untuk mewarnai tanggal berbeda dari libur nasional.
+ */
+export function isCutiBersama(keterangan: string | null | undefined): boolean {
+  return /cuti\s*bersama/i.test(String(keterangan || ''));
+}

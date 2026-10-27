@@ -47,7 +47,7 @@ export default function ExportPdfDialog({
 
       // Default kalender enabled if there are any dated draft agendas
       const hasDatedAgendas = notes.some(
-        (n) => n.jenis === 'draft_agenda' && Boolean(n.tanggal_agenda)
+        (n) => Boolean(n.tanggal_agenda || n.created_at)
       )
       setSertakanKalender(hasDatedAgendas)
       setIsExporting(false)
@@ -155,7 +155,7 @@ export default function ExportPdfDialog({
     <Modal open={isOpen} onClose={onClose} size="md">
       <ModalHeader
         title="Export Catatan ke PDF"
-        subtitle="Unduh catatan pribadi dan draft agenda dalam format dokumen PDF"
+        subtitle="Unduh catatan dan list pribadi beserta kalender dalam format PDF"
         onClose={onClose}
         icon={<Download size={20} className="text-blue-600 dark:text-blue-400" />}
       />

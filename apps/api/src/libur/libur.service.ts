@@ -1,5 +1,21 @@
-import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  NotFoundException,
+  BadGatewayException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import {
+  DEFAULT_ICS_URL,
+  parseIcsLibur,
+  rentangTanggalNasional,
+  type EventLiburNasional,
+} from './libur-nasional';
+
+/** Feed Google jarang berubah; cukup diambil ulang tiap 6 jam (atau saat diminta). */
+const CACHE_NASIONAL_MS = 6 * 60 * 60 * 1000;
+const BATAS_ITEM_SINKRON = 200;
+const BATAS_HARI_PER_ITEM = 31;
 
 /** Tanggal saja (YYYY-MM-DD) dari kolom `@db.Date` yang dibaca sebagai UTC. */
 function toDateOnly(d: Date | string | null | undefined): string {
@@ -353,6 +369,158 @@ export class LiburService {
       data: this.serialize(updated),
       /** Jumlah baris tambahan yang dibuat/diselaraskan untuk jam lainnya. */
       extra_jam: jamTambahan.length,
+    };
+  }
+
+  /* ------------------------- Libur nasional (Google) ------------------------- */
+
+  private cacheNasional: { url: string; at: number; events: EventLiburNasional[] } | null = null;
+
+  private async ambilFeedNasional(segarkan: boolean): Promise<{ url: string; events: EventLiburNasional[] }> {
+    const url = (process.env.LIBUR_NASIONAL_ICS_URL || '').trim() || DEFAULT_ICS_URL;
+    const c = this.cacheNasional;
+    if (!segarkan && c && c.url === url && Date.now() - c.at < CACHE_NASIONAL_MS) {
+      return { url, events: c.events };
+    }
+
+    let teks: string;
+    try {
+      const res = await fetch(url, { signal: AbortSignal.timeout(15_000) });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      teks = await res.text();
+    } catch (err: any) {
+      throw new BadGatewayException(
+        `Kalender libur nasional Google tidak dapat diambil (${err?.message || err}). ` +
+          'Pastikan server API punya akses internet ke calendar.google.com.',
+      );
+    }
+    if (!teks.includes('BEGIN:VCALENDAR')) {
+      throw new BadGatewayException('Respons kalender Google bukan format iCal yang valid.');
+    }
+
+    const events = parseIcsLibur(teks);
+    this.cacheNasional = { url, at: Date.now(), events };
+    return { url, events };
+  }
+
+  /**
+   * Pratinjau libur nasional untuk satu tahun kalender, lengkap dengan tanda
+   * tanggal mana yang SUDAH punya data di tabel `libur` (apa pun lingkupnya).
+   * Tidak menulis apa pun.
+   */
+  async getLiburNasional(params: { tahun?: string; segarkan?: string }) {
+    const tahunIni = new Date(Date.now() + 8 * 3_600_000).getUTCFullYear(); // WITA
+    const tahun = /^\d{4}$/.test(String(params.tahun || '')) ? Number(params.tahun) : tahunIni;
+    const segarkan = ['1', 'true', 'ya'].includes(String(params.segarkan || '').toLowerCase());
+
+    const { url, events } = await this.ambilFeedNasional(segarkan);
+
+    const awal = `${tahun}-01-01`;
+    const akhir = `${tahun}-12-31`;
+    const dalamTahun = events.filter((e) => e.tanggal_mulai <= akhir && e.tanggal_selesai >= awal);
+
+    const tahunTersedia = [...new Set(events.map((e) => Number(e.tanggal_mulai.slice(0, 4))))].sort();
+
+    const existing = await this.prisma.libur.findMany({
+      where: { tanggal: { gte: dateOnlyToUtc(awal), lte: dateOnlyToUtc(akhir) } },
+      select: { tanggal: true, keterangan: true },
+    });
+    const terisiMap = new Map<string, Set<string>>();
+    for (const r of existing) {
+      const k = toDateOnly(r.tanggal);
+      if (!terisiMap.has(k)) terisiMap.set(k, new Set());
+      terisiMap.get(k)!.add(r.keterangan);
+    }
+
+    const items = dalamTahun.map((e) => {
+      const tanggal = rentangTanggalNasional(e.tanggal_mulai, e.tanggal_selesai);
+      const terisi = tanggal.filter((t) => terisiMap.has(t));
+      const keteranganAda = [...new Set(terisi.flatMap((t) => [...(terisiMap.get(t) || [])]))];
+      return {
+        ...e,
+        jumlah_hari: tanggal.length,
+        tanggal_terisi: terisi,
+        keterangan_terisi: keteranganAda,
+        status: terisi.length === 0 ? 'baru' : terisi.length === tanggal.length ? 'sudah_ada' : 'sebagian',
+      };
+    });
+
+    return {
+      ok: true,
+      data: { tahun, sumber: url, tahun_tersedia: tahunTersedia, items },
+    };
+  }
+
+  /**
+   * Simpan libur nasional pilihan admin sebagai libur sehari penuh untuk
+   * seluruh madrasah. Tanggal yang sudah punya baris libur apa pun DILEWATI —
+   * data yang diisi manual (mis. libur khusus kelas XII) tidak pernah ditimpa.
+   */
+  async sinkronNasional(body: any) {
+    const items: any[] = Array.isArray(body?.items) ? body.items : Array.isArray(body) ? body : [];
+    if (items.length === 0) throw new BadRequestException('Pilih minimal satu hari libur.');
+    if (items.length > BATAS_ITEM_SINKRON) {
+      throw new BadRequestException(`Maksimal ${BATAS_ITEM_SINKRON} item per sinkronisasi.`);
+    }
+
+    // tanggal → keterangan (beberapa acara di tanggal yang sama digabung)
+    const perTanggal = new Map<string, string[]>();
+    for (const it of items) {
+      const mulai = String(it?.tanggal_mulai || it?.tanggal || '').trim();
+      const selesai = String(it?.tanggal_selesai || mulai).trim();
+      const ket = String(it?.keterangan || '').trim().slice(0, 200);
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(mulai) || !/^\d{4}-\d{2}-\d{2}$/.test(selesai) || selesai < mulai) {
+        throw new BadRequestException(`Tanggal tidak valid: ${mulai} s.d. ${selesai}`);
+      }
+      if (!ket) throw new BadRequestException(`Keterangan kosong untuk tanggal ${mulai}`);
+      const awalUtc = dateOnlyToUtc(mulai);
+      const akhirUtc = dateOnlyToUtc(selesai);
+      if (!Number.isFinite(awalUtc.getTime()) || !Number.isFinite(akhirUtc.getTime())
+        || toDateOnly(awalUtc) !== mulai || toDateOnly(akhirUtc) !== selesai) {
+        throw new BadRequestException(`Tanggal kalender tidak valid: ${mulai} s.d. ${selesai}`);
+      }
+      if ((akhirUtc.getTime() - awalUtc.getTime()) / 86_400_000 + 1 > BATAS_HARI_PER_ITEM) {
+        throw new BadRequestException(`Rentang ${mulai} s.d. ${selesai} terlalu panjang.`);
+      }
+      const rentang = rentangTanggalNasional(mulai, selesai);
+      if (rentang.length > BATAS_HARI_PER_ITEM) {
+        throw new BadRequestException(`Rentang ${mulai} s.d. ${selesai} terlalu panjang.`);
+      }
+      for (const t of rentang) {
+        const daftar = perTanggal.get(t) || [];
+        if (!daftar.includes(ket)) daftar.push(ket);
+        perTanggal.set(t, daftar);
+      }
+    }
+
+    const semuaTanggal = [...perTanggal.keys()].sort();
+    const existing = await this.prisma.libur.findMany({
+      where: { tanggal: { in: semuaTanggal.map(dateOnlyToUtc) } },
+      select: { tanggal: true },
+    });
+    const sudahAda = new Set(existing.map((r) => toDateOnly(r.tanggal)));
+
+    const dibuat = semuaTanggal.filter((t) => !sudahAda.has(t));
+    const dilewati = semuaTanggal.filter((t) => sudahAda.has(t));
+
+    if (dibuat.length > 0) {
+      await this.prisma.libur.createMany({
+        data: dibuat.map((t) => ({
+          tanggal: dateOnlyToUtc(t),
+          jam_ke: 'Semua',
+          keterangan: perTanggal.get(t)!.join(' / '),
+          lingkup: 'semua',
+          target_kelas: [],
+        })),
+      });
+    }
+
+    return {
+      ok: true,
+      created: dibuat.length,
+      skipped: dilewati.length,
+      tanggal_dibuat: dibuat,
+      tanggal_dilewati: dilewati,
     };
   }
 

@@ -1,6 +1,8 @@
 'use client'
 
 import Pagination from '@/components/ui/Pagination'
+import { Button } from '@/components/ui/Button'
+import { Plus, Download, LockKeyhole, CheckSquare, X, NotebookPen, LayoutGrid, Calendar } from 'lucide-react'
 
 import React, { useState, useCallback, useMemo } from 'react'
 import type { User } from '@/lib/types'
@@ -27,7 +29,7 @@ export default function CatatanSayaView({ user }: Props) {
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set())
 
   const {
-    notes, loading, filters, setFilter, refreshNotes, setSearch, pagination, setPage,
+    notes, loading, error, filters, setFilter, refreshNotes, setSearch, pagination, setPage,
   } = useCatatan()
 
   // All unique labels from current notes for toolbar filter
@@ -113,7 +115,7 @@ export default function CatatanSayaView({ user }: Props) {
         body: JSON.stringify({
           judul: '',
           isi: [{ type: 'paragraph', text: '' }],
-          jenis: 'draft_agenda',
+          jenis: 'catatan',
           tanggal_agenda: date,
         }),
       })
@@ -123,7 +125,7 @@ export default function CatatanSayaView({ user }: Props) {
         setEditorOpen(true)
       }
     } catch {
-      Swal.fire({ icon: 'error', title: 'Gagal membuat draft agenda' })
+      Swal.fire({ icon: 'error', title: 'Gagal membuat catatan' })
     }
   }, [])
 
@@ -161,6 +163,16 @@ export default function CatatanSayaView({ user }: Props) {
 
   return (
     <div className="catatan-page">
+      <header className="catatan-home-header">
+        <div className="catatan-home-header__identity">
+          <span className="catatan-home-header__icon"><NotebookPen size={23} /></span>
+          <div><h2>Catatan &amp; rencana</h2><p><LockKeyhole size={12} /> Ruang pribadi untuk catatan dan daftar pribadi Anda.</p></div>
+        </div>
+        <div className="catatan-home-header__actions">
+          <Button variant="outline" icon="pdf" onClick={() => setExportOpen(true)}>Export PDF</Button>
+          <Button variant="primary" leftIcon={<Plus size={16} />} onClick={handleNewNote}>Catatan baru</Button>
+        </div>
+      </header>
       <CatatanToolbar
         onNewNote={handleNewNote}
         search={filters.search}
@@ -180,6 +192,19 @@ export default function CatatanSayaView({ user }: Props) {
         selectedCount={selectedIds.size}
       />
 
+      {error && <div className="catatan-home-error" role="alert">{error}<Button variant="outline" size="sm" onClick={refreshNotes}>Coba lagi</Button></div>}
+      <div className="catatan-results">
+        <div><h3>{viewMode === 'calendar' ? 'Kalender pribadi' : filters.status === 'archived' ? 'Arsip catatan' : filters.status === 'trashed' ? 'Sampah' : 'Koleksi catatan'}</h3>
+          <span>{viewMode === 'calendar' ? 'Catatan dan list berdasarkan tanggal' : selectionMode ? `${selectedIds.size} catatan dipilih` : loading ? 'Memuat catatan...' : `${pagination.total} catatan · diperbarui terbaru`}</span></div>
+        <div className="catatan-results__actions">
+          <div className="catatan-view-toggle" role="group" aria-label="Tampilan catatan">
+            <button type="button" aria-pressed={viewMode === 'cards'} className={`catatan-view-toggle__btn${viewMode === 'cards' ? ' catatan-view-toggle__btn--active' : ''}`} onClick={() => setViewMode('cards')}><LayoutGrid size={15} /> Catatan</button>
+            <button type="button" aria-pressed={viewMode === 'calendar'} className={`catatan-view-toggle__btn${viewMode === 'calendar' ? ' catatan-view-toggle__btn--active' : ''}`} onClick={() => setViewMode('calendar')}><Calendar size={15} /> Kalender</button>
+          </div>
+          {viewMode === 'cards' && <Button variant={selectionMode ? 'secondary' : 'outline'} size="sm" leftIcon={selectionMode ? <X size={14} /> : <CheckSquare size={14} />} onClick={handleToggleSelectionMode}>{selectionMode ? 'Batal memilih' : 'Pilih catatan'}</Button>}
+        </div>
+      </div>
+      {selectionMode && viewMode === 'cards' && <div className="catatan-selection-bar"><span>{selectedIds.size ? `${selectedIds.size} catatan siap diekspor` : 'Pilih catatan yang ingin disertakan dalam PDF.'}</span><Button variant="outline" size="sm" disabled={!selectedIds.size} leftIcon={<Download size={14} />} onClick={() => setExportOpen(true)}>Export pilihan</Button></div>}
       {viewMode === 'cards' && (
         <CatatanList
           notes={notes}
@@ -206,6 +231,7 @@ export default function CatatanSayaView({ user }: Props) {
 
       {viewMode === 'calendar' && (
         <KalenderBulanan
+          key={`${editorOpen}-${pagination.total}`}
           onAgendaClick={handleAgendaClick}
           onCreateAgenda={handleCreateAgenda}
         />

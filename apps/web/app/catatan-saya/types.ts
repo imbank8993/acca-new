@@ -7,7 +7,7 @@ export interface CatatanBlock {
 export interface Catatan {
   id: number;
   user_id: number;
-  jenis: 'catatan' | 'draft_agenda';
+  jenis: 'catatan' | 'list';
   judul: string;
   isi: CatatanBlock[];
   label: string[];
@@ -23,10 +23,12 @@ export interface Catatan {
 }
 
 export type CatatanStatus = 'active' | 'pinned' | 'archived' | 'trashed';
-export type CatatanJenis = 'catatan' | 'draft_agenda';
-export type CatatanWarna = 'default' | 'red' | 'orange' | 'yellow' | 'green' | 'teal' | 'blue' | 'purple' | 'pink' | 'brown' | 'gray';
+export type CatatanJenis = 'catatan' | 'list';
+export type CatatanWarna = `#${string}` | 'default' | 'red' | 'orange' | 'yellow' | 'green' | 'teal' | 'blue' | 'purple' | 'pink' | 'brown' | 'gray';
 
 export interface KalenderAgenda {
+  jenis?: CatatanJenis;
+  warna?: CatatanWarna;
   id: number;
   judul: string;
   tanggal_agenda: string;

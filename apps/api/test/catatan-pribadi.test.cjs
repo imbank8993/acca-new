@@ -17,5 +17,18 @@ test('atomic note updates reject a concurrent stale version and isolate ownershi
 });
 
 test('deployment migration creates notes table idempotently before app startup',async()=>{
- const db=new PGlite();try{await db.exec('CREATE TABLE public.users (id bigint primary key);');const sql=fs.readFileSync('apps/api/prisma/sql/20261027_create_catatan_pribadi.sql','utf8');await db.exec(sql);await db.exec(sql);const result=await db.query("SELECT to_regclass('public.catatan_pribadi') as name");assert.equal(result.rows[0].name,'catatan_pribadi');const deploy=fs.readFileSync('.github/workflows/deploy.yml','utf8');assert(deploy.indexOf('20261027_create_catatan_pribadi.sql')<deploy.indexOf('docker compose up -d'));}finally{await db.close();}
+ const db=new PGlite();try{await db.exec('CREATE TABLE public.users (id bigint primary key);');const sql=fs.readFileSync('apps/api/prisma/sql/20261027_create_catatan_pribadi.sql','utf8');await db.exec(sql);await db.exec(sql);const listSql=fs.readFileSync('apps/api/prisma/sql/20261027_catatan_list.sql','utf8');await db.exec(listSql);await db.exec(listSql);await db.exec("INSERT INTO public.users VALUES (1);INSERT INTO public.catatan_pribadi(user_id,jenis) VALUES (1,'list');");const result=await db.query("SELECT to_regclass('public.catatan_pribadi') as name");assert.equal(result.rows[0].name,'catatan_pribadi');const deploy=fs.readFileSync('.github/workflows/deploy.yml','utf8');assert(deploy.indexOf('20261027_create_catatan_pribadi.sql')<deploy.indexOf('docker compose up -d'));}finally{await db.close();}
+});
+
+test('custom note colors accept strict HEX, preserve legacy colors and reject invalid values',async()=>{
+ const service=new box.exports.CatatanPribadiService({catatan_pribadi:{create:async({data})=>({id:1n,...data})}});
+ assert.equal((await service.create(1n,{warna:'#A1b2C3'})).warna,'#a1b2c3');
+ assert.equal((await service.create(1n,{warna:'blue'})).warna,'blue');
+ assert.equal((await service.create(1n,{warna:'default'})).warna,'default');
+ for(const warna of ['#fff','#12345678','red;background:url(x)','rgb(0,0,0)',123])await assert.rejects(service.create(1n,{warna}));
+});
+
+test('calendar includes notes and lists, uses WITA creation date only when no explicit date',async()=>{
+ let where;const service=new box.exports.CatatanPribadiService({catatan_pribadi:{findMany:async query=>{where=query.where;return[{id:1n,user_id:1n,jenis:'catatan',tanggal_agenda:null,created_at:new Date('2026-10-26T17:00:00Z')},{id:2n,user_id:1n,jenis:'list',tanggal_agenda:new Date('2026-10-25T00:00:00Z'),created_at:new Date('2026-10-20T00:00:00Z')}];}}});
+ const result=await service.getKalender(1n,'2026-10');assert.equal(result[0].tanggal_agenda,'2026-10-27');assert.equal(result[1].tanggal_agenda,'2026-10-25');assert.equal(result[1].jenis,'list');assert.equal(where.user_id,1n);assert.equal(where.jenis,undefined);assert.equal(where.OR[1].tanggal_agenda,null);assert.equal(where.OR[1].created_at.gte.toISOString(),'2026-09-30T16:00:00.000Z');
 });

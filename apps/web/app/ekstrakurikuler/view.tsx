@@ -18,6 +18,7 @@ import Tab, { TabItem } from '@/components/ui/Tab'
 import { MobileFab } from '@/components/mobile'
 import { DesktopFab } from '@/components/ui/DesktopFab'
 import SiswaEkskulView from './components/SiswaEkskulView'
+import TambahPesertaModal from './components/TambahPesertaModal'
 import './ekstrakurikuler.css'
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -49,7 +50,21 @@ export default function EkskulPembinaView(props: { user: any }) {
 function EkskulPembinaViewContent({ user }: { user: any }) {
     const { openFile, viewer } = useFileViewer()
     const roles: string[] = (user?.roles || []).map((r: string) => String(r).toUpperCase())
-    const canManageAll = roles.includes('ADMIN') || roles.includes('WKM_KESISWAAN')
+    // Izin sebenarnya datang dari server (GET /ekskul/izin-saya). Tebakan dari
+    // role hanya dipakai sampai respons tiba, supaya tampilan tidak berkedip.
+    const [izin, setIzin] = useState(() => ({
+        kelolaSemua: roles.includes('ADMIN') || roles.includes('ADMINISTRATOR') || roles.includes('WKM_KESISWAAN'),
+        kelolaPeserta: roles.includes('ADMIN'),
+    }))
+    useEffect(() => {
+        let batal = false
+        fetch('/api/ekskul/izin-saya')
+            .then(r => r.json())
+            .then(j => { if (!batal && j?.ok && j.data) setIzin({ kelolaSemua: !!j.data.kelolaSemua, kelolaPeserta: !!j.data.kelolaPeserta }) })
+            .catch(() => {})
+        return () => { batal = true }
+    }, [])
+    const canManageAll = izin.kelolaSemua
     const isSiswa = roles.includes('SISWA')
     const namaGuru = user?.nama_lengkap || user?.nama || user?.username || ''
 
@@ -67,17 +82,18 @@ function EkskulPembinaViewContent({ user }: { user: any }) {
     const [pesertaSearch, setPesertaSearch] = useState('')
 
     useEffect(() => { setSearchQuery('') }, [activeTab])
-    
+
     // Pertemuan State
     const [peserta, setPeserta] = useState<Peserta[]>([])
     const [pertemuanList, setPertemuanList] = useState<Pertemuan[]>([])
     const [loadingPanel, setLoadingPanel] = useState(false)
-    
+
     // Absensi Modal State
     const [selectedPertemuan, setSelectedPertemuan] = useState<Pertemuan | null>(null)
     const [absensi, setAbsensi] = useState<Record<string, AbsRow>>({})
     const [showAbsensiModal, setShowAbsensiModal] = useState(false)
     const [showPesertaModal, setShowPesertaModal] = useState(false)
+    const [showTambahPeserta, setShowTambahPeserta] = useState(false)
     const [saving, setSaving] = useState(false)
 
     // Laporan State
@@ -121,7 +137,7 @@ function EkskulPembinaViewContent({ user }: { user: any }) {
             ])
             const myJson = await myRes.json()
             const allJson = await allRes.json()
-            
+
             setMyEkskul(myJson.ok ? (myJson.data || []).map((p: any) => ({ id: p.ekskul_id, nama_ekskul: p.nama_ekskul })) : [])
             setSemuaEkskul(allJson.ok ? (allJson.data || []) : [])
         } catch (e) { console.error(e) }
@@ -142,6 +158,9 @@ function EkskulPembinaViewContent({ user }: { user: any }) {
     }, [canManageAll, semuaEkskul, myEkskul, ta, sem])
 
     const isPembinaOfSelected = myEkskul.some(e => e.id === selectedEkskul)
+    /** Menambah & mengeluarkan peserta: pembina ekskul ini, atau pengelola peserta (Hak Akses Fitur). */
+    const bolehAturPeserta = isPembinaOfSelected || izin.kelolaPeserta
+    const namaEkskulTerpilih = (canManageAll ? semuaEkskul : myEkskul).find(e => e.id === selectedEkskul)?.nama_ekskul
 
     const loadPertemuan = useCallback(async (ekskulId: string) => {
         if (!ekskulId) return
@@ -171,7 +190,7 @@ function EkskulPembinaViewContent({ user }: { user: any }) {
         finally { setLoadingLaporan(false) }
     }, [canManageAll, user?.nip])
 
-    useEffect(() => { 
+    useEffect(() => {
         if (activeTab === 'approval') {
             loadLaporan('', true)
         } else if (selectedEkskul && ta) {
@@ -297,7 +316,7 @@ function EkskulPembinaViewContent({ user }: { user: any }) {
     const removePeserta = async (pesertaId: string, nama: string) => {
         const c = await Swal.fire({ title: 'Hapus Peserta?', html: `Keluarkan <b>${nama}</b> dari ekstrakurikuler ini?`, icon: 'warning', showCancelButton: true, confirmButtonColor: '#ef4444', confirmButtonText: 'Ya, Keluarkan' })
         if (!c.isConfirmed) return;
-        
+
         try {
             const res = await fetch(`/api/ekskul/siswa?id=${pesertaId}`, { method: 'DELETE' })
             const json = await res.json()
@@ -518,7 +537,7 @@ function EkskulPembinaViewContent({ user }: { user: any }) {
     return (
         <div className="ekp-scope" style={{ display: 'flex', flexDirection: 'column', gap: '12px', paddingBottom: '2rem' }}>
             {/* Standard PageBanner */}
-            
+
 
             {/* Standard Tab */}
             <Tab
@@ -931,12 +950,19 @@ function EkskulPembinaViewContent({ user }: { user: any }) {
                         onClose={() => setShowPesertaModal(false)}
                     />
                     <ModalBody>
-                        <div style={{ marginBottom: '12px' }}>
-                            <FilterSearch
-                                value={pesertaSearch}
-                                onChange={setPesertaSearch}
-                                placeholder="Cari nama peserta..."
-                            />
+                        <div style={{ marginBottom: '12px', display: 'flex', gap: '8px', alignItems: 'center' }}>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                                <FilterSearch
+                                    value={pesertaSearch}
+                                    onChange={setPesertaSearch}
+                                    placeholder="Cari nama peserta..."
+                                />
+                            </div>
+                            {bolehAturPeserta && (
+                                <Button variant="primary" icon="add" onClick={() => { setShowPesertaModal(false); setShowTambahPeserta(true) }}>
+                                    Tambah
+                                </Button>
+                            )}
                         </div>
                         <div style={{ maxHeight: '55vh', overflowY: 'auto' }}>
                             {filteredPeserta.length === 0 ? (
@@ -949,7 +975,7 @@ function EkskulPembinaViewContent({ user }: { user: any }) {
                                         <span style={{ fontSize: '0.9rem', color: 'var(--n-muted)', width: '20px', textAlign: 'right', flexShrink: 0 }}>{i + 1}</span>
                                         <div style={{ fontWeight: 600, color: 'var(--n-text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontSize: '0.9rem' }}>{ps.nama_siswa}</div>
                                     </div>
-                                    {canEditPertemuan && (
+                                    {bolehAturPeserta && (
                                         <ActionButton action="delete" size="sm" onClick={() => removePeserta(ps.id, ps.nama_siswa)} tooltip="Keluarkan Peserta" />
                                     )}
                                 </div>
@@ -957,6 +983,19 @@ function EkskulPembinaViewContent({ user }: { user: any }) {
                         </div>
                     </ModalBody>
                 </Modal>
+            )}
+
+            {/* Modal Tambah Peserta (pembina ekskul ini / pengelola peserta) */}
+            {bolehAturPeserta && selectedEkskul && (
+                <TambahPesertaModal
+                    open={showTambahPeserta}
+                    onClose={() => { setShowTambahPeserta(false); setShowPesertaModal(true) }}
+                    onSaved={() => loadPertemuan(selectedEkskul)}
+                    ekskulId={selectedEkskul}
+                    namaEkskul={namaEkskulTerpilih}
+                    tahunAjaran={ta}
+                    semester={sem}
+                />
             )}
 
             {/* Modal Tambah / Edit Pertemuan */}
@@ -1131,4 +1170,4 @@ function EkskulPembinaViewContent({ user }: { user: any }) {
             {viewer}
         </div>
     )
-}
+}

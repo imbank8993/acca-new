@@ -19,10 +19,7 @@ export interface UseCatatanKalenderReturn {
  * Helper to get current month formatted as YYYY-MM
  */
 function getTodayMonth(): string {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-  return `${year}-${month}`;
+  return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Makassar' }).slice(0, 7);
 }
 
 /**

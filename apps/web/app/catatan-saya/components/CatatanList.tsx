@@ -54,13 +54,14 @@ export default function CatatanList({
     <div className="catatan-list">
       {pinned.length > 0 && (
         <>
-          <div className="catatan-list__section-label">Disematkan</div>
+          <div className="catatan-list__section-label">Disematkan <span>{pinned.length}</span></div>
           <div className="catatan-grid">
             {pinned.map(catatan => (
               <div key={catatan.id} className={`catatan-grid__item${selectionMode ? ' catatan-grid__item--selectable' : ''}${selectedIds?.has(catatan.id) ? ' catatan-grid__item--selected' : ''}`}>
                 {selectionMode && (
                   <label className="catatan-grid__checkbox" onClick={e => e.stopPropagation()}>
                     <input
+                      aria-label={`Pilih ${catatan.judul || 'catatan tanpa judul'}`}
                       type="checkbox"
                       checked={selectedIds?.has(catatan.id) ?? false}
                       onChange={() => onToggleSelect?.(catatan.id)}
@@ -69,7 +70,8 @@ export default function CatatanList({
                 )}
                 <CatatanCard
                   catatan={catatan}
-                  onClick={onNoteClick}
+                  onClick={selectionMode ? () => onToggleSelect?.(catatan.id) : onNoteClick}
+                  showActions={!selectionMode}
                   onStatusChange={onStatusChange}
                   onRestore={onRestore}
                 />
@@ -82,7 +84,7 @@ export default function CatatanList({
       {others.length > 0 && (
         <>
           {pinned.length > 0 && (
-            <div className="catatan-list__section-label">Lainnya</div>
+            <div className="catatan-list__section-label">Catatan lainnya <span>{others.length}</span></div>
           )}
           <div className="catatan-grid">
             {others.map(catatan => (
@@ -90,6 +92,7 @@ export default function CatatanList({
                 {selectionMode && (
                   <label className="catatan-grid__checkbox" onClick={e => e.stopPropagation()}>
                     <input
+                      aria-label={`Pilih ${catatan.judul || 'catatan tanpa judul'}`}
                       type="checkbox"
                       checked={selectedIds?.has(catatan.id) ?? false}
                       onChange={() => onToggleSelect?.(catatan.id)}
@@ -98,7 +101,8 @@ export default function CatatanList({
                 )}
                 <CatatanCard
                   catatan={catatan}
-                  onClick={onNoteClick}
+                  onClick={selectionMode ? () => onToggleSelect?.(catatan.id) : onNoteClick}
+                  showActions={!selectionMode}
                   onStatusChange={onStatusChange}
                   onRestore={onRestore}
                 />

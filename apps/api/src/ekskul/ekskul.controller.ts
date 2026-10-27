@@ -117,6 +117,27 @@ export class EkskulController {
     return aksesDiizinkan({ ...req.user, roles }, parseKonfigurasiAkses(konfigRow?.value));
   }
 
+  /**
+   * Izin pemanggil untuk halaman Ekstrakurikuler, supaya UI tidak lagi menebak
+   * dari daftar role sendiri (dulu hardcode ADMIN/WKM_KESISWAAN, yang tidak
+   * cocok dengan aturan server).
+   *
+   * - `kelolaSemua`: `EkskulService.isManager` — melihat semua ekskul,
+   *   pertemuan & absensinya, dan tab Approval.
+   * - `kelolaPeserta`: Hak Akses Fitur "Siswa Ekskul" — mengatur peserta ekskul
+   *   mana pun. Pembina selalu boleh mengatur peserta ekskul yang ia bina.
+   */
+  @Get('izin-saya')
+  @ApiOperation({ summary: 'Izin pemanggil di halaman Ekstrakurikuler' })
+  async getIzinSaya(@Request() req: any) {
+    const roles = await this.getUserRoles(req);
+    const kelolaPeserta = await this.bolehKelolaPeserta(req, roles);
+    return {
+      ok: true,
+      data: { kelolaSemua: this.ekskulService.isManager(roles), kelolaPeserta },
+    };
+  }
+
   // --- Ekskul (Master) ---
 
   @Get()
@@ -166,7 +187,12 @@ export class EkskulController {
     const roles = await this.getUserRoles(req);
     const nip = req.user.nip || req.user.username || '';
     const nisn = req.user.nisn || req.user.username || '';
-    const bolehKelola = await this.bolehKelolaPeserta(req, roles);
+    // Membaca saja: pengelola halaman Ekstrakurikuler (isManager) sudah melihat
+    // pertemuan & absensi — berisi nama siswa — dari ekskul mana pun, jadi daftar
+    // pesertanya ikut terbuka. Menulis tetap butuh `bolehKelolaPeserta` atau
+    // status pembina ekskul itu.
+    const bolehBaca =
+      (await this.bolehKelolaPeserta(req, roles)) || this.ekskulService.isManager(roles);
 
     // We parse bigints to string before returning via a custom replacer
     const data = await this.ekskulService.getEkskulSiswaList(nip, nisn, {
@@ -175,7 +201,7 @@ export class EkskulController {
       tahun_ajaran,
       semester,
       distinct,
-    }, bolehKelola);
+    }, bolehBaca);
     
     return JSON.parse(
       JSON.stringify({ ok: true, data }, (_k, v) =>
@@ -199,6 +225,32 @@ export class EkskulController {
         typeof v === 'bigint' ? v.toString() : v,
       ),
     );
+  }
+
+  @Get('kandidat')
+  @ApiOperation({ summary: 'Calon peserta (siswa per kelas) untuk ditambahkan pembina ke ekskulnya' })
+  async getKandidat(
+    @Request() req: any,
+    @Query('ekskul_id') ekskul_id?: string,
+    @Query('tahun_ajaran') tahun_ajaran?: string,
+    @Query('semester') semester?: string,
+  ) {
+    const roles = await this.getUserRoles(req);
+    const bolehKelola = await this.bolehKelolaPeserta(req, roles);
+    const data = await this.ekskulService.getKandidatPeserta(req.user.nip || req.user.username || '', bolehKelola, {
+      ekskul_id,
+      tahun_ajaran,
+      semester,
+    });
+    return { ok: true, data };
+  }
+
+  @Post('siswa/tambah')
+  @ApiOperation({ summary: 'Tambah beberapa peserta ke satu ekskul (pembina ekskul itu / pengelola)' })
+  async tambahPeserta(@Request() req: any, @Body() body: any) {
+    const roles = await this.getUserRoles(req);
+    const bolehKelola = await this.bolehKelolaPeserta(req, roles);
+    return this.ekskulService.tambahPesertaEkskul(req.user.nip || req.user.username || '', bolehKelola, body);
   }
 
   @Delete('siswa')

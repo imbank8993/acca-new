@@ -1,9 +1,10 @@
 'use client'
 
 import React from 'react'
-import { Pin, Calendar, Clock, MapPin, Trash2, Archive, ArchiveRestore, RotateCcw } from 'lucide-react'
+import { Pin, ListChecks, FileText, Calendar, Clock, MapPin, Trash2, Archive, ArchiveRestore, RotateCcw } from 'lucide-react'
 import type { Catatan, CatatanWarna } from '../types'
 import { WARNA_OPTIONS } from '../types'
+import { catatanColor } from '../lib/catatan-color'
 
 interface CatatanCardProps {
   catatan: Catatan
@@ -14,6 +15,10 @@ interface CatatanCardProps {
 }
 
 function getWarnaStyle(warna: CatatanWarna): React.CSSProperties {
+  if (/^#[0-9a-f]{6}$/i.test(warna)) {
+    const color = catatanColor(warna)
+    return { '--card-bg': `${color}18`, '--card-bg-dark': `${color}28`, '--note-accent': color } as React.CSSProperties
+  }
   const opt = WARNA_OPTIONS.find(w => w.value === warna)
   if (!opt || warna === 'default') return {}
   return { '--card-bg': opt.color, '--card-bg-dark': opt.darkColor } as React.CSSProperties
@@ -74,7 +79,8 @@ export default function CatatanCard({ catatan, onClick, onStatusChange, onRestor
   const isPinned = catatan.status === 'pinned'
   const isTrashed = catatan.status === 'trashed'
   const isArchived = catatan.status === 'archived'
-  const isAgenda = catatan.jenis === 'draft_agenda'
+  const isAgenda = !!catatan.tanggal_agenda
+  const isList = catatan.jenis === 'list'
 
   const handleAction = (e: React.MouseEvent, action: () => void) => {
     e.stopPropagation()
@@ -83,22 +89,21 @@ export default function CatatanCard({ catatan, onClick, onStatusChange, onRestor
 
   return (
     <div
-      className={`catatan-card catatan-card--${catatan.warna}${isPinned ? ' catatan-card--pinned' : ''}${isTrashed ? ' catatan-card--trashed' : ''} catatan-animate-in`}
+      className={`catatan-card catatan-card--${catatan.warna.startsWith('#') ? 'custom' : catatan.warna}${isPinned ? ' catatan-card--pinned' : ''}${isTrashed ? ' catatan-card--trashed' : ''} catatan-animate-in`}
       style={getWarnaStyle(catatan.warna)}
       onClick={() => onClick(catatan)}
       role="button"
       tabIndex={0}
-      onKeyDown={e => { if (e.key === 'Enter') onClick(catatan) }}
+      onKeyDown={e => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); onClick(catatan) } }}
     >
-      {isPinned && (
-        <div className="catatan-card__pin-icon" title="Disematkan">
-          <Pin size={14} />
-        </div>
-      )}
-
-      {catatan.judul && (
-        <h3 className="catatan-card__title">{catatan.judul}</h3>
-      )}
+      <div className="catatan-card__heading">
+        <span className={`catatan-card__kind${isAgenda ? ' catatan-card__kind--agenda' : ''}`}>
+          {isList ? <ListChecks size={14} /> : <FileText size={14} />}{isList ? 'List' : 'Catatan'}
+        </span>
+        {isPinned && <span className="catatan-card__pinned" title="Disematkan"><Pin size={13} /></span>}
+      </div>
+      <h3 className="catatan-card__title">{catatan.judul || 'Tanpa judul'}</h3>
+      {!preview && <p className="catatan-card__preview catatan-card__preview--empty">Belum ada isi catatan.</p>}
 
       {preview && (
         <p className="catatan-card__preview">{preview}</p>
@@ -108,7 +113,7 @@ export default function CatatanCard({ catatan, onClick, onStatusChange, onRestor
         <div className="catatan-card__agenda-info">
           <span className="catatan-card__agenda-badge">
             <Calendar size={12} />
-            Draft Agenda
+            Bertanggal
           </span>
           <span className="catatan-card__agenda-detail">
             <Calendar size={12} />
@@ -142,12 +147,13 @@ export default function CatatanCard({ catatan, onClick, onStatusChange, onRestor
         </div>
       )}
 
+      <div className="catatan-card__bottom">
       <div className="catatan-card__meta">
-        <span className="catatan-card__time">{timeAgo(catatan.updated_at)}</span>
+        <span className="catatan-card__time"><Clock size={12} /> {timeAgo(catatan.updated_at)}</span>
         {isAgenda && !catatan.tanggal_agenda && (
           <span className="catatan-card__agenda-badge">
             <Calendar size={12} />
-            Draft
+            Catatan
           </span>
         )}
       </div>
@@ -199,6 +205,7 @@ export default function CatatanCard({ catatan, onClick, onStatusChange, onRestor
           )}
         </div>
       )}
+      </div>
     </div>
   )
 }

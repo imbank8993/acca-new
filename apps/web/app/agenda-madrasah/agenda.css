@@ -921,6 +921,9 @@
 .ag-day-number { font-size: 0.9rem; font-weight: 700; line-height: 1; z-index: 1; color: var(--n-text); transition: color 0.15s ease; }
 .is-partial-holiday:not(.is-selected) .ag-day-number { color: #cd7f32 !important; }
 .is-weekend .ag-day-number, .is-full-holiday .ag-day-number { color: #ef4444; }
+/* Cuti bersama: ungu, supaya tidak tertukar dengan merah (libur) maupun
+   perunggu (PBM tidak efektif). Lihat isCutiBersama di lib/libur.ts. */
+.is-cuti-bersama:not(.is-selected) .ag-day-number { color: #8b5cf6 !important; }
 
 .is-today {
     background: rgba(48, 131, 255, 0.1) !important;
@@ -955,6 +958,7 @@
 .is-active-box { background: #1e293b; }
 .is-partial-box { background: #cd7f32; }
 .is-holiday-box { background: #ef4444; }
+.is-cuti-box { background: #8b5cf6; }
 
 /* Calendar Details Pane */
 .ag-details-card { display: flex; flex-direction: column; height: 100%; min-height: 450px; }
@@ -980,6 +984,11 @@
     font-size: 0.78rem;
     font-weight: 700;
     border: 1px solid rgba(239, 68, 68, 0.1);
+}
+.ag-holiday-notice.is-cuti {
+    background: #f5f3ff;
+    color: #7c3aed;
+    border-color: rgba(139, 92, 246, 0.18);
 }
 
 .ag-details-content { padding: 24px; flex: 1; overflow-y: auto; max-height: 580px; min-width: 0; }
@@ -2534,6 +2543,8 @@ textarea.form-input {
 .dark .is-active-box { background: #f1f5f9 !important; }
 .dark .is-partial-box { background: #d49b6a !important; }
 .dark .is-holiday-box { background: #ef4444 !important; }
+.dark .is-cuti-box { background: #a78bfa !important; }
+.dark .is-cuti-bersama:not(.is-selected) .ag-day-number { color: #a78bfa !important; }
 
 .dark .ag-details-header {
     background: #0b1329 !important;
@@ -2548,6 +2559,11 @@ textarea.form-input {
     background: rgba(239, 68, 68, 0.15) !important;
     border: 1px solid rgba(239, 68, 68, 0.35) !important;
     color: #fca5a5 !important;
+}
+.dark .ag-holiday-notice.is-cuti {
+    background: rgba(139, 92, 246, 0.16) !important;
+    border: 1px solid rgba(139, 92, 246, 0.4) !important;
+    color: #c4b5fd !important;
 }
 
 .dark .ag-timeline-tabs {

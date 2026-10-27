@@ -1278,3 +1278,177 @@
   background: rgba(239, 68, 68, 0.15);
   border-color: rgba(248, 113, 113, 0.35);
 }
+
+/* Editor memakai bingkai dan footer Modal bersama; hanya field yang ditata di sini. */
+.catatan-modal .catatan-form { display: flex; flex-direction: column; gap: 18px; }
+.catatan-modal .catatan-form__status { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; color: var(--n-muted); font-size: .76rem; line-height: 1.5; }
+.catatan-modal .catatan-form__status button { border: 0; background: none; color: var(--n-primary); padding: 0; font: inherit; cursor: pointer; text-decoration: underline; }
+.catatan-modal .catatan-form__fields { display: flex; flex-direction: column; gap: 18px; margin: 0; padding: 0; border: 0; min-width: 0; }
+.catatan-modal .catatan-form__row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.catatan-modal .catatan-form__row--agenda { grid-template-columns: 1fr 1fr 1.4fr; }
+.catatan-modal .catatan-form__field { display: flex; flex-direction: column; gap: 7px; min-width: 0; }
+.catatan-modal .catatan-form__field > label { color: var(--n-ink); font-size: .8rem; font-weight: 600; line-height: 1.5; }
+.catatan-modal .catatan-form__optional, .catatan-modal .catatan-form__hint { color: var(--n-muted); font-size: .74rem; font-weight: 400; line-height: 1.5; }
+.catatan-modal .catatan-form input, .catatan-modal .catatan-form textarea, .catatan-modal .catatan-form select {
+  width: 100%; min-width: 0; box-sizing: border-box; border: 1px solid var(--n-border); border-radius: 8px;
+  background: var(--n-card); color: var(--n-ink); padding: 10px 12px; font-family: inherit; font-size: .85rem; font-weight: 400; line-height: 1.5; outline: none;
+}
+.catatan-modal .catatan-form input:focus, .catatan-modal .catatan-form textarea:focus, .catatan-modal .catatan-form select:focus { border-color: var(--n-primary); box-shadow: 0 0 0 3px var(--n-soft); }
+.catatan-modal .catatan-form input::placeholder, .catatan-modal .catatan-form textarea::placeholder { color: var(--n-muted); opacity: .75; }
+.catatan-modal .catatan-form textarea { min-height: 180px; resize: vertical; }
+.catatan-modal .catatan-form__label-entry { display: flex; align-items: center; gap: 8px; }
+.catatan-modal .catatan-form__labels, .catatan-modal .catatan-form__actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.catatan-modal .catatan-form__labels button { border: 0; background: transparent; color: inherit; display: inline-flex; cursor: pointer; margin-left: 4px; padding: 2px; }
+.catatan-modal .catatan-form__actions { padding-top: 16px; border-top: 1px solid var(--n-border); }
+.catatan-modal fieldset:disabled { opacity: .7; }
+@media (max-width: 600px) {
+  .catatan-modal .catatan-form__row, .catatan-modal .catatan-form__row--agenda { grid-template-columns: 1fr; gap: 18px; }
+  .catatan-modal .catatan-form__actions > button { flex: 1 1 auto; }
+  .catatan-modal .catatan-form textarea { min-height: 160px; }
+}
+
+/* Halaman utama: token dan komponen visual mengikuti halaman ACCA lainnya. */
+.catatan-page {
+  --catatan-bg: var(--n-surface); --catatan-card-bg: var(--n-card); --catatan-border: var(--n-border);
+  --catatan-text: var(--n-ink); --catatan-text-secondary: var(--n-muted); --catatan-accent: var(--n-primary); --catatan-accent-light: var(--n-soft);
+  padding: 0; gap: 22px; max-width: none;
+}
+.catatan-home-header { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 22px; border: 1px solid var(--n-border); border-radius: 16px; background: var(--n-card); }
+.catatan-home-header__identity { display: flex; align-items: center; gap: 14px; min-width: 0; }
+.catatan-home-header__icon { display: grid; place-items: center; width: 48px; height: 48px; border-radius: 13px; background: var(--n-soft); color: var(--n-primary); flex-shrink: 0; }
+.catatan-home-header h2 { margin: 0 0 6px; font-size: 1.15rem; font-weight: 700; letter-spacing: -.025em; color: var(--n-ink); }
+.catatan-home-header p { margin: 0; display: flex; align-items: center; gap: 5px; color: var(--n-muted); font-size: .78rem; line-height: 1.6; }
+.catatan-home-header p svg { flex-shrink: 0; }
+.catatan-home-header__actions { display: flex; gap: 9px; flex-shrink: 0; }
+.catatan-page .catatan-toolbar { margin: 0; box-shadow: none; }
+.catatan-page .catatan-view-toggle { background: var(--n-soft); border: 1px solid var(--n-border); border-radius: 9px; padding: 3px; gap: 3px; }
+.catatan-page .catatan-view-toggle__btn { min-height: 32px; padding: 6px 10px; font-size: .76rem; border-radius: 6px; gap: 6px; color: var(--n-muted); }
+.catatan-page .catatan-view-toggle__btn--active { background: var(--n-card); color: var(--n-primary); box-shadow: 0 1px 3px #0000000a; }
+.catatan-results { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.catatan-results h3 { margin: 0 0 4px; color: var(--n-ink); font-size: .95rem; font-weight: 650; }
+.catatan-results span { color: var(--n-muted); font-size: .75rem; }
+.catatan-selection-bar, .catatan-home-error { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; border: 1px solid var(--n-border); border-radius: 10px; background: var(--n-soft); padding: 10px 14px; color: var(--n-ink); font-size: .8rem; }
+.catatan-page .catatan-list { gap: 14px; }
+.catatan-page .catatan-list__section-label { display: flex; align-items: center; gap: 7px; margin: 0; padding: 0; text-transform: none; letter-spacing: 0; font-size: .78rem; font-weight: 600; color: var(--n-muted); }
+.catatan-page .catatan-list__section-label span { display: inline-flex; justify-content: center; min-width: 20px; padding: 2px 6px; background: var(--n-soft); border-radius: 5px; font-size: .68rem; }
+.catatan-page .catatan-grid { gap: 16px; align-items: stretch; }
+.catatan-page .catatan-card { height: 100%; min-height: 230px; gap: 12px; padding: 20px; border-radius: 13px; background: var(--n-card) !important; box-shadow: none; transition: border-color .18s ease, box-shadow .18s ease; }
+.catatan-page .catatan-card:hover { transform: none; border-color: var(--n-primary); box-shadow: 0 4px 16px #00000005; }
+.catatan-page .catatan-card--pinned { border-color: var(--n-border) !important; box-shadow: none; }
+.catatan-page .catatan-card--pinned:hover { border-color: var(--n-primary) !important; }
+.catatan-card__heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.catatan-card__kind { display: inline-flex; align-items: center; gap: 6px; color: var(--n-muted); font-size: .7rem; font-weight: 500; }
+.catatan-card__kind--agenda { color: var(--n-primary); }
+.catatan-card__pinned { display: inline-flex; color: var(--n-primary); }
+.catatan-page .catatan-card__title { margin: 0; padding: 0; font-size: .96rem; line-height: 1.55; font-weight: 650; letter-spacing: -.01em; color: var(--n-ink); }
+.catatan-page .catatan-card__preview { margin: 0; font-size: .8rem; line-height: 1.75; color: var(--n-muted); -webkit-line-clamp: 4; white-space: pre-line; }
+.catatan-page .catatan-card__preview--empty { opacity: .7; font-style: italic; }
+.catatan-page .catatan-card__label { background: var(--n-soft); color: var(--n-muted); font-size: .65rem; font-weight: 500; border: none; border-radius: 5px; padding: 3px 7px; }
+.catatan-page .catatan-card__agenda-info { gap: 6px; border: none; padding: 0; }
+.catatan-page .catatan-card__agenda-badge { display: none; }
+.catatan-page .catatan-card__agenda-detail { font-size: .72rem; color: var(--n-muted); }
+.catatan-card__bottom { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: auto; border-top: 1px solid var(--n-border); padding-top: 10px; }
+.catatan-page .catatan-card__meta { border: 0; padding: 0; margin: 0; min-width: 0; }
+.catatan-page .catatan-card__time { display: inline-flex; align-items: center; gap: 4px; font-size: .66rem; color: var(--n-muted); }
+.catatan-page .catatan-card__actions { position: static; opacity: 1; transform: none; display: flex; gap: 2px; padding: 0; background: none; border: 0; box-shadow: none; }
+.catatan-page .catatan-card__action-btn { width: 29px; height: 29px; border-radius: 6px; background: transparent; color: var(--n-muted); }
+.catatan-page .catatan-card__action-btn:hover { background: var(--n-soft); color: var(--n-primary); }
+.catatan-page .catatan-card__action-btn--danger:hover { color: #dc2626; background: #ef44440d; }
+.catatan-page .catatan-list__empty { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; text-align: center; min-height: 220px; border: 1px dashed var(--n-border); border-radius: 14px; background: var(--n-card); padding: 60px 20px; color: var(--n-muted); }
+.catatan-page .catatan-grid__item--selected .catatan-card { border-color: var(--n-primary) !important; box-shadow: 0 0 0 2px var(--n-soft); }
+.catatan-page .catatan-grid__checkbox { top: 15px; right: 15px; }
+.catatan-page .catatan-grid__item--selectable .catatan-card__heading { padding-right: 26px; }
+@media (max-width: 767px) {
+  .catatan-page { gap: 16px; padding: 0; }
+  .catatan-home-header { align-items: stretch; flex-direction: column; gap: 18px; padding: 18px 16px; border-radius: 13px; }
+  .catatan-home-header__identity { gap: 11px; }
+  .catatan-home-header__icon { width: 41px; height: 41px; border-radius: 10px; }
+  .catatan-home-header h2 { font-size: 1.05rem; }
+  .catatan-home-header p { font-size: .72rem; }
+  .catatan-home-header__actions { gap: 8px; }
+  .catatan-home-header__actions > button { flex: 1; }
+  .catatan-page .catatan-card { min-height: 210px; padding: 18px; }
+  .catatan-page .catatan-grid { gap: 12px; }
+  .catatan-results h3 { font-size: .87rem; }
+}
+
+.catatan-page .catatan-card:not(.catatan-card--default) .catatan-card__kind { background: var(--card-bg); padding: 3px 7px; border-radius: 5px; color: #334155; }
+.dark .catatan-page .catatan-card:not(.catatan-card--default) .catatan-card__kind { background: var(--card-bg-dark); color: #e2e8f0; }
+
+.catatan-page .catatan-list { display: flex; flex-direction: column; gap: 14px; }
+.catatan-page .catatan-card__agenda-info { display: flex; flex-wrap: wrap; gap: 8px 12px; }
+.catatan-page .catatan-card__agenda-detail { display: inline-flex; align-items: center; gap: 4px; }
+.catatan-results { flex-wrap: wrap; }
+.catatan-results__actions { display: flex; align-items: center; gap: 10px; }
+@media (max-width: 600px) {
+  .catatan-results__actions { width: 100%; justify-content: space-between; gap: 6px; }
+  .catatan-page .catatan-view-toggle__btn { padding: 6px 8px; font-size: .72rem; }
+}
+
+.catatan-modal .catatan-form .uisel { min-width: 0; width: 100%; }
+.catatan-modal .catatan-form .uisel select { padding-right: 32px; height: 42px; border-radius: 8px; }
+.catatan-color-control { display: flex; align-items: center; gap: 10px; min-height: 42px; border: 1px solid var(--n-border); border-radius: 8px; padding: 5px 10px; background: var(--n-card); }
+.catatan-modal .catatan-form .catatan-color-control input[type="color"] { width: 30px; height: 30px; min-height: 0; flex-shrink: 0; padding: 0; border: 0; border-radius: 6px; cursor: pointer; background: transparent; }
+.catatan-color-control input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+.catatan-color-control input[type="color"]::-webkit-color-swatch { border: 1px solid #00000015; border-radius: 6px; }
+.catatan-color-control > span { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.catatan-color-control strong { color: var(--n-ink); font-size: .75rem; font-weight: 500; }
+.catatan-color-control small { color: var(--n-muted); font-size: .65rem; }
+.catatan-color-control > button { border: 0; background: transparent; color: var(--n-primary); cursor: pointer; padding: 4px; font: inherit; font-size: .7rem; }
+.catatan-page .catatan-card--custom { border-top: 3px solid var(--note-accent); }
+.catatan-page .catatan-card--custom .catatan-card__kind { color: var(--n-ink); }
+
+/* Kalender pribadi: satu grid dengan indikator jenis catatan yang jelas. */
+.note-calendar { background: var(--n-card); border: 1px solid var(--n-border); border-radius: 16px; overflow: hidden; }
+.note-calendar__header { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 22px; }
+.note-calendar__identity { display: flex; align-items: center; gap: 12px; }
+.note-calendar__identity > span { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 12px; background: var(--n-soft); color: var(--n-primary); }
+.note-calendar__header h3 { margin: 0 0 5px; font-size: 1.12rem; font-weight: 650; color: var(--n-ink); text-transform: capitalize; }
+.note-calendar__header p { margin: 0; font-size: .74rem; color: var(--n-muted); }
+.note-calendar__nav { display: flex; gap: 7px; }
+.note-calendar__grid { display: grid; grid-template-columns: repeat(7,minmax(0,1fr)); }
+.note-calendar__weekday { padding: 13px 6px; background: var(--n-surface); text-align: center; font-size: .72rem; font-weight: 600; color: var(--n-muted); border-top: 1px solid var(--n-border); }
+.note-calendar-cell { min-width: 0; min-height: 120px; padding: 10px; border-top: 1px solid var(--n-border); border-right: 1px solid var(--n-border); cursor: pointer; transition: background .15s; }
+.note-calendar-cell:nth-child(7n) { border-right: 0; }
+.note-calendar-cell:hover { background: var(--n-surface); }
+.note-calendar-cell:focus-visible { outline: 2px solid var(--n-primary); outline-offset: -2px; }
+.note-calendar-cell--muted { background: var(--n-surface); }
+.note-calendar-cell--muted .note-calendar-date { color: var(--n-muted); opacity: .5; }
+.note-calendar-cell__top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.note-calendar-date { display: grid; place-items: center; width: 27px; height: 27px; font-size: .77rem; font-weight: 500; color: var(--n-ink); }
+.note-calendar-cell--today .note-calendar-date { background: var(--n-primary); color: #fff; border-radius: 50%; }
+.note-calendar-count { color: var(--n-muted); font-size: .65rem; }
+.note-calendar-events { display: flex; flex-direction: column; gap: 5px; }
+.note-calendar-event { display: flex; align-items: center; gap: 5px; width: 100%; min-width: 0; padding: 6px; border: 0; border-left: 2px solid var(--note-color); background: var(--n-soft); color: var(--n-ink); border-radius: 4px; cursor: pointer; text-align: left; font: inherit; font-size: .67rem; }
+.note-calendar-event svg { flex-shrink: 0; color: var(--n-primary); }
+.note-calendar-event span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.note-calendar-more { color: var(--n-muted); font-size: .64rem; padding: 2px 4px; }
+.note-calendar__footer { padding: 16px 22px; border-top: 1px solid var(--n-border); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+.note-calendar__footer > div { display: flex; gap: 16px; }
+.note-calendar__footer span { display: inline-flex; align-items: center; gap: 5px; color: var(--n-muted); font-size: .72rem; }
+.note-calendar__footer p { margin: 0; color: var(--n-muted); font-size: .69rem; line-height: 1.5; }
+.note-calendar-day-list { display: flex; flex-direction: column; gap: 8px; }
+.note-calendar-day-list > button { display: flex; gap: 10px; align-items: center; border: 1px solid var(--n-border); border-radius: 8px; padding: 12px; background: var(--n-card); color: var(--n-ink); text-align: left; cursor: pointer; }
+.note-calendar-day-list span { display: flex; flex-direction: column; gap: 4px; }
+.note-calendar-day-list strong { font-size: .8rem; font-weight: 600; }
+.note-calendar-day-list small { font-size: .7rem; color: var(--n-muted); }
+.catatan-checklist { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
+.catatan-checklist__row { display: flex; align-items: center; gap: 8px; width: 100%; }
+.catatan-modal .catatan-form .catatan-checklist__row input[type="checkbox"] { width: 17px; height: 17px; flex-shrink: 0; accent-color: var(--n-primary); }
+.catatan-checklist__row > button { display: grid; place-items: center; padding: 6px; background: transparent; border: 0; color: var(--n-muted); cursor: pointer; }
+@media (max-width: 600px) {
+  .note-calendar__header { padding: 16px 12px; align-items: flex-start; flex-direction: column; gap: 14px; }
+  .note-calendar__nav { width: 100%; justify-content: flex-end; }
+  .note-calendar-cell { min-height: 76px; padding: 5px 3px; }
+  .note-calendar-cell__top { margin-bottom: 4px; }
+  .note-calendar-date { width: 23px; height: 23px; font-size: .7rem; }
+  .note-calendar-count { font-size: .6rem; }
+  .note-calendar-events { flex-direction: row; flex-wrap: wrap; gap: 3px; }
+  .note-calendar-event { width: auto; padding: 4px; border-left: 0; }
+  .note-calendar-event span { display: none; }
+  .note-calendar-more { font-size: .53rem; padding: 0; }
+  .note-calendar__footer { padding: 14px 12px; }
+}
+
+.catatan-page .catatan-list__empty p { margin: 0; line-height: 1.6; }
+.catatan-page .catatan-list__empty > svg { flex-shrink: 0; }

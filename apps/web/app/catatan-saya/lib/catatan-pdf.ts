@@ -139,7 +139,7 @@ function drawCalendarGrid(
   doc.setFillColor(...COLORS.headingBlue)
   doc.roundedRect(margin, currentY, usableWidth, bannerHeight, 1.5, 1.5, 'F')
   doc.setFont('helvetica', 'bold').setFontSize(9).setTextColor(255, 255, 255)
-  doc.text(`KALENDER DRAFT AGENDA — ${monthName.toUpperCase()} ${year}`, margin + usableWidth / 2, currentY + 5.1, { align: 'center' })
+  doc.text(`KALENDER CATATAN — ${monthName.toUpperCase()} ${year}`, margin + usableWidth / 2, currentY + 5.1, { align: 'center' })
   currentY += bannerHeight
 
   // 2. Weekday Header Row (Sen - Min)
@@ -361,7 +361,7 @@ export function generateCatatanPdf(notes: Catatan[], options: ExportOptions): vo
 
   // Separate notes by jenis
   const draftAgendas = notes
-    .filter(n => n.jenis === 'draft_agenda')
+    .filter(n => !!n.tanggal_agenda)
     .sort((a, b) => {
       const dateA = a.tanggal_agenda || '9999-99-99'
       const dateB = b.tanggal_agenda || '9999-99-99'
@@ -372,7 +372,7 @@ export function generateCatatanPdf(notes: Catatan[], options: ExportOptions): vo
     })
 
   const bebasNotes = notes
-    .filter(n => n.jenis !== 'draft_agenda')
+    .filter(n => !n.tanggal_agenda)
     .sort((a, b) => {
       const aPinned = a.status === 'pinned' ? 1 : 0
       const bPinned = b.status === 'pinned' ? 1 : 0
@@ -408,7 +408,7 @@ export function generateCatatanPdf(notes: Catatan[], options: ExportOptions): vo
     doc.setFillColor(...COLORS.headingBlue)
     doc.rect(margin, currentY, usableWidth, 7, 'F')
     doc.setFont('helvetica', 'bold').setFontSize(9.5).setTextColor(255, 255, 255)
-    doc.text('DAFTAR DRAFT AGENDA', margin + 4, currentY + 4.9)
+    doc.text('CATATAN BERTANGGAL', margin + 4, currentY + 4.9)
     currentY += 11
 
     // Render each Draft Agenda

@@ -4,7 +4,7 @@
 CREATE TABLE IF NOT EXISTS public.catatan_pribadi (
     id BIGSERIAL PRIMARY KEY,
     user_id BIGINT NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
-    jenis VARCHAR(20) NOT NULL DEFAULT 'catatan' CHECK (jenis IN ('catatan', 'draft_agenda')),
+    jenis VARCHAR(20) NOT NULL DEFAULT 'catatan' CHECK (jenis IN ('catatan', 'list', 'draft_agenda')),
     judul VARCHAR(200) NOT NULL DEFAULT '',
     isi JSONB NOT NULL DEFAULT '[]',
     label TEXT[] NOT NULL DEFAULT '{}',

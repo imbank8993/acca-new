@@ -7,9 +7,9 @@ import {
   Pin, Archive, Trash2, RotateCcw, Copy, Calendar, Clock, MapPin,
   X, AlertTriangle, Check, Loader2, XCircle, Tag, Palette
 } from 'lucide-react'
-import CatatanBlockEditor from './CatatanBlockEditor'
-import type { Catatan, CatatanBlock, CatatanJenis, CatatanWarna } from '../types'
-import { WARNA_OPTIONS } from '../types'
+import type { Catatan, CatatanJenis, CatatanWarna } from '../types'
+import { InlineSelect } from '@/components/ui/InlineSelect'
+import { catatanColor } from '../lib/catatan-color'
 import Swal from 'sweetalert2'
 
 interface CatatanEditorProps {
@@ -28,7 +28,6 @@ export default function CatatanEditor({ catatan: initialCatatan, isOpen, onClose
   const [conflictData, setConflictData] = useState<Catatan | null>(null)
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
   const [newLabelInput, setNewLabelInput] = useState('')
-  const [showWarnaMenu, setShowWarnaMenu] = useState(false)
   const [allLabels, setAllLabels] = useState<string[]>([])
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const lastSavedRef = useRef<string>('')
@@ -257,7 +256,7 @@ export default function CatatanEditor({ catatan: initialCatatan, isOpen, onClose
     if (!catatan) return
     const lines: string[] = []
     if (catatan.judul) lines.push(catatan.judul, '')
-    if (catatan.jenis === 'draft_agenda') {
+    if (catatan.tanggal_agenda) {
       if (catatan.tanggal_agenda) lines.push(`Tanggal: ${catatan.tanggal_agenda}`)
       if (catatan.waktu_agenda) lines.push(`Waktu: ${catatan.waktu_agenda}`)
       if (catatan.tempat_agenda) lines.push(`Tempat: ${catatan.tempat_agenda}`)
@@ -310,216 +309,102 @@ export default function CatatanEditor({ catatan: initialCatatan, isOpen, onClose
 
   return (
     <>
-      <Modal open={isOpen} onClose={handleClose} size="lg" variant="default">
-        <ModalHeader onClose={handleClose} title={<>
-          <span>Catatan Saya</span>
-          <div className="catatan-editor__header-row">
-            <div className="catatan-editor__save-status-wrapper">
-              {saveStatus === 'saving' && (
-                <span className="catatan-editor__save-status catatan-editor__save-status--saving">
-                  <Loader2 size={14} className="animate-spin" /> Menyimpan...
-                </span>
-              )}
-              {saveStatus === 'saved' && (
-                <span className="catatan-editor__save-status catatan-editor__save-status--saved">
-                  <Check size={14} /> Tersimpan
-                </span>
-              )}
-              {saveStatus === 'error' && !conflictData && (
-                <span className="catatan-editor__save-status catatan-editor__save-status--error">
-                  <XCircle size={14} /> Gagal menyimpan
-                  <button type="button" onClick={retrySave} className="catatan-editor__retry-btn">Coba lagi</button>
-                </span>
-              )}
-            </div>
-          </div>
-        </>} />
-
+      <Modal open={isOpen} onClose={handleClose} size="lg" variant="edit" className="catatan-modal" labelledBy="catatan-editor-title">
+        <ModalHeader id="catatan-editor-title" title="Catatan Saya" icon="journal-text"
+          subtitle="Catatan dan list pribadi Anda" onClose={handleClose} />
         <ModalBody>
-          <div className="catatan-editor">
-            {/* Type selector */}
-            <div className="catatan-editor__type-selector">
-              <button
-                type="button"
-                className={`catatan-editor__type-btn${catatan.jenis === 'catatan' ? ' catatan-editor__type-btn--active' : ''}`}
-                onClick={() => updateField('jenis', 'catatan' as CatatanJenis)}
-              >
-                Catatan Bebas
-              </button>
-              <button
-                type="button"
-                className={`catatan-editor__type-btn${catatan.jenis === 'draft_agenda' ? ' catatan-editor__type-btn--active' : ''}`}
-                onClick={() => updateField('jenis', 'draft_agenda' as CatatanJenis)}
-              >
-                <Calendar size={14} />
-                Draft Agenda
-              </button>
+          <div className="catatan-form">
+            <div className="catatan-form__status" aria-live="polite">
+              {saveStatus === 'saving' ? <><Loader2 size={14} className="animate-spin" /> Menyimpan...</>
+                : saveStatus === 'error' ? <><XCircle size={14} /> Gagal menyimpan. <button type="button" onClick={retrySave}>Coba lagi</button></>
+                : hasUnsavedChanges ? 'Perubahan belum tersimpan'
+                : <><Check size={14} /> Perubahan disimpan otomatis</>}
             </div>
-
-            {/* Agenda fields */}
-            {catatan.jenis === 'draft_agenda' && (
-              <div className="catatan-editor__agenda-fields">
-                <div className="catatan-editor__field">
-                  <label><Calendar size={14} /> Tanggal</label>
-                  <input
-                    type="date"
-                    value={catatan.tanggal_agenda || ''}
-                    onChange={e => updateField('tanggal_agenda', e.target.value || null)}
-                  />
+            <fieldset disabled={isTrashed} className="catatan-form__fields">
+              <div className="catatan-form__row">
+                <div className="catatan-form__field">
+                  <label>Jenis catatan</label>
+                  <InlineSelect title="Jenis catatan" value={catatan.jenis}
+                    onChange={value => {
+                      updateField('jenis', value as CatatanJenis)
+                      if (value === 'list') updateField('isi', catatan.isi.length ? catatan.isi.map(item => ({ ...item, type: 'checklist', checked: !!item.checked })) : [{ type: 'checklist', text: '', checked: false }])
+                    }} disabled={isTrashed}
+                    minWidth="0" height="42px" style={{ width: '100%' }}
+                    options={[{ value: 'catatan', label: 'Catatan' }, { value: 'list', label: 'List' }]} />
                 </div>
-                <div className="catatan-editor__field">
-                  <label><Clock size={14} /> Waktu</label>
-                  <input
-                    type="time"
-                    value={catatan.waktu_agenda || ''}
-                    onChange={e => updateField('waktu_agenda', e.target.value || null)}
-                  />
-                </div>
-                <div className="catatan-editor__field">
-                  <label><MapPin size={14} /> Tempat</label>
-                  <input
-                    type="text"
-                    value={catatan.tempat_agenda || ''}
-                    onChange={e => updateField('tempat_agenda', e.target.value || null)}
-                    placeholder="Opsional..."
-                    maxLength={255}
-                  />
-                </div>
-              </div>
-            )}
-
-            {/* Title */}
-            <input
-              className="catatan-editor__title-input"
-              type="text"
-              value={catatan.judul}
-              onChange={e => updateField('judul', e.target.value)}
-              placeholder="Judul catatan..."
-              maxLength={200}
-              disabled={isTrashed}
-            />
-
-            {/* Block editor */}
-            <CatatanBlockEditor
-              blocks={Array.isArray(catatan.isi) ? catatan.isi : [{ type: 'paragraph', text: '' }]}
-              onChange={blocks => updateField('isi', blocks as any)}
-              readOnly={isTrashed}
-            />
-
-            {/* Labels */}
-            <div className="catatan-editor__labels">
-              <div className="catatan-editor__labels-header">
-                <Tag size={14} />
-                <span>Label</span>
-              </div>
-              <div className="catatan-editor__labels-list">
-                {catatan.label.map((lbl, i) => (
-                  <span key={i} className="catatan-card__label">
-                    {lbl}
-                    {!isTrashed && (
-                      <button type="button" onClick={() => handleRemoveLabel(lbl)} className="catatan-editor__label-remove">
-                        <X size={10} />
-                      </button>
-                    )}
-                  </span>
-                ))}
-                {!isTrashed && catatan.label.length < 10 && (
-                  <div className="catatan-editor__label-input-wrap">
-                    <input
-                      type="text"
-                      value={newLabelInput}
-                      onChange={e => setNewLabelInput(e.target.value)}
-                      onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAddLabel() } }}
-                      placeholder="Tambah label..."
-                      maxLength={50}
-                      list="catatan-labels-list"
-                    />
-                    <datalist id="catatan-labels-list">
-                      {allLabels.filter(l => !catatan.label.includes(l)).map(l => (
-                        <option key={l} value={l} />
-                      ))}
-                    </datalist>
+                <div className="catatan-form__field">
+                  <label htmlFor="catatan-warna">Warna kartu</label>
+                  <div className="catatan-color-control">
+                    <input id="catatan-warna" type="color" aria-label="Pilih warna kartu custom" value={catatanColor(catatan.warna)}
+                      onChange={e => updateField('warna', e.target.value as CatatanWarna)} disabled={isTrashed} />
+                    <span><strong>{catatan.warna === 'default' ? 'Warna default' : catatanColor(catatan.warna).toUpperCase()}</strong><small>Klik warna untuk memilih sendiri</small></span>
+                    {catatan.warna !== 'default' && <button type="button" disabled={isTrashed} onClick={() => updateField('warna', 'default')}>Reset</button>}
                   </div>
-                )}
-              </div>
-            </div>
-
-            {/* Color picker */}
-            <div className="catatan-editor__warna-section">
-              <button
-                type="button"
-                className="catatan-editor__warna-toggle"
-                onClick={() => setShowWarnaMenu(!showWarnaMenu)}
-              >
-                <Palette size={14} />
-                <span>Warna</span>
-                <span
-                  className="catatan-editor__warna-preview"
-                  style={{ backgroundColor: WARNA_OPTIONS.find(w => w.value === catatan.warna)?.color || '#fff' }}
-                />
-              </button>
-              {showWarnaMenu && (
-                <div className="catatan-editor__warna-picker">
-                  {WARNA_OPTIONS.map(w => (
-                    <button
-                      key={w.value}
-                      type="button"
-                      className={`catatan-editor__warna-option${catatan.warna === w.value ? ' catatan-editor__warna-option--active' : ''}`}
-                      style={{ backgroundColor: w.color }}
-                      onClick={() => { updateField('warna', w.value as CatatanWarna); setShowWarnaMenu(false) }}
-                      title={w.label}
-                    >
-                      {catatan.warna === w.value && <Check size={14} />}
-                    </button>
-                  ))}
                 </div>
-              )}
+              </div>
+              <div className="catatan-form__field">
+                <label htmlFor="catatan-judul">Judul catatan</label>
+                <input id="catatan-judul" className="catatan-editor__title-input" value={catatan.judul}
+                  onChange={e => updateField('judul', e.target.value)} placeholder="Contoh: Persiapan kegiatan bulan November" maxLength={200} />
+              </div>
+              <div className="catatan-form__field">
+                <label htmlFor="catatan-tanggal">Tanggal catatan <span className="catatan-form__optional">(opsional)</span></label>
+                <input id="catatan-tanggal" type="date" value={catatan.tanggal_agenda || ''} onChange={e => updateField('tanggal_agenda', e.target.value || null)} />
+                <span className="catatan-form__hint">Jika kosong, kalender memakai tanggal pembuatan catatan.</span>
+              </div>
+              <div className="catatan-form__field">
+                <label htmlFor="catatan-isi">Isi catatan</label>
+                {catatan.jenis === 'list' ? (
+                  <div className="catatan-checklist">
+                    {(catatan.isi.length ? catatan.isi : [{ type: 'checklist', text: '', checked: false }]).map((item, index) => (
+                      <div className="catatan-checklist__row" key={index}>
+                        <input type="checkbox" aria-label={`Selesai item ${index + 1}`} checked={!!item.checked} onChange={e => {
+                          const items = catatan.isi.length ? [...catatan.isi] : [{ type: 'checklist' as const, text: '' }]
+                          items[index] = { ...items[index], type: 'checklist', checked: e.target.checked }; updateField('isi', items)
+                        }} />
+                        <input aria-label={`Item ${index + 1}`} value={item.text} placeholder="Tulis item..." onChange={e => {
+                          const items = catatan.isi.length ? [...catatan.isi] : [{ type: 'checklist' as const, text: '' }]
+                          items[index] = { ...items[index], type: 'checklist', text: e.target.value }; updateField('isi', items)
+                        }} />
+                        <button type="button" aria-label={`Hapus item ${index + 1}`} onClick={() => updateField('isi', catatan.isi.filter((_, i) => i !== index))}><X size={14} /></button>
+                      </div>
+                    ))}
+                    <Button variant="outline" size="sm" onClick={() => updateField('isi', [...catatan.isi, { type: 'checklist', text: '', checked: false }])}>Tambah item</Button>
+                  </div>
+                ) : <textarea id="catatan-isi" rows={7} placeholder="Tulis catatan Anda di sini..."
+                  value={(Array.isArray(catatan.isi) ? catatan.isi : []).map(block => block.text).join('\n\n')}
+                  onChange={e => updateField('isi', [{ type: 'paragraph', text: e.target.value }])} />}
+                <span className="catatan-form__hint">{catatan.jenis === 'list' ? 'Centang item yang sudah selesai.' : 'Tulis dalam bentuk paragraf. Gunakan Enter untuk baris baru.'}</span>
+              </div>
+              <div className="catatan-form__field">
+                <label htmlFor="catatan-label">Label <span className="catatan-form__optional">(opsional)</span></label>
+                <div className="catatan-form__label-entry">
+                  <input id="catatan-label" value={newLabelInput} onChange={e => setNewLabelInput(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAddLabel() } }}
+                    placeholder="Ketik label, lalu tekan Enter" maxLength={50} list="catatan-labels-list" />
+                  <Button variant="outline" onClick={handleAddLabel} disabled={!newLabelInput.trim() || catatan.label.length >= 10 || isTrashed}>Tambah</Button>
+                </div>
+                <datalist id="catatan-labels-list">{allLabels.filter(l => !catatan.label.includes(l)).map(l => <option key={l} value={l} />)}</datalist>
+                {catatan.label.length > 0 && <div className="catatan-form__labels">{catatan.label.map(lbl => (
+                  <span key={lbl} className="catatan-card__label">{lbl}{!isTrashed && <button type="button" aria-label={`Hapus label ${lbl}`} onClick={() => handleRemoveLabel(lbl)}><X size={12} /></button>}</span>
+                ))}</div>}
+              </div>
+            </fieldset>
+            <div className="catatan-form__actions">
+              {!isTrashed && <>
+                {!isArchived && <Button variant="outline" size="sm" leftIcon={<Pin size={14} />} onClick={() => handleStatusChange(isPinned ? 'active' : 'pinned')}>{isPinned ? 'Lepas sematan' : 'Sematkan'}</Button>}
+                <Button variant="outline" size="sm" leftIcon={<Copy size={14} />} onClick={handleCopyDraft}>Salin catatan</Button>
+                <Button variant="outline" size="sm" leftIcon={<Archive size={14} />} onClick={() => handleStatusChange(isArchived ? 'active' : 'archived')}>{isArchived ? 'Kembalikan ke aktif' : 'Arsipkan'}</Button>
+                <Button variant="danger" size="sm" leftIcon={<Trash2 size={14} />} onClick={() => handleStatusChange('trashed')}>Hapus</Button>
+              </>}
+              {isTrashed && <><Button variant="outline" leftIcon={<RotateCcw size={14} />} onClick={handleRestore}>Pulihkan</Button>
+                <Button variant="danger" leftIcon={<Trash2 size={14} />} onClick={handlePermanentDelete}>Hapus permanen</Button></>}
             </div>
           </div>
         </ModalBody>
-
         <ModalFooter>
-          <div className="catatan-editor__footer">
-            <div className="catatan-editor__footer-left">
-              {!isTrashed && !isArchived && (
-                <>
-                  <Button variant="ghost" onClick={() => handleStatusChange(isPinned ? 'active' : 'pinned')}>
-                    <Pin size={14} /> {isPinned ? 'Lepas sematan' : 'Sematkan'}
-                  </Button>
-                  <Button variant="ghost" onClick={handleCopyDraft}>
-                    <Copy size={14} /> Salin draft
-                  </Button>
-                </>
-              )}
-            </div>
-            <div className="catatan-editor__footer-right">
-              {!isTrashed && !isArchived && (
-                <>
-                  <Button variant="ghost" onClick={() => handleStatusChange('archived')}>
-                    <Archive size={14} /> Arsipkan
-                  </Button>
-                  <Button variant="danger" onClick={() => handleStatusChange('trashed')}>
-                    <Trash2 size={14} /> Hapus
-                  </Button>
-                </>
-              )}
-              {isArchived && (
-                <Button variant="secondary" onClick={() => handleStatusChange('active')}>
-                  Kembalikan ke aktif
-                </Button>
-              )}
-              {isTrashed && (
-                <>
-                  <Button variant="secondary" onClick={handleRestore}>
-                    <RotateCcw size={14} /> Pulihkan
-                  </Button>
-                  <Button variant="danger" onClick={handlePermanentDelete}>
-                    <Trash2 size={14} /> Hapus permanen
-                  </Button>
-                </>
-              )}
-            </div>
-          </div>
+          <Button variant="cancel" onClick={handleClose}>Tutup</Button>
+          {!isTrashed && <Button variant="primary" icon="save" isLoading={saveStatus === 'saving'} onClick={handleClose}>Simpan &amp; tutup</Button>}
         </ModalFooter>
       </Modal>
 

@@ -326,12 +326,10 @@ export class EkskulService {
     let siswa_id = data.siswa_id ? this.idSiswa(data.siswa_id) ?? undefined : undefined;
     const isMgr = bolehKelola;
 
-    // Siapa pun yang bukan pengelola — termasuk pembina — dipaksa ke `siswa_id`
-    // miliknya sendiri. Untuk seorang guru pencarian itu selalu kosong, jadi
-    // pembina tidak bisa menambahkan peserta ke ekskulnya dari sini, meski
-    // `deleteEkskulSiswa` mengizinkannya mengeluarkan peserta. Ketimpangan itu
-    // dibiarkan: pendaftaran peserta memang lewat tab Pengaturan Data (pengelola)
-    // atau oleh siswa sendiri.
+    // Siapa pun yang bukan pengelola dipaksa ke `siswa_id` miliknya sendiri —
+    // ini jalur siswa mendaftar/membatalkan diri. Pembina menambah peserta
+    // ekskulnya lewat `tambahPesertaEkskul` (POST /ekskul/siswa/tambah), yang
+    // memeriksa kepemilikan ekskul; mengeluarkan tetap lewat `deleteEkskulSiswa`.
     if (!isMgr) {
       const ownId = await this.resolveOwnSiswaId(nisn);
       if (!ownId) {
@@ -428,6 +426,173 @@ export class EkskulService {
       where: { id: idBaris },
     });
     return { ok: true };
+  }
+
+  // --- Kelola peserta oleh pembina ---
+
+  /**
+   * Boleh menambah/mengeluarkan peserta SATU ekskul tertentu: pengelola peserta
+   * (Hak Akses Fitur "Siswa Ekskul", ADMIN melekat) atau pembina aktif ekskul
+   * itu. Pembina tidak pernah bisa menyentuh ekskul lain.
+   */
+  private async assertBolehKelolaPesertaEkskul(nip: string, ekskulId: string, bolehKelola: boolean) {
+    if (bolehKelola) return;
+    if (await this.isPembinaOf(nip, ekskulId)) return;
+    throw new ForbiddenException('Hanya pembina ekskul ini yang dapat mengatur pesertanya.');
+  }
+
+  private kunciNisn(nisn: string | null | undefined): string {
+    return String(nisn ?? '').trim().replace(/^0+/, '');
+  }
+
+  /**
+   * Calon peserta untuk ditambahkan pembina: siswa yang terdaftar di kelas pada
+   * tahun ajaran itu (siswa_kelas), dipetakan ke `master_siswa.id` — kunci yang
+   * dipakai `ekskul_siswa`. Siswa boleh ikut lebih dari satu ekskul, jadi
+   * keikutsertaan di ekskul lain tidak menyaring apa pun.
+   *
+   * Yang dikembalikan sengaja minimal (id, nama, kelas, status) — tidak ada NISN
+   * atau data pribadi lain.
+   */
+  async getKandidatPeserta(
+    nip: string,
+    bolehKelola: boolean,
+    query: { ekskul_id?: string; tahun_ajaran?: string; semester?: string },
+  ) {
+    const ekskulId = this.assertUuid(query.ekskul_id, 'ekskul_id');
+    const ta = this.filterSkalar(query.tahun_ajaran);
+    const sem = this.angkaBulat(query.semester);
+    if (!ta || (sem !== 1 && sem !== 2)) throw new BadRequestException('tahun_ajaran dan semester wajib diisi');
+    await this.assertBolehKelolaPesertaEkskul(nip, ekskulId, bolehKelola);
+
+    const semLabel = sem === 2 ? 'Genap' : 'Ganjil';
+    const rombel = await this.prisma.siswa_kelas.findMany({
+      where: { tahun_ajaran: ta, NOT: { aktif: false } },
+      select: { nisn: true, nama_siswa: true, kelas: true, semester: true },
+    });
+
+    // Satu siswa bisa tercatat di Ganjil & Genap; utamakan semester yang diminta.
+    const perNisn = new Map<string, { nisn: string; nama: string; kelas: string; cocok: boolean }>();
+    for (const r of rombel) {
+      const k = this.kunciNisn(r.nisn);
+      if (!k) continue;
+      const cocok = (r.semester || 'Ganjil') === semLabel;
+      const ada = perNisn.get(k);
+      if (!ada || (cocok && !ada.cocok)) {
+        perNisn.set(k, { nisn: r.nisn, nama: r.nama_siswa, kelas: r.kelas, cocok });
+      }
+    }
+
+    const varian = new Set<string>();
+    for (const [k, v] of perNisn) {
+      varian.add(v.nisn.trim());
+      varian.add(k);
+      varian.add(k.padStart(10, '0'));
+    }
+    const master = varian.size
+      ? await this.prisma.master_siswa.findMany({
+          where: { nisn: { in: [...varian] } },
+          select: { id: true, nisn: true, nama_lengkap: true },
+        })
+      : [];
+    const idPerNisn = new Map(master.map((m) => [this.kunciNisn(m.nisn), m]));
+
+    const peserta = await this.prisma.ekskul_siswa.findMany({
+      where: { ekskul_id: ekskulId, tahun_ajaran: ta, semester: sem },
+      select: { siswa_id: true, aktif: true },
+    });
+    const statusPeserta = new Map(peserta.map((p) => [p.siswa_id.toString(), p.aktif !== false]));
+
+    let tanpaMaster = 0;
+    const siswa: { siswa_id: string; nama: string; kelas: string; peserta: boolean }[] = [];
+    for (const [k, v] of perNisn) {
+      const m = idPerNisn.get(k);
+      if (!m) {
+        tanpaMaster++;
+        continue;
+      }
+      const id = m.id.toString();
+      siswa.push({
+        siswa_id: id,
+        nama: m.nama_lengkap || v.nama,
+        kelas: v.kelas,
+        peserta: statusPeserta.get(id) === true,
+      });
+    }
+    siswa.sort((a, b) =>
+      a.kelas === b.kelas
+        ? a.nama.localeCompare(b.nama, 'id')
+        : a.kelas.localeCompare(b.kelas, 'id', { numeric: true }),
+    );
+    const kelas = [...new Set(siswa.map((s) => s.kelas))];
+
+    return { kelas, siswa, tanpa_master: tanpaMaster };
+  }
+
+  /**
+   * Tambahkan beberapa siswa sekaligus ke satu ekskul. Baris yang sudah ada tapi
+   * nonaktif diaktifkan kembali; yang sudah aktif dibiarkan.
+   */
+  async tambahPesertaEkskul(
+    nip: string,
+    bolehKelola: boolean,
+    body: { ekskul_id?: string; tahun_ajaran?: string; semester?: number | string; siswa_ids?: unknown },
+  ) {
+    const ekskulId = this.assertUuid(body?.ekskul_id, 'ekskul_id');
+    const ta = this.filterSkalar(body?.tahun_ajaran);
+    const sem = this.angkaBulat(body?.semester);
+    if (!ta || (sem !== 1 && sem !== 2)) throw new BadRequestException('tahun_ajaran dan semester wajib diisi');
+    await this.assertBolehKelolaPesertaEkskul(nip, ekskulId, bolehKelola);
+
+    const mentah = Array.isArray(body?.siswa_ids) ? body.siswa_ids : [];
+    if (mentah.length === 0) throw new BadRequestException('Pilih minimal satu siswa.');
+    if (mentah.length > 500) throw new BadRequestException('Maksimal 500 siswa per penyimpanan.');
+    const ids = [...new Set(mentah.map((v) => this.idSiswa(v)).filter((v): v is bigint => v !== null))];
+    if (ids.length === 0) throw new BadRequestException('ID siswa tidak valid.');
+
+    const valid = await this.prisma.master_siswa.findMany({
+      where: { id: { in: ids } },
+      select: { id: true },
+    });
+    const idValid = valid.map((v) => v.id);
+    if (idValid.length === 0) throw new NotFoundException('Data siswa tidak ditemukan.');
+
+    const ada = await this.prisma.ekskul_siswa.findMany({
+      where: { ekskul_id: ekskulId, tahun_ajaran: ta, semester: sem, siswa_id: { in: idValid } },
+      select: { id: true, siswa_id: true, aktif: true },
+    });
+    const sudahAda = new Set(ada.map((r) => r.siswa_id.toString()));
+    const perluAktif = ada.filter((r) => r.aktif === false).map((r) => r.id);
+    const baru = idValid.filter((id) => !sudahAda.has(id.toString()));
+
+    await this.prisma.$transaction(async (tx) => {
+      if (baru.length > 0) {
+        await tx.ekskul_siswa.createMany({
+          data: baru.map((siswa_id) => ({
+            ekskul_id: ekskulId,
+            siswa_id,
+            tahun_ajaran: ta,
+            semester: sem,
+            aktif: true,
+          })),
+          skipDuplicates: true,
+        });
+      }
+      if (perluAktif.length > 0) {
+        await tx.ekskul_siswa.updateMany({
+          where: { id: { in: perluAktif } },
+          data: { aktif: true, updated_at: new Date() },
+        });
+      }
+    });
+
+    return {
+      ok: true,
+      created: baru.length,
+      reactivated: perluAktif.length,
+      sudah_aktif: ada.length - perluAktif.length,
+      tidak_ditemukan: ids.length - idValid.length,
+    };
   }
 
   // --- Ekskul Pembina ---

@@ -25,7 +25,7 @@ export const VALID_COLORS = [
 
 export type ValidColor = (typeof VALID_COLORS)[number];
 
-export const VALID_JENIS = ['catatan', 'draft_agenda'] as const;
+export const VALID_JENIS = ['catatan', 'list'] as const;
 export type ValidJenis = (typeof VALID_JENIS)[number];
 
 export const VALID_STATUS = ['active', 'pinned', 'archived', 'trashed'] as const;
@@ -70,6 +70,7 @@ export function serializeCatatan(item: any) {
   return {
     ...item,
     id: typeof item.id === 'bigint' ? item.id.toString() : item.id,
+    jenis: item.jenis === 'draft_agenda' ? 'catatan' : item.jenis,
     user_id: typeof item.user_id === 'bigint' ? item.user_id.toString() : item.user_id,
     tanggal_agenda: toLocalISODate(item.tanggal_agenda),
     waktu_agenda: toLocalISOTime(item.waktu_agenda),
@@ -134,15 +135,17 @@ export class CatatanPribadiService {
 
   private validateWarna(warna: any): string {
     if (warna === undefined || warna === null || warna === '') return 'default';
+    if (typeof warna === 'string' && /^#[0-9a-f]{6}$/i.test(warna)) return warna.toLowerCase();
     if (typeof warna !== 'string' || !VALID_COLORS.includes(warna as any)) {
       throw new BadRequestException(
-        `Warna "${warna}" tidak valid. Pilihan valid: ${VALID_COLORS.join(', ')}`,
+        `Warna "${warna}" tidak valid. Gunakan kode HEX enam digit atau warna bawaan`,
       );
     }
     return warna;
   }
 
   private validateJenis(jenis: any): ValidJenis {
+    if (jenis === 'draft_agenda') return 'catatan'; // kompatibilitas data/klien lama
     if (jenis === undefined || jenis === null || jenis === '') return 'catatan';
     if (typeof jenis !== 'string' || !VALID_JENIS.includes(jenis as any)) {
       throw new BadRequestException(
@@ -243,7 +246,7 @@ export class CatatanPribadiService {
 
     // Jenis filter
     if (query.jenis && query.jenis.trim()) {
-      where.jenis = query.jenis.trim();
+      where.jenis = query.jenis.trim() === 'catatan' ? { in: ['catatan', 'draft_agenda'] } : query.jenis.trim();
     }
 
     // Label filter
@@ -558,21 +561,21 @@ export class CatatanPribadiService {
     const data = await this.prisma.catatan_pribadi.findMany({
       where: {
         user_id: userId,
-        jenis: 'draft_agenda',
         status: { in: ['active', 'pinned'] },
-        tanggal_agenda: {
-          gte: start,
-          lte: end,
-        },
+        OR: [
+          { tanggal_agenda: { gte: start, lte: end } },
+          { tanggal_agenda: null, created_at: {
+            gte: new Date(start.getTime() - 8 * 60 * 60 * 1000),
+            lte: new Date(end.getTime() - 8 * 60 * 60 * 1000),
+          } },
+        ],
       },
-      orderBy: [
-        { tanggal_agenda: 'asc' },
-        { waktu_agenda: 'asc' },
-        { id: 'asc' },
-      ],
+      orderBy: [{ created_at: 'asc' }, { id: 'asc' }],
     });
-
-    return data.map(serializeCatatan);
+    return data.map(item => ({ ...serializeCatatan(item),
+      tanggal_agenda: toLocalISODate(item.tanggal_agenda)
+        || new Date(item.created_at).toLocaleDateString('en-CA', { timeZone: 'Asia/Makassar' }),
+    }));
   }
 
   /**
@@ -642,7 +645,6 @@ export class CatatanPribadiService {
           status: { not: 'trashed' },
           OR: [
             {
-              jenis: 'draft_agenda',
               tanggal_agenda: { gte: start, lte: end },
             },
             {

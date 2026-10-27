@@ -6,6 +6,7 @@ import Swal from 'sweetalert2'
 import DatePicker from '@/components/ui/DatePicker'
 import { exportToExcel } from '@/lib/excel-utils'
 import ImportModal from '@/components/ui/ImportModal'
+import SinkronLiburNasionalModal from '../components/SinkronLiburNasionalModal'
 import Select, { components } from 'react-select'
 
 import { useModalBlur } from '@/components/ModalBlurProvider'
@@ -125,6 +126,7 @@ export default function LiburTab({
   const [searchTerm, setSearchTerm] = useState('')
   const [showModal, setShowModal] = useState(false)
   const [showImportModal, setShowImportModal] = useState(false)
+  const [showSinkronModal, setShowSinkronModal] = useState(false)
   // Delete Modal State
   const [showDeleteModal, setShowDeleteModal] = useState(false)
 
@@ -140,7 +142,7 @@ export default function LiburTab({
   const { openModal, closeModal } = useModalBlur()
 
   useEffect(() => {
-    if (showModal || showImportModal || showDeleteModal || showViewModal) {
+    if (showModal || showImportModal || showSinkronModal || showDeleteModal || showViewModal) {
       openModal()
     } else {
       closeModal()
@@ -148,7 +150,7 @@ export default function LiburTab({
     return () => {
       closeModal()
     }
-  }, [showModal, showImportModal, showDeleteModal, showViewModal, openModal, closeModal])
+  }, [showModal, showImportModal, showSinkronModal, showDeleteModal, showViewModal, openModal, closeModal])
 
   const [saving, setSaving] = useState(false)
   const [academicYears, setAcademicYears] = useState<string[]>([])
@@ -537,6 +539,17 @@ export default function LiburTab({
                     type="button"
                     role="menuitem"
                     className="sk__menuItem"
+                    onClick={() => { setShowActionMenu(false); setShowSinkronModal(true) }}
+                  >
+                    <span className="sk__menuIcon"><i className="bi bi-cloud-download-fill" style={{ color: '#16a34a' }} /></span>
+                    <span className="sk__menuLabel">Libur Nasional</span>
+                  </button>
+                )}
+                {canManage && (
+                  <button
+                    type="button"
+                    role="menuitem"
+                    className="sk__menuItem"
                     onClick={() => { setShowActionMenu(false); setShowImportModal(true) }}
                   >
                     <span className="sk__menuIcon"><i className="bi bi-file-earmark-excel-fill" style={{ color: '#f97316' }} /></span>
@@ -556,6 +569,17 @@ export default function LiburTab({
             )}
           </div>
 
+          {canManage && (
+            <Button
+              variant="outline"
+              onClick={() => setShowSinkronModal(true)}
+              icon="cloud-download"
+              className="sk__btnDesktopOnly"
+              title="Ambil libur nasional dari Google Calendar"
+            >
+              Libur Nasional
+            </Button>
+          )}
           {canManage && (
             <Button
               variant="outline"
@@ -893,6 +917,15 @@ export default function LiburTab({
           </div>
         </div>,
         document.body
+      )}
+
+      {/* ===== Sinkron Libur Nasional (Google Calendar) ===== */}
+      {canManage && (
+        <SinkronLiburNasionalModal
+          open={showSinkronModal}
+          onClose={() => setShowSinkronModal(false)}
+          onSaved={fetchData}
+        />
       )}
 
       {/* ===== Modal Hapus Libur ===== */}

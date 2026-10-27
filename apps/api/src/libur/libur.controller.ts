@@ -77,6 +77,31 @@ export class LiburController {
     return { success: true, data: { bolehKelola } };
   }
 
+  /**
+   * Pratinjau libur nasional dari kalender publik Google untuk satu tahun.
+   * Hanya untuk pengelola libur: hasilnya dipakai untuk memilih apa yang
+   * disimpan lewat `POST sinkron-nasional`.
+   */
+  @Get('nasional')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Pratinjau libur nasional dari Google Calendar' })
+  async getLiburNasional(
+    @Request() req: any,
+    @Query('tahun') tahun?: string,
+    @Query('segarkan') segarkan?: string,
+  ) {
+    await this.assertCanWrite(req);
+    return this.liburService.getLiburNasional({ tahun, segarkan });
+  }
+
+  @Post('sinkron-nasional')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Simpan libur nasional terpilih (tanggal yang sudah ada dilewati)' })
+  async sinkronNasional(@Request() req: any, @Body() body: any) {
+    await this.assertCanWrite(req);
+    return this.liburService.sinkronNasional(body);
+  }
+
   @Get()
   @ApiOperation({ summary: 'Daftar hari libur madrasah' })
   async getLibur(
