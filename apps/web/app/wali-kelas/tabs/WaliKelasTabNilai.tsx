@@ -143,6 +143,7 @@ export default function WaliKelasTabNilai({ user }: { user?: any }) {
     const [availableSemesters, setAvailableSemesters] = useState<string[]>([]);
     const [kkmMap, setKkmMap] = useState<Record<string, number>>({});
     const [searchQuery, setSearchQuery] = useState('');
+    const [gradeSearch, setGradeSearch] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
     const nilaiRequest = useRef(0);
 
@@ -274,6 +275,7 @@ export default function WaliKelasTabNilai({ user }: { user?: any }) {
     }, [ta.selected]);
 
     const handleSelectSiswa = (s: SiswaKelas) => {
+        setGradeSearch('');
         setSelectedNisn(s.nisn);
         setSelectedSumber('all');
         setSelectedMapel('');
@@ -282,6 +284,7 @@ export default function WaliKelasTabNilai({ user }: { user?: any }) {
     };
 
     const handleBack = () => {
+        setGradeSearch('');
         nilaiRequest.current++;
         setView('list');
         setSelectedNisn('');
@@ -338,6 +341,15 @@ export default function WaliKelasTabNilai({ user }: { user?: any }) {
         });
     }, [nilaiData, selectedTahunAjaran, selectedSemester, selectedSumber]);
 
+    const searchTerms = useMemo(() => gradeSearch.trim().toLowerCase().split(/\s+/).filter(Boolean), [gradeSearch]);
+    const searchedItems = useMemo(() => currentItems.filter(item => {
+        const text = [item.mapel, item.nama_guru, item.materi_tp, item.topik,
+            item.jenis, item.tagihan, item.catatan,
+            item.score_type === 'classical' ? 'Klasikal' : item.score_type?.replace(/_/g, ' ')]
+            .filter(Boolean).join(' ').toLowerCase();
+        return searchTerms.every(term => text.includes(term));
+    }), [currentItems, searchTerms]);
+
     const currentApresiasi = useMemo(() => {
         const parsed = parseInt(selectedSemester);
         const semNum = isNaN(parsed) ? null : parsed;
@@ -346,31 +358,32 @@ export default function WaliKelasTabNilai({ user }: { user?: any }) {
             if (selectedTahunAjaran && a.tahun_ajaran && a.tahun_ajaran !== selectedTahunAjaran) return false;
             if (semNum !== null && a.semester !== null && a.semester !== semNum) return false;
             if (selectedMapel && a.mapel && a.mapel !== selectedMapel) return false;
-            return true;
+            const text = [a.mapel, a.nama_guru, a.judul, a.topik, a.catatan].filter(Boolean).join(' ').toLowerCase();
+            return searchTerms.every(term => text.includes(term));
         });
-    }, [apresiasi, selectedTahunAjaran, selectedSemester, selectedMapel, selectedSumber]);
+    }, [apresiasi, selectedTahunAjaran, selectedSemester, selectedMapel, selectedSumber, searchTerms]);
 
     const groupedByMapel = useMemo(() => {
         const grouped: Record<string, NilaiItem[]> = {};
-        currentItems.forEach(item => {
+        searchedItems.forEach(item => {
             const key = item.mapel || 'Lainnya';
             if (!grouped[key]) grouped[key] = [];
             grouped[key].push(item);
         });
         return grouped;
-    }, [currentItems]);
+    }, [searchedItems]);
 
-    const availableMapel = useMemo(() => Object.keys(groupedByMapel).sort(), [groupedByMapel]);
+    const availableMapel = useMemo(() => [...new Set(currentItems.map(item => item.mapel || 'Lainnya'))].sort(), [currentItems]);
 
     const displayedMapelList = useMemo(() => {
-        if (!selectedMapel) return availableMapel;
-        return availableMapel.filter(m => m === selectedMapel);
-    }, [availableMapel, selectedMapel]);
+        const mapel = Object.keys(groupedByMapel).sort();
+        return selectedMapel ? mapel.filter(m => m === selectedMapel) : mapel;
+    }, [groupedByMapel, selectedMapel]);
 
     const displayedItems = useMemo(() => {
-        if (!selectedMapel) return currentItems;
-        return currentItems.filter(i => (i.mapel || 'Lainnya') === selectedMapel);
-    }, [currentItems, selectedMapel]);
+        if (!selectedMapel) return searchedItems;
+        return searchedItems.filter(i => (i.mapel || 'Lainnya') === selectedMapel);
+    }, [searchedItems, selectedMapel]);
 
     useEffect(() => {
         if (selectedMapel && !availableMapel.includes(selectedMapel)) {
@@ -696,6 +709,12 @@ export default function WaliKelasTabNilai({ user }: { user?: any }) {
                     <div className="nilai-page__content">
                         {/* Filters Toolbar */}
                         <FilterToolbar className="nilai-page__filter-toolbar" actionsInline>
+                            <FilterSearch
+                                label="Cari nilai"
+                                value={gradeSearch}
+                                onChange={setGradeSearch}
+                                placeholder="Cari ujian, mapel, guru, atau topik..."
+                            />
                             <FilterSelect
                                 label="Sumber Nilai"
                                 icon="funnel"
@@ -779,7 +798,7 @@ export default function WaliKelasTabNilai({ user }: { user?: any }) {
                         {/* Grades */}
                         {displayedGradeGroups.length === 0 ? (
                             <div className="nilai-page__card nilai-page__empty-state" style={{ padding: '48px', textAlign: 'center' }}>
-                                <h3 className="nilai-page__empty-title">Belum ada data nilai pada periode ini</h3>
+                                <h3 className="nilai-page__empty-title">{searchTerms.length ? 'Tidak ada nilai yang sesuai dengan pencarian' : 'Belum ada data nilai pada periode ini'}</h3>
                             </div>
                         ) : (
                             <div className="nilai-page__mapel-list">
