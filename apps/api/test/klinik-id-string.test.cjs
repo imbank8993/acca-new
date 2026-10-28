@@ -129,3 +129,77 @@ test('register: siswa yang mengirim id-nya sendiri dianggap mendaftar diri sendi
     assert.equal(r.ok, true);
     assert.deepEqual(tabel.klinik_peserta.map(p => String(p.siswa_id)), ['1']);
 });
+
+for (const siswa of [false, true]) {
+    for (const total of [12, 13]) test(`update_slot: ${siswa ? 'siswa termasuk pengaju' : 'guru'} total ${total}`, async () => {
+        const ids = Array.from({ length: total }, (_, i) => 100 + i);
+        const { db, tabel, log } = buatDb({
+            users: [user(9), ...ids.map(user)], siswa_kelas: rombel(ids),
+            klinik_slots: [{ id: 'limit', status: 'pending', guru_id: '9', initiator_type: siswa ? 'SISWA' : 'GURU', initiator_siswa_id: siswa ? '100' : null, max_siswa: 12 }],
+            klinik_peserta: siswa ? [{ id: 'pengaju', slot_id: 'limit', siswa_id: '100', status: 'registered' }] : [],
+        });
+        const req = { user: { authId: siswa ? 'auth100' : 'auth9', roles: [siswa ? 'SISWA' : 'GURU'], manage: true } };
+        const run = mod.exports.handlePost(req, 'update_slot', { slot_id: 'limit', payload: { ...jadwal, max_siswa: 12, anggota: ids } }, db);
+        if (total === 13) {
+            await assert.rejects(run, e => /12|kuota/i.test(e.getResponse?.().error || e.message));
+            assert.equal(log.delete.length, 0);
+            assert.equal(log.insert.length, 0);
+        } else {
+            assert.equal((await run).ok, true);
+            assert.equal(tabel.klinik_peserta.length, 12);
+            assert.equal(tabel.klinik_slots[0].max_siswa, 12);
+        }
+    });
+}
+
+test('create_slot menolak kuota guru di atas 12 dan kelompok siswa berjumlah 13', async () => {
+    for (const siswa of [false, true]) {
+        const { db, log } = buatDb({ users: [user(9)] });
+        await assert.rejects(mod.exports.handlePost({ user: { authId: 'auth9', roles: [siswa ? 'SISWA' : 'GURU'] } }, 'create_slot', {
+            ...jadwal, jam_selesai: '09:15', max_siswa: 13, anggota: siswa ? Array.from({ length: 12 }, (_, i) => 100 + i) : [],
+        }, db), e => /12/.test(e.getResponse?.().error || e.message));
+        assert.equal(log.insert.length, 0);
+    }
+});
+
+for (const action of ['register', 'join_request']) test(`${action}: sesi lama berkuota 20 tetap menolak peserta ke-13`, async () => {
+    const { db, log } = buatDb({
+        users: [user(1)],
+        klinik_slots: [{ id: 'old', status: action === 'register' ? 'open' : 'pending', initiator_type: 'SISWA', max_siswa: 20 }],
+        klinik_peserta: Array.from({ length: 12 }, (_, i) => ({ id: String(i), siswa_id: String(100 + i), slot_id: 'old' })),
+    });
+    await assert.rejects(mod.exports.handlePost({ user: { authId: 'auth1', roles: ['SISWA'] } }, action, { slot_id: 'old' }, db), e => /12/.test(e.getResponse?.().error || e.message));
+    assert.equal(log.insert.length, 0);
+});
+
+test('update_slot menghitung gabungan peserta tugasan dan pendaftar mandiri sebelum menulis', async () => {
+    const ids = Array.from({ length: 13 }, (_, i) => 100 + i);
+    const { db, log, tabel } = buatDb({
+        users: [user(9), ...ids.map(user)], siswa_kelas: rombel(ids),
+        klinik_slots: [{ id: 'union', guru_id: '9', initiator_type: 'GURU', status: 'pending', max_siswa: 12 }],
+        klinik_peserta: ids.slice(0, 11).map(id => ({ id: 'p' + id, slot_id: 'union', siswa_id: String(id), status: 'registered' })),
+    });
+    await assert.rejects(mod.exports.handlePost({ user: { authId: 'auth9', roles: ['GURU'], manage: true } }, 'update_slot', {
+        slot_id: 'union', payload: { ...jadwal, max_siswa: 12, anggota: [111, 112] },
+    }, db), e => /12/.test(e.getResponse?.().error || e.message));
+    assert.equal(tabel.klinik_peserta.length, 11);
+    assert.equal(log.insert.length, 0);
+    assert.equal(log.delete.length, 0);
+});
+
+test('sesi guru lama dapat dikurangi dari 13 menjadi 12 tanpa menghapus peserta yang dipertahankan', async () => {
+    const ids = Array.from({ length: 13 }, (_, i) => 100 + i);
+    const { db, tabel, log } = buatDb({
+        users: [user(9), ...ids.map(user)], siswa_kelas: rombel(ids),
+        klinik_slots: [{ id: 'legacy', guru_id: '9', initiator_type: 'GURU', status: 'pending', max_siswa: 20 }],
+        klinik_peserta: ids.map(id => ({ id: 'p' + id, slot_id: 'legacy', siswa_id: String(id), status: 'ditugaskan' })),
+    });
+    const r = await mod.exports.handlePost({ user: { authId: 'auth9', roles: ['GURU'], manage: true } }, 'update_slot', {
+        slot_id: 'legacy', payload: { ...jadwal, max_siswa: 12, anggota: ids.slice(0, 12) },
+    }, db);
+    assert.equal(r.ok, true);
+    assert.equal(tabel.klinik_peserta.length, 12);
+    assert.equal(tabel.klinik_slots[0].max_siswa, 12);
+    assert.deepEqual(log.delete.filter(d => d[0] === 'klinik_peserta'), [['klinik_peserta', ['112']]]);
+    assert.equal(log.insert.length, 0);
+});

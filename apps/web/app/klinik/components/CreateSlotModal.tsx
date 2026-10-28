@@ -232,11 +232,13 @@ export default function CreateSlotModal({
                     <input
                       type="number"
                       min={2}
+                      max={12}
+                      step={1}
                       value={form.max_siswa || ''}
                       onChange={(e) =>
                         setForm({
                           ...form,
-                          max_siswa: (e.target.value === '' ? 0 : parseInt(e.target.value, 10)) || 0,
+                          max_siswa: Math.min(12, (e.target.value === '' ? 0 : parseInt(e.target.value, 10)) || 0),
                         })
                       }
                       onBlur={() => {
@@ -245,6 +247,7 @@ export default function CreateSlotModal({
                         }
                       }}
                     />
+                    <p className="form-hint">Maksimal 12 siswa per sesi.</p>
                   </div>
                 )}
                 <div className="form-group">
@@ -431,7 +434,7 @@ export default function CreateSlotModal({
                 {isPengajuanSiswa ? 'Anggota Kelompok' : 'Pilih Peserta Siswa'}
                 {isPengajuanSiswa ? (
                   <span className="form-section__count">
-                    {anggota.length + 1} peserta
+                    {anggota.length + 1} / 12 peserta
                   </span>
                 ) : (
                   <span
@@ -449,7 +452,7 @@ export default function CreateSlotModal({
               <div className="form-group">
                 <p className="form-hint">
                   {isPengajuanSiswa
-                    ? `Anda otomatis menjadi peserta. Pilih minimal 1 teman${
+                    ? `Anda otomatis menjadi peserta. Pilih 1–11 teman (maksimal 12 peserta termasuk Anda)${
                         temanTingkat
                           ? ` dari angkatan kelas ${temanTingkat}`
                           : ' seangkatan'

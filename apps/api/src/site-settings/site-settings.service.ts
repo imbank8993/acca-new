@@ -1,6 +1,23 @@
 import { Injectable, NotFoundException, UnauthorizedException, InternalServerErrorException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
+/** Validate before writing so an invalid policy cannot lock the admin editor. */
+export function normalizeFeatureAccessSetting(key: string, value: unknown): string {
+  if (!key.endsWith('_access_config')) return String(value);
+  let config: any = value;
+  if (typeof config === 'string') {
+    try { config = JSON.parse(config); } catch { throw new BadRequestException('Format hak akses harus berupa JSON yang valid'); }
+  }
+  if (!config || typeof config !== 'object' || Array.isArray(config)
+    || !Array.isArray(config.allowedRoles) || !Array.isArray(config.allowedUsers)
+    || config.allowedRoles.some((r: unknown) => typeof r !== 'string' || !r.trim())
+    || config.allowedUsers.some((u: any) => !u || typeof u !== 'object' || Array.isArray(u)
+      || ![u.id, u.nip].some(v => (typeof v === 'string' || typeof v === 'number') && String(v).trim()))) {
+    throw new BadRequestException('Hak akses harus berisi daftar role dan pengguna yang valid');
+  }
+  return JSON.stringify({ ...config, allowedRoles: [...new Set(config.allowedRoles.map((r: string) => r.trim().toUpperCase()))] });
+}
+
 @Injectable()
 export class SiteSettingsService {
   constructor(private readonly prisma: PrismaService) {}
@@ -47,7 +64,11 @@ export class SiteSettingsService {
   }
 
   async updateSetting(key: string, body: any) {
-    const { value, message, label, description } = body;
+    if (key.endsWith('_access_config') && body.value === undefined) {
+      throw new BadRequestException('Nilai konfigurasi hak akses wajib diisi');
+    }
+    const { message, label, description } = body;
+    const value = body.value === undefined ? undefined : normalizeFeatureAccessSetting(key, body.value);
 
     const existing = await this.prisma.site_settings.findUnique({
       where: { key },
@@ -84,6 +105,8 @@ export class SiteSettingsService {
   }
 
   async updateSettingsBatch(items: Array<{ key: string; value: unknown }>) {
+    items = items.map(item => item.key.endsWith('_access_config')
+      ? { ...item, value: normalizeFeatureAccessSetting(item.key, item.value) } : item);
     return this.prisma.$transaction(async (tx) => {
       const results = [];
       for (const { key, value } of items) {

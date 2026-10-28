@@ -136,6 +136,7 @@ function getLaporan(slot: KlinikSlot): any {
 
 /** Peserta minimal supaya sesi klinik sah dilaksanakan — sinkron dgn PESERTA_MINIMAL di API. */
 const PESERTA_MINIMAL = 2;
+const PESERTA_MAKSIMAL_PENGAJUAN = 12;
 
 /**
  * Pengajuan yang belum diputuskan final. Pengajuan kelompok siswa singgah dulu
@@ -799,10 +800,11 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
     // Pemeriksaan kuota sengaja di luar updater: fungsi updater harus murni,
     // dan React boleh menjalankannya lebih dari sekali (StrictMode) — dialognya
     // akan muncul dobel kalau dipanggil dari dalam sana.
-    if (!isPengajuanSiswa && anggota.length >= form.max_siswa) {
+    const batasPilihan = isPengajuanSiswa ? PESERTA_MAKSIMAL_PENGAJUAN - 1 : Math.min(form.max_siswa, PESERTA_MAKSIMAL_PENGAJUAN);
+    if (anggota.length >= batasPilihan) {
       Swal.fire(
         'Kuota Terlampaui',
-        `Peserta terpilih tidak boleh melebihi Kuota Siswa (${form.max_siswa}). Naikkan kuota atau hapus peserta yang sudah dipilih.`,
+        isPengajuanSiswa ? 'Maksimal 11 teman dan Anda sebagai pengaju (12 peserta).' : `Maksimal ${batasPilihan} peserta terpilih. Batas kuota klinik adalah 12 siswa.`,
         'warning'
       );
       return;
@@ -1007,6 +1009,11 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
         `Durasi pelaksanaan sesi klinik (${durasiSlot > 0 ? durasiSlot + ' menit' : 'invalid'}) kurang dari batas minimal 75 menit. Mohon atur kembali jam mulai dan jam selesai.`,
         'warning'
       );
+      return;
+    }
+    if ((isPengajuanSiswa ? anggota.length + 1 : anggota.length) > PESERTA_MAKSIMAL_PENGAJUAN
+      || (!isPengajuanSiswa && (!Number.isInteger(form.max_siswa) || form.max_siswa > PESERTA_MAKSIMAL_PENGAJUAN))) {
+      Swal.fire('Kuota Terlampaui', 'Maksimal 12 peserta klinik, termasuk siswa pengaju.', 'warning');
       return;
     }
     if (!isPengajuanSiswa && form.max_siswa < 2) {

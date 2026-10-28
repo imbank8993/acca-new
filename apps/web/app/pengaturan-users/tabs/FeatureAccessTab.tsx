@@ -510,7 +510,7 @@ function parseKonfig(nilai: unknown): AccessConfig {
     return {
         capabilityManaged: config.capabilityManaged === true,
         allowedRoles: Array.isArray(config.allowedRoles)
-            ? config.allowedRoles.filter((role): role is string => typeof role === 'string')
+            ? config.allowedRoles.filter((role): role is string => typeof role === 'string').map(role => role.trim().toUpperCase()).filter(Boolean)
             : [...ROLE_ADMIN],
         allowedUsers: Array.isArray(config.allowedUsers)
             ? config.allowedUsers.filter((user): user is UserAccessItem =>
@@ -537,7 +537,9 @@ export default function FeatureAccessTab({ onDirtyChange }: { onDirtyChange?: (d
 
     /** Search & filter state */
     const [search, setSearch] = useState('');
-    const [filterGrup, setFilterGrup] = useState<string | null>(null);
+    const [filterGrup, setFilterGrup] = useState<string | null>(MODUL[0].grup);
+    const [editingKey, setEditingKey] = useState<string | null>(null);
+    const [dirtyOnly, setDirtyOnly] = useState(false);
     const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
 
     const muatSemua = useCallback(async () => {
@@ -600,7 +602,13 @@ export default function FeatureAccessTab({ onDirtyChange }: { onDirtyChange?: (d
                     });
                     const capRoles: string[] = Array.isArray(capJson?.roles) ? capJson.roles : [];
                     const managed = ssCfg.capabilityManaged === true;
-                    const mergedUsers = [...new Map([...(managed ? [] : ssCfg.allowedUsers), ...capUsers].map(u => [String(u.id), u])).values()].filter(u => !revokedUsers.some(r => r.id === String(u.id)));
+                    const legacyUsers = managed ? [] : ssCfg.allowedUsers.map(u => {
+                        if (/^\d+$/.test(String(u.id))) return u;
+                        const found = u.nip ? usersList.find(candidate => String(candidate.nip || candidate.nisn || '') === String(u.nip)) : undefined;
+                        if (!found) throw new Error('Penunjukan lama belum dapat dicocokkan ke akun pengguna');
+                        return { ...u, id: String(found.id || found.user_id) };
+                    });
+                    const mergedUsers = [...new Map([...legacyUsers, ...capUsers].map(u => [String(u.id), u])).values()].filter(u => !revokedUsers.some(r => r.id === String(u.id)));
                     hasil[kunci] = {
                         allowedRoles: [...new Set([...(managed ? ROLE_ADMIN : ssCfg.allowedRoles), ...capRoles])],
                         allowedUsers: mergedUsers,
@@ -746,7 +754,7 @@ export default function FeatureAccessTab({ onDirtyChange }: { onDirtyChange?: (d
                 }),
             });
             const json = await res.json();
-            if (!json.ok) throw new Error(json.message || json.error || 'Gagal menyimpan pengaturan');
+            if (!res.ok || !json.ok) throw new Error(json.message || json.error || 'Gagal menyimpan pengaturan');
 
             const saved = { ...currentCfg, ...payloadValue, legacyPending: false, capabilityManaged: !!m.isCapability };
             setKonfig(prev => ({ ...prev, [m.settingKey]: saved }));
@@ -764,6 +772,7 @@ export default function FeatureAccessTab({ onDirtyChange }: { onDirtyChange?: (d
         const map = new Map<string, ModulItem[]>();
         const q = search.toLowerCase().trim();
         for (const m of MODUL) {
+            if (dirtyOnly && savedSnapshots[m.settingKey] === configSnapshot(konfig[m.settingKey] ?? KONFIG_AWAL)) continue;
             // Filter per grup
             if (filterGrup && m.grup !== filterGrup) continue;
             // Filter per search
@@ -781,7 +790,7 @@ export default function FeatureAccessTab({ onDirtyChange }: { onDirtyChange?: (d
             if (!GRUP_ORDER.includes(g)) sorted.push([g, items]);
         }
         return sorted;
-    }, [search, filterGrup]);
+    }, [search, filterGrup, dirtyOnly, savedSnapshots, konfig]);
 
     /** Daftar semua grup unik (untuk filter chips). */
     const allGroups = useMemo(() => {
@@ -823,8 +832,8 @@ export default function FeatureAccessTab({ onDirtyChange }: { onDirtyChange?: (d
                 <div className="fa-title-group">
                     <i className="bi bi-sliders2"></i>
                     <div>
-                        <h2>Hak Akses Fitur &amp; Pengelola Modul</h2>
-                        <p className="fa-subtitle">{totalFiltered} modul dari {MODUL.length} total</p>
+                        <h2>Hak Akses Fitur</h2>
+                        <p className="fa-subtitle">Pilih halaman, lalu atur role atau pengguna yang boleh mengelola fiturnya.</p>
                     </div>
                 </div>
             </div>
@@ -846,6 +855,12 @@ export default function FeatureAccessTab({ onDirtyChange }: { onDirtyChange?: (d
                     ]}
                 />
             </FilterToolbar>
+
+            <div className="fa-guide" role="status">
+                <span>{totalFiltered} fitur ditampilkan · {Object.entries(konfig).filter(([key, cfg]) => savedSnapshots[key] !== configSnapshot(cfg)).length} perubahan belum disimpan.</span>
+                <button type="button" className="fa-edit-btn" aria-pressed={dirtyOnly} onClick={() => { setDirtyOnly(!dirtyOnly); if (!dirtyOnly) setFilterGrup(null); }}>{dirtyOnly ? 'Tampilkan semua' : 'Lihat perubahan'}</button>
+            </div>
+            <p className="fa-note">ADMIN selalu memiliki akses penuh. Hak akses fitur mengatur tindakan di dalam halaman; akses membuka halaman tetap diatur pada tab Akses Halaman.</p>
 
             {/* ──── GROUPED MODULES ──── */}
             {groupedModuls.length === 0 && (
@@ -882,6 +897,8 @@ export default function FeatureAccessTab({ onDirtyChange }: { onDirtyChange?: (d
                                     const filteredRoleOptions = roleOptions.filter(opt => !(m.peranBawaan || []).includes(String(opt.value).toUpperCase()));
                                     const userTerpilih = cfg.allowedUsers.map(u => String(u.id));
                                     const sedangSimpan = savingKey === m.settingKey;
+                                    const berubah = savedSnapshots[m.settingKey] !== configSnapshot(cfg);
+                                    const sedangEdit = editingKey === m.settingKey;
                                     const gagal = gagalMuat.has(m.settingKey);
                                     const sourceKey = ['jurnal_input_access_config', 'jurnal_review_banding_access_config', 'jurnal_generate_access_config'].includes(m.settingKey) ? 'jurnal_access_config' : ['informasi_akademik_access_config', 'informasi_keasramaan_access_config', 'informasi_kesiswaan_access_config', 'informasi_umum_access_config'].includes(m.settingKey) ? 'informasi_access_config' : null;
                                     const sourceCfg = sourceKey ? konfig[sourceKey] : null;
@@ -892,11 +909,15 @@ export default function FeatureAccessTab({ onDirtyChange }: { onDirtyChange?: (d
                                             <div className="fa-card-head">
                                                 <div className="fa-head-info">
                                                     <div>
-                                                        <h3>{m.judul}</h3>
+                                                        <h3>{m.judul}{berubah && <span className="fa-dirty-badge">Belum disimpan</span>}</h3>
+                                                        <p className="fa-card-description">{m.keterangan}</p>
+                                                        <p className="fa-note">{roleTerpilih.length} role tambahan · {userTerpilih.length} pengguna khusus{cfg.revokedUsers?.length ? ` · ${cfg.revokedUsers.length} pengecualian` : ''}{gagal ? ' · Gagal dimuat' : ''}</p>
                                                     </div>
                                                 </div>
+                                                <button type="button" className="fa-edit-btn" disabled={!!savingKey} aria-expanded={sedangEdit} onClick={() => setEditingKey(sedangEdit ? null : m.settingKey)}>{sedangEdit ? 'Tutup' : 'Atur akses'}</button>
                                             </div>
 
+                                            {sedangEdit && <>
                                             <div className="fa-card-body">
                                                 {gagal && <p role="alert" className="fa-load-error">Konfigurasi kartu ini belum berhasil dimuat. Gunakan Coba lagi sebelum mengubah izin.</p>}
                                                 {cfg.legacyPending && <p className="fa-load-error">Penunjukan lama turut dimuat. Simpan kartu ini untuk menyelaraskan penunjukan tersebut dengan izin server.</p>}
@@ -911,7 +932,7 @@ export default function FeatureAccessTab({ onDirtyChange }: { onDirtyChange?: (d
                                                 <div className="fa-fields-row">
                                                     <div className="fa-inline-field">
                                                         <SearchableSelect
-                                                            label="Role Pengelola"
+                                                            label="Tambahkan akses berdasarkan role"
                                                             options={filteredRoleOptions}
                                                             value={roleTerpilih}
                                                             onChange={v => ubahRole(m, v)}
@@ -924,7 +945,7 @@ export default function FeatureAccessTab({ onDirtyChange }: { onDirtyChange?: (d
 
                                                     <div className="fa-inline-field">
                                                         <SearchableSelect
-                                                            label="Pengguna Khusus"
+                                                            label="Atau pilih pengguna tertentu"
                                                             options={userOptions}
                                                             value={userTerpilih}
                                                             onChange={v => ubahUser(m.settingKey, v)}
@@ -944,7 +965,7 @@ export default function FeatureAccessTab({ onDirtyChange }: { onDirtyChange?: (d
                                                     type="button"
                                                     className="fa-btn-submit"
                                                     onClick={() => simpan(m)}
-                                                    disabled={!!savingKey || gagal}
+                                                    disabled={!!savingKey || gagal || (!berubah && !cfg.legacyPending)}
                                                 >
                                                     {sedangSimpan ? (
                                                         <>
@@ -959,6 +980,7 @@ export default function FeatureAccessTab({ onDirtyChange }: { onDirtyChange?: (d
                                                     )}
                                                 </button>
                                             </div>
+                                            </>}
                                         </div>
                                     );
                                 })}
@@ -969,6 +991,13 @@ export default function FeatureAccessTab({ onDirtyChange }: { onDirtyChange?: (d
             })}
 
             <style jsx>{`
+                .fa-guide { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; color: var(--n-muted); font-size: .85rem; }
+                .fa-edit-btn { border: 1px solid var(--n-border); border-radius: 10px; padding: 8px 12px; background: var(--n-card); color: var(--n-primary); font: inherit; cursor: pointer; flex-shrink: 0; }
+                .fa-edit-btn:disabled { opacity: .5; cursor: not-allowed; }
+                .fa-card-description { margin: 6px 0; color: var(--n-muted); font-size: .82rem; line-height: 1.5; }
+                .fa-dirty-badge { display: inline-block; margin-left: 8px; color: var(--n-primary); font-size: .72rem; font-weight: 500; }
+                @media (max-width: 600px) { .fa-card-head { flex-direction: column; gap: 10px; } }
+
                 .fa-clean-page {
                     display: flex;
                     flex-direction: column;
@@ -1098,7 +1127,7 @@ export default function FeatureAccessTab({ onDirtyChange }: { onDirtyChange?: (d
                     display: flex;
                     align-items: flex-start;
                     justify-content: space-between;
-                    padding: 16px 20px 0;
+                    padding: 16px 20px;
                 }
                 .fa-head-info {
                     display: flex;

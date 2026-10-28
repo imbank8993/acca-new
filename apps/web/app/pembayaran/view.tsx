@@ -466,7 +466,13 @@ export default function PembayaranPage({ user: propUser }: PembayaranPageProps =
                 (s.guru?.nip || '').toLowerCase().includes(q)
             );
         }
-        return list;
+        return [...list].sort((a, b) => {
+            const namaA = (a.nama_guru || a.guru?.nama || '').trim().replace(/\s+/g, ' ');
+            const namaB = (b.nama_guru || b.guru?.nama || '').trim().replace(/\s+/g, ' ');
+            return namaA.localeCompare(namaB, 'id', { sensitivity: 'base' })
+                || b.tanggal.localeCompare(a.tanggal)
+                || a.id.localeCompare(b.id);
+        });
     }, [klinikSlots, klinikFilterBayar, klinikSearchQuery]);
 
     const klinikStats = useMemo(() => ({

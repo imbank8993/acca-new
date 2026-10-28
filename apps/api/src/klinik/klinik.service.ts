@@ -107,7 +107,8 @@ const isAdminUser = (user: any) =>
  * disamakan persis dengan jumlah anggota awal, slot lahir dalam keadaan penuh
  * dan tombol Gabung tidak akan pernah bisa dipakai.
  */
-const KUOTA_KELOMPOK_SISWA = 10;
+const PESERTA_MAKSIMAL_PENGAJUAN = 12;
+const KUOTA_KELOMPOK_SISWA = PESERTA_MAKSIMAL_PENGAJUAN;
 
 /** Kuota default sesi yang dibuka guru (dipakai kalau form tidak mengirimnya). */
 const KUOTA_GURU_DEFAULT = 5;
@@ -868,6 +869,13 @@ export async function handleGet(req: any, action: string, searchParams: URLSearc
         // Identitas siswa pengaju utk pengajuan kelompok — dibutuhkan halaman
         // approval supaya reviewer tahu siapa yang mengajukan, bukan cuma gurunya.
         if (data && Array.isArray(data)) {
+            // Tampilkan batas efektif untuk sesi lama yang masih menerima peserta.
+            // Kuota historis sesi selesai tetap seperti saat pelaksanaannya.
+            for (const slot of data as any[]) {
+                if (slot.initiator_type !== 'ADMIN' && !['finished', 'paid', 'cancelled'].includes(slot.status)) {
+                    slot.max_siswa = Math.min(slot.max_siswa, PESERTA_MAKSIMAL_PENGAJUAN);
+                }
+            }
             const pengajuIds = [...new Set(
                 data.filter((s: any) => s.initiator_type === 'SISWA' && s.initiator_siswa_id)
                     .map((s: any) => s.initiator_siswa_id)
@@ -1004,12 +1012,16 @@ export async function handlePost(req: any, action: string, payload: any, db: Pri
             const anggotaIds: string[] = daftarIdTeks(payload.anggota)
                 .filter(v => !samaId(v, userRecord.id));
 
-            // Kelompok siswa: pengaju tidak mengisi kuota. Kuotanya diberi ruang
+            // Kelompok siswa: pengaju termasuk dalam kuota. Kuotanya diberi ruang
             // di atas jumlah anggota awal supaya siswa lain masih bisa "Gabung".
             // Guru/Admin tetap menentukan kuota sendiri.
             const maxSiswa = pengajuanSiswa
                 ? Math.max(anggotaIds.length + 1, KUOTA_KELOMPOK_SISWA)
                 : (Number(payload.max_siswa) || KUOTA_GURU_DEFAULT);
+
+            if (!Number.isInteger(maxSiswa) || maxSiswa > PESERTA_MAKSIMAL_PENGAJUAN) {
+                throw new HttpException({ ok: false, error: 'Maksimal 12 peserta klinik, termasuk siswa pengaju' }, 400);
+            }
 
             if (pengajuanSiswa) {
                 // Klinik kelompok wajib punya minimal 2 peserta (pengaju + teman),
@@ -1274,6 +1286,7 @@ export async function handlePost(req: any, action: string, payload: any, db: Pri
                 throw new Error('Pengajuan ini sudah tidak bisa dibergabungi (sudah diproses atau bukan pengajuan kelompok siswa)');
             }
 
+            slot.max_siswa = Math.min(slot.max_siswa, PESERTA_MAKSIMAL_PENGAJUAN);
             if (await hitungPeserta(db, slot_id) >= slot.max_siswa) {
                 throw new Error('Kuota sudah penuh (Maksimal ' + slot.max_siswa + ' siswa)');
             }
@@ -1338,7 +1351,7 @@ export async function handlePost(req: any, action: string, payload: any, db: Pri
             // 1. Get slot info
             const { data: slot, error: slotErr } = await db
                 .from('klinik_slots')
-                .select('max_siswa, status, target_kelas, guru_id')
+                .select('max_siswa, status, target_kelas, guru_id, initiator_type')
                 .eq('id', slot_id)
                 .single();
 
@@ -1370,6 +1383,10 @@ export async function handlePost(req: any, action: string, payload: any, db: Pri
                 siswa_id = target.id;
                 nama_siswa = target.nama;
                 pesertaRecord = target;
+            }
+
+            if (slot.initiator_type !== 'ADMIN') {
+                slot.max_siswa = Math.min(slot.max_siswa, PESERTA_MAKSIMAL_PENGAJUAN);
             }
 
             // 2. Count current participants accurately
@@ -1567,6 +1584,11 @@ export async function handlePost(req: any, action: string, payload: any, db: Pri
             let maxSiswa = Number(updateData.max_siswa) || slot.max_siswa || KUOTA_GURU_DEFAULT;
             // Teks kanonik (lihat idTeks) supaya bisa dibandingkan dgn siswa_id dari DB.
             let anggotaIds: string[] = [];
+            if (slot.initiator_type !== 'ADMIN' && (!Number.isInteger(maxSiswa)
+                || (updateData.max_siswa !== undefined && Number(updateData.max_siswa) > PESERTA_MAKSIMAL_PENGAJUAN))) {
+                throw new HttpException({ ok: false, error: 'Maksimal 12 peserta klinik, termasuk siswa pengaju' }, 400);
+            }
+            if (slot.initiator_type !== 'ADMIN') maxSiswa = Math.min(maxSiswa, PESERTA_MAKSIMAL_PENGAJUAN);
 
             if (sesiAdmin) {
                 anggotaIds = daftarIdTeks(updateData.anggota);
@@ -1583,6 +1605,9 @@ export async function handlePost(req: any, action: string, payload: any, db: Pri
                     .filter(v => !samaId(v, slot.initiator_siswa_id));
                 if (anggotaIds.length < 1) {
                     throw new HttpException({ ok: false, error: 'Pilih minimal 1 teman kelompok' }, 400);
+                }
+                if (anggotaIds.length + 1 > PESERTA_MAKSIMAL_PENGAJUAN) {
+                    throw new HttpException({ ok: false, error: 'Maksimal 11 teman dan 1 siswa pengaju (12 peserta)' }, 400);
                 }
 
                 const { data: pengajuRow } = await db.from('users')
@@ -1603,7 +1628,7 @@ export async function handlePost(req: any, action: string, payload: any, db: Pri
                 }
                 // Kuota tidak boleh diturunkan di bawah peserta yang terlanjur terdaftar.
                 const terdaftar = await hitungPeserta(db, slot_id);
-                if (maxSiswa < terdaftar) {
+                if (!sesiGuru && maxSiswa < terdaftar) {
                     throw new HttpException({
                         ok: false,
                         error: `Kuota tidak boleh kurang dari jumlah peserta yang sudah terdaftar (${terdaftar} siswa)`,
@@ -1621,6 +1646,20 @@ export async function handlePost(req: any, action: string, payload: any, db: Pri
                     const salahPeserta = await validasiPesertaTunjukan(
                         db, anggotaIds, updateData.target_kelas);
                     if (salahPeserta) throw new HttpException({ ok: false, error: salahPeserta }, 400);
+                }
+            }
+
+            if (slot.initiator_type !== 'ADMIN') {
+                const { data: pesertaSaatIni, error: pesertaError } = await db.from('klinik_peserta')
+                    .select('siswa_id, status').eq('slot_id', slot_id);
+                if (pesertaError) throw new Error('Gagal memeriksa jumlah peserta');
+                const pesertaFinal = kelompokSiswa
+                    ? new Set([...anggotaIds, idTeks(slot.initiator_siswa_id)])
+                    : sesiGuru
+                        ? new Set([...anggotaIds, ...(pesertaSaatIni || []).filter((p: any) => p.status !== STATUS_DITUGASKAN).map((p: any) => idTeks(p.siswa_id))])
+                        : new Set((pesertaSaatIni || []).map((p: any) => idTeks(p.siswa_id)));
+                if (pesertaFinal.size > maxSiswa) {
+                    throw new HttpException({ ok: false, error: `Jumlah peserta tidak boleh melebihi kuota (${maxSiswa} siswa, maksimal 12 termasuk pengaju)` }, 400);
                 }
             }
 

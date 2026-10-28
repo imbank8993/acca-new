@@ -97,14 +97,14 @@ const configSnapshot = evaluate(feature.configSnapshot);
 const parseKonfig = evaluate('(() => {' + feature.parseKonfig + '; return parseKonfig;})()', { ROLE_ADMIN, KONFIG_AWAL });
 const flush = () => new Promise(resolve => setImmediate(resolve));
 function featureFixture(opts = {}) {
-  const state = { konfig: {}, failed: new Set(), snapshots: {}, calls: [], saving: null };
+  const state = { konfig: {}, failed: new Set(), snapshots: {}, calls: [], messages: [], saving: null };
   const ctx = { ROLE_ADMIN, KONFIG_AWAL, MODUL, configSnapshot, parseKonfig, loadId: { current: 0 }, console, setLoading() {}, setRawUserList() {}, setDbRoles() {},
     setKonfig: v => state.konfig = typeof v === 'function' ? v(state.konfig) : v,
     setSavedSnapshots: v => state.snapshots = typeof v === 'function' ? v(state.snapshots) : v,
-    setGagalMuat: v => state.failed = v, setSavingKey: v => state.saving = v, Swal: { fire: async () => ({}) },
+    setGagalMuat: v => state.failed = v, setSavingKey: v => state.saving = v, Swal: { fire: async (...args) => { state.messages.push(args); return {}; } },
     fetch: async (url, init) => {
       state.calls.push({ url, body: init?.body && JSON.parse(init.body) });
-      return { ok: true, json: async () => init ? { ok: true } : url === '/api/admin/users' ? { ok: !opts.usersFail, data: [{ id: '1', nama: 'User 1' }] } : url === '/api/admin/roles' ? { ok: true, data: [{ name: 'GURU' }] } : url === '/api/site-settings' ? { ok: !opts.settingsFail, data: opts.settings || [] } : { ok: !opts.capsFail, roles: ['GURU'], grants: [], revokes: [{ user_id: '1', nama: 'User 1' }] } };
+      return { ok: !(init && opts.writeHttpFail), json: async () => init ? { ok: true } : url === '/api/admin/users' ? { ok: !opts.usersFail, data: opts.users || [{ id: '1', nama: 'User 1' }] } : url === '/api/admin/roles' ? { ok: true, data: [{ name: 'GURU' }] } : url === '/api/site-settings' ? { ok: !opts.settingsFail, data: opts.settings || [] } : { ok: !opts.capsFail, roles: ['GURU'], grants: [], revokes: [{ user_id: '1', nama: 'User 1' }] } };
     } };
   const muat = evaluate(feature.muatSemua.match(/useCallback\(([\s\S]*),\s*\[\]\)$/)[1], ctx);
   const save = m => evaluate(feature.simpan, { ...ctx, konfig: state.konfig, gagalMuat: state.failed, savingKey: state.saving })(m);
@@ -196,3 +196,49 @@ test('middleware sends restricted sessions to password change even for utility a
     assert.equal(result.kind, 'redirect'); assert.equal(result.url.pathname, '/update-password'); assert.equal(result.url.search, '');
   }
 });
+
+const { normalizeFeatureAccessSetting, SiteSettingsService } = load('apps/api/src/site-settings/site-settings.service.ts');
+test('invalid feature policy is rejected before single or batch database writes', async () => {
+  let writes = 0;
+  const svc = new SiteSettingsService({ site_settings: { findUnique() { writes++; } }, $transaction() { writes++; } });
+  for (const value of [undefined, '{bad', '[]', '{}', { allowedRoles: [''], allowedUsers: [] }, { allowedRoles: ['GURU'], allowedUsers: [null] }, { allowedRoles: [], allowedUsers: [{ nama: 'No identity' }] }]) {
+    await assert.rejects(svc.updateSetting('dokumen_access_config', { value }));
+    await assert.rejects(svc.updateSettingsBatch([{ key: 'app_name', value: 'Example' }, { key: 'dokumen_access_config', value }]));
+  }
+  assert.equal(writes, 0);
+});
+test('feature policies preserve BIGINT IDs, NIP-only users and normalize roles', () => {
+  const result = JSON.parse(normalizeFeatureAccessSetting('dokumen_access_config', { allowedRoles: ['guru', ' GURU '], allowedUsers: [{ id: '9007199254740993' }, { nip: '00123' }] }));
+  assert.equal(result.allowedRoles.join(), 'GURU'); assert.equal(result.allowedUsers[0].id, '9007199254740993'); assert.equal(result.allowedUsers[1].nip, '00123');
+  assert.equal(normalizeFeatureAccessSetting('unrelated_setting', 'plain value'), 'plain value');
+});
+test('legacy NIP grants resolve to a user ID before capability synchronization', async () => {
+  const f = featureFixture({ users: [{ id: '9007199254740993', nip: '00123', nama: 'Legacy holder' }], settings: [{ key: 'klinik.kelola_sesi', value: JSON.stringify({ allowedRoles: [], allowedUsers: [{ nip: '00123', nama: 'Legacy holder' }] }) }] });
+  await f.muat(); assert(!f.state.failed.has('klinik.kelola_sesi'));
+  await f.save(MODUL.find(m => m.settingKey === 'klinik.kelola_sesi'));
+  assert.deepEqual(f.state.calls.find(c => c.body).body.userIds, ['9007199254740993']);
+});
+test('unresolved legacy users lock saving instead of silently losing their grant', async () => {
+  const f = featureFixture({ settings: [{ key: 'klinik.kelola_sesi', value: JSON.stringify({ allowedRoles: [], allowedUsers: [{ nip: 'not-found' }] }) }] });
+  await f.muat(); assert(f.state.failed.has('klinik.kelola_sesi')); await f.save(MODUL[0]); assert(!f.state.calls.some(c => c.body));
+});
+test('HTTP save failure never marks the edited policy as saved', async () => {
+  const f = featureFixture({ writeHttpFail: true }); await f.muat(); const before = f.state.snapshots.dokumen_access_config;
+  f.state.konfig.dokumen_access_config.allowedRoles.push('GURU');
+  await f.save(MODUL.find(m => m.settingKey === 'dokumen_access_config'));
+  assert.equal(f.state.snapshots.dokumen_access_config, before); assert.equal(f.state.messages.at(-1)[0], 'Error');
+});
+const { FeatureAccessGuard } = load('apps/api/src/auth/feature-access.guard.ts');
+for (const key of ['dokumen_access_config', 'jadwal_generate_access_config', 'agenda_access_config', 'notulensi_access_config', 'guru_asuh_approval_access_config', 'jurnal_input_access_config', 'informasi_access_config', 'libur_access_config']) {
+  test(`server feature guard enforces role/user grants and revocation: ${key}`, async () => {
+    let config = { allowedRoles: [], allowedUsers: [] };
+    const guard = new FeatureAccessGuard({ getAllAndOverride: () => ({ settingKey: key, peranBawaan: [] }) }, { site_settings: { findUnique: async args => { assert.equal(args.where.key, key); return { value: JSON.stringify(config) }; } } });
+    const request = { headers: {}, user: { id: '42', roles: ['GURU'] } };
+    const ctx = { getHandler() {}, getClass() {}, switchToHttp: () => ({ getRequest: () => request }) };
+    await assert.rejects(guard.canActivate(ctx));
+    config.allowedRoles.push('GURU'); assert.equal(await guard.canActivate(ctx), true);
+    config.allowedRoles = []; config.allowedUsers = [{ id: '42' }]; assert.equal(await guard.canActivate(ctx), true);
+    config.allowedUsers = []; await assert.rejects(guard.canActivate(ctx));
+    request.user.roles = ['ADMIN']; assert.equal(await guard.canActivate(ctx), true);
+  });
+}
