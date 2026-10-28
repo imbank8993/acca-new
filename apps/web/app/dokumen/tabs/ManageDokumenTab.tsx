@@ -44,7 +44,7 @@ export default function ManageDokumenTab({ user, canManageOverride }: { user?: a
     const [filterCategory, setFilterCategory] = useState('')
     const [filterUploader, setFilterUploader] = useState('')
     const [filterUploaderDebounced, setFilterUploaderDebounced] = useState('')
-    const [selectedDoc, setSelectedDoc] = useState<{ url: string; title: string } | null>(null)
+    const [selectedDoc, setSelectedDoc] = useState<{ url: string; title: string; index: number } | null>(null)
     // Bulk upload state
     const [bulkFiles, setBulkFiles] = useState<BulkFilePreview[]>([])
     const [bulkCategoryId, setBulkCategoryId] = useState('')
@@ -393,8 +393,9 @@ export default function ManageDokumenTab({ user, canManageOverride }: { user?: a
         }
     }
 
-    const handleView = (url: string, fileName: string) => {
-        setSelectedDoc({ url: ensureAbsoluteUrl(url), title: fileName });
+    const handleView = (index: number) => {
+        const doc = documents[index];
+        if (doc) setSelectedDoc({ url: ensureAbsoluteUrl(doc.file_url), title: doc.file_name, index });
     };
 
     const handleDownload = async (doc: any) => {
@@ -697,7 +698,7 @@ export default function ManageDokumenTab({ user, canManageOverride }: { user?: a
                                         <ActionGroup>
                                             <ActionButton
                                                 action="view"
-                                                onClick={() => handleView(doc.file_url, doc.file_name)}
+                                                onClick={() => handleView(documents.indexOf(doc))}
                                                 title="Buka Dokumen"
                                             />
                                             <ActionButton
@@ -2218,9 +2219,13 @@ export default function ManageDokumenTab({ user, canManageOverride }: { user?: a
             {/* PDF Viewer Modal - PDFViewer handles its own createPortal internally */}
             {selectedDoc && (
                 <PDFViewer
+                    key={selectedDoc.url}
                     url={selectedDoc.url}
                     title={selectedDoc.title}
                     onClose={() => setSelectedDoc(null)}
+                    onPrevious={selectedDoc.index > 0 ? () => handleView(selectedDoc.index - 1) : undefined}
+                    onNext={selectedDoc.index < documents.length - 1 ? () => handleView(selectedDoc.index + 1) : undefined}
+                    positionLabel={`${selectedDoc.index + 1} / ${documents.length}`}
                 />
             )}
 

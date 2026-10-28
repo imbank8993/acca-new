@@ -46,6 +46,9 @@ interface PDFViewerProps {
     title: string;
     onClose: () => void;
     inline?: boolean;
+    onPrevious?: () => void;
+    onNext?: () => void;
+    positionLabel?: string;
 }
 
 const IMAGE_EXTS = /\.(jpg|jpeg|jfif|jpe|png|apng|gif|webp|bmp|dib|tiff?|svgz?|ico|heic|heif|avif|jp2|jpx)$/i;
@@ -67,7 +70,39 @@ const SHARPEN_DELAY = 260;
 // berukuran besar (A3/poster) supaya canvas tidak gagal dirender di HP/tablet
 const MAX_CANVAS_PIXELS = 12_000_000;
 
-export default function PDFViewer({ url, title, onClose, inline = false }: PDFViewerProps) {
+export default function PDFViewer({ url, title, onClose, inline = false, onPrevious, onNext, positionLabel }: PDFViewerProps) {
+    useEffect(() => {
+        if (inline || (!onPrevious && !onNext)) return;
+        const navigate = (e: KeyboardEvent) => {
+            const target = e.target as HTMLElement | null;
+            if (e.ctrlKey || e.metaKey || e.altKey || target?.closest('input, textarea, select, [contenteditable="true"]')) return;
+            if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+                e.preventDefault(); e.stopPropagation();
+                (e.key === 'ArrowLeft' ? onPrevious : onNext)?.();
+            }
+        };
+        window.addEventListener('keydown', navigate, true);
+        return () => window.removeEventListener('keydown', navigate, true);
+    }, [inline, onPrevious, onNext]);
+
+    const fileNavigation = (onPrevious || onNext) && (
+        <nav aria-label="Navigasi file dalam folder">
+            {[{ label: 'File sebelumnya', icon: 'chevron-left', action: onPrevious, side: 'left' },
+              { label: 'File berikutnya', icon: 'chevron-right', action: onNext, side: 'right' }].map(item => (
+                <button key={item.side} type="button" aria-label={item.label} title={item.label}
+                    disabled={!item.action} onClick={item.action}
+                    style={{ position: 'fixed', top: '50%', [item.side]: 12, transform: 'translateY(-50%)',
+                        zIndex: 100000, width: 44, height: 52, border: '1px solid #ffffff40', borderRadius: 12,
+                        background: '#111827cc', color: '#fff', fontSize: 24,
+                        opacity: item.action ? 1 : 0.3, cursor: item.action ? 'pointer' : 'default' }}>
+                    <i className={`bi bi-${item.icon}`} aria-hidden="true" />
+                </button>
+            ))}
+            {positionLabel && <span role="status" style={{ position: 'fixed', bottom: 36, left: '50%', transform: 'translateX(-50%)',
+                zIndex: 100000, padding: '4px 12px', borderRadius: 20, background: '#111827dd', color: '#fff', fontSize: 12 }}>{positionLabel}</span>}
+        </nav>
+    );
+
     const urlMentah = ensureAbsoluteUrl(url);
 
     /**
@@ -1163,7 +1198,7 @@ export default function PDFViewer({ url, title, onClose, inline = false }: PDFVi
                 </div>
             </>
         );
-        return inline ? <div style={{ position: 'relative', width: '100%', height: '100%', overflow: 'hidden' }}>{content}</div> : createPortal(content, document.body);
+        return inline ? <div style={{ position: 'relative', width: '100%', height: '100%', overflow: 'hidden' }}>{content}</div> : createPortal(<>{content}{fileNavigation}</>, document.body);
     }
 
     if (isImage) {
@@ -1315,6 +1350,8 @@ export default function PDFViewer({ url, title, onClose, inline = false }: PDFVi
                                 plugins={[Zoom, Download, Inline]}
                                 inline={{ style: { width: '100%', height: '100%', background: '#111' } }}
                                 slides={[{ src: imageSrc, alt: title }]}
+                                carousel={{ finite: true }}
+                                render={{ buttonPrev: () => null, buttonNext: () => null }}
                                 zoom={{
                                     ref: imgZoomRef,
                                     maxZoomPixelRatio: 5,
@@ -1339,7 +1376,7 @@ export default function PDFViewer({ url, title, onClose, inline = false }: PDFVi
                 </div>
             </>
         );
-        return inline ? <div style={{ position: 'relative', width: '100%', height: '100%', overflow: 'hidden' }}>{content}</div> : createPortal(content, document.body);
+        return inline ? <div style={{ position: 'relative', width: '100%', height: '100%', overflow: 'hidden' }}>{content}</div> : createPortal(<>{content}{fileNavigation}</>, document.body);
     }
 
     // ── VIDEO PLAYER ───────────────────────────────────────────────────
@@ -1388,7 +1425,7 @@ export default function PDFViewer({ url, title, onClose, inline = false }: PDFVi
                 </div>
             </>
         );
-        return inline ? <div style={{ position: 'relative', width: '100%', height: '100%', overflow: 'hidden' }}>{content}</div> : createPortal(content, document.body);
+        return inline ? <div style={{ position: 'relative', width: '100%', height: '100%', overflow: 'hidden' }}>{content}</div> : createPortal(<>{content}{fileNavigation}</>, document.body);
     }
 
     // ── AUDIO PLAYER ────────────────────────────────────────────────────
@@ -1437,7 +1474,7 @@ export default function PDFViewer({ url, title, onClose, inline = false }: PDFVi
                 </div>
             </>
         );
-        return inline ? <div style={{ position: 'relative', width: '100%', height: '100%', overflow: 'hidden' }}>{content}</div> : createPortal(content, document.body);
+        return inline ? <div style={{ position: 'relative', width: '100%', height: '100%', overflow: 'hidden' }}>{content}</div> : createPortal(<>{content}{fileNavigation}</>, document.body);
     }
 
     // ── PDF / OFFICE / OTHER ────────────────────────────────────────────
@@ -2490,5 +2527,5 @@ export default function PDFViewer({ url, title, onClose, inline = false }: PDFVi
             </div>
         </>
     );
-    return inline ? <div style={{ position: 'relative', width: '100%', height: '100%', overflow: 'hidden' }}>{content}</div> : createPortal(content, document.body);
+    return inline ? <div style={{ position: 'relative', width: '100%', height: '100%', overflow: 'hidden' }}>{content}</div> : createPortal(<>{content}{fileNavigation}</>, document.body);
 }

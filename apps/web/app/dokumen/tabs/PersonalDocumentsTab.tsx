@@ -57,39 +57,6 @@ export default function PersonalDocumentsPage({ user }: { user: any }) {
     // Viewer file in-app (sama seperti halaman Informasi).
     const { openFile, viewer } = useFileViewer();
 
-    /**
-     * Buka dokumen di viewer.
-     *
-     * Sebelumnya `/api/personal/documents/{id}/file?action=view` diserahkan
-     * langsung ke viewer. Rute itu TIDAK menyajikan berkasnya — ia selalu
-     * membalas JSON berisi metadata dokumen, termasuk `file_url` yang
-     * sesungguhnya. Akibatnya viewer mengunduh JSON, tidak mengenalinya sebagai
-     * jenis berkas apa pun, dan tampil kosong untuk SEMUA dokumen pribadi —
-     * PDF, Word, maupun Excel.
-     *
-     * Jadi: pakai `file_url` yang memang sudah ada di daftar, dan hanya kalau
-     * tidak ada barulah tanyakan ke rute metadata itu. Memanggil rute tersebut
-     * juga yang menjalankan pemeriksaan hak akses di backend, jadi jalur
-     * cadangannya tetap aman.
-     */
-    const bukaDokumen = useCallback(async (doc: { id: string; judul: string; file_url?: string | null }) => {
-        if (doc.file_url) {
-            openFile(doc.file_url, doc.judul);
-            return;
-        }
-        try {
-            const res = await fetch(`/api/personal/documents/${doc.id}/file`);
-            const json = await res.json();
-            if (json?.ok && json.data?.file_url) {
-                openFile(json.data.file_url, doc.judul);
-            } else {
-                Swal.fire('Gagal', json?.error || 'Berkas tidak dapat dibuka.', 'error');
-            }
-        } catch {
-            Swal.fire('Gagal', 'Berkas tidak dapat dibuka.', 'error');
-        }
-    }, [openFile]);
-
     const [activeTab, setActiveTab] = useState<'mine' | 'shared'>('mine');
 
     const [folders, setFolders] = useState<Folder[]>([]);
@@ -319,6 +286,45 @@ export default function PersonalDocumentsPage({ user }: { user: any }) {
     }, [sortedDocuments, searchQuery]);
 
 
+
+    /**
+     * Buka dokumen di viewer.
+     *
+     * Sebelumnya `/api/personal/documents/{id}/file?action=view` diserahkan
+     * langsung ke viewer. Rute itu TIDAK menyajikan berkasnya — ia selalu
+     * membalas JSON berisi metadata dokumen, termasuk `file_url` yang
+     * sesungguhnya. Akibatnya viewer mengunduh JSON, tidak mengenalinya sebagai
+     * jenis berkas apa pun, dan tampil kosong untuk SEMUA dokumen pribadi —
+     * PDF, Word, maupun Excel.
+     *
+     * Jadi: pakai `file_url` yang memang sudah ada di daftar, dan hanya kalau
+     * tidak ada barulah tanyakan ke rute metadata itu. Memanggil rute tersebut
+     * juga yang menjalankan pemeriksaan hak akses di backend, jadi jalur
+     * cadangannya tetap aman.
+     */
+    const bukaDokumen = useCallback(async (doc: { id: string; judul: string; file_url?: string | null }) => {
+        const index = filteredDocuments.findIndex(item => item.id === doc.id);
+        const navigation = index < 0 ? undefined : {
+            onPrevious: index > 0 ? () => { void bukaDokumen(filteredDocuments[index - 1]); } : undefined,
+            onNext: index < filteredDocuments.length - 1 ? () => { void bukaDokumen(filteredDocuments[index + 1]); } : undefined,
+            positionLabel: `${index + 1} / ${filteredDocuments.length}`,
+        };
+        if (doc.file_url) {
+            openFile(doc.file_url, doc.judul, navigation);
+            return;
+        }
+        try {
+            const res = await fetch(`/api/personal/documents/${doc.id}/file`);
+            const json = await res.json();
+            if (json?.ok && json.data?.file_url) {
+                openFile(json.data.file_url, doc.judul, navigation);
+            } else {
+                Swal.fire('Gagal', json?.error || 'Berkas tidak dapat dibuka.', 'error');
+            }
+        } catch {
+            Swal.fire('Gagal', 'Berkas tidak dapat dibuka.', 'error');
+        }
+    }, [openFile, filteredDocuments]);
 
     const handleMoveDoc = async () => {
 

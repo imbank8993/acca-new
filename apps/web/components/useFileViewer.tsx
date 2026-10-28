@@ -16,18 +16,24 @@ const PDFViewer = dynamic(() => import('@/components/ui/PDFViewerWrapper'), { ss
  *   <button onClick={() => openFile(row.file_url, row.title)}>Lihat</button>
  *   {viewer}   // taruh sekali di akhir JSX
  */
-export function useFileViewer() {
-    const [file, setFile] = useState<{ url: string; title: string } | null>(null);
+interface FileNavigation {
+    onPrevious?: () => void;
+    onNext?: () => void;
+    positionLabel?: string;
+}
 
-    const openFile = useCallback((url: string | null | undefined, title?: string | null) => {
+export function useFileViewer() {
+    const [file, setFile] = useState<({ url: string; title: string } & FileNavigation) | null>(null);
+
+    const openFile = useCallback((url: string | null | undefined, title?: string | null, navigation?: FileNavigation) => {
         if (!url) return;
-        setFile({ url, title: title?.trim() || 'Dokumen' });
+        setFile({ url, title: title?.trim() || 'Dokumen', ...navigation });
     }, []);
 
     const closeFile = useCallback(() => setFile(null), []);
 
     const viewer = file
-        ? <PDFViewer url={file.url} title={file.title} onClose={closeFile} />
+        ? <PDFViewer key={file.url} {...file} onClose={closeFile} />
         : null;
 
     return { openFile, closeFile, viewer, isOpen: file !== null };

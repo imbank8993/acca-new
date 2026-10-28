@@ -19,6 +19,9 @@ export default function PDFViewerWrapper(props: {
     title: string
     onClose: () => void
     inline?: boolean
+    onPrevious?: () => void
+    onNext?: () => void
+    positionLabel?: string
 }) {
     return <PDFViewer {...props} />
 }
