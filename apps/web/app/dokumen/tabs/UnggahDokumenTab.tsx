@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import dynamic from 'next/dynamic'
 import { PageLoader } from '@/components/ui/Spinner'
+import { Modal, ModalBody } from '@/components/ui/Modal'
 import Swal from 'sweetalert2'
 import { FilterToolbar, FilterSelect } from '@/components/ui/FilterToolbar'
 import ActionButton, { ActionGroup } from '@/components/ui/ActionButtons'
@@ -362,122 +363,106 @@ export default function UnggahDokumenTab({
 
             {/* Modal Unggah Dokumen */}
             {isUploadModalOpen && (
-                <div
-                    className="ud-modal-overlay"
-                    onClick={(e) => {
-                        if (e.target === e.currentTarget && !isUploading) {
-                            setIsUploadModalOpen(false)
-                        }
-                    }}
+                <Modal
+                    title="Unggah Dokumen Sekolah"
+                    icon="cloud-arrow-up-fill"
+                    labelledBy="unggah-dokumen-sekolah-title"
+                    size="lg"
+                    variant="add"
+                    onClose={() => { if (!isUploading) setIsUploadModalOpen(false) }}
+                    closeOnOverlayClick={!isUploading}
                 >
-                    <div className="ud-modal-card">
-                        <div className="ud-modal-header">
-                            <div className="ud-modal-title">
-                                <i className="bi bi-cloud-arrow-up-fill"></i>
-                                <h4>Unggah Dokumen Sekolah</h4>
-                            </div>
-                            <button
-                                className="ud-modal-close"
-                                onClick={() => !isUploading && setIsUploadModalOpen(false)}
-                                title="Tutup"
-                                disabled={isUploading}
-                            >
-                                <i className="bi bi-x-lg"></i>
-                            </button>
+                    <ModalBody>
+                        {/* Folder Selection */}
+                        <div className="ud-form-group" style={{ marginBottom: '20px' }}>
+                            <FilterToolbar style={{ background: 'transparent', border: 'none', padding: 0 }}>
+                                <FilterSelect
+                                    label="Pilih Folder Tujuan"
+                                    icon="folder2-open"
+                                    value={selectedCategory}
+                                    onChange={setSelectedCategory}
+                                    width="100%"
+                                    grow={1}
+                                >
+                                    <option value="">-- Pilih Folder --</option>
+                                    {categories.map(cat => (
+                                        <option key={cat.id} value={cat.id}>{cat.name}</option>
+                                    ))}
+                                </FilterSelect>
+                            </FilterToolbar>
+                            {categories.length === 0 && (
+                                <p className="help-text">Belum ada folder tersedia. Hubungi admin untuk membuat folder.</p>
+                            )}
                         </div>
 
-                        <div className="ud-modal-body">
-                            {/* Folder Selection */}
-                            <div className="ud-form-group" style={{ marginBottom: '20px' }}>
-                                <FilterToolbar style={{ background: 'transparent', border: 'none', padding: 0 }}>
-                                    <FilterSelect
-                                        label="Pilih Folder Tujuan"
-                                        icon="folder2-open"
-                                        value={selectedCategory}
-                                        onChange={setSelectedCategory}
-                                        width="100%"
-                                        grow={1}
+                        {/* File Drop Zone */}
+                        <div
+                            className={`ud-dropzone ${dragOver ? 'drag-over' : ''} ${selectedFile ? 'has-file' : ''}`}
+                            onDragOver={handleDragOver}
+                            onDragLeave={handleDragLeave}
+                            onDrop={handleDrop}
+                            onClick={!selectedFile ? triggerFileSelect : undefined}
+                        >
+                            {selectedFile ? (
+                                <div className="file-preview">
+                                    <i className={`bi ${getFileIcon(selectedFile.name)}`}></i>
+                                    <div className="file-info">
+                                        <span className="file-name">{selectedFile.name}</span>
+                                        <span className="file-size">{formatFileSize(selectedFile.size)}</span>
+                                    </div>
+                                    <button
+                                        className="btn-remove-file"
+                                        onClick={(e) => {
+                                            e.stopPropagation()
+                                            setSelectedFile(null)
+                                            const fileInput = document.getElementById('file-input-modal') as HTMLInputElement
+                                            if (fileInput) fileInput.value = ''
+                                        }}
+                                        title="Hapus file"
                                     >
-                                        <option value="">-- Pilih Folder --</option>
-                                        {categories.map(cat => (
-                                            <option key={cat.id} value={cat.id}>{cat.name}</option>
-                                        ))}
-                                    </FilterSelect>
-                                </FilterToolbar>
-                                {categories.length === 0 && (
-                                    <p className="help-text">Belum ada folder tersedia. Hubungi admin untuk membuat folder.</p>
-                                )}
-                            </div>
-
-                            {/* File Drop Zone */}
-                            <div
-                                className={`ud-dropzone ${dragOver ? 'drag-over' : ''} ${selectedFile ? 'has-file' : ''}`}
-                                onDragOver={handleDragOver}
-                                onDragLeave={handleDragLeave}
-                                onDrop={handleDrop}
-                                onClick={!selectedFile ? triggerFileSelect : undefined}
-                            >
-                                {selectedFile ? (
-                                    <div className="file-preview">
-                                        <i className={`bi ${getFileIcon(selectedFile.name)}`}></i>
-                                        <div className="file-info">
-                                            <span className="file-name">{selectedFile.name}</span>
-                                            <span className="file-size">{formatFileSize(selectedFile.size)}</span>
-                                        </div>
-                                        <button
-                                            className="btn-remove-file"
-                                            onClick={(e) => {
-                                                e.stopPropagation()
-                                                setSelectedFile(null)
-                                                const fileInput = document.getElementById('file-input-modal') as HTMLInputElement
-                                                if (fileInput) fileInput.value = ''
-                                            }}
-                                            title="Hapus file"
-                                        >
-                                            <i className="bi bi-x-lg"></i>
-                                        </button>
+                                        <i className="bi bi-x-lg"></i>
+                                    </button>
+                                </div>
+                            ) : (
+                                <div className="dropzone-content">
+                                    <div className="dropzone-icon">
+                                        <i className="bi bi-cloud-arrow-up"></i>
                                     </div>
-                                ) : (
-                                    <div className="dropzone-content">
-                                        <div className="dropzone-icon">
-                                            <i className="bi bi-cloud-arrow-up"></i>
-                                        </div>
-                                        <p className="dropzone-text">
-                                            Drag & drop file di sini, atau <span className="browse-label">pilih file</span>
-                                        </p>
-                                        <p className="dropzone-hint">Format yang didukung: PDF, JPG, PNG, DOC, DOCX, XLS, XLSX (Max 20MB)</p>
-                                        <input
-                                            type="file"
-                                            id="file-input-modal"
-                                            onChange={handleFileChange}
-                                            accept=".pdf,.jpg,.jpeg,.png,.gif,.doc,.docx,.xls,.xlsx"
-                                            style={{ display: 'none' }}
-                                        />
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* Upload Submit Button */}
-                            <button
-                                className={`btn-upload ${isUploading ? 'uploading' : ''}`}
-                                onClick={handleUpload}
-                                disabled={!selectedFile || !selectedCategory || isUploading}
-                            >
-                                {isUploading ? (
-                                    <>
-                                        <span className="spinner"></span>
-                                        Mengunggah...
-                                    </>
-                                ) : (
-                                    <>
-                                        <i className="bi bi-upload"></i>
-                                        Unggah Dokumen
-                                    </>
-                                )}
-                            </button>
+                                    <p className="dropzone-text">
+                                        Drag & drop file di sini, atau <span className="browse-label">pilih file</span>
+                                    </p>
+                                    <p className="dropzone-hint">Format yang didukung: PDF, JPG, PNG, DOC, DOCX, XLS, XLSX (Max 20MB)</p>
+                                    <input
+                                        type="file"
+                                        id="file-input-modal"
+                                        onChange={handleFileChange}
+                                        accept=".pdf,.jpg,.jpeg,.png,.gif,.doc,.docx,.xls,.xlsx"
+                                        style={{ display: 'none' }}
+                                    />
+                                </div>
+                            )}
                         </div>
-                    </div>
-                </div>
+
+                        {/* Upload Submit Button */}
+                        <button
+                            className={`btn-upload ${isUploading ? 'uploading' : ''}`}
+                            onClick={handleUpload}
+                            disabled={!selectedFile || !selectedCategory || isUploading}
+                        >
+                            {isUploading ? (
+                                <>
+                                    <span className="spinner"></span>
+                                    Mengunggah...
+                                </>
+                            ) : (
+                                <>
+                                    <i className="bi bi-upload"></i>
+                                    Unggah Dokumen
+                                </>
+                            )}
+                        </button>
+                    </ModalBody>
+                </Modal>
             )}
 
             {viewerFile && (
@@ -667,83 +652,6 @@ export default function UnggahDokumenTab({
                     filter: brightness(1.08);
                     transform: translateY(-1px);
                     box-shadow: 0 4px 14px rgba(59, 130, 246, 0.35);
-                }
-
-                /* ── MODAL STYLES ── */
-                .ud-modal-overlay {
-                    position: fixed;
-                    inset: 0;
-                    background: rgba(15, 23, 42, 0.55);
-                    backdrop-filter: blur(6px);
-                    z-index: 9999;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    padding: 20px;
-                    animation: udFadeIn 0.2s ease-out;
-                }
-                .ud-modal-card {
-                    background: var(--n-card);
-                    border-radius: 20px;
-                    border: 1px solid var(--n-border);
-                    width: 100%;
-                    max-width: 580px;
-                    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
-                    overflow: hidden;
-                    animation: udSlideUp 0.25s ease-out;
-                }
-                .ud-modal-header {
-                    display: flex;
-                    align-items: center;
-                    justify-content: space-between;
-                    padding: 18px 24px;
-                    border-bottom: 1px solid var(--n-border);
-                    background: var(--n-soft);
-                }
-                .ud-modal-title {
-                    display: flex;
-                    align-items: center;
-                    gap: 10px;
-                    color: var(--n-ink);
-                }
-                .ud-modal-title i {
-                    font-size: 1.3rem;
-                    color: var(--n-primary);
-                }
-                .ud-modal-title h4 {
-                    margin: 0;
-                    font-size: 1.05rem;
-                    font-weight: 700;
-                }
-                .ud-modal-close {
-                    background: transparent;
-                    border: none;
-                    font-size: 1rem;
-                    color: var(--n-muted);
-                    cursor: pointer;
-                    width: 32px;
-                    height: 32px;
-                    border-radius: 8px;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    transition: all 0.15s;
-                }
-                .ud-modal-close:hover:not(:disabled) {
-                    background: rgba(0, 0, 0, 0.06);
-                    color: var(--n-ink);
-                }
-                .ud-modal-body {
-                    padding: 24px;
-                }
-
-                @keyframes udFadeIn {
-                    from { opacity: 0; }
-                    to { opacity: 1; }
-                }
-                @keyframes udSlideUp {
-                    from { opacity: 0; transform: translateY(16px) scale(0.98); }
-                    to { opacity: 1; transform: translateY(0) scale(1); }
                 }
 
                 /* ── FORM GROUP ── */
@@ -1195,29 +1103,6 @@ export default function UnggahDokumenTab({
                     color: #ffffff !important;
                     box-shadow: 0 0 14px rgba(26, 115, 232, 0.4) !important;
                     border-radius: 10px !important;
-                }
-                :global(.dark) .ud-modal-overlay {
-                    background: rgba(0, 0, 0, 0.75) !important;
-                    backdrop-filter: blur(8px) !important;
-                }
-                :global(.dark) .ud-modal-card {
-                    background: #0b1329 !important;
-                    border: 1.8px solid rgba(26, 115, 232, 0.75) !important;
-                    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8) !important;
-                }
-                :global(.dark) .ud-modal-header {
-                    background: rgba(26, 115, 232, 0.08) !important;
-                    border-bottom-color: rgba(59, 130, 246, 0.3) !important;
-                }
-                :global(.dark) .ud-modal-title h4 {
-                    color: #f1f5f9 !important;
-                }
-                :global(.dark) .ud-modal-close {
-                    color: #94a3b8 !important;
-                }
-                :global(.dark) .ud-modal-close:hover:not(:disabled) {
-                    background: rgba(255, 255, 255, 0.1) !important;
-                    color: #f1f5f9 !important;
                 }
                 :global(.dark) .btn-action,
                 :global(.dark) .btn-remove-file {
