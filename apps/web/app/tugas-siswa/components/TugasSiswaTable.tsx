@@ -285,8 +285,8 @@ export default function TugasSiswaTable({
 
                                         <div className="tst__guruSub" style={{ display: 'flex', flexDirection: 'column', gap: '2px', marginTop: '2px' }}>
                                             <span>{tugas.nama_guru}</span>
-                                            {tugas.created_by && (
-                                                <span style={{ opacity: 0.7, fontSize: '0.65rem' }}>Penginput: {tugas.created_by}</span>
+                                            {(tugas.created_by || tugas.nama_pembuat) && (
+                                                <span style={{ opacity: 0.7, fontSize: '0.65rem' }}>Penginput: {tugas.nama_pembuat?.trim() || 'Nama tidak tersedia'}</span>
                                             )}
                                         </div>
                                     </div>
