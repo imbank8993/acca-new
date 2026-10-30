@@ -6538,3 +6538,11 @@ body.dark .kh-time-input {
     display: none !important;
   }
 }
+
+/* Keep collective NISN lists from pushing the delete action outside the table. */
+.acca-letter-table-wrap { max-width: 100%; overflow-x: auto; }
+.acca-letter-table { table-layout: fixed; min-width: 900px; }
+.acca-letter-table th, .acca-letter-table td { overflow-wrap: anywhere; }
+.acca-letter-table th:last-child, .acca-letter-table td:last-child { padding-left: 12px; padding-right: 12px; }
+.acca-letter-table .srt-table-actions { flex-wrap: wrap; }
+.acca-letter-table .srt-table-actions .srt-btn { flex-shrink: 0; }

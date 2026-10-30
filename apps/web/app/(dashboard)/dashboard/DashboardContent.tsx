@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { useTimezone } from '@/hooks/use-timezone';
 import { getActivePeriods } from '@/lib/settings-client';
 import { getAcademicYearFromDate } from '@/lib/date-utils';
-import { formatWaktuAgenda } from '@/lib/agenda';
+import { fetchAgendaList, formatWaktuAgenda } from '@/lib/agenda';
 import type { User } from '@/lib/types';
 import { getProxiedImageUrl } from '@/lib/image-utils';
 import DOMPurify from 'isomorphic-dompurify';
@@ -148,6 +148,20 @@ export default function DashboardContent({ user, headerExtra }: { user: User; he
 
     const [agendaDates, setAgendaDates] = useState<Set<string>>(new Set());
     const [agendaItemsList, setAgendaItemsList] = useState<any[]>([]);
+    const [upcomingAgendaCount, setUpcomingAgendaCount] = useState<number | null>(null);
+
+    useEffect(() => {
+        const controller = new AbortController();
+        setUpcomingAgendaCount(null);
+        fetchAgendaList(false, controller.signal).then(items => {
+            if (controller.signal.aborted) return;
+            setUpcomingAgendaCount(new Set(items
+                .filter(item => String(item.tanggal_mulai || '').slice(0, 10) > todayISO)
+                .map(item => item.id)).size);
+        }).catch(() => { /* Keep the link available if the count cannot load. */ });
+        return () => controller.abort();
+    }, [todayISO]);
+
 
     useEffect(() => {
         let aborted = false;
@@ -978,6 +992,11 @@ export default function DashboardContent({ user, headerExtra }: { user: User; he
                                             }}
                                         >
                                             Lihat Semua
+                                            {upcomingAgendaCount !== null && (
+                                                <span style={{ marginLeft: '6px', padding: '2px 7px', borderRadius: '999px', background: 'rgba(48, 131, 255, 0.12)', fontSize: '0.7rem', fontWeight: 700 }} aria-label={`${upcomingAgendaCount} agenda mendatang`}>
+                                                    {upcomingAgendaCount}
+                                                </span>
+                                            )}
                                         </Link>
                                     </div>
                                 </div>

@@ -1,5 +1,6 @@
 'use client';
 import Pagination from '@/components/ui/Pagination';
+import { canDeleteLetter, isSakitLetter } from '../letter-access';
 import MaintenanceBanner from '@/components/MaintenanceBanner';
 import { useState, useEffect, useMemo } from 'react';
 import { getCurrentUser } from '@/lib/auth-client';
@@ -109,7 +110,7 @@ function DaftarAccaContent() {
             const uData = await getCurrentUser();
             if (uData) {
                 setUserData(uData);
-                const roles = (uData?.roles || []).map((r: string) => r.toUpperCase().replace(/\s+/g, '_'));
+                const roles = (Array.isArray(uData.roles) ? uData.roles : String(uData.role || '').split(/[,|]/)).map((r: string) => r.trim().toUpperCase().replace(/\s+/g, '_'));
                 const adminCheck = roles.some((r: string) => ['ADMIN', 'ADMINISTRATOR'].includes(r));
                 setIsAdmin(adminCheck);
                 // OP_IZIN kelola surat izin (Meninggalkan Asrama); OP_UKS kelola surat sakit (Rekom Kontrol & Rekam Medik)
@@ -138,18 +139,15 @@ function DaftarAccaContent() {
         }
     };
 
-    const SAKIT_LETTER_TYPES = ['REKOMENDASI_KONTROL', 'REKAM_MEDIK', 'REKAPAN_SAKIT'];
-    const isSakitLetter = (j: string) => SAKIT_LETTER_TYPES.includes(j);
     const isIzinAsramaLetter = (j: string) => ['MENINGGALKAN_ASRAMA', 'P', 'M'].includes(j);
-    const canManageLetter = (l: AccaLetter) =>
-        isSakitLetter(l.jenis_izin) ? canManageSakit : canManageIzin;
+    const canManageLetter = (l: AccaLetter) => canDeleteLetter(l, { isAdmin, canManageIzin, canManageSakit });
 
     // Isolasi ketat: operator tunggal hanya melihat surat jenisnya sendiri
     const soloIzin = !isAdmin && canManageIzin && !canManageSakit;
     const soloSakit = !isAdmin && canManageSakit && !canManageIzin;
     const visibleLetters = letters.filter(l => {
-        if (soloIzin) return !isSakitLetter(l.jenis_izin);
-        if (soloSakit) return isSakitLetter(l.jenis_izin);
+        if (soloIzin) return !isSakitLetter(l.jenis_izin, l.nomor_surat);
+        if (soloSakit) return isSakitLetter(l.jenis_izin, l.nomor_surat);
         return true;
     });
 
@@ -389,7 +387,7 @@ function DaftarAccaContent() {
             </div>
 
             {/* ΓöÇΓöÇ Tabel Daftar Surat ΓöÇΓöÇ */}
-            <div className="srt-table-wrapper">
+            <div className="srt-table-wrapper acca-letter-table-wrap">
                 {loading ? (
                     <div className="srt-empty">
                         <div className="srt-empty-icon"><i className="bi bi-hourglass-split"></i></div>
@@ -408,7 +406,7 @@ function DaftarAccaContent() {
                     </div>
                 ) : (
                     <>
-                        <table className="srt-table">
+                        <table className="srt-table acca-letter-table">
                             <thead>
                                 <tr>
                                     <th style={{ width: '40px', textAlign: 'center' }}>#</th>
@@ -416,7 +414,7 @@ function DaftarAccaContent() {
                                     <th style={{ minWidth: '280px' }}>Identitas Siswa</th>
                                     <th style={{ minWidth: '200px' }}>Keterangan & Periode</th>
                                     <th style={{ textAlign: 'center', width: '70px' }}>Berkas</th>
-                                    <th style={{ textAlign: 'center', width: '130px' }}>Aksi</th>
+                                    <th style={{ textAlign: 'center', width: '160px' }}>Aksi</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -488,6 +486,8 @@ function DaftarAccaContent() {
                                                         onClick={() => handleDelete(letter)}
                                                         className="srt-btn srt-btn-danger srt-btn-sm"
                                                         title="Hapus"
+                                                        aria-label={`Hapus surat ${letter.nomor_surat}`}
+                                                        type="button"
                                                     >
                                                         <i className="bi bi-trash"></i>
                                                     </button>
@@ -554,7 +554,7 @@ function DaftarAccaContent() {
                                                     <i className="bi bi-file-earmark-text"></i> Surat
                                                 </button>
                                                 {canManageLetter(letter) && (
-                                                    <button onClick={() => handleDelete(letter)} className="srt-btn srt-btn-danger srt-btn-sm" style={{ flex: '0 0 auto' }}>
+                                                    <button type="button" aria-label={`Hapus surat ${letter.nomor_surat}`} title="Hapus" onClick={() => handleDelete(letter)} className="srt-btn srt-btn-danger srt-btn-sm" style={{ flex: '0 0 auto' }}>
                                                         <i className="bi bi-trash"></i>
                                                     </button>
                                                 )}

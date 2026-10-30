@@ -25,6 +25,14 @@ interface AgendaItem {
     foto?: { url: string; caption: string | null; tanggal?: string | null }[] | null;
 }
 
+function agendaSchedule(event: AgendaItem) {
+    return [
+        formatDateRange(event.tanggal_mulai, event.tanggal_selesai),
+        event.waktu_mulai ? formatWaktuAgenda(event.waktu_mulai, event.waktu_selesai) : null,
+        event.lokasi?.trim(),
+    ].filter(Boolean).join(' | ');
+}
+
 interface AgendaFoto {
     url: string;
     caption: string | null;
@@ -407,11 +415,8 @@ export default function AgendaDisplayView({ headerTabs }: { headerTabs?: React.R
                                                 </div>
                                                 {eventMap[displayDay].map(ev => {
                                                     const isExpanded = expandedEventId === ev.id;
-                                                    const subtitle = ev.waktu_mulai 
-                                                        ? formatWaktuAgenda(ev.waktu_mulai, ev.waktu_selesai)
-                                                        : formatDateRange(ev.tanggal_mulai, ev.tanggal_selesai);
                                                     return (
-                                                        <div key={ev.id} className="ag-mini-event-wrapper" style={{ marginBottom: '8px' }}>
+                                                        <div key={ev.id} className="ag-mini-event-wrapper">
                                                             <div 
                                                                 className={`ag-mini-event ${isExpanded ? 'is-expanded' : ''}`} 
                                                                 onClick={() => setExpandedEventId(isExpanded ? null : ev.id)}
@@ -420,7 +425,7 @@ export default function AgendaDisplayView({ headerTabs }: { headerTabs?: React.R
                                                                 <div className="ag-mini-info">
                                                                     <span className="ag-mini-title">{ev.judul}</span>
                                                                     <SasaranAgenda sasaran={ev.sasaran} />
-                                                                    <span className="ag-mini-date">{subtitle}</span>
+                                                                    <span className="ag-mini-date">{agendaSchedule(ev)}</span>
                                                                 </div>
                                                                 <i className={`bi ${isExpanded ? 'bi-chevron-up' : 'bi-chevron-down'} ag-mini-arrow`}></i>
                                                             </div>
@@ -450,11 +455,8 @@ export default function AgendaDisplayView({ headerTabs }: { headerTabs?: React.R
                                                 </div>
                                                 {ongoingEvents.map(ev => {
                                                     const isExpanded = expandedEventId === ev.id;
-                                                    const subtitle = ev.tanggal_selesai && ev.tanggal_selesai !== ev.tanggal_mulai
-                                                        ? formatDateRange(ev.tanggal_mulai, ev.tanggal_selesai)
-                                                        : (ev.waktu_mulai ? formatWaktuAgenda(ev.waktu_mulai, ev.waktu_selesai) : formatDateRange(ev.tanggal_mulai, ev.tanggal_selesai));
                                                     return (
-                                                        <div key={ev.id} className="ag-mini-event-wrapper" style={{ marginBottom: '8px' }}>
+                                                        <div key={ev.id} className="ag-mini-event-wrapper">
                                                             <div 
                                                                 className={`ag-mini-event ${isExpanded ? 'is-expanded' : ''}`} 
                                                                 onClick={() => setExpandedEventId(isExpanded ? null : ev.id)}
@@ -463,7 +465,7 @@ export default function AgendaDisplayView({ headerTabs }: { headerTabs?: React.R
                                                                 <div className="ag-mini-info">
                                                                     <span className="ag-mini-title">{ev.judul}</span>
                                                                     <SasaranAgenda sasaran={ev.sasaran} />
-                                                                    <span className="ag-mini-date">{subtitle}</span>
+                                                                    <span className="ag-mini-date">{agendaSchedule(ev)}</span>
                                                                 </div>
                                                                 <i className={`bi ${isExpanded ? 'bi-chevron-up' : 'bi-chevron-down'} ag-mini-arrow`}></i>
                                                             </div>
@@ -492,7 +494,7 @@ export default function AgendaDisplayView({ headerTabs }: { headerTabs?: React.R
                                                     <i className="bi bi-fast-forward-fill"></i> Kegiatan Mendatang
                                                 </div>
                                                 {upcomingEvents.map(ev => (
-                                                    <div key={ev.id} className="ag-mini-event" style={{ marginBottom: '8px' }} onClick={() => {
+                                                    <div key={ev.id} className="ag-mini-event" onClick={() => {
                                                         setSelectedDay(ev.tanggal_mulai);
                                                         setActiveTab('selected');
                                                     }}>
@@ -500,7 +502,7 @@ export default function AgendaDisplayView({ headerTabs }: { headerTabs?: React.R
                                                         <div className="ag-mini-info">
                                                             <span className="ag-mini-title">{ev.judul}</span>
                                                                     <SasaranAgenda sasaran={ev.sasaran} />
-                                                            <span className="ag-mini-date">{formatDateRange(ev.tanggal_mulai, ev.tanggal_selesai)}</span>
+                                                            <span className="ag-mini-date">{agendaSchedule(ev)}</span>
                                                         </div>
                                                     </div>
                                                 ))}

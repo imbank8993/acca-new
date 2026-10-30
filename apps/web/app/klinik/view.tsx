@@ -1147,6 +1147,7 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
       });
       const json = await safeJson(res);
       if (json.ok) {
+        setShowViewReportModal(null);
         Swal.fire('Berhasil', laporanAction === 'approve' ? 'Laporan telah disetujui' : 'Laporan telah dikembalikan', 'success');
         fetchUserAndSlots();
       } else {
@@ -2286,28 +2287,6 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
                                         title="Lihat Detail Laporan"
                                         onClick={() => setShowViewReportModal(slot)}
                                       />
-                                      {laporan.status === 'Submitted' && (
-                                        <>
-                                          <button
-                                            type="button"
-                                            className="btn-icon-soft"
-                                            data-tooltip="Setujui Laporan"
-                                            aria-label="Setujui Laporan"
-                                            onClick={() => handleApproveLaporan(laporan.id, 'approve')}
-                                          >
-                                            <i className="bi bi-check-lg" style={{ color: '#0284c7' }} />
-                                          </button>
-                                          <button
-                                            type="button"
-                                            className="btn-icon-soft"
-                                            data-tooltip="Kembalikan (Revisi)"
-                                            aria-label="Kembalikan Laporan"
-                                            onClick={() => handleApproveLaporan(laporan.id, 'revisi')}
-                                          >
-                                            <i className="bi bi-arrow-return-left" style={{ color: '#ef4444' }} />
-                                          </button>
-                                        </>
-                                      )}
                                       {laporan.status === 'Approved' && slot.status !== 'paid' && (
                                         <button
                                           type="button"
@@ -2815,6 +2794,9 @@ function KlinikPage({ user: initialUser }: { user?: any } = {}) {
             ? (s) => setShowAbsensiModal(s)
             : undefined
         }
+        canApprove={bisaApproveLaporan}
+        onApprove={handleApproveLaporan}
+        approvalLoading={actionLoadingId === `laporan_${getLaporan(showViewReportModal || {} as KlinikSlot)?.id}`}
         canRevisiApproved={bisaApproveLaporan && showViewReportModal?.status !== 'paid'}
         onRevisiApproved={handleKembalikanApproved}
       />

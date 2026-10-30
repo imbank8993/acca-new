@@ -20,6 +20,9 @@ interface ViewReportModalProps {
   onPrintPreview: (slotId: string) => void;
   loadingPreviewSlotId: string | null;
   onOpenAbsensi?: (slot: any) => void;
+  canApprove?: boolean;
+  approvalLoading?: boolean;
+  onApprove?: (id: string, action: 'approve' | 'revisi') => void;
   canRevisiApproved?: boolean;
   onRevisiApproved?: (laporanId: string) => void;
 }
@@ -32,6 +35,9 @@ export default function ViewReportModal({
   onPrintPreview,
   loadingPreviewSlotId,
   onOpenAbsensi,
+  canApprove,
+  approvalLoading,
+  onApprove,
   canRevisiApproved,
   onRevisiApproved,
 }: ViewReportModalProps) {
@@ -286,6 +292,16 @@ export default function ViewReportModal({
         )}
       </ModalBody>
 
+      {canApprove && laporan?.status === 'Submitted' && onApprove && (
+        <div className="vrm-review">
+          <div className="vrm-review__heading">Tinjau &amp; setujui laporan</div>
+          <p>Periksa materi, kehadiran, dan bukti kegiatan sebelum memberikan persetujuan.</p>
+          <div className="vrm-review__actions">
+            <Button variant="secondary" disabled={approvalLoading} onClick={() => onApprove(laporan.id, 'revisi')} leftIcon={<i className="bi bi-arrow-return-left" />}>Minta Revisi</Button>
+            <Button variant="primary" isLoading={approvalLoading} disabled={approvalLoading} onClick={() => onApprove(laporan.id, 'approve')} leftIcon={<i className="bi bi-check-circle" />}>Setujui Laporan</Button>
+          </div>
+        </div>
+      )}
       <ModalFooter align={canRevisiApproved && laporan?.status === 'Approved' && onRevisiApproved ? 'between' : 'end'}>
         {canRevisiApproved && laporan?.status === 'Approved' && onRevisiApproved && (
           <Button

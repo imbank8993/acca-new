@@ -1510,3 +1510,15 @@
 .dark .apr-seksi--sesi    .apr-seksi__ikon { background: rgba(59, 130, 246, 0.16) !important; color: #93c5fd !important; }
 .dark .apr-seksi--laporan .apr-seksi__ikon { background: rgba(139, 92, 246, 0.16) !important; color: #c4b5fd !important; }
 .dark .apr-pisah { background: linear-gradient(90deg, transparent, rgba(59, 130, 246, 0.28) 12%, rgba(59, 130, 246, 0.28) 88%, transparent) !important; }
+
+/* Approval is shared by mobile and desktop report details. */
+.vrm-review { padding: 20px 24px; border-top: 1px solid var(--n-border); background: var(--n-soft); }
+.vrm-review__heading { font-size: .95rem; font-weight: 750; color: var(--n-ink); }
+.vrm-review p { margin: 6px 0 16px; font-size: .82rem; line-height: 1.6; color: var(--n-muted); }
+.vrm-review__actions { display: flex; justify-content: flex-end; gap: 10px; }
+@media (max-width: 767px) {
+  .vrm-review { padding: 18px 16px; }
+  .vrm-review__actions { display: grid; grid-template-columns: 1fr; }
+  .vrm-review__actions > :last-child { grid-row: 1; }
+  .vrm-review__actions button { width: 100%; min-height: 44px; justify-content: center; }
+}
