@@ -12,6 +12,7 @@ import Swal from 'sweetalert2';
 import '../../surat/surat.css';
 import { getPublicOrigin } from '@/lib/public-url';
 import { APP_BRAND } from '@/lib/branding';
+import { suratFileName } from '@acca/shared/surat-document.cjs';
 
 interface SuratItem {
     id: string;
@@ -208,10 +209,10 @@ function DaftarSuratContent({ hideHeader = false }: { hideHeader?: boolean }) {
                 throw new Error((await res.text()) || 'Berkas surat gagal diunduh.');
             }
 
-            // Nama berkas mengikuti Content-Disposition dari server (nomor surat)
+            // Nama berkas mengikuti Content-Disposition dari server (nomor surat dan perihal)
             const disposition = res.headers.get('content-disposition') || '';
             const named = /filename\*=UTF-8''([^;]+)/i.exec(disposition) || /filename="([^"]+)"/i.exec(disposition);
-            const fileName = named ? decodeURIComponent(named[1]) : `${surat.nomor_surat || 'surat'}.pdf`;
+            const fileName = named ? decodeURIComponent(named[1]) : suratFileName(surat.nomor_surat, surat.perkara);
 
             const blob = await res.blob();
             const objectUrl = window.URL.createObjectURL(blob);

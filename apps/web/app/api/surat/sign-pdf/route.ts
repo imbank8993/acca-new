@@ -6,6 +6,7 @@ import { getApiUser } from '@/lib/api-auth';
 import QRCode from 'qrcode';
 import { POST as handleUpload } from '@/app/api/upload/route';
 import { getPublicOrigin } from '@/lib/public-url';
+import { suratFileName } from '@acca/shared/surat-document.cjs';
 
 export const dynamic = 'force-dynamic';
 
@@ -415,8 +416,7 @@ export async function POST(req: NextRequest) {
         const uploadFormData = new FormData();
         
         // Buat nama file unik
-        const rawFileName = file.name.replace(/\.pdf$/i, '');
-        const finalName = `${rawFileName}_SIGNED_${Date.now()}.pdf`;
+        const finalName = suratFileName(suratData.nomor_surat, suratData.perkara);
         
         uploadFormData.append('file', modifiedFileBlob, finalName);
         uploadFormData.append('folder', 'Surat Eksternal');
@@ -460,16 +460,19 @@ export async function POST(req: NextRequest) {
             })
         });
 
-        if (updateStatus !== 200 && updateStatus !== 201) {
+        if ((updateStatus !== 200 && updateStatus !== 201) || !updateBody?.ok) {
             console.error('[Sign-PDF] Finalization database error:', updateBody);
-            // Kita kembalikan link file walaupun update status gagal agar user tdk kehilangan akses
+            throw new Error('PDF sudah diunggah, tetapi penyimpanan arsip surat dan Informasi gagal. Silakan coba kembali.');
         }
 
         return NextResponse.json({
             ok: true,
             suratId: suratId,
             fileUrl: fileUrl,
-            message: 'Penandatanganan dokumen PDF eksternal berhasil.'
+            informasiCategory: updateBody.informasiCategory || null,
+            message: updateBody.informasiCategory
+                ? `Dokumen berhasil ditandatangani dan tersedia di Informasi → ${updateBody.informasiCategory}.`
+                : 'Dokumen berhasil ditandatangani.'
         });
 
     } catch (error: any) {

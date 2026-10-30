@@ -896,7 +896,7 @@ export default function SuratPage() {
             Swal.close();
             if (!res.ok || !result.ok) throw new Error(result.error || 'Proses gagal');
             setIsSuccess(true);
-            await Swal.fire({ icon: 'success', title: 'Berhasil!', text: 'Dokumen berhasil ditandatangani.', confirmButtonColor: '#3083FF', confirmButtonText: 'Lihat Hasil' });
+            await Swal.fire({ icon: 'success', title: 'Berhasil!', text: result.message || 'Dokumen berhasil ditandatangani.', confirmButtonColor: '#3083FF', confirmButtonText: 'Lihat Hasil' });
             setActiveTab('daftar');
         } catch (e: any) { Swal.fire('Gagal', e.message, 'error'); }
         finally { setProcessing(false); }

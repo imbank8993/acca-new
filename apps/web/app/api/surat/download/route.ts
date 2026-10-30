@@ -15,26 +15,13 @@ import { extractRequestToken } from '@/lib/app-jwt';
 import { nestFetchAsUser } from '@/lib/nest-api';
 import { getApiUser } from '@/lib/api-auth';
 import { fetchSafeFile } from '@/lib/proxy-guard';
+import { suratFileName } from '@acca/shared/surat-document.cjs';
 
 /** Ubah tautan tampilan Google Drive jadi tautan unduh langsung. */
 function toDirectUrl(url: string): string {
     if (!url.includes('drive.google.com')) return url;
     const match = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/) || url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
     return match ? `https://drive.google.com/uc?export=download&id=${match[1]}` : url;
-}
-
-/** Nama berkas aman untuk header Content-Disposition. */
-function safeFileName(nomorSurat: string | null, fileUrl: string): string {
-    const fromUrl = decodeURIComponent(fileUrl.split('?')[0].split('/').pop() || '');
-    const ext = /\.[a-z0-9]{2,5}$/i.exec(fromUrl)?.[0] || '.pdf';
-
-    const base = (nomorSurat || fromUrl.replace(/\.[a-z0-9]{2,5}$/i, '') || 'surat')
-        .replace(/[\\/:*?"<>|]+/g, '-')   // karakter terlarang di nama berkas
-        .replace(/\s+/g, ' ')
-        .trim()
-        .slice(0, 120);
-
-    return `${base || 'surat'}${ext}`;
 }
 
 export async function GET(request: NextRequest) {
@@ -71,14 +58,14 @@ export async function GET(request: NextRequest) {
         }
 
         const buffer = await upstream.arrayBuffer();
-        const fileName = safeFileName(data?.nomor_surat ?? null, fileUrl);
+        const fileName = suratFileName(data?.nomor_surat, data?.perkara);
 
         return new NextResponse(buffer, {
             headers: {
                 'Content-Type': upstream.headers.get('content-type') || 'application/pdf',
                 // filename* (RFC 5987) supaya nomor surat dengan karakter non-ASCII tetap utuh
                 'Content-Disposition':
-                    `attachment; filename="${fileName.replace(/"/g, '')}"; ` +
+                    `attachment; filename="${fileName.replace(/[^\x20-\x7e]/g, '_').replace(/"/g, '')}"; ` +
                     `filename*=UTF-8''${encodeURIComponent(fileName)}`,
                 'Cache-Control': 'private, no-store',
             },

@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { Prisma } from '@prisma/client';
+import { suratFileName, edaranDivision } from '@acca/shared/surat-document.cjs';
 
 @Injectable()
 export class SuratService {
@@ -226,14 +227,88 @@ export class SuratService {
     return { ok: true, data: result };
   }
 
-  async createSurat(body: any, user: any) {
-    const data = await this.prisma.surat.create({
-      data: {
-        ...body,
-        created_by: user ? (user.auth_id || String(user.id)) : undefined,
+  /** Use the letter UUID as the information document UUID for idempotent syncing. */
+  private async syncInformasiEdaran(tx: Prisma.TransactionClient, surat: Prisma.suratGetPayload<{}>) {
+    const division = edaranDivision(surat);
+
+    if (!division || surat.status !== 'FINAL' || !surat.file_url?.trim()) {
+      await tx.informasi_akademik.deleteMany({ where: { id: surat.id } });
+      return null;
+    }
+
+    const category = `[${division}] Surat Edaran`;
+    const document = {
+      title: suratFileName(surat.nomor_surat, surat.perkara).slice(0, -4),
+      category,
+      file_url: surat.file_url,
+      file_name: suratFileName(surat.nomor_surat, surat.perkara),
+      file_type: 'application/pdf',
+      file_size: surat.file_size,
+      storage_type: surat.storage_type,
+      updated_at: new Date(),
+    };
+    await tx.informasi_akademik.upsert({
+      where: { id: surat.id },
+      create: {
+        id: surat.id,
+        ...document,
+        created_by: surat.created_by,
+        audience: 'umum',
+        show_on_landing: true,
       },
+      // Preserve audience and landing preferences set by information managers.
+      update: document,
     });
-    return { ok: true, data };
+    return category;
+  }
+
+  /** One-off maintenance operation; no public HTTP endpoint. Safe to rerun. */
+  async syncExistingEdaran(apply = false) {
+    const report = { scanned: 0, eligible: 0, synced: 0, skipped: 0, failed: [] as string[] };
+    let cursor: string | undefined;
+    for (;;) {
+      const batch = await this.prisma.surat.findMany({
+        where: { status: 'FINAL', file_url: { not: null } },
+        orderBy: { id: 'asc' }, take: 100,
+        ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+        select: {
+          id: true, jenis_surat: true, file_url: true, nomor_surat: true,
+          nomor_kode1_nama: true, nomor_kode2_nama: true, nomor_kode3_nama: true,
+          pejabat_jabatan: true, penandatangan_jabatan: true,
+        },
+      });
+      if (!batch.length) break;
+      for (const row of batch) {
+        report.scanned++;
+        if (!edaranDivision(row) || !row.file_url?.trim()) { report.skipped++; continue; }
+        report.eligible++;
+        if (!apply) continue;
+        try {
+          const category = await this.prisma.$transaction(async (tx) => {
+            // Re-read in the transaction in case the letter changed since the scan.
+            const current = await tx.surat.findUnique({ where: { id: row.id } });
+            return current ? this.syncInformasiEdaran(tx, current) : null;
+          });
+          if (category) report.synced++;
+          else report.skipped++;
+        } catch { report.failed.push(row.id); }
+      }
+      cursor = batch[batch.length - 1].id;
+    }
+    return report;
+  }
+
+  async createSurat(body: any, user: any) {
+    return this.prisma.$transaction(async (tx) => {
+      const data = await tx.surat.create({
+        data: {
+          ...body,
+          created_by: user ? (user.auth_id || String(user.id)) : undefined,
+        },
+      });
+      const informasiCategory = await this.syncInformasiEdaran(tx, data);
+      return { ok: true, data, informasiCategory };
+    });
   }
 
   async updateSurat(id: string, body: any, user: any) {
@@ -253,14 +328,17 @@ export class SuratService {
       throw new ForbiddenException('Anda tidak berhak mengubah surat ini');
     }
 
-    const data = await this.prisma.surat.update({
-      where: { id },
-      data: {
-        ...body,
-        updated_at: new Date(),
-      },
+    return this.prisma.$transaction(async (tx) => {
+      const data = await tx.surat.update({
+        where: { id },
+        data: {
+          ...body,
+          updated_at: new Date(),
+        },
+      });
+      const informasiCategory = await this.syncInformasiEdaran(tx, data);
+      return { ok: true, data, informasiCategory };
     });
-    return { ok: true, data };
   }
 
   async deleteSurat(id: string, apiUser: any) {
@@ -274,7 +352,10 @@ export class SuratService {
       throw new (require('@nestjs/common').ForbiddenException)('Anda tidak berhak menghapus surat ini');
     }
 
-    await this.prisma.surat.delete({ where: { id } });
+    await this.prisma.$transaction(async (tx) => {
+      await tx.informasi_akademik.deleteMany({ where: { id } });
+      await tx.surat.delete({ where: { id } });
+    });
     return { ok: true, message: 'Surat berhasil dihapus' };
   }
 
