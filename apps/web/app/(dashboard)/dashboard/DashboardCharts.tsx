@@ -646,9 +646,6 @@ export default function DashboardCharts({
                     transition: width 0.8s ease;
                 }
 
-                /* auto-fit, bukan repeat(4, 1fr): dengan empat kategori, kartu
-                   yang sempit menumpuk jadi 2x2 alih-alih memaksa empat kolom
-                   yang angkanya saling berdempet. */
                 .db-chart-gauge-stats {
                     display: grid;
                     grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -709,6 +706,32 @@ export default function DashboardCharts({
                    (Tanpa backtick: blok ini template literal styled-jsx.)
                    ───────────────────────────────────────────────────────────── */
                 @media (max-width: 767.98px) {
+                    .db-chart-gauge-stats {
+                        grid-template-columns: repeat(2, minmax(0, 1fr));
+                        gap: 8px;
+                    }
+
+                    .db-chart-gauge-stat-item {
+                        padding: 12px 10px;
+                        gap: 10px;
+                        align-items: flex-start;
+                    }
+
+                    .db-chart-gauge-num {
+                        font-size: 1.05rem;
+                        line-height: 1.2;
+                    }
+
+                    .db-chart-gauge-sub {
+                        margin-top: 3px;
+                        font-size: 0.7rem;
+                        line-height: 1.4;
+                        white-space: normal;
+                        overflow: visible;
+                        text-overflow: clip;
+                        overflow-wrap: anywhere;
+                    }
+
                     .db-charts-grid {
                         grid-template-columns: 1fr;
                         gap: 12px;
