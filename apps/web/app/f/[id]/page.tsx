@@ -3,6 +3,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import Swal from 'sweetalert2';
+import Link from 'next/link';
+import { APP_BRAND } from '@/lib/branding';
+import './public-form.css';
 import { Spinner } from '@/components/ui/Spinner';
 import { FormSchema, FormField, FieldCondition } from '@/app/form/types';
 import { validateFormAnswers, safeFormPattern, formDisplayValue } from '@acca/shared';
@@ -454,25 +457,23 @@ export default function FormViewerPage() {
         textStrong: isDark ? '#f8fafc' : '#1e293b',
         muted: isDark ? '#94a3b8' : '#64748b',
         light: isDark ? '#64748b' : '#94a3b8',
-        brand: isDark ? '#60a5fa' : '#475569',
-        border: isDark ? 'rgba(37, 99, 235, 0.85)' : '#cbd5e1',
-        fieldBorder: isDark ? 'rgba(37, 99, 235, 0.85)' : '#cbd5e1',
-        surface: isDark ? '#000000' : '#ffffff',
-        soft: isDark ? '#000000' : '#f8fafc',
-        softer: isDark ? '#000000' : '#f1f5f9',
+        brand: isDark ? '#60a5fa' : '#3083ff',
+        border: isDark ? '#263653' : '#e0e6ef',
+        fieldBorder: isDark ? '#354764' : '#cfd9e7',
+        surface: isDark ? '#0f1a2e' : '#ffffff',
+        soft: isDark ? '#14213b' : '#f8fafc',
+        softer: isDark ? '#14213b' : '#f1f5f9',
     };
 
-    const shellClass = embedded
-        ? 'bg-transparent px-4 py-8 sm:py-10 flex flex-col items-center justify-start'
-        : 'min-h-screen bg-slate-50 dark:bg-transparent pt-8 sm:pt-14 pb-16 px-4 sm:px-6 flex flex-col items-center justify-start';
-    const centeredShellClass = embedded
-        ? 'bg-transparent flex items-center justify-center px-0 py-8'
-        : 'min-h-screen bg-slate-50 dark:bg-transparent flex items-center justify-center p-4';
-    const centeredCardOffset = embedded ? '0px' : '-180px';
+    const shellClass = `public-form-shell${embedded ? ' public-form-embedded' : ''}`;
+    const centeredShellClass = `${shellClass} public-form-centered`;
+    const centeredCardOffset = '0px';
+    const pageHeader = !embedded && <PublicFormHeader isDark={isDark} />;
 
     if (isClosed) {
         return (
             <div className={centeredShellClass}>
+                {pageHeader}
                 <div
                     className="bg-white dark:bg-slate-800 rounded-2xl shadow-lg border border-slate-200/80 max-w-md w-full flex flex-col items-center text-center"
                     style={{ paddingTop: '40px', paddingBottom: '48px', paddingLeft: '32px', paddingRight: '32px', marginTop: centeredCardOffset }}
@@ -492,6 +493,7 @@ export default function FormViewerPage() {
     if (isAccessDenied) {
         return (
             <div className={centeredShellClass}>
+                {pageHeader}
                 <div
                     className="bg-white dark:bg-slate-800 rounded-2xl shadow-lg border border-slate-200/80 max-w-md w-full flex flex-col items-center text-center"
                     style={{ paddingTop: '40px', paddingBottom: '48px', paddingLeft: '32px', paddingRight: '32px', marginTop: centeredCardOffset }}
@@ -517,7 +519,8 @@ export default function FormViewerPage() {
 
     if (loading) {
         return (
-            <div className={embedded ? 'bg-transparent flex flex-col items-center justify-center py-24' : 'min-h-screen bg-slate-50 dark:bg-black flex flex-col items-center justify-center'}>
+            <div className={centeredShellClass}>
+                {pageHeader}
                 <Spinner variant="buble" size={44} />
             </div>
         );
@@ -526,10 +529,11 @@ export default function FormViewerPage() {
     if (!formConfig) {
         return (
             <div className={shellClass}>
-                <div className="max-w-3xl w-full mx-auto" style={{ marginTop: '20px' }}>
+                {pageHeader}
+                <div className="public-form-layout">
                     <div
                         style={{
-                            background: 'var(--banner-bg, linear-gradient(135deg, var(--n-primary) 0%, #c2185b 100%))',
+                            background: '#3083ff',
                             borderRadius: '8px',
                             padding: '32px 36px',
                             marginBottom: '16px',
@@ -590,7 +594,8 @@ export default function FormViewerPage() {
     if (submitted) {
         return (
             <div className={shellClass}>
-                <div className="max-w-xl w-full mx-auto" style={{ marginTop: '8px' }}>
+                {pageHeader}
+                <div className="public-form-layout public-form-result">
                     <div
                         style={{
                             borderRadius: '8px',
@@ -620,14 +625,14 @@ export default function FormViewerPage() {
                             Terkirim!
                         </h2>
                         <p style={{ fontSize: '13px', color: theme.muted, margin: '0 0 28px 0', lineHeight: '1.6' }}>
-                            Tanggapan Anda telah berhasil disimpan ke dalam sistem database secara aman.
+                            Terima kasih. Tanggapan Anda telah berhasil disimpan.
                         </p>
                         <button
                             type="button"
                             onClick={() => window.location.reload()}
                             style={{
-                                borderRadius: '4px',
-                                height: '42px',
+                                borderRadius: '10px',
+                                height: '44px',
                                 padding: '0 28px',
                                 fontSize: '12px',
                                 fontWeight: 800,
@@ -696,54 +701,21 @@ export default function FormViewerPage() {
 
     return (
         <div className={shellClass}>
-            <div className="max-w-3xl w-full mx-auto" style={{ marginTop: '8px' }}>
-                <style jsx global>{`.form-responsive-card { overflow-wrap: anywhere; } @media (max-width: 639px) { .form-responsive-card { padding: 22px 16px !important; } .form-responsive-card input, .form-responsive-card select, .form-responsive-card textarea { font-size: 16px !important; } }`}</style>
-                {/* ══ Header Banner Card ══ */}
-                <div
-                    style={{
-                        borderRadius: '8px',
-                        padding: '32px 36px',
-                        marginBottom: '16px',
-                        boxShadow: '0 4px 20px rgba(0,0,0,0.12)',
-                    }}
-                    className="form-responsive-card form-header-card relative overflow-hidden text-center"
-                >
-                    <div className="relative z-10 flex flex-col items-center text-center">
-                        <h2 className="form-header-title" style={{ fontSize: '24px', fontWeight: 800, letterSpacing: '-0.02em', margin: '0 0 6px 0' }}>
-                            {formConfig.title}
-                        </h2>
-                        {formConfig.schema.description ? (
-                            <p
-                                style={{
-                                    fontSize: '13px',
-                                    marginTop: '6px',
-                                    fontWeight: 500,
-                                    lineHeight: '1.5',
-                                }}
-                                className="form-header-desc max-w-xl text-center"
-                            >
-                                {formConfig.schema.description}
-                            </p>
-                        ) : (
-                            <p style={{ fontSize: '12px', fontWeight: 600, marginTop: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }} className="form-header-desc">
-                                <i className="bi bi-shield-check"></i>
-                                Formulir resmi dikelola oleh ACCA App
-                            </p>
-                        )}
-                    </div>
-                    <div className="absolute -top-24 -right-24 w-64 h-64 bg-white opacity-5 rounded-full blur-3xl"></div>
-                </div>
+            {pageHeader}
+            <div className="public-form-layout">
+                <section className="public-form-hero" aria-labelledby="public-form-title">
+                    <div className="public-form-eyebrow"><i className="bi bi-file-earmark-text" aria-hidden="true" /> Formulir ACCA</div>
+                    <h1 id="public-form-title">{formConfig.title}</h1>
+                    {formConfig.schema.description ? (
+                        <p>{formConfig.schema.description}</p>
+                    ) : (
+                        <p>Formulir resmi dikelola oleh ACCA App.</p>
+                    )}
+                </section>
 
                 {/* ══ Form Fields Container Card ══ */}
                 <form
-                    onSubmit={handleSubmit} className="form-responsive-card"
-                    style={{
-                        borderRadius: '8px',
-                        backgroundColor: theme.surface,
-                        padding: '32px 36px',
-                        border: `1.8px solid ${theme.border}`,
-                        boxShadow: '0 4px 24px rgba(0,0,0,0.06)',
-                    }}
+                    onSubmit={handleSubmit} className="public-form-card form-responsive-card"
                 >
                     {/* Stepper Header Bar jika terdapat lebih dari 1 bagian */}
                     {pages.length > 1 && (
@@ -789,7 +761,7 @@ export default function FormViewerPage() {
                         </div>
                     )}
 
-                    <div className="flex flex-wrap gap-6">
+                    <div className="public-form-fields flex flex-wrap gap-6">
                         {activePage.fields.map((field) => {
                             const visible = checkFieldVisibility(field, formData);
                             if (!visible) return null;
@@ -828,14 +800,14 @@ export default function FormViewerPage() {
                     </div>
 
                     {/* Navigasi Tombol Multi-Step (Kembali, Selanjutnya, Kirim) */}
-                    <div style={{ marginTop: '36px', paddingTop: '24px', borderTop: isDark ? '1px dashed rgba(37, 99, 235, 0.7)' : '1px dashed #cbd5e1' }} className="flex justify-between items-center gap-4">
+                    <div className="public-form-actions flex justify-between items-center gap-4">
                         {currentStep > 0 ? (
                             <button
                                 type="button"
                                 onClick={handlePrevStep}
                                 style={{
-                                    borderRadius: '4px',
-                                    height: '42px',
+                                    borderRadius: '10px',
+                                    height: '44px',
                                     padding: '0 24px',
                                     fontSize: '12px',
                                     fontWeight: 800,
@@ -856,16 +828,16 @@ export default function FormViewerPage() {
                                 type="button"
                                 onClick={handleNextStep}
                                 style={{
-                                    background: isDark ? 'linear-gradient(135deg, #1d6bf3 0%, #2563eb 100%)' : 'linear-gradient(135deg, #3083FF 0%, #c2185b 100%)',
-                                    borderRadius: '4px',
+                                    background: '#3083ff',
+                                    borderRadius: '10px',
                                     height: '44px',
                                     padding: '0 32px',
                                     fontSize: '13px',
-                                    fontWeight: 800,
+                                    fontWeight: 700,
                                     color: '#ffffff',
                                     border: isDark ? '1px solid rgba(147, 197, 253, 0.4)' : 'none',
                                     cursor: 'pointer',
-                                    boxShadow: isDark ? '0 4px 16px rgba(29, 107, 243, 0.4)' : '0 2px 6px rgba(0,0,0,0.12)',
+                                    boxShadow: '0 4px 12px rgba(48, 131, 255, 0.18)',
                                 }}
                                 className="inline-flex items-center gap-2 hover:opacity-95 transition-opacity ml-auto"
                             >
@@ -877,17 +849,17 @@ export default function FormViewerPage() {
                                 type="submit"
                                 disabled={submitting || uploadCount > 0}
                                 style={{
-                                    background: isDark ? 'linear-gradient(135deg, #1d6bf3 0%, #2563eb 100%)' : 'linear-gradient(135deg, #3083FF 0%, #c2185b 100%)',
-                                    borderRadius: '4px',
+                                    background: '#3083ff',
+                                    borderRadius: '10px',
                                     height: '44px',
                                     padding: '0 40px',
                                     fontSize: '13px',
-                                    fontWeight: 800,
+                                    fontWeight: 700,
                                     color: '#ffffff',
                                     border: isDark ? '1px solid rgba(147, 197, 253, 0.4)' : 'none',
-                                    cursor: submitting ? 'not-allowed' : 'pointer',
-                                    opacity: submitting ? 0.6 : 1,
-                                    boxShadow: isDark ? '0 4px 16px rgba(29, 107, 243, 0.4)' : '0 2px 6px rgba(0,0,0,0.12)',
+                                    cursor: submitting || uploadCount > 0 ? 'not-allowed' : 'pointer',
+                                    opacity: submitting || uploadCount > 0 ? 0.6 : 1,
+                                    boxShadow: '0 4px 12px rgba(48, 131, 255, 0.18)',
                                 }}
                                 className="inline-flex items-center gap-2 hover:opacity-95 transition-opacity ml-auto"
                             >
@@ -908,6 +880,27 @@ export default function FormViewerPage() {
                 </div>
             </div>
         </div>
+    );
+}
+
+function PublicFormHeader({ isDark }: { isDark: boolean }) {
+    const toggleTheme = () => {
+        const next = !document.documentElement.classList.contains('dark');
+        document.documentElement.classList.toggle('dark', next);
+        localStorage.setItem('darkMode', next ? '1' : '0');
+    };
+    return (
+        <header className="public-form-header">
+            <div className="public-form-header-inner">
+                <Link href="/" prefetch={false} className="public-form-brand" aria-label="Ke Home / Dashboard" title="Ke Home / Dashboard">
+                    <img src={isDark ? APP_BRAND.wordmarkDark : APP_BRAND.wordmark} alt="ACCA" />
+                    <span>Formulir Publik</span>
+                </Link>
+                <button type="button" className="public-form-theme" onClick={toggleTheme} aria-label={isDark ? 'Beralih ke mode terang' : 'Beralih ke mode gelap'} title={isDark ? 'Mode terang' : 'Mode gelap'}>
+                    <i className={`bi bi-${isDark ? 'sun' : 'moon-stars'}`} aria-hidden="true" />
+                </button>
+            </div>
+        </header>
     );
 }
 
@@ -957,7 +950,7 @@ function RenderField({
                 {field.label && <p className="text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2 leading-relaxed">{field.label}</p>}
                 <p
                     style={{
-                        borderRadius: '4px',
+                        borderRadius: '10px',
                         padding: '16px 24px',
                         backgroundColor: theme.surface,
                         border: `1.5px solid ${theme.border}`,
@@ -983,7 +976,7 @@ function RenderField({
     return (
         <div className={`${widthClass} min-w-0`}>
             {/* Label dengan Jarak mb-1.5 & Indent 2px */}
-            <label id={`form-label-${field.id}`} htmlFor={`form-field-${field.id}`} style={{ display: 'block', fontSize: '13px', fontWeight: 700, color: theme.textStrong, marginBottom: '4px', paddingLeft: '2px', lineHeight: 1.3 }}>
+            <label id={`form-label-${field.id}`} htmlFor={`form-field-${field.id}`} style={{ display: 'block', fontSize: '13px', fontWeight: 700, color: theme.textStrong, marginBottom: '8px', paddingLeft: '2px', lineHeight: 1.3 }}>
                 {field.label}
                 {field.required && <span style={{ color: '#e11d48', marginLeft: '4px', fontWeight: 800 }}>*</span>}
             </label>
@@ -991,12 +984,13 @@ function RenderField({
 
             {field.type === 'textarea' && (
                 <textarea
+                    id={`form-field-${field.id}`}
                     value={value ?? ''}
                     onChange={(e) => onChange(e.target.value)}
                     placeholder={field.placeholder}
                     rows={field.rows || 4}
                     style={{
-                        borderRadius: '4px',
+                        borderRadius: '10px',
                         minHeight: '100px',
                         padding: '12px 16px',
                         border: `1px solid ${theme.fieldBorder}`,
@@ -1015,11 +1009,12 @@ function RenderField({
 
             {field.type === 'select' && (
                 <select
+                    id={`form-field-${field.id}`}
                     value={value || ''}
                     onChange={(e) => onChange(e.target.value)}
                     style={{
-                        borderRadius: '4px',
-                        height: '42px',
+                        borderRadius: '10px',
+                        height: '44px',
                         padding: '0 16px',
                         border: `1px solid ${theme.fieldBorder}`,
                         backgroundColor: theme.surface,
@@ -1160,8 +1155,8 @@ function RenderField({
                             }
                         }}
                         style={{
-                            borderRadius: '4px',
-                            height: '42px',
+                            borderRadius: '10px',
+                            height: '44px',
                             padding: '8px 20px',
                             border: `1px solid ${theme.fieldBorder}`,
                             backgroundColor: theme.surface,
@@ -1182,6 +1177,7 @@ function RenderField({
 
             {['text', 'number', 'email', 'phone', 'url', 'date', 'time', 'datetime'].includes(field.type) && (
                 <input
+                    id={`form-field-${field.id}`}
                     type={
                         field.type === 'phone' ? 'tel' :
                         field.type === 'datetime' ? 'datetime-local' :
@@ -1193,8 +1189,8 @@ function RenderField({
                     min={field.min as any}
                     max={field.max as any}
                     style={{
-                        borderRadius: '4px',
-                        height: '42px',
+                        borderRadius: '10px',
+                        height: '44px',
                         padding: '0 16px',
                         border: `1px solid ${theme.fieldBorder}`,
                         backgroundColor: theme.surface,

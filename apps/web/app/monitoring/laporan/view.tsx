@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { Fragment, useState, useEffect, useMemo, useCallback } from 'react';
 import Link from 'next/link';
 import { APP_BRAND } from '@/lib/branding';
 import FilterToolbar, { FilterSearch, FilterSelect, FilterActions } from '@/components/ui/FilterToolbar';
@@ -13,6 +13,7 @@ import InlineSelect from '@/components/ui/InlineSelect';
 import Swal from 'sweetalert2';
 import { swalError, swalSuccess } from '@/lib/swal-premium';
 import { getProxiedImageUrl } from '@/lib/image-utils';
+import { reportPeriod, sortReports } from './report-order';
 import './monitoring-laporan.css';
 
 const BULAN = [
@@ -164,28 +165,8 @@ export default function MonitoringLaporanView() {
         fetchData();
     }, [fetchData]);
 
-    // Sort data newest first
-    const sortedDataList = useMemo(() => {
-        return [...dataList].sort((a, b) => {
-            if (activeTab === 'KLINIK') {
-                const dateA = a.tanggal ? new Date(a.tanggal).getTime() : 0;
-                const dateB = b.tanggal ? new Date(b.tanggal).getTime() : 0;
-                return dateB - dateA;
-            }
-            // GURU_ASUH & EKSKUL
-            const thnA = Number(a.tahun) || 0;
-            const thnB = Number(b.tahun) || 0;
-            if (thnB !== thnA) return thnB - thnA;
-
-            const blnA = Number(a.bulan) || 0;
-            const blnB = Number(b.bulan) || 0;
-            if (blnB !== blnA) return blnB - blnA;
-
-            const timeA = new Date(a.submitted_at || a.approved_at || a.created_at || 0).getTime();
-            const timeB = new Date(b.submitted_at || b.approved_at || b.created_at || 0).getTime();
-            return timeB - timeA;
-        });
-    }, [dataList, activeTab]);
+    // Newest month first, with each teacher's reports kept together A–Z.
+    const sortedDataList = useMemo(() => sortReports(dataList, activeTab), [dataList, activeTab]);
 
     const pageCount = Math.ceil(sortedDataList.length / PAGE_SIZE);
     const pageStart = (currentPage - 1) * PAGE_SIZE;
@@ -368,12 +349,24 @@ export default function MonitoringLaporanView() {
         );
     };
 
+    const periodLabel = (row: any) => {
+        const { year, month } = reportPeriod(row, activeTab);
+        return month ? `${NAMA_BULAN[month - 1]} ${year}` : 'Periode tidak diketahui';
+    };
+    // Repeat the month heading on a new page so the period is always visible.
+    const startsPeriod = (idx: number) => idx === 0 || reportPeriod(paginatedDataList[idx], activeTab).key !== reportPeriod(paginatedDataList[idx - 1], activeTab).key;
+    const renderPeriodHeading = (row: any, idx: number) => startsPeriod(idx) ? (
+        <tr className="mon-period-row">
+            <th colSpan={6} scope="rowgroup">{periodLabel(row)} <span>· Nama A–Z</span></th>
+        </tr>
+    ) : null;
+
     return (
         <div className="mon-lap-wrap" suppressHydrationWarning>
             {/* Top Navigation Header with ACCA Logo (compact & elegant) */}
             <header className="mon-lap-header">
                 <div className="mon-lap-header-inner">
-                    <Link href="/monitoring/laporan" className="mon-lap-brand" title="Portal Monitoring Laporan ACCA">
+                    <Link href="/" className="mon-lap-brand" title="Ke Home / Dashboard" aria-label="Ke Home / Dashboard">
                         {/* Logo ACCA lebar tetapi proporsional */}
                         <img
                             src={APP_BRAND.wordmark}
@@ -542,127 +535,136 @@ export default function MonitoringLaporanView() {
                                     <tbody>
                                         {/* 1. TAB GURU ASUH */}
                                         {activeTab === 'GURU_ASUH' && paginatedDataList.map((row, idx) => (
-                                            <tr key={row.id}>
-                                                <td style={{ textAlign: 'center', color: 'var(--n-muted)' }}>{pageStart + idx + 1}</td>
-                                                <td>
-                                                    <div className="mon-avatar-cell">
-                                                        {renderAvatar(row.id, row.nama_guru_snap, row.foto_profil)}
-                                                        <div>
-                                                            <div className="gap-td-name">{row.nama_guru_snap || '-'}</div>
-                                                            <div className="gap-td-nip">NIP. {row.nip || '-'}</div>
+                                            <Fragment key={row.id}>
+                                                {renderPeriodHeading(row, idx)}
+                                                <tr>
+                                                    <td style={{ textAlign: 'center', color: 'var(--n-muted)' }}>{pageStart + idx + 1}</td>
+                                                    <td>
+                                                        <div className="mon-avatar-cell">
+                                                            {renderAvatar(row.id, row.nama_guru_snap, row.foto_profil)}
+                                                            <div>
+                                                                <div className="gap-td-name">{row.nama_guru_snap || '-'}</div>
+                                                                <div className="gap-td-nip">NIP. {row.nip || '-'}</div>
+                                                            </div>
                                                         </div>
-                                                    </div>
-                                                </td>
-                                                <td>
-                                                    <strong>{NAMA_BULAN[row.bulan - 1] || row.bulan} {row.tahun}</strong>
-                                                </td>
-                                                <td>
-                                                    <span className="gap-badge gap-badge--per-bulan">
-                                                        {row.total_laporan || 0} Kegiatan
-                                                    </span>
-                                                </td>
-                                                <td>
-                                                    <div style={{ fontSize: '0.8rem', fontWeight: 600 }}>
-                                                        {row.approved_by_name || 'WKM Keasramaan'}
-                                                    </div>
-                                                    <div style={{ fontSize: '0.72rem', color: 'var(--n-muted)' }}>
-                                                        {fmtDate(row.approved_at || row.submitted_at)}
-                                                    </div>
-                                                </td>
-                                                <td style={{ textAlign: 'center', whiteSpace: 'nowrap' }}>
-                                                    <button
-                                                        type="button"
-                                                        className="btn-action-view"
-                                                        onClick={() => handlePreviewDoc(row.id, `Laporan Guru Asuh - ${row.nama_guru_snap || 'Guru'} (${NAMA_BULAN[row.bulan - 1] || row.bulan} ${row.tahun})`)}
-                                                        title="Pratinjau Dokumen Laporan"
-                                                    >
-                                                        <i className="bi bi-eye" />
-                                                        <span>Lihat Laporan</span>
-                                                    </button>
-                                                </td>
-                                            </tr>
+                                                    </td>
+                                                    <td>
+                                                        <strong>{NAMA_BULAN[row.bulan - 1] || row.bulan} {row.tahun}</strong>
+                                                    </td>
+                                                    <td>
+                                                        <span className="gap-badge gap-badge--per-bulan">
+                                                            {row.total_laporan || 0} Kegiatan
+                                                        </span>
+                                                    </td>
+                                                    <td>
+                                                        <div style={{ fontSize: '0.8rem', fontWeight: 600 }}>
+                                                            {row.approved_by_name || 'WKM Keasramaan'}
+                                                        </div>
+                                                        <div style={{ fontSize: '0.72rem', color: 'var(--n-muted)' }}>
+                                                            {fmtDate(row.approved_at || row.submitted_at)}
+                                                        </div>
+                                                    </td>
+                                                    <td style={{ textAlign: 'center', whiteSpace: 'nowrap' }}>
+                                                        <button
+                                                            type="button"
+                                                            className="btn-action-view"
+                                                            onClick={() => handlePreviewDoc(row.id, `Laporan Guru Asuh - ${row.nama_guru_snap || 'Guru'} (${NAMA_BULAN[row.bulan - 1] || row.bulan} ${row.tahun})`)}
+                                                            title="Pratinjau Dokumen Laporan"
+                                                        >
+                                                            <i className="bi bi-eye" />
+                                                            <span>Lihat Laporan</span>
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            </Fragment>
                                         ))}
 
                                         {/* 2. TAB KLINIK PEMBELAJARAN */}
                                         {activeTab === 'KLINIK' && paginatedDataList.map((row, idx) => (
-                                            <tr key={row.id}>
-                                                <td style={{ textAlign: 'center', color: 'var(--n-muted)' }}>{pageStart + idx + 1}</td>
-                                                <td>
-                                                    <div className="mon-avatar-cell">
-                                                        {renderAvatar(row.id, row.nama_guru, row.foto_profil)}
-                                                        <div>
-                                                            <div className="gap-td-name">{row.nama_guru || '-'}</div>
-                                                            <div className="gap-td-nip">NIP. {row.nip || '-'}</div>
+                                            <Fragment key={row.id}>
+                                                {renderPeriodHeading(row, idx)}
+                                                <tr>
+                                                    <td style={{ textAlign: 'center', color: 'var(--n-muted)' }}>{pageStart + idx + 1}</td>
+                                                    <td>
+                                                        <div className="mon-avatar-cell">
+                                                            {renderAvatar(row.id, row.nama_guru, row.foto_profil)}
+                                                            <div>
+                                                                <div className="gap-td-name">{row.nama_guru || '-'}</div>
+                                                                <div className="gap-td-nip">NIP. {row.nip || '-'}</div>
+                                                            </div>
                                                         </div>
-                                                    </div>
-                                                </td>
-                                                <td>
-                                                    <div style={{ fontWeight: 700, color: 'var(--n-ink)' }}>{row.mapel || '-'}</div>
-                                                    <div style={{ fontSize: '0.75rem', color: 'var(--n-muted)', marginTop: 2 }}>{row.topik || '-'}</div>
-                                                </td>
-                                                <td>
-                                                    <div style={{ fontWeight: 600 }}>{fmtDate(row.tanggal)}</div>
-                                                    <div style={{ fontSize: '0.72rem', color: 'var(--n-muted)' }}>
-                                                        {row.jam_mulai && row.jam_selesai ? `${row.jam_mulai} - ${row.jam_selesai}` : 'Sesi Klinik'}
-                                                        {row.ruangan ? ` (${row.ruangan})` : ''}
-                                                    </div>
-                                                </td>
-                                                <td>
-                                                    <span className="gap-badge gap-badge--per-bulan">
-                                                        {row.total_peserta || 0} Siswa
-                                                    </span>
-                                                </td>
-                                                <td style={{ textAlign: 'center', whiteSpace: 'nowrap' }}>
-                                                    <button
-                                                        type="button"
-                                                        className="btn-action-view"
-                                                        onClick={() => handlePreviewDoc(row.id, `Laporan Klinik - ${row.nama_guru || 'Guru'} (${row.mapel || 'Klinik'})`)}
-                                                        title="Pratinjau Dokumen Laporan"
-                                                    >
-                                                        <i className="bi bi-eye" />
-                                                        <span>Lihat Laporan</span>
-                                                    </button>
-                                                </td>
-                                            </tr>
+                                                    </td>
+                                                    <td>
+                                                        <div style={{ fontWeight: 700, color: 'var(--n-ink)' }}>{row.mapel || '-'}</div>
+                                                        <div style={{ fontSize: '0.75rem', color: 'var(--n-muted)', marginTop: 2 }}>{row.topik || '-'}</div>
+                                                    </td>
+                                                    <td>
+                                                        <div style={{ fontWeight: 600 }}>{fmtDate(row.tanggal)}</div>
+                                                        <div style={{ fontSize: '0.72rem', color: 'var(--n-muted)' }}>
+                                                            {row.jam_mulai && row.jam_selesai ? `${row.jam_mulai} - ${row.jam_selesai}` : 'Sesi Klinik'}
+                                                            {row.ruangan ? ` (${row.ruangan})` : ''}
+                                                        </div>
+                                                    </td>
+                                                    <td>
+                                                        <span className="gap-badge gap-badge--per-bulan">
+                                                            {row.total_peserta || 0} Siswa
+                                                        </span>
+                                                    </td>
+                                                    <td style={{ textAlign: 'center', whiteSpace: 'nowrap' }}>
+                                                        <button
+                                                            type="button"
+                                                            className="btn-action-view"
+                                                            onClick={() => handlePreviewDoc(row.id, `Laporan Klinik - ${row.nama_guru || 'Guru'} (${row.mapel || 'Klinik'})`)}
+                                                            title="Pratinjau Dokumen Laporan"
+                                                        >
+                                                            <i className="bi bi-eye" />
+                                                            <span>Lihat Laporan</span>
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            </Fragment>
                                         ))}
 
                                         {/* 3. TAB EKSTRAKURIKULER */}
                                         {activeTab === 'EKSKUL' && paginatedDataList.map((row, idx) => (
-                                            <tr key={row.id}>
-                                                <td style={{ textAlign: 'center', color: 'var(--n-muted)' }}>{pageStart + idx + 1}</td>
-                                                <td>
-                                                    <div className="mon-avatar-cell">
-                                                        {renderAvatar(row.id, row.pembina_nama, row.foto_profil)}
-                                                        <div>
-                                                            <div className="gap-td-name">{row.pembina_nama || '-'}</div>
-                                                            <div className="gap-td-nip">NIP. {row.pembina_nip || '-'}</div>
+                                            <Fragment key={row.id}>
+                                                {renderPeriodHeading(row, idx)}
+                                                <tr>
+                                                    <td style={{ textAlign: 'center', color: 'var(--n-muted)' }}>{pageStart + idx + 1}</td>
+                                                    <td>
+                                                        <div className="mon-avatar-cell">
+                                                            {renderAvatar(row.id, row.pembina_nama, row.foto_profil)}
+                                                            <div>
+                                                                <div className="gap-td-name">{row.pembina_nama || '-'}</div>
+                                                                <div className="gap-td-nip">NIP. {row.pembina_nip || '-'}</div>
+                                                            </div>
                                                         </div>
-                                                    </div>
-                                                </td>
-                                                <td>
-                                                    <strong style={{ color: '#1e40af' }}>{row.ekskul?.nama_ekskul || '-'}</strong>
-                                                </td>
-                                                <td>
-                                                    <strong>{NAMA_BULAN[row.bulan - 1] || row.bulan} {row.tahun}</strong>
-                                                </td>
-                                                <td>
-                                                    <div style={{ fontWeight: 700 }}>{row.total_pertemuan || 0} Pertemuan</div>
-                                                    <div style={{ fontSize: '0.72rem', color: 'var(--n-muted)' }}>
-                                                        Internal: {row.jml_internal || 0} | Eksternal: {row.jml_eksternal || 0}
-                                                    </div>
-                                                </td>
-                                                <td style={{ textAlign: 'center', whiteSpace: 'nowrap' }}>
-                                                    <button
-                                                        type="button"
-                                                        className="btn-action-view"
-                                                        onClick={() => handlePreviewDoc(row.id, `Laporan Ekskul - ${row.ekskul?.nama_ekskul || 'Ekskul'} (${row.pembina_nama || 'Pembina'})`)}
-                                                        title="Pratinjau Dokumen Laporan"
-                                                    >
-                                                        <i className="bi bi-eye" />
-                                                        <span>Lihat Laporan</span>
-                                                    </button>
-                                                </td>
-                                            </tr>
+                                                    </td>
+                                                    <td>
+                                                        <strong style={{ color: '#1e40af' }}>{row.ekskul?.nama_ekskul || '-'}</strong>
+                                                    </td>
+                                                    <td>
+                                                        <strong>{NAMA_BULAN[row.bulan - 1] || row.bulan} {row.tahun}</strong>
+                                                    </td>
+                                                    <td>
+                                                        <div style={{ fontWeight: 700 }}>{row.total_pertemuan || 0} Pertemuan</div>
+                                                        <div style={{ fontSize: '0.72rem', color: 'var(--n-muted)' }}>
+                                                            Internal: {row.jml_internal || 0} | Eksternal: {row.jml_eksternal || 0}
+                                                        </div>
+                                                    </td>
+                                                    <td style={{ textAlign: 'center', whiteSpace: 'nowrap' }}>
+                                                        <button
+                                                            type="button"
+                                                            className="btn-action-view"
+                                                            onClick={() => handlePreviewDoc(row.id, `Laporan Ekskul - ${row.ekskul?.nama_ekskul || 'Ekskul'} (${row.pembina_nama || 'Pembina'})`)}
+                                                            title="Pratinjau Dokumen Laporan"
+                                                        >
+                                                            <i className="bi bi-eye" />
+                                                            <span>Lihat Laporan</span>
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            </Fragment>
                                         ))}
                                     </tbody>
                                 </table>
@@ -678,31 +680,33 @@ export default function MonitoringLaporanView() {
                                         : row.pembina_nama;
 
                                     return (
-                                        <div
-                                            key={row.id || idx}
-                                            role="button"
-                                            tabIndex={0}
-                                            className="mon-mobile-item"
-                                            onClick={() => setSelectedDetail(row)}
-                                            onKeyDown={(e) => {
-                                                if (e.key === 'Enter' || e.key === ' ') {
-                                                    e.preventDefault();
-                                                    setSelectedDetail(row);
-                                                }
-                                            }}
-                                        >
-                                            <div className="mon-mobile-item-left">
-                                                {renderAvatar(row.id, teacherName, row.foto_profil)}
-                                                <div className="mon-mobile-info">
-                                                    <div className="mon-mobile-name">{teacherName || '-'}</div>
-                                                    <div className="mon-mobile-sub">
-                                                        {activeTab === 'GURU_ASUH' && `${row.total_laporan || 0} Kegiatan · ${NAMA_BULAN[row.bulan - 1] || row.bulan} ${row.tahun}`}
-                                                        {activeTab === 'KLINIK' && `${row.mapel || 'Klinik'} · ${row.total_peserta || 0} Siswa`}
-                                                        {activeTab === 'EKSKUL' && `${row.ekskul?.nama_ekskul || 'Ekskul'} · ${row.total_pertemuan || 0} Pertemuan`}
+                                        <Fragment key={row.id || idx}>
+                                            {startsPeriod(idx) && <h2 className="mon-period-heading">{periodLabel(row)} <span>· Nama A–Z</span></h2>}
+                                            <div
+                                                role="button"
+                                                tabIndex={0}
+                                                className="mon-mobile-item"
+                                                onClick={() => setSelectedDetail(row)}
+                                                onKeyDown={(e) => {
+                                                    if (e.key === 'Enter' || e.key === ' ') {
+                                                        e.preventDefault();
+                                                        setSelectedDetail(row);
+                                                    }
+                                                }}
+                                            >
+                                                <div className="mon-mobile-item-left">
+                                                    {renderAvatar(row.id, teacherName, row.foto_profil)}
+                                                    <div className="mon-mobile-info">
+                                                        <div className="mon-mobile-name">{teacherName || '-'}</div>
+                                                        <div className="mon-mobile-sub">
+                                                            {activeTab === 'GURU_ASUH' && `${row.total_laporan || 0} Kegiatan · ${NAMA_BULAN[row.bulan - 1] || row.bulan} ${row.tahun}`}
+                                                            {activeTab === 'KLINIK' && `${row.mapel || 'Klinik'} · ${row.total_peserta || 0} Siswa · ${fmtDate(row.tanggal)}`}
+                                                            {activeTab === 'EKSKUL' && `${row.ekskul?.nama_ekskul || 'Ekskul'} · ${row.total_pertemuan || 0} Pertemuan · ${periodLabel(row)}`}
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </div>
-                                        </div>
+                                        </Fragment>
                                     );
                                 })}
                             </div>

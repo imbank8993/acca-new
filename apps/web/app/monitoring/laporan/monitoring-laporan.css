@@ -151,6 +151,43 @@
     padding: 20px 20px 40px;
 }
 
+.mon-lap-main > .gap-stats {
+    margin-bottom: 24px;
+}
+
+.mon-lap-main > .gap-table-card {
+    gap: 20px;
+}
+
+.mon-lap-wrap .ftb-toolbar {
+    padding: 16px;
+}
+
+.mon-lap-wrap .gap-table .mon-period-row th,
+.mon-period-heading {
+    background: var(--n-soft, #eff6ff);
+    color: var(--n-ink, #0f172a);
+    padding: 12px 16px;
+    font-size: 0.84rem;
+    font-weight: 700;
+    text-align: left;
+    text-transform: none;
+    letter-spacing: normal;
+}
+
+.mon-period-row span,
+.mon-period-heading span {
+    color: var(--n-muted, #64748b);
+    font-size: 0.74rem;
+    font-weight: 500;
+}
+
+.dark .mon-period-row th,
+.dark .mon-period-heading {
+    background: #14213b !important;
+    color: #f1f5f9 !important;
+}
+
 /* Hero Banner */
 .mon-lap-hero {
     background: linear-gradient(135deg, #1e40af 0%, #2563eb 50%, #0284c7 100%);
@@ -645,7 +682,7 @@
         gap: 6px !important;
         width: 100% !important;
         margin-top: 0 !important;
-        margin-bottom: 12px !important;
+        margin-bottom: 16px !important;
         box-sizing: border-box !important;
     }
     .gap-stat-item {
@@ -698,11 +735,12 @@
     }
 
     /* Container Card on Mobile */
-    .gap-table-card {
+    .mon-lap-main > .gap-table-card {
         background: transparent !important;
         border: none !important;
         box-shadow: none !important;
         overflow: visible !important;
+        gap: 16px;
     }
 
     /* On Mobile: Hide Desktop Table and Show List */
@@ -719,7 +757,17 @@
 
     .mon-mobile-list {
         display: flex !important;
-        padding-top: 12px;
+        padding-top: 0;
+    }
+
+    .mon-period-heading {
+        margin: 8px 0 0;
+        border-radius: 10px;
+        padding: 10px 12px;
+    }
+
+    .mon-period-heading:first-child {
+        margin-top: 0;
     }
 
     /* Mobile Topbar & Search Wrap Flex (Fits Search + Download Button side-by-side without horizontal scroll) */

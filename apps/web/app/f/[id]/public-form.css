@@ -1,0 +1,160 @@
+.public-form-shell {
+    --pf-bg: #f3f5f9;
+    --pf-surface: #fff;
+    --pf-text: #172b4d;
+    --pf-muted: #64748b;
+    --pf-border: #e0e6ef;
+    position: relative;
+    z-index: 1;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background: var(--pf-bg);
+    color: var(--pf-text);
+}
+
+.dark .public-form-shell {
+    --pf-bg: #080e1e;
+    --pf-surface: #0f1a2e;
+    --pf-text: #f1f5f9;
+    --pf-muted: #a3b3c9;
+    --pf-border: #263653;
+}
+
+.public-form-header {
+    background: var(--pf-surface);
+    border-bottom: 1px solid var(--pf-border);
+    padding: 12px 24px;
+}
+
+.public-form-header-inner {
+    max-width: 1400px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.public-form-brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 14px;
+    text-decoration: none;
+    color: var(--pf-text);
+    min-width: 0;
+}
+
+.public-form-brand img { width: auto; height: 20px; }
+.public-form-brand span {
+    border-left: 1px solid var(--pf-border);
+    padding-left: 14px;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.public-form-theme {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    border: 1px solid var(--pf-border);
+    background: var(--pf-surface);
+    color: var(--pf-muted);
+    cursor: pointer;
+}
+
+.public-form-layout {
+    width: 100%;
+    max-width: 840px;
+    margin: 0 auto;
+    padding: 36px 20px 24px;
+    box-sizing: border-box;
+}
+
+.public-form-hero {
+    background: var(--pf-surface);
+    border: 1px solid var(--pf-border);
+    border-top: 4px solid #3083ff;
+    border-radius: 18px;
+    padding: 28px 32px;
+    margin-bottom: 24px;
+    overflow-wrap: anywhere;
+}
+
+.public-form-eyebrow {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #2875e5;
+    font-size: 12px;
+    font-weight: 600;
+    margin-bottom: 12px;
+}
+
+.dark .public-form-eyebrow { color: #82b6ff; }
+.public-form-hero h1 {
+    font-size: clamp(20px, 2.4vw, 26px);
+    font-weight: 750;
+    letter-spacing: -0.025em;
+    line-height: 1.4;
+    color: var(--pf-text);
+    margin: 0;
+}
+
+.public-form-hero p {
+    color: var(--pf-muted);
+    font-size: 13px;
+    line-height: 1.7;
+    margin: 10px 0 0;
+    white-space: pre-line;
+}
+
+.public-form-card {
+    background: var(--pf-surface);
+    border: 1px solid var(--pf-border);
+    border-radius: 18px;
+    padding: 32px;
+    box-shadow: 0 4px 20px rgba(15, 23, 42, 0.025);
+    overflow-wrap: anywhere;
+}
+
+.public-form-fields { row-gap: 28px; }
+.public-form-actions {
+    margin-top: 32px;
+    padding-top: 24px;
+    border-top: 1px solid var(--pf-border);
+}
+
+.public-form-actions button { justify-content: center; transition: background 0.2s, box-shadow 0.2s; }
+.public-form-actions button:disabled { cursor: not-allowed; }
+.public-form-actions button[type="submit"]:hover:not(:disabled) { background: #1d6bf3 !important; }
+.public-form-shell :is(input, select, textarea):focus-visible {
+    border-color: #3083ff !important;
+    outline: 3px solid rgba(48, 131, 255, 0.16) !important;
+    outline-offset: 1px;
+}
+.public-form-shell :is(a, button):focus-visible { outline: 3px solid #3083ff; outline-offset: 3px; }
+.public-form-shell :is(input, textarea)::placeholder { color: #8291a7; opacity: 1; }
+.public-form-result { max-width: 600px; }
+.public-form-centered > :not(.public-form-header) { align-self: center; margin: auto !important; max-width: min(440px, calc(100% - 32px)); }
+.public-form-embedded { min-height: 0; background: transparent; }
+.public-form-embedded .public-form-layout { padding-top: 16px; }
+
+@media (max-width: 639px) {
+    .public-form-header { padding: 10px 16px; }
+    .public-form-brand { gap: 10px; }
+    .public-form-brand img { height: 16px; }
+    .public-form-brand span { padding-left: 10px; font-size: 11px; }
+    .public-form-layout { padding: 24px 14px 16px; }
+    .public-form-hero { padding: 22px 20px; margin-bottom: 16px; border-radius: 16px; }
+    .public-form-card { padding: 24px 20px; border-radius: 16px; }
+    .public-form-card :is(input, select, textarea) { font-size: 16px !important; }
+    .public-form-fields { row-gap: 24px; }
+    .public-form-actions { flex-wrap: wrap; gap: 12px; margin-top: 28px; padding-top: 20px; }
+    .public-form-actions > div:empty { display: none; }
+    .public-form-actions button { flex: 1 1 auto; padding: 0 20px !important; }
+}
