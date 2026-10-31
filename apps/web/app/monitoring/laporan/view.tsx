@@ -443,7 +443,7 @@ export default function MonitoringLaporanView() {
                 </div>
 
                 {/* Filter Toolbar & Actions (with actionsInline for mobile circular button) */}
-                <div className="gap-table-card">
+                <div className="mon-lap-results">
                     <FilterToolbar actionsInline={true}>
                         <FilterSelect
                             label="Bulan"
