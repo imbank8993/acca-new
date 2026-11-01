@@ -1,9 +1,10 @@
 import { Injectable, BadRequestException, ForbiddenException, InternalServerErrorException, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { JadwalService } from '../jadwal/jadwal.service';
 
 @Injectable()
 export class SettingsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService, private readonly jadwal: JadwalService) {}
 
   private async createNotification(type: string, title: string, message: string, link: string) {
     try {
@@ -36,7 +37,8 @@ export class SettingsService {
   // JADWAL PIKET
   // ==========================================
   async getJadwalPiket(params: any) {
-    const { kelas, hari, guru, validDate, asOf, distinctDates, q } = params;
+    const { kelas, hari, guru, validDate, distinctDates, q } = params;
+    const asOf = params.asOf || (!validDate && !distinctDates ? await this.jadwal.tanggalMadrasah() : undefined);
 
     if (distinctDates) {
       const dates = await this.prisma.jadwal_piket.findMany({
@@ -121,7 +123,7 @@ export class SettingsService {
     }
 
     const data = await this.prisma.jadwal_piket.findMany({
-      where,
+      where: asOf && !validDate ? { aktif: true } : where,
       orderBy: [
         { hari: 'asc' },
         { jam_ke: 'asc' },
@@ -159,6 +161,13 @@ export class SettingsService {
           : data;
     }
 
+    if (asOf && !validDate) {
+      filteredData = (await this.jadwal.applySementara(filteredData, asOf, 'piket')).filter(r =>
+        (!kelas || kelas === 'Semua' || kelas.split(',').includes(r.kelas))
+        && (!hari || hari === 'Semua' || r.hari === hari)
+        && (!guru || guru === 'Semua' || matchedNips.includes(r.nip) || matchedKodeGurus.includes(r.kode_guru))
+        && (!q || [r.nip, r.kode_guru, r.ruang, r.kelas].some(v => String(v || '').toLowerCase().includes(q.toLowerCase()))));
+    }
     const kodeGurus = [...new Set(filteredData.map((d) => d.kode_guru).filter(Boolean))];
     const nipMap: Record<string, string> = {};
     const namaMap: Record<string, string> = {};
@@ -474,7 +483,13 @@ export class SettingsService {
     // Akun yang seluruh perannya bukan pegawai = siswa dan orang tua.
     const redaksiNip = !!pemanggil && this.seluruhnyaBukanPegawai(pemanggil);
 
-    const allData = await this.prisma.jadwal_guru.findMany({
+    const allData = !validDate
+      ? (await this.jadwal.resolveJadwalBerlaku(params.asOf || await this.jadwal.tanggalMadrasah()))
+        .filter(r => (!kelas || kelas === 'Semua' || r.kelas === kelas)
+          && (!hari || hari === 'Semua' || r.hari === hari)
+          && (!guru || guru === 'Semua' || r.nip === guru || String(r.nama_guru).toLowerCase().includes(guru.toLowerCase()))
+          && (!q || [r.nama_guru, r.kelas, r.nip, r.ruang].some(v => String(v || '').toLowerCase().includes(q.toLowerCase()))))
+      : await this.prisma.jadwal_guru.findMany({
       where,
       orderBy: [
         { hari: 'asc' },
@@ -488,17 +503,6 @@ export class SettingsService {
     if (validDate) {
       const targetDate = this.formatYYYYMMDD(validDate);
       filteredData = allData.filter((item) => this.formatYYYYMMDD(item.berlaku_mulai) === targetDate);
-    } else {
-      let maxDateStr: string | null = null;
-      for (const item of allData) {
-        const ds = this.formatYYYYMMDD(item.berlaku_mulai);
-        if (ds && (!maxDateStr || ds > maxDateStr)) {
-          maxDateStr = ds;
-        }
-      }
-      if (maxDateStr) {
-        filteredData = allData.filter((item) => this.formatYYYYMMDD(item.berlaku_mulai) === maxDateStr);
-      }
     }
 
     const dedupSeen: Record<string, boolean> = {};

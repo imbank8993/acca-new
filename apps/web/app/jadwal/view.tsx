@@ -14,13 +14,14 @@ import JadwalPiketTab from './tabs/JadwalPiketTab'
 import GeneratePbmTab from './tabs/GeneratePbmTab'
 import GeneratePiketTab from './tabs/GeneratePiketTab'
 import TukarJadwalTab from './tabs/TukarJadwalTab'
+import JadwalSementaraTab from './tabs/JadwalSementaraTab'
 import JadwalSiswaTab from './tabs/JadwalSiswaTab'
 import { CalendarCheck, ArrowLeftRight } from 'lucide-react'
 import { DesktopFab } from '@/components/ui/DesktopFab'
 import './jadwal.css'
 
-type JadwalTab = 'mengajar' | 'piket' | 'generate_pbm' | 'generate_piket' | 'tukar'
-const JADWAL_TABS = ['mengajar', 'piket', 'generate_pbm', 'generate_piket', 'tukar'] as const
+type JadwalTab = 'mengajar' | 'piket' | 'generate_pbm' | 'generate_piket' | 'tukar' | 'sementara'
+const JADWAL_TABS = ['mengajar', 'piket', 'generate_pbm', 'generate_piket', 'tukar', 'sementara'] as const
 
 const WEEK = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu']
 
@@ -91,6 +92,7 @@ export default function JadwalPage({ user }: { user: User }) {
   // daftar role di sini — supaya tab yang tampil selalu sama dengan yang
   // diizinkan guard backend.
   const [bolehGenerate, setBolehGenerate] = useState(false)
+  const [bolehSementara, setBolehSementara] = useState(false)
 
   useEffect(() => {
     if (isSiswa) return
@@ -99,7 +101,7 @@ export default function JadwalPage({ user }: { user: User }) {
       try {
         const res = await fetch('/api/jadwal/izin-saya')
         const json = await res.json()
-        if (!cancelled && json?.ok) setBolehGenerate(!!json.data?.bolehGenerate)
+        if (!cancelled && json?.ok) { setBolehGenerate(!!json.data?.bolehGenerate); setBolehSementara(!!json.data?.bolehSementara) }
       } catch (e) {
         console.warn('[JADWAL] Gagal memuat hak akses:', e)
       }
@@ -111,7 +113,7 @@ export default function JadwalPage({ user }: { user: User }) {
   const tanggalHariIni = tzLoading ? '' : getCurrentDate()
 
   // Tab yang benar-benar boleh dibuka user ini.
-  const kunciTab = bolehGenerate ? JADWAL_TABS.join() : 'mengajar,piket,tukar'
+  const kunciTab = JADWAL_TABS.filter(t => t === 'sementara' ? bolehSementara : t.startsWith('generate_') ? bolehGenerate : true).join()
   const tabTersedia = useMemo(
     () => kunciTab.split(',') as JadwalTab[],
     [kunciTab]
@@ -153,6 +155,7 @@ export default function JadwalPage({ user }: { user: User }) {
       generate_pbm: { label: 'Generate PBM', icon: 'file-spreadsheet' },
       generate_piket: { label: 'Generate Piket', icon: 'file-spreadsheet' },
       tukar: { label: 'Tukar Jadwal', icon: 'arrow-left-right' },
+      sementara: { label: 'Jadwal Sementara', icon: 'calendar-check' },
     }
     window.dispatchEvent(new CustomEvent('acca:page-tabs', {
       detail: tabTersedia.map(id => ({ id, ...label[id], active: tabAktif === id, isCustom: true }))
@@ -357,6 +360,7 @@ export default function JadwalPage({ user }: { user: User }) {
             { key: 'generate_pbm' as const, label: 'Generate PBM', shortLabel: 'Gen PBM', icon: 'file-earmark-spreadsheet' },
             { key: 'generate_piket' as const, label: 'Generate Piket', shortLabel: 'Gen Piket', icon: 'shield-check' },
             { key: 'tukar' as const, label: 'Tukar Jadwal', shortLabel: 'Tukar', icon: 'arrow-left-right', hint: tukarBadge > 0 ? `${tukarBadge} menunggu` : undefined },
+            { key: 'sementara' as const, label: 'Jadwal Sementara', shortLabel: 'Sementara', icon: 'calendar-check' },
           ].filter(t => tabTersedia.includes(t.key))}
           activeTab={tabAktif}
           onChange={setActiveJadwalTab}
@@ -391,6 +395,7 @@ export default function JadwalPage({ user }: { user: User }) {
         <TukarJadwalTab onChanged={muatUlangBadge} />
       )}
 
+      {bolehSementara && tabAktif === 'sementara' && <JadwalSementaraTab />}
       {bolehGenerate && tabAktif === 'generate_pbm' && <GeneratePbmTab user={user} bolehKelola={bolehGenerate} />}
       {bolehGenerate && tabAktif === 'generate_piket' && <GeneratePiketTab bolehKelola={bolehGenerate} />}
 

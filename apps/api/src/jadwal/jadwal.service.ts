@@ -9,10 +9,12 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import {
   JADWAL_GENERATE_KEY,
+  JADWAL_SEMENTARA_KEY,
   TUKAR_JADWAL_REVIEW_KEY,
   aksesDiizinkan,
   parseKonfigurasiAkses,
 } from '../auth/feature-access.guard';
+import { tanggalSementara, tandaBaris, terapkanSementara, pastikanBebasBentrok } from './jadwal-sementara';
 
 export interface JadwalFilterParams {
   nip?: string;
@@ -112,6 +114,120 @@ function pastikanPegawai(user: any): void {
 @Injectable()
 export class JadwalService {
   constructor(private readonly prisma: PrismaService) {}
+
+  async tanggalMadrasah() {
+    const setting = await this.prisma.site_settings.findUnique({ where: { key: 'timezone' }, select: { value: true } });
+    let zone = String(setting?.value || 'Asia/Makassar');
+    try { new Intl.DateTimeFormat('en-CA', { timeZone: zone }); } catch { zone = 'Asia/Makassar'; }
+    return new Intl.DateTimeFormat('en-CA', { timeZone: zone }).format(new Date());
+  }
+
+  async bolehSementara(user: any) {
+    const row = await this.prisma.site_settings.findUnique({ where: { key: JADWAL_SEMENTARA_KEY } });
+    return aksesDiizinkan(user, parseKonfigurasiAkses(row?.value));
+  }
+
+  private async wajibSementara(user: any) {
+    if (!await this.bolehSementara(user)) throw new ForbiddenException('Anda belum diberi hak kelola Jadwal Sementara');
+  }
+
+  async applySementara(rows: any[], tanggal: string, jenis: string) {
+    const records = await this.prisma.jadwal_sementara.findMany({
+      where: { jenis, dibatalkan: false, mulai: { lte: new Date(tanggal) }, selesai: { gte: new Date(tanggal) } },
+      orderBy: { id: 'asc' },
+    }).catch((error: any) => {
+      // Jadwal normal tetap tersedia ketika kode dirilis sebelum migrasi tabel.
+      if (error?.code === 'P2021') return [];
+      throw error;
+    });
+    return terapkanSementara(rows, records);
+  }
+
+  async resolvePiketDasar(tanggal: string) {
+    const latest = await this.prisma.jadwal_piket.findFirst({
+      where: { aktif: true, berlaku_mulai: { lte: new Date(tanggal) } }, orderBy: { berlaku_mulai: 'desc' },
+    });
+    return latest ? this.prisma.jadwal_piket.findMany({ where: { aktif: true, berlaku_mulai: latest.berlaku_mulai } }) : [];
+  }
+
+  async getSementara(user: any, tanggal?: string, jenis = 'mengajar') {
+    await this.wajibSementara(user);
+    const day = tanggalSementara(tanggal || await this.tanggalMadrasah());
+    if (!['mengajar', 'piket'].includes(jenis)) throw new BadRequestException('Jenis jadwal tidak sah');
+    const rows = jenis === 'piket' ? await this.resolvePiketDasar(day) : await this.resolveJadwalBerlaku(day, undefined, undefined, undefined, true);
+    const history = await this.prisma.jadwal_sementara.findMany({ orderBy: { id: 'desc' }, take: 100 });
+    const teachers = jenis === 'piket' ? await this.prisma.master_kode_guru.findMany({ select: { nip: true, nama_guru: true } }) : [];
+    return { ok: true, data: {
+      slots: rows.map(r => ({ ...r, nama_guru: r.nama_guru || teachers.find(t => samaNip(t.nip, r.nip))?.nama_guru, id: String(r.id), versi_id: r.versi_id ? String(r.versi_id) : null })),
+      riwayat: history.map(r => ({ ...r, id: String(r.id), mulai: toDateOnly(r.mulai), selesai: toDateOnly(r.selesai) })),
+    } };
+  }
+
+  async createSementara(user: any, body: any) {
+    await this.wajibSementara(user);
+    const mulai = tanggalSementara(body.mulai);
+    const selesai = tanggalSementara(body.selesai);
+    const days = (Date.parse(selesai) - Date.parse(mulai)) / 86400000 + 1;
+    if (days < 1 || days > 31) throw new BadRequestException('Masa berlaku harus 1–31 hari');
+    const jenis = body.jenis;
+    if (!['mengajar', 'piket'].includes(jenis)) throw new BadRequestException('Jenis jadwal tidak sah');
+    const idsA: string[] = Array.isArray(body.slots_a) ? body.slots_a.map(String) : [];
+    const idsB: string[] = Array.isArray(body.slots_b) ? body.slots_b.map(String) : [];
+    const ids = [...idsA, ...idsB];
+    if (!idsA.length || idsA.length !== idsB.length || idsA.length > 100 || new Set(ids).size !== ids.length || ids.some(id => !/^\d+$/.test(id))) {
+      throw new BadRequestException('Pilih dua kelompok slot berbeda dengan jumlah baris sama');
+    }
+    const alasan = String(body.alasan || '').trim();
+    if (!alasan || alasan.length > 1000) throw new BadRequestException('Alasan wajib diisi, maksimal 1000 karakter');
+    const saved = await this.prisma.$transaction(async tx => {
+      // Semua pembuatan dan pembatalan memakai kunci yang sama agar tidak saling mendahului.
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(20261101)`;
+      const existing = await tx.jadwal_sementara.findMany({ where: { jenis, dibatalkan: false, mulai: { lte: new Date(selesai) }, selesai: { gte: new Date(mulai) } } });
+      let perubahan: any[] = [];
+      for (let n = 0; n < days; n++) {
+        const day = new Date(Date.parse(mulai) + n * 86400000).toISOString().slice(0, 10);
+        const rows: any[] = jenis === 'piket' ? await this.resolvePiketDasar(day) : await this.resolveJadwalBerlaku(day, undefined, undefined, undefined, true);
+        const a = idsA.map(id => rows.find(r => String(r.id) === id));
+        const b = idsB.map(id => rows.find(r => String(r.id) === id));
+        if ([...a, ...b].some(r => !r)) throw new ConflictException('Slot tidak berlaku sepanjang periode ini. Pilih ulang atau pendekkan periode.');
+        if (!a[0].nip || !b[0].nip || samaNip(a[0].nip, b[0].nip) || a.some(r => !samaNip(r.nip, a[0].nip)) || b.some(r => !samaNip(r.nip, b[0].nip))) {
+          throw new BadRequestException('Masing-masing kelompok harus milik satu guru yang berbeda');
+        }
+        if (jenis === 'piket' && [...a, ...b].some(selected => rows.some(r => samaNip(r.nip, selected.nip) && r.hari === selected.hari && r.jam_ke === selected.jam_ke && !ids.includes(String(r.id))))) {
+          throw new BadRequestException('Pilih seluruh baris tugas piket guru pada hari dan jam yang sama');
+        }
+        if (jenis === 'piket' && [...a.map(r => ({ guru: b[0].nip, slot: r })), ...b.map(r => ({ guru: a[0].nip, slot: r }))].some(({ guru, slot }) => rows.some(r => !ids.includes(String(r.id)) && samaNip(r.nip, guru) && r.hari === slot.hari && r.jam_ke === slot.jam_ke))) {
+          throw new ConflictException('Guru tujuan sudah memiliki tugas piket pada hari dan jam yang ditukar');
+        }
+        const nips = [a[0].nip, b[0].nip];
+        if (existing.some(e => (e.perubahan as any[]).some(c => nips.some(nip => samaNip(nip, c.pengganti.nip))))) {
+          throw new ConflictException('Guru yang dipilih sudah terlibat jadwal sementara pada periode ini');
+        }
+        const replacement = (r: any) => jenis === 'piket' ? { nip: r.nip, kode_guru: r.kode_guru } : { nip: r.nip, nama_guru: r.nama_guru, mata_pelajaran: r.mata_pelajaran };
+        const changes = a.flatMap((r, i) => [
+          { id: String(r.id), asal: tandaBaris(r), label: `${r.hari} / ${r.jam_ke} / ${r.kelas || '-'} / ${r.nama_guru || r.nip}`, pengganti: replacement(b[i]) },
+          { id: String(b[i].id), asal: tandaBaris(b[i]), label: `${b[i].hari} / ${b[i].jam_ke} / ${b[i].kelas || '-'} / ${b[i].nama_guru || b[i].nip}`, pengganti: replacement(r) },
+        ]);
+        if (n > 0 && JSON.stringify(changes) !== JSON.stringify(perubahan)) throw new ConflictException('Jadwal dasar berubah dalam periode ini');
+        perubahan = changes;
+        const active = existing.filter(e => toDateOnly(e.mulai) <= day && toDateOnly(e.selesai) >= day);
+        pastikanBebasBentrok(terapkanSementara(rows, [...active, { perubahan }]), ids, jenis);
+      }
+      return tx.jadwal_sementara.create({ data: { jenis, mulai: new Date(mulai), selesai: new Date(selesai), perubahan, alasan, dibuat_oleh: String(user.nama_lengkap || user.nama || user.nip || user.id) } });
+    }, { timeout: 30000 });
+    return { ok: true, data: { id: String(saved.id) } };
+  }
+
+  async cancelSementara(user: any, id: string) {
+    await this.wajibSementara(user);
+    if (!/^\d+$/.test(id)) throw new BadRequestException('ID tidak sah');
+    await this.prisma.$transaction(async tx => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(20261101)`;
+      const result = await tx.jadwal_sementara.updateMany({ where: { id: BigInt(id), dibatalkan: false }, data: { dibatalkan: true } });
+      if (!result.count) throw new NotFoundException('Jadwal sementara tidak ditemukan atau sudah dibatalkan');
+    });
+    return { ok: true };
+  }
 
   /**
    * Boleh meninjau pengajuan tukar jadwal: menyetujui, menolak sebagai peninjau,
@@ -245,7 +361,7 @@ export class JadwalService {
     const isAktif =
       aktif === undefined || aktif === null ? true : aktif === 'true' || aktif === true;
 
-    const referenceDate = valid_date || toDateOnly(new Date());
+    const referenceDate = valid_date || await this.tanggalMadrasah();
     const modeVersiTertentu = !!berlaku_mulai || !isAktif;
 
     let rows: any[] = [];
@@ -357,6 +473,7 @@ export class JadwalService {
     filterHari?: string,
     filterNip?: string,
     filterKelas?: string,
+    dasarSaja = false,
   ) {
     const refD = new Date(referenceDate);
 
@@ -424,6 +541,8 @@ export class JadwalService {
       }
       rows = Array.from(slotMap.values());
     }
+
+    if (!dasarSaja) rows = await this.applySementara(rows, referenceDate, 'mengajar');
 
     // Filter akhir (nip, kelas, hari)
     const normNipFilter = filterNip ? normNip(filterNip) : null;
@@ -502,6 +621,7 @@ export class JadwalService {
       ok: true,
       data: {
         bolehGenerate: aksesDiizinkan(user, parseKonfigurasiAkses(row?.value)),
+        bolehSementara: await this.bolehSementara(user),
         bolehTukar: !seluruhnyaBukanPegawai(user),
         // Hak MENINJAU tukar jadwal sengaja tidak disertakan di sini: layar
         // Tukar Jadwal sudah menerimanya sebagai `isWkm` dari `getTukarList`,

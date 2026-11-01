@@ -3,6 +3,21 @@ generator client {
   previewFeatures = ["multiSchema"]
 }
 
+model jadwal_sementara {
+  id           BigInt   @id @default(autoincrement())
+  jenis        String
+  mulai        DateTime @db.Date
+  selesai      DateTime @db.Date
+  perubahan    Json
+  alasan       String
+  dibuat_oleh  String
+  dibatalkan   Boolean  @default(false)
+  created_at   DateTime @default(now()) @db.Timestamptz(6)
+
+  @@index([jenis, mulai, selesai])
+  @@schema("public")
+}
+
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")

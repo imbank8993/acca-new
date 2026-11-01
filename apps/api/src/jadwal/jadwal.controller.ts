@@ -74,6 +74,21 @@ export class JadwalController {
   // 2. TUKAR JADWAL
   // =========================================================================
 
+  @Get('sementara')
+  getSementara(@Request() req: any, @Query('tanggal') tanggal?: string, @Query('jenis') jenis?: string) {
+    return this.jadwalService.getSementara(req.user, tanggal, jenis);
+  }
+
+  @Post('sementara')
+  createSementara(@Request() req: any, @Body() body: any) {
+    return this.jadwalService.createSementara(req.user, body);
+  }
+
+  @Delete('sementara/:id')
+  cancelSementara(@Request() req: any, @Param('id') id: string) {
+    return this.jadwalService.cancelSementara(req.user, id);
+  }
+
   @Get('tukar/slots')
   @ApiOperation({ summary: 'Ambil slot jadwal guru yang dapat diajukan untuk ditukar' })
   async getTukarSlots(

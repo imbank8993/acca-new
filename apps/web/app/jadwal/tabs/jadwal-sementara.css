@@ -1,0 +1,44 @@
+/* Kartu dan pemilihan slot berbagi kelas dengan tab Tukar Jadwal. */
+.jsm { color: var(--n-ink); font-family: inherit; }
+.jsm__intro { display: flex; align-items: center; gap: 14px; }
+.jsm__introIcon { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 46px; height: 46px; border-radius: 12px; color: var(--n-primary); background: var(--n-soft); }
+.jsm__intro h2 { margin: 0 0 5px; font-size: 1rem; font-weight: 700; }
+.jsm__intro p { margin: 0; font-size: .8rem; line-height: 1.6; color: var(--n-muted); }
+.jsm__fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
+.jsm__srOnly { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.jsm__dates { display: grid; grid-template-columns: 1fr 1fr 1fr; align-items: end; gap: 16px; margin: 18px 0; }
+.jsm__dates > div { min-width: 0; }
+.jsm__label { display: block; font-size: .78rem; font-weight: 600; color: var(--n-ink); margin-bottom: 7px; }
+.jsm__label span { font-weight: 400; color: var(--n-muted); }
+.jsm__duration { display: flex; align-items: center; gap: 9px; min-height: 42px; padding: 9px 12px; border: 1px solid var(--n-border); border-radius: 10px; background: var(--n-soft); box-sizing: border-box; }
+.jsm__duration svg { color: var(--n-primary); flex-shrink: 0; }
+.jsm__duration strong, .jsm__duration span { display: block; }
+.jsm__duration strong { font-size: .8rem; }.jsm__duration span { font-size: .67rem; color: var(--n-muted); margin-top: 2px; }
+.jsm .tj__hintBox > svg, .jsm .tjp__error > svg { flex-shrink: 0; margin-top: 2px; }
+.jsm__teachers { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 18px; }
+.jsm__teacher { padding: 14px; border: 1px solid var(--n-border); border-radius: 13px; background: var(--n-surface); }
+.jsm__teacher h4 { margin: 0; }.jsm__teacher .jsm__label { margin-bottom: -3px; }
+.jsm__selectionCount { margin-left: auto; font-size: .7rem; font-weight: 600; color: var(--n-muted); }
+.jsm__slots { max-height: 310px; }.jsm__slots .tj__slot:last-child { margin-bottom: 0; }
+.jsm .tj__textarea { box-sizing: border-box; min-height: 80px; }
+.jsm__required { color: var(--n-primary); }
+.jsm__formFooter { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 14px; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--n-border); }
+.jsm__formFooter > span { display: inline-flex; align-items: center; gap: 7px; font-size: .73rem; color: var(--n-muted); }
+.jsm__pairs { display: grid; gap: 8px; max-height: 250px; overflow-y: auto; }
+.jsm__pair { display: grid; grid-template-columns: 22px minmax(0, 1fr) 15px minmax(0, 1fr); align-items: center; gap: 8px; font-size: .75rem; line-height: 1.5; }
+.jsm__pair > svg { color: var(--n-primary); }.jsm__pair > span { overflow-wrap: anywhere; }
+.jsm__pairNumber { display: inline-flex; justify-content: center; align-items: center; height: 22px; border-radius: 6px; background: var(--n-card); font-weight: 700; }
+.jsm__mismatch { margin: 10px 0 0; font-size: .75rem; color: var(--n-muted); }
+.jsm__success { display: flex; align-items: flex-start; gap: 8px; padding: 11px 14px; font-size: .8rem; border: 1px solid rgba(16,185,129,.3); border-radius: 11px; color: #047857; background: rgba(16,185,129,.1); }
+.jsm__success svg { flex-shrink: 0; }.dark .jsm__success { color: #6ee7b7; }
+.jsm__history { min-width: 0; }.jsm__period { display: flex; align-items: center; gap: 8px; font-size: .8rem; margin-bottom: 10px; }.jsm__period svg { color: var(--n-muted); flex-shrink: 0; }
+.jsm__details { margin: 12px 0; font-size: .75rem; color: var(--n-muted); }.jsm__details summary { cursor: pointer; padding: 4px 0; font-weight: 600; }.jsm__details ul { padding: 0; margin: 8px 0; list-style: none; display: grid; gap: 7px; }.jsm__details li { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; overflow-wrap: anywhere; }.jsm__details strong { color: var(--n-ink); }
+.jsm .tjp__empty > svg { display: block; margin: 0 auto 8px; opacity: .5; }.jsm .tjp__empty p { margin: 0 0 5px; }.jsm .tjp__empty > span { font-size: .73rem; }
+.jsm button:focus-visible, .jsm summary:focus-visible { outline: 2px solid var(--n-primary); outline-offset: 3px; }
+@media (max-width: 768px) { .jsm__dates { grid-template-columns: 1fr 1fr; gap: 12px; }.jsm__duration { grid-column: 1 / -1; }.jsm__teachers { gap: 12px; } }
+@media (max-width: 640px) {
+  .jsm__intro { align-items: flex-start; gap: 10px; }.jsm__introIcon { width: 36px; height: 36px; border-radius: 10px; }.jsm__intro h2 { font-size: .9rem; }
+  .jsm .tjp__section { padding: 14px; border-radius: 14px; }.jsm .tjp__sectionHead { flex-wrap: wrap; }.jsm .tjp__sectionHead h3 { font-size: .85rem; }
+  .jsm__teachers { grid-template-columns: minmax(0, 1fr); }.jsm__teacher { padding: 12px; }.jsm__formFooter { align-items: stretch; flex-direction: column; }.jsm__formFooter .ui-btn { width: 100%; }
+  .jsm__period { font-size: .75rem; }.jsm .tjp__cardFoot { gap: 10px; flex-wrap: wrap; }.jsm__pair { font-size: .7rem; gap: 6px; }
+}

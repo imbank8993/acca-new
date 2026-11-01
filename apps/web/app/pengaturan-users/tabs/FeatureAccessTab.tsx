@@ -144,6 +144,13 @@ const MODUL: ModulItem[] = [
     },
     // ─── JADWAL ─────────────────────────────────────────────────────────
     {
+        settingKey: 'jadwal_sementara_access_config',
+        judul: 'Kelola Jadwal Sementara',
+        ikon: 'bi-calendar-week',
+        keterangan: 'Menukar jadwal PBM dan piket tanpa persetujuan guru selama periode tertentu, serta membatalkannya. Jadwal normal kembali otomatis setelah periode berakhir.',
+        grup: 'Jadwal',
+    },
+    {
         settingKey: 'jadwal_generate_access_config',
         judul: 'Generate PBM & Piket',
         ikon: 'bi-calendar-week-fill',

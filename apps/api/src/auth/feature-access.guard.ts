@@ -46,6 +46,7 @@ export const TUKAR_JADWAL_REVIEW_KEY = 'tukar_jadwal_review_access_config';
 
 /** Kunci site_settings untuk hak kelola jadwal (Generate PBM & Generate Piket). */
 export const JADWAL_GENERATE_KEY = 'jadwal_generate_access_config';
+export const JADWAL_SEMENTARA_KEY = 'jadwal_sementara_access_config';
 
 /**
  * Kunci site_settings untuk wewenang di halaman Izin Guru.

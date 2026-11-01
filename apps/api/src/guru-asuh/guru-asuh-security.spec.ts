@@ -18,7 +18,7 @@ describe('Guru Asuh security regressions', () => {
     const service = new SettingsService({ guru_asuh: {
       findUnique: jest.fn().mockResolvedValue({ id: 1n, nip: 'G1', nisn_siswa: '001', tahun_ajaran: '2026/2027', aktif: false }),
       findFirst: jest.fn().mockResolvedValue({ id: 2n, nama_guru: 'Guru lain' }), update,
-    } } as any);
+    } } as any, {} as any);
     await expect(service.updateGuruAsuh({ id: '1', aktif: true }, { nip: 'G1' }))
       .rejects.toThrow('sudah diasuh');
     expect(update).not.toHaveBeenCalled();
@@ -29,7 +29,7 @@ describe('Guru Asuh security regressions', () => {
     const update = jest.fn().mockResolvedValue({ ...record, aktif: true });
     const service = new SettingsService({ guru_asuh: {
       findUnique: jest.fn().mockResolvedValue(record), findFirst: jest.fn().mockResolvedValue(null), update,
-    } } as any);
+    } } as any, {} as any);
     await expect(service.updateGuruAsuh({ id: '1', aktif: true }, { nip: 'G1' })).resolves.toMatchObject({ ok: true });
     expect(update).toHaveBeenCalled();
   });
