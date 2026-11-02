@@ -132,20 +132,20 @@ export default function PembayaranPage({ user: propUser }: PembayaranPageProps =
     const [loading, setLoading] = useState(false);
     const [submissions, setSubmissions] = useState<Submission[]>([]);
     const [saving, setSaving] = useState(false);
-    const [filterBayar, setFilterBayar] = useState('BELUM');
+    const [filterBayar, setFilterBayar] = useState('ALL');
     const [searchQuery, setSearchQuery] = useState('');
     const [activeTab, setActiveTab] = useState('GURU_ASUH');
 
     const [klinikSlots, setKlinikSlots] = useState<KlinikSlot[]>([]);
     const [loadingKlinik, setLoadingKlinik] = useState(false);
     const [savingKlinik, setSavingKlinik] = useState(false);
-    const [klinikFilterBayar, setKlinikFilterBayar] = useState('BELUM');
+    const [klinikFilterBayar, setKlinikFilterBayar] = useState('ALL');
     const [klinikSearchQuery, setKlinikSearchQuery] = useState('');
 
     const [ekskulSubmissions, setEkskulSubmissions] = useState<EkskulSubmission[]>([]);
     const [loadingEkskul, setLoadingEkskul] = useState(false);
     const [savingEkskul, setSavingEkskul] = useState(false);
-    const [ekskulFilterBayar, setEkskulFilterBayar] = useState('BELUM');
+    const [ekskulFilterBayar, setEkskulFilterBayar] = useState('ALL');
     const [ekskulSearchQuery, setEkskulSearchQuery] = useState('');
 
     const [tarifList, setTarifList] = useState<TarifHonor[]>([]);
@@ -358,7 +358,7 @@ export default function PembayaranPage({ user: propUser }: PembayaranPageProps =
                 (s.ekskul?.nama_ekskul || '').toLowerCase().includes(q)
             );
         }
-        return list;
+        return [...list].sort((a, b) => Number(Boolean(a.dibayarkan)) - Number(Boolean(b.dibayarkan)));
     }, [periodEkskulSubmissions, ekskulFilterBayar, ekskulSearchQuery]);
 
     const ekskulStats = useMemo(() => ({
@@ -484,7 +484,8 @@ export default function PembayaranPage({ user: propUser }: PembayaranPageProps =
         return [...list].sort((a, b) => {
             const namaA = (a.nama_guru || a.guru?.nama || '').trim().replace(/\s+/g, ' ');
             const namaB = (b.nama_guru || b.guru?.nama || '').trim().replace(/\s+/g, ' ');
-            return namaA.localeCompare(namaB, 'id', { sensitivity: 'base' })
+            return Number(a.status === 'paid') - Number(b.status === 'paid')
+                || namaA.localeCompare(namaB, 'id', { sensitivity: 'base' })
                 || b.tanggal.localeCompare(a.tanggal)
                 || a.id.localeCompare(b.id);
         });
@@ -562,7 +563,7 @@ export default function PembayaranPage({ user: propUser }: PembayaranPageProps =
                 (s.nip || '').toLowerCase().includes(q)
             );
         }
-        return list;
+        return [...list].sort((a, b) => Number(Boolean(a.dibayarkan)) - Number(Boolean(b.dibayarkan)));
     }, [periodSubmissions, filterBayar, searchQuery]);
 
     const statsCount = useMemo(() => ({
@@ -772,9 +773,9 @@ export default function PembayaranPage({ user: propUser }: PembayaranPageProps =
                             value={filterBayar}
                             onChange={(val) => setFilterBayar(val)}
                             options={[
+                                { value: 'ALL', label: 'Semua Status' },
                                 { value: 'BELUM', label: 'Belum Dibayar' },
-                                { value: 'SUDAH', label: 'Sudah Dibayar' },
-                                { value: 'ALL', label: 'Semua Status' }
+                                { value: 'SUDAH', label: 'Sudah Dibayar' }
                             ]}
                         />
                         <FilterSearch
@@ -898,9 +899,9 @@ export default function PembayaranPage({ user: propUser }: PembayaranPageProps =
                             value={klinikFilterBayar}
                             onChange={(val) => setKlinikFilterBayar(val)}
                             options={[
+                                { value: 'ALL', label: 'Semua Status' },
                                 { value: 'BELUM', label: 'Belum Dibayar' },
-                                { value: 'SUDAH', label: 'Sudah Dibayar' },
-                                { value: 'ALL', label: 'Semua Status' }
+                                { value: 'SUDAH', label: 'Sudah Dibayar' }
                             ]}
                         />
                         <FilterSearch
@@ -970,9 +971,9 @@ export default function PembayaranPage({ user: propUser }: PembayaranPageProps =
                             value={ekskulFilterBayar}
                             onChange={(val) => setEkskulFilterBayar(val)}
                             options={[
+                                { value: 'ALL', label: 'Semua Status' },
                                 { value: 'BELUM', label: 'Belum Dibayar' },
-                                { value: 'SUDAH', label: 'Sudah Dibayar' },
-                                { value: 'ALL', label: 'Semua Status' }
+                                { value: 'SUDAH', label: 'Sudah Dibayar' }
                             ]}
                         />
                         <FilterSearch
