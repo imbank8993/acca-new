@@ -153,13 +153,25 @@ export default function DisposisiPanel({ canManage, user, source, onClose }: Pro
         {listError && <p role="alert" className="disposisi-error">{listError}</p>}
         {loading ? <div className="disposisi-empty" role="status">Memuat pemberitahuan...</div> : listError ? null : items.length === 0 ?
             <div className="disposisi-empty"><Inbox size={32} /><strong>{unreadOnly ? 'Semua pemberitahuan sudah dibaca' : 'Belum ada pemberitahuan surat masuk'}</strong><p>{canManage ? 'Pilih Disposisi pada daftar layanan untuk mengirim detail permohonan dan lampirannya.' : 'Pemberitahuan yang dikirim kepada Anda akan muncul di sini.'}</p></div> :
-            <div className="disposisi-list">{items.map(item => <button type="button" className="disposisi-item" key={item.id} onClick={() => openNotice(item.id)}>
-                <div className="disposisi-item-top"><span className="disposisi-service"><FileText size={17} />{String(item.snapshot?.layanan || 'Permohonan PTSP')}</span><span className={`disposisi-state ${item.read_at ? 'is-read' : ''}`}>{item.read_at ? 'Sudah dibaca' : 'Belum dibaca'}</span></div>
-                <strong className="disposisi-applicant">{String(item.snapshot?.nama || item.snapshot?.nama_siswa || 'Pemohon')}</strong>
-                <span className="disposisi-phone">Nomor WA: {String(item.snapshot?.wa || item.snapshot?.no_wa || 'Tidak tersedia')}</span>
-                <p className="disposisi-message">{item.instructions}</p>
-                <div className="disposisi-item-footer"><span>{item.sender_name}<ArrowRight size={13} />{item.recipient_name}</span><time>{letterDate(item.created_at)} WITA</time></div>
-            </button>)}</div>}
+            <div className="disposisi-table-wrap" role="region" aria-label="Daftar pemberitahuan surat masuk" tabIndex={0}>
+                <table className="disposisi-table" aria-label="Pemberitahuan surat masuk">
+                    <thead><tr>
+                        <th scope="col">No.</th><th scope="col">Layanan</th><th scope="col">Pemohon / Nomor WA</th>
+                        <th scope="col">Pesan</th><th scope="col">Pengirim</th><th scope="col">Penerima</th>
+                        <th scope="col">Tanggal</th><th scope="col">Status baca</th><th scope="col">Aksi</th>
+                    </tr></thead>
+                    <tbody>{items.map((item, index) => <tr key={item.id}>
+                        <td>{(page - 1) * 12 + index + 1}</td>
+                        <td><span className="disposisi-service">{String(item.snapshot?.layanan || 'Permohonan PTSP')}</span></td>
+                        <td><strong className="disposisi-applicant">{String(item.snapshot?.nama || item.snapshot?.nama_siswa || 'Pemohon')}</strong><span className="disposisi-phone">{String(item.snapshot?.wa || item.snapshot?.no_wa || 'WA tidak tersedia')}</span></td>
+                        <td><p className="disposisi-message" title={item.instructions}>{item.instructions}</p></td>
+                        <td>{item.sender_name}</td><td>{item.recipient_name}</td>
+                        <td><time>{letterDate(item.created_at)} WITA</time></td>
+                        <td><span className={`disposisi-state ${item.read_at ? 'is-read' : ''}`}>{item.read_at ? 'Sudah dibaca' : 'Belum dibaca'}</span></td>
+                        <td><Button className="disposisi-item" variant="secondary" size="sm" onClick={() => openNotice(item.id)} aria-label={`Lihat detail surat ${String(item.snapshot?.nama || item.snapshot?.nama_siswa || 'pemohon')}`}>Detail</Button></td>
+                    </tr>)}</tbody>
+                </table>
+            </div>}
         {pageCount > 1 && <nav className="disposisi-pagination" aria-label="Halaman pemberitahuan"><Button size="sm" variant="secondary" disabled={loading || page <= 1} onClick={() => setPage(p => p - 1)}>Sebelumnya</Button><span>{page} / {pageCount}</span><Button size="sm" variant="secondary" disabled={loading || page >= pageCount} onClick={() => setPage(p => p + 1)}>Berikutnya</Button></nav>}
 
         {source && <Modal size="md" title="Disposisi surat masuk" subtitle="Bagikan permohonan dan lampiran kepada pengguna" icon={<Send size={20} />} onClose={() => { if (!busy) onClose() }} labelledBy="ptsp-letter-send-title">
