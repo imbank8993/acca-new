@@ -12,9 +12,12 @@ import ParentDashboard from './ParentDashboard'
 export default function DashboardHomePage() {
     const { user } = useDashboardUser()
 
-    const isParent =
-        user?.roles?.some(r => ['ORANG_TUA', 'ORANGTUA', 'WALI'].includes(String(r).trim().toUpperCase())) ||
-        ['ORANG_TUA', 'ORANGTUA', 'WALI'].some(r => String(user?.role || '').toUpperCase().includes(r));
+    const roles = [
+        ...(user?.roles || []),
+        ...String(user?.role || '').split(/[,|]/),
+    ].map(role => String(role).trim().toUpperCase().replace(/\s+/g, '_'));
+    // Cocokkan role utuh: WALI_KELAS bukan role WALI/orang tua.
+    const isParent = roles.some(role => ['ORANG_TUA', 'ORANGTUA', 'WALI'].includes(role));
 
     if (isParent) {
         return <ParentDashboard user={user} />
