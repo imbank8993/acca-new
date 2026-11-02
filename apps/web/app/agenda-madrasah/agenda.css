@@ -2669,6 +2669,40 @@ textarea.form-input {
 .dark .ag-desc-body { color: #cbd5e1 !important; }
 
 /* ── 12. RESPONSIVE MEDIA QUERIES ── */
+@media (max-width: 1023.98px) {
+    /* Mobile uses the document scroller supplied by the dashboard layout.
+       Unlike hidden, clip does not turn overflow-y: visible into auto. */
+    .agw-root .ag-root,
+    .agw-root .page-wrapper {
+        overflow-x: clip;
+        overflow-y: visible;
+    }
+
+    .agw-root .ag-details-card {
+        height: auto;
+        min-height: 0;
+    }
+
+    .agw-root .ag-details-content {
+        flex: 0 0 auto;
+        max-height: none;
+        overflow: visible;
+    }
+
+    .agw-root,
+    .agw-root * {
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+    }
+
+    .agw-root::-webkit-scrollbar,
+    .agw-root *::-webkit-scrollbar {
+        display: none;
+        width: 0;
+        height: 0;
+    }
+}
+
 @media (max-width: 1024px) {
     .stats-row { grid-template-columns: repeat(2, 1fr); }
     .stat-actions-card { grid-column: span 2; flex-direction: row; }
@@ -2853,7 +2887,7 @@ textarea.form-input {
     .ag-today-btn { display: none; }
 
     .ag-legend {
-        flex-wrap: nowrap !important;
+        flex-wrap: wrap !important;
         justify-content: center !important;
         gap: 8px !important;
     }
