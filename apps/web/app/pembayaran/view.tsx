@@ -723,17 +723,8 @@ export default function PembayaranPage({ user: propUser }: PembayaranPageProps =
         );
     }
 
-    return (
-        <div className="gap">
-            <Tab
-                tabs={TABS.map(t => ({ key: t.id, label: t.label, icon: t.icon }))}
-                activeTab={activeTab}
-                onChange={(key) => setActiveTab(key)}
-                ariaLabel="Modul Pembayaran"
-                variant="slider"
-            />
-
-            <FilterToolbar alwaysExpanded>
+    const periodFilterFields = (
+        <>
                 <FilterSelect
                     label={activeTab === 'NOMINAL' ? 'Bulan Perubahan Tarif' : 'Bulan Kegiatan / Laporan'}
                     icon="calendar3"
@@ -748,7 +739,22 @@ export default function PembayaranPage({ user: propUser }: PembayaranPageProps =
                     onChange={value => setPeriodYear(value === 'ALL' ? 0 : Number(value))}
                     options={[{ value: 'ALL', label: 'Semua Tahun' }, ...periodYears.map(year => ({ value: String(year), label: String(year) }))]}
                 />
-            </FilterToolbar>
+        </>
+    );
+
+    return (
+        <div className="gap">
+            <Tab
+                tabs={TABS.map(t => ({ key: t.id, label: t.label, icon: t.icon }))}
+                activeTab={activeTab}
+                onChange={(key) => setActiveTab(key)}
+                ariaLabel="Modul Pembayaran"
+                variant="slider"
+            />
+
+            {['NOMINAL', 'REKAPAN'].includes(activeTab) && (
+                <FilterToolbar alwaysExpanded>{periodFilterFields}</FilterToolbar>
+            )}
 
             {activeTab === 'GURU_ASUH' && (
                 <>
@@ -758,7 +764,8 @@ export default function PembayaranPage({ user: propUser }: PembayaranPageProps =
                         <div className="gap-stat-item green"><div className="gap-stat-val">{statsCount.sudah}</div><div className="gap-stat-lbl">Sudah Dibayar</div></div>
                     </div>
 
-                    <FilterToolbar>
+                    <FilterToolbar className="gap-payment-filters">
+                        {periodFilterFields}
                         <FilterSelect
                             label="Status Pembayaran"
                             icon="funnel"
@@ -883,7 +890,8 @@ export default function PembayaranPage({ user: propUser }: PembayaranPageProps =
                         <div className="gap-stat-item green"><div className="gap-stat-val">{klinikStats.sudah}</div><div className="gap-stat-lbl">Sudah Dibayar</div></div>
                     </div>
 
-                    <FilterToolbar>
+                    <FilterToolbar className="gap-payment-filters">
+                        {periodFilterFields}
                         <FilterSelect
                             label="Status Pembayaran"
                             icon="funnel"
@@ -954,7 +962,8 @@ export default function PembayaranPage({ user: propUser }: PembayaranPageProps =
                         <div className="gap-stat-item green"><div className="gap-stat-val">{ekskulStats.sudah}</div><div className="gap-stat-lbl">Sudah Dibayar</div></div>
                     </div>
 
-                    <FilterToolbar>
+                    <FilterToolbar className="gap-payment-filters">
+                        {periodFilterFields}
                         <FilterSelect
                             label="Status Pembayaran"
                             icon="funnel"

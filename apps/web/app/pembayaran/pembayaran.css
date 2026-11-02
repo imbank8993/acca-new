@@ -694,3 +694,16 @@
     color: #60a5fa !important;
 }
 
+
+/* Keep the three payment filters and search together below the summary cards. */
+@media (min-width: 768px) {
+    .gap .gap-payment-filters {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 0.8fr) minmax(0, 1.15fr) minmax(0, 2fr);
+    }
+
+    .gap .gap-payment-filters .ftb-field {
+        min-width: 0;
+        width: 100%;
+    }
+}
