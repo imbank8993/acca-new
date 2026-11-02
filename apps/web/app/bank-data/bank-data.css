@@ -894,3 +894,13 @@
         justify-content: space-between;
     }
 }
+
+/* One complete bank account per line, including in the export preview. */
+.bd-data-table td.bd-data-rekening,
+.bd-table td.bd-data-rekening {
+    white-space: pre;
+    min-width: 360px;
+    max-width: none;
+    line-height: 1.8;
+    font-variant-numeric: tabular-nums;
+}

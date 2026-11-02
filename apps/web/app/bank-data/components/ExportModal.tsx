@@ -334,7 +334,7 @@ export default function ExportModal({ dataset, onClose }: Props) {
                     <tr key={i}>
                       <td style={{ textAlign: 'center', color: 'var(--n-muted)', fontWeight: 600 }}>{i + 1}</td>
                       {pratinjau.kolom.map(k => (
-                        <td key={k.key}>
+                        <td key={k.key} className={k.key === 'data_rekening' ? 'bd-data-rekening' : undefined}>
                           {formatTampilanNilai(r[k.key])}
                         </td>
                       ))}

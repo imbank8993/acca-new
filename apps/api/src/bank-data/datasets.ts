@@ -83,6 +83,24 @@ export interface KolomDef {
     sensitif?: boolean;
     /** Ada = kolom pendukung; tidak ada = kolom di tabel induk. */
     pendukung?: PendukungDef;
+    /** One complete account per line in a single sensitive export column. */
+    rekening?: readonly { nomor: string; bank: string; atasNama: string }[];
+}
+
+const DATA_REKENING: KolomDef = {
+    key: 'data_rekening', label: 'Data Rekening', tipe: 'teks', sensitif: true,
+    rekening: [
+        { nomor: 'rekening_1_nomor', bank: 'rekening_1_nama_bank', atasNama: 'rekening_1_atas_nama' },
+        { nomor: 'rekening_2_nomor', bank: 'rekening_2_nama_bank', atasNama: 'rekening_2_atas_nama' },
+    ],
+};
+
+/** A former partial grant never grants access to a complete account package. */
+export function normalisasiKolomRekening(keys: string[]): string[] {
+    const legacy = ['rekening_1_nomor', 'rekening_1_nama_bank', 'rekening_1_atas_nama'];
+    const result = keys.filter(key => !legacy.includes(key));
+    if (legacy.every(key => keys.includes(key))) result.push('data_rekening');
+    return [...new Set(result)];
 }
 
 export type FilterKey = 'tahun_ajaran' | 'semester' | 'kelas';
@@ -296,9 +314,7 @@ export const DATASETS = {
             // ── Sensitif ────────────────────────────────────────────────────
             { key: 'alamat', label: 'Alamat', tipe: 'teks', sensitif: true },
             { key: 'no_hp', label: 'Nomor WA', tipe: 'teks', sensitif: true },
-            { key: 'rekening_1_nama_bank', label: 'Bank', tipe: 'teks', sensitif: true },
-            { key: 'rekening_1_nomor', label: 'No. Rekening', tipe: 'teks', sensitif: true },
-            { key: 'rekening_1_atas_nama', label: 'Rekening a.n.', tipe: 'teks', sensitif: true },
+            DATA_REKENING,
         ],
         // Tanpa `prasaring`: pegawai tanpa tugas tambahan di TA terpilih TETAP
         // muncul (kolom pendukungnya saja yang kosong). Daftar kepegawaian tidak
@@ -350,9 +366,7 @@ export const DATASETS = {
 
             { key: 'alamat', label: 'Alamat', tipe: 'teks', sensitif: true },
             { key: 'no_hp', label: 'Nomor WA', tipe: 'teks', sensitif: true },
-            { key: 'rekening_1_nama_bank', label: 'Bank', tipe: 'teks', sensitif: true },
-            { key: 'rekening_1_nomor', label: 'No. Rekening', tipe: 'teks', sensitif: true },
-            { key: 'rekening_1_atas_nama', label: 'Rekening a.n.', tipe: 'teks', sensitif: true },
+            DATA_REKENING,
         ],
         filter: ['tahun_ajaran', 'semester'],
         baseFilter: [{ kolom: 'jenis_pegawai', op: 'eq', nilai: 'TENDIK' }],

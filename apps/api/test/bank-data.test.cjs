@@ -177,6 +177,7 @@ test('Semua tabel dan kolom katalog cocok dengan schema Prisma', () => {
   for (const def of Object.values(catalog.exports.DATASETS)) {
     field(def.table, 'id');
     for (const col of def.kolom) {
+      if (col.rekening) { for (const account of col.rekening) for (const key of [account.nomor,account.bank,account.atasNama]) field(def.table,key); continue; }
       if (!col.pendukung) { field(def.table, col.key); continue; }
       const p = col.pendukung;
       if (p.kunciInduk) field(def.table, p.kunciInduk);
@@ -185,4 +186,45 @@ test('Semua tabel dan kolom katalog cocok dengan schema Prisma', () => {
     }
     if (def.prasaring) for (const key of ['kolomKunci', 'kolomKelas', 'kolomTahunAjaran', 'kolomSemester', 'kolomAktif']) if (def.prasaring[key]) field(def.prasaring.table, def.prasaring[key]);
   }
+});
+
+
+function accountFixture({ allowed = ['nama_lengkap','data_rekening'], sensitive = true, dataset = 'guru' } = {}) {
+  const f=fixture({ config:{dataset_id:dataset,aktif:true,kolom_diizinkan:allowed,batas_baris:10}, access:{roles:['GURU'],caps:sensitive?['bank_data.export_sensitif']:[],pageIds:['bank-data']} });
+  const records=[
+    {id:1n,nama_lengkap:'Pemilik dua rekening',rekening_1_nomor:'001234',rekening_1_nama_bank:'BRI',rekening_1_atas_nama:'Imran',rekening_2_nomor:'000987',rekening_2_nama_bank:'BSI',rekening_2_atas_nama:'Imran Kedua'},
+    {id:2n,nama_lengkap:'Hanya rekening kedua',rekening_2_nomor:'000002',rekening_2_nama_bank:'BTN',rekening_2_atas_nama:'Nama Kedua'},
+    {id:3n,nama_lengkap:'Rekening belum lengkap',rekening_1_nomor:'000003'},
+    {id:4n,nama_lengkap:'Tanpa rekening'},
+  ];
+  f.service.prisma.master_guru={count:async()=>records.length,findMany:async q=>{f.queries.push(q);return records.slice(q.skip||0,(q.skip||0)+q.take).map(row=>Object.fromEntries(Object.keys(q.select).map(k=>[k,row[k]])));}};
+  return f;
+}
+const accountPayload={action:'data',dataset_id:'guru',kolom:['nama_lengkap','data_rekening'],filter:{},halaman:1,perHalaman:10};
+
+test('Data Rekening menggabungkan nomor, bank, dan atas nama: satu paket per baris pada tabel, preview, dan Excel',async()=>{
+ const f=accountFixture();const result=await f.service.handlePost(accountPayload,actor);
+ assert.deepEqual(Array.from(result.kolom,c=>c.label),['Nama Lengkap','Data Rekening']);
+ assert.equal(result.data[0].data_rekening,'Nomor: 001234 | Bank: BRI | Atas nama: Imran\nNomor: 000987 | Bank: BSI | Atas nama: Imran Kedua');
+ assert.equal(result.data[1].data_rekening,'Nomor: 000002 | Bank: BTN | Atas nama: Nama Kedua');
+ assert.equal(result.data[2].data_rekening,'Nomor: 000003 | Bank: - | Atas nama: -');
+ assert.equal(result.data[3].data_rekening,'');
+ assert.deepEqual(Object.keys(result.data[0]),['nama_lengkap','data_rekening']);
+ assert.equal(f.queries[0].select.data_rekening,undefined);assert.equal(f.queries[0].select.rekening_2_nomor,true);
+ const preview=await f.service.handlePost({...accountPayload,action:'preview'},actor);assert.deepEqual(preview.data,result.data);
+ const exported=await f.service.handlePost({...accountPayload,action:'export'},actor);const book=new Workbook();await book.xlsx.load(exported.buffer);
+ const sheet=book.worksheets[0];assert.equal(sheet.columnCount,2);assert.equal(sheet.getCell('B1').value,'Data Rekening');assert.equal(sheet.getCell('B2').value,result.data[0].data_rekening);assert.equal(sheet.getCell('B2').numFmt,'@');assert.equal(sheet.getCell('B2').alignment.wrapText,true);assert(sheet.getRow(2).height>=44);
+ assert(f.logs.every(log=>log.kolom.includes('data_rekening')));
+});
+
+test('Paket rekening tetap memerlukan hak sensitif dan tidak membuka izin lama yang hanya sebagian',async()=>{
+ const legacy=['rekening_1_nomor','rekening_1_nama_bank','rekening_1_atas_nama'];
+ for(const dataset of ['guru','tendik']){
+  const f=accountFixture({allowed:['nama_lengkap',...legacy],dataset});
+  const result=await f.service.handlePost({...accountPayload,dataset_id:dataset},actor);assert.equal(result.data[0].data_rekening.split('\n').length,2);
+  const denied=accountFixture({allowed:['nama_lengkap','rekening_1_nama_bank'],dataset});await reject(denied.service.handlePost({...accountPayload,dataset_id:dataset},actor),'ForbiddenException');
+  const noSensitive=accountFixture({sensitive:false,dataset});await reject(noSensitive.service.handlePost({...accountPayload,dataset_id:dataset},actor),'ForbiddenException');assert.equal(noSensitive.queries.length,0);
+ }
+ const f=accountFixture();await reject(f.service.handlePost({...accountPayload,kolom:['rekening_2_nomor']},actor),'ForbiddenException');
+ await f.service.handlePost({...accountPayload,q:'Pemilik'},actor);assert(!JSON.stringify(f.queries[0].where).includes('data_rekening'));
 });

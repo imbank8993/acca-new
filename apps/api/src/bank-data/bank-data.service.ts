@@ -3,7 +3,7 @@ import { Prisma } from '@prisma/client';
 import { Workbook } from 'exceljs';
 import { PrismaService } from '../prisma/prisma.service';
 import { AccessService } from '../access/access.service';
-import { DATASETS, DatasetDef, KolomDef, getDataset, kolomEfektif } from './datasets';
+import { DATASETS, DatasetDef, KolomDef, getDataset, kolomEfektif, normalisasiKolomRekening } from './datasets';
 @Injectable()
 export class BankDataService {
     constructor(private readonly prisma: PrismaService, private readonly access: AccessService) { }
@@ -48,7 +48,7 @@ export class BankDataService {
     private config(def: DatasetDef, row: any) {
         const defaultCols = def.kolom.filter(k => !k.sensitif).map(k => k.key);
         const validSet = new Set(def.kolom.map(c => c.key));
-        const savedCols = Array.isArray(row?.kolom_diizinkan) ? row.kolom_diizinkan.filter((k: string) => validSet.has(k)) : [];
+        const savedCols = Array.isArray(row?.kolom_diizinkan) ? normalisasiKolomRekening(row.kolom_diizinkan).filter((k: string) => validSet.has(k)) : [];
         return {
             aktif: row ? row.aktif === true : true,
             kolomDiizinkan: row ? savedCols : defaultCols,
@@ -78,7 +78,7 @@ export class BankDataService {
         if (!Array.isArray(body.kolomDiizinkan))
             throw new BadRequestException('Kolom tidak valid');
         const validSet = new Set(def.kolom.map(c => c.key));
-        const cleanKolom = body.kolomDiizinkan.filter((k: any) => typeof k === 'string' && validSet.has(k));
+        const cleanKolom = normalisasiKolomRekening(body.kolomDiizinkan.filter((k: any) => typeof k === 'string')).filter(k => validSet.has(k));
         const limit = body.batasBaris ? Number(body.batasBaris) : null;
         if (limit !== null && (!Number.isInteger(limit) || limit < 1))
             throw new BadRequestException('Batas baris tidak valid');
@@ -135,7 +135,7 @@ export class BankDataService {
             where[b.kolom] = b.op === 'eq' ? b.nilai : { equals: b.nilai, mode: 'insensitive' };
         // Search only permitted identity fields; hidden columns cannot be probed.
         if (query) {
-            const fields = columns.filter(c => !c.pendukung && c.tipe === 'teks');
+            const fields = columns.filter(c => !c.pendukung && !c.rekening && c.tipe === 'teks');
             where.OR = fields.length ? fields.map(c => ({ [c.key]: { contains: query, mode: 'insensitive' } })) : [{ id: { in: [] } }];
         }
         const p = def.prasaring;
@@ -153,7 +153,10 @@ export class BankDataService {
         const working = def.kolom.filter(c => needed.has(c.key));
         const select: any = { id: true };
         for (const c of working) {
-            if (!c.pendukung)
+            if (c.rekening) {
+                for (const account of c.rekening)
+                    for (const key of [account.nomor, account.bank, account.atasNama]) select[key] = true;
+            } else if (!c.pendukung)
                 select[c.key] = true;
             else if (c.pendukung.kunciInduk)
                 select[c.pendukung.kunciInduk] = true;
@@ -168,6 +171,15 @@ export class BankDataService {
                 orderBy: def.urut && def.urut.kolom !== 'id' ? [{ [def.urut.kolom]: def.urut.naik === false ? 'desc' : 'asc' }, { id: 'asc' }] : { id: 'asc' }
             })
         ]);
+        for (const col of working.filter(c => c.rekening)) {
+            for (const row of rows) {
+                row[col.key] = col.rekening!.flatMap(account => {
+                    const values = [account.nomor, account.bank, account.atasNama].map(key => String(row[key] ?? '').trim().replace(/\s+/g, ' '));
+                    if (!values.some(Boolean)) return [];
+                    return [`Nomor: ${values[0] || '-'} | Bank: ${values[1] || '-'} | Atas nama: ${values[2] || '-'}`];
+                }).join('\n');
+            }
+        }
         const raw: Record<string, any[]>[] = rows.map(() => ({}));
         for (const col of working.filter(c => c.pendukung)) {
             const d = col.pendukung!;
@@ -414,7 +426,7 @@ export class BankDataService {
                 cleanRow[c.key] = sanitizeCellValue(r[c.key], c.tipe, c.key);
             }
             const row = sheet.addRow(cleanRow);
-            row.height = 22;
+            row.height = Math.max(22, ...columns.filter(c => c.rekening).map(c => String(cleanRow[c.key] || '').split('\n').length * 22));
             const isEven = idx % 2 === 0;
 
             row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
@@ -439,7 +451,9 @@ export class BankDataService {
                 };
 
                 let hAlign: 'left' | 'center' | 'right' = 'left';
-                if (colDef?.tipe === 'boolean' || colDef?.tipe === 'tanggal' || isNumericId || key === 'gender' || key === 'golongan') {
+                if (colDef?.rekening) {
+                    hAlign = 'left';
+                } else if (colDef?.tipe === 'boolean' || colDef?.tipe === 'tanggal' || isNumericId || key === 'gender' || key === 'golongan') {
                     hAlign = 'center';
                 } else if (colDef?.tipe === 'angka') {
                     hAlign = 'right';
@@ -448,6 +462,7 @@ export class BankDataService {
                 cell.alignment = {
                     vertical: 'middle',
                     horizontal: hAlign,
+                    ...(colDef?.rekening ? { wrapText: true } : {}),
                 };
 
                 cell.border = {
@@ -469,12 +484,22 @@ export class BankDataService {
             if (column.eachCell) {
                 column.eachCell({ includeEmpty: false }, (cell: any, rowNumber: number) => {
                     if (rowNumber > 1) {
-                        const len = cell.value ? String(cell.value).length : 0;
+                        const len = cell.value ? Math.max(...String(cell.value).split('\n').map(line => line.length)) : 0;
                         if (len > maxLen) maxLen = len;
                     }
                 });
             }
-            column.width = Math.min(Math.max(maxLen + 4, 12), 48);
+            const accountColumn = columns.find(c => c.key === column.key)?.rekening;
+            column.width = accountColumn ? Math.min(Math.max(maxLen + 4, 40), 150) : Math.min(Math.max(maxLen + 4, 12), 48);
+        });
+
+        rowData.forEach((_, index) => {
+            const row = sheet.getRow(index + 2);
+            for (const col of columns.filter(c => c.rekening)) {
+                const width = Math.max(1, Number(sheet.getColumn(col.key).width) - 4);
+                const lines = String(row.getCell(col.key).value || '').split('\n').reduce((count, line) => count + Math.max(1, Math.ceil(line.length / width)), 0);
+                row.height = Math.max(row.height || 22, lines * 22);
+            }
         });
 
         return sheet;
