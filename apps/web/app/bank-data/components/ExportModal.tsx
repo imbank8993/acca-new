@@ -1,4 +1,5 @@
 'use client';
+import RekeningCell from './RekeningCell';
 
 import { useEffect, useMemo, useState } from 'react';
 import Swal from 'sweetalert2';
@@ -335,7 +336,7 @@ export default function ExportModal({ dataset, onClose }: Props) {
                       <td style={{ textAlign: 'center', color: 'var(--n-muted)', fontWeight: 600 }}>{i + 1}</td>
                       {pratinjau.kolom.map(k => (
                         <td key={k.key} className={k.key === 'data_rekening' ? 'bd-data-rekening' : undefined}>
-                          {formatTampilanNilai(r[k.key])}
+                          {k.key === 'data_rekening' ? <RekeningCell value={r[k.key]} /> : formatTampilanNilai(r[k.key])}
                         </td>
                       ))}
                     </tr>

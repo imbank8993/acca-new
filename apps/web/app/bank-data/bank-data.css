@@ -895,12 +895,20 @@
     }
 }
 
-/* One complete bank account per line, including in the export preview. */
+/* Each account has a compact vertical hierarchy, shared with the export preview. */
 .bd-data-table td.bd-data-rekening,
 .bd-table td.bd-data-rekening {
-    white-space: pre;
-    min-width: 360px;
-    max-width: none;
-    line-height: 1.8;
-    font-variant-numeric: tabular-nums;
+    white-space: normal;
+    min-width: 220px;
+    max-width: 320px;
+    vertical-align: top;
 }
+
+.bd-accounts { display: flex; flex-direction: column; gap: 12px; }
+.bd-account { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.bd-account + .bd-account { border-top: 1px solid var(--n-border, #e2e8f0); padding-top: 12px; }
+.bd-account-number { font-size: 0.88rem; font-weight: 650; line-height: 1.5; letter-spacing: 0.025em; font-variant-numeric: tabular-nums; color: var(--n-ink, #162f50); overflow-wrap: anywhere; }
+.bd-account-bank { font-size: 0.78rem; font-weight: 500; line-height: 1.5; color: var(--n-text, #334155); overflow-wrap: anywhere; }
+.bd-account-holder { display: flex; flex-wrap: wrap; gap: 0 5px; font-size: 0.73rem; line-height: 1.6; color: var(--n-text, #334155); overflow-wrap: anywhere; }
+.bd-account-holder > span:first-child, .bd-account-empty { color: var(--n-muted, #64748b); }
+.bd-account--fallback { white-space: pre-line; font-size: 0.8rem; line-height: 1.6; overflow-wrap: anywhere; }
