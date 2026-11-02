@@ -4,6 +4,7 @@ import { useSearchParams } from 'next/navigation'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { ArrowRight, CheckCheck, FileText, Inbox, Mail, Paperclip, RefreshCw, Send } from 'lucide-react'
 import Modal, { ModalHeader, ModalBody, ModalFooter } from '@/components/ui/Modal'
+import InlineSelect from '@/components/ui/InlineSelect'
 import { Button } from '@/components/ui/Button'
 import { useFileViewer } from '@/components/useFileViewer'
 import { letterAttachments, letterDate, letterFields, type LetterNotice } from '@/lib/ptsp-letter'
@@ -151,7 +152,7 @@ export default function DisposisiPanel({ canManage, user, source, onClose }: Pro
         {success && <p role="status" className="disposisi-success">{success}</p>}
         {listError && <p role="alert" className="disposisi-error">{listError}</p>}
         {loading ? <div className="disposisi-empty" role="status">Memuat pemberitahuan...</div> : listError ? null : items.length === 0 ?
-            <div className="disposisi-empty"><Inbox size={32} /><strong>{unreadOnly ? 'Semua pemberitahuan sudah dibaca' : 'Belum ada pemberitahuan surat masuk'}</strong><p>{canManage ? 'Pilih Beri tahu pada daftar layanan untuk mengirim detail permohonan dan lampirannya.' : 'Pemberitahuan yang dikirim kepada Anda akan muncul di sini.'}</p></div> :
+            <div className="disposisi-empty"><Inbox size={32} /><strong>{unreadOnly ? 'Semua pemberitahuan sudah dibaca' : 'Belum ada pemberitahuan surat masuk'}</strong><p>{canManage ? 'Pilih Disposisi pada daftar layanan untuk mengirim detail permohonan dan lampirannya.' : 'Pemberitahuan yang dikirim kepada Anda akan muncul di sini.'}</p></div> :
             <div className="disposisi-list">{items.map(item => <button type="button" className="disposisi-item" key={item.id} onClick={() => openNotice(item.id)}>
                 <div className="disposisi-item-top"><span className="disposisi-service"><FileText size={17} />{String(item.snapshot?.layanan || 'Permohonan PTSP')}</span><span className={`disposisi-state ${item.read_at ? 'is-read' : ''}`}>{item.read_at ? 'Sudah dibaca' : 'Belum dibaca'}</span></div>
                 <strong className="disposisi-applicant">{String(item.snapshot?.nama || item.snapshot?.nama_siswa || 'Pemohon')}</strong>
@@ -161,17 +162,31 @@ export default function DisposisiPanel({ canManage, user, source, onClose }: Pro
             </button>)}</div>}
         {pageCount > 1 && <nav className="disposisi-pagination" aria-label="Halaman pemberitahuan"><Button size="sm" variant="secondary" disabled={loading || page <= 1} onClick={() => setPage(p => p - 1)}>Sebelumnya</Button><span>{page} / {pageCount}</span><Button size="sm" variant="secondary" disabled={loading || page >= pageCount} onClick={() => setPage(p => p + 1)}>Berikutnya</Button></nav>}
 
-        {source && <Modal size="md" onClose={() => { if (!busy) onClose() }} labelledBy="ptsp-letter-send-title">
-            <ModalHeader id="ptsp-letter-send-title" title="Beri tahu surat masuk" subtitle="Bagikan permohonan dan lampiran kepada pengguna" onClose={() => { if (!busy) onClose() }} />
+        {source && <Modal size="md" title="Disposisi surat masuk" subtitle="Bagikan permohonan dan lampiran kepada pengguna" icon={<Send size={20} />} onClose={() => { if (!busy) onClose() }} labelledBy="ptsp-letter-send-title">
             <ModalBody><form id="ptsp-letter-send" className="disposisi-form" onSubmit={send}>
                 <div className="disposisi-info"><FileText size={20} /><p>Detail permohonan dan lampiran asli disertakan. Nama pemohon dan nomor WA tersedia sebagai teks di halaman penerima.</p></div>
-                <label>Pengguna penerima<select required disabled={busy || recipientsLoading} value={recipientId} onChange={e => { setRecipient(e.target.value); requestId.current = crypto.randomUUID() }}><option value="">{recipientsLoading ? 'Memuat pengguna...' : 'Pilih pengguna penerima'}</option>{recipients.map(u => <option key={u.id} value={u.id}>{u.nama} ({u.role || 'Pengguna'})</option>)}</select></label>
+                <div className="disposisi-field">
+                    <span>Pengguna penerima</span>
+                    <InlineSelect
+                        title="Pengguna penerima"
+                        disabled={busy || recipientsLoading}
+                        value={recipientId}
+                        onChange={value => { setRecipient(value); requestId.current = crypto.randomUUID() }}
+                        minWidth="0"
+                        height="42px"
+                        style={{ width: '100%' }}
+                        options={[
+                            { value: '', label: recipientsLoading ? 'Memuat pengguna...' : 'Pilih pengguna penerima', disabled: true },
+                            ...recipients.map(u => ({ value: u.id, label: `${u.nama} (${u.role || 'Pengguna'})` })),
+                        ]}
+                    />
+                </div>
                 <label>Pesan tambahan <small>Opsional</small><textarea disabled={busy} maxLength={4000} rows={4} value={message} onChange={e => { setMessage(e.target.value); requestId.current = crypto.randomUUID() }} placeholder="Contoh: Ada surat permohonan peminjaman aula. Silakan lihat detailnya." /></label>
                 <p className="disposisi-hint">Penerima mendapat notifikasi di aplikasi dan dapat mengunduh PDF serta membuka lampiran. Pesan ini merupakan pemberitahuan surat masuk.</p>
                 {formError && <p role="alert" className="disposisi-error">{formError}</p>}
                 {!recipientsLoading && recipients.length === 0 && <Button type="button" variant="secondary" onClick={() => setRecipientRetry(n => n + 1)}>Muat ulang pengguna</Button>}
             </form></ModalBody>
-            <ModalFooter><Button variant="cancel" onClick={onClose} disabled={busy}>Batal</Button><Button variant="primary" form="ptsp-letter-send" type="submit" disabled={recipientsLoading || !recipientId} isLoading={busy} leftIcon={<Send size={15} />}>Kirim pemberitahuan</Button></ModalFooter>
+            <ModalFooter><Button variant="cancel" onClick={onClose} disabled={busy}>Batal</Button><Button variant="primary" form="ptsp-letter-send" type="submit" disabled={recipientsLoading || !recipientId} isLoading={busy} leftIcon={<Send size={15} />}>Kirim disposisi</Button></ModalFooter>
         </Modal>}
 
         {selected && <Modal size="lg" onClose={closeDetail} labelledBy="ptsp-letter-detail-title">

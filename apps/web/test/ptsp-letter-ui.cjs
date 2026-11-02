@@ -34,6 +34,8 @@ const esbuild = require('esbuild'), puppeteer = require('puppeteer');
   await page.evaluate(()=>window.__recipient());await page.click('.disposisi-item');await page.waitForFunction(()=>window.__posts.some(p=>p.action==='mark_read'));await page.waitForFunction(()=>document.querySelector('.disposisi-detail-meta').textContent.includes('Sudah dibaca'));
   await page.evaluate(()=>[...document.querySelectorAll('.mdl-foot button')].find(b=>b.textContent==='Tutup').click());
   await page.click('#compose');await page.waitForFunction(()=>document.querySelector('select option[value="recipient"]'));
+  assert.equal(await page.$eval('.mdl-head__title',el=>el.textContent),'Disposisi surat masuk');assert(await page.$('.mdl-panel .uisel select.uisel-input'));
+  for(const width of [320,390,1280]){await page.setViewport({width,height:900});assert(await page.$eval('.mdl-panel',el=>el.scrollWidth<=el.clientWidth+1));}
   await page.select('select','recipient');assert.equal(await page.$eval('textarea',el=>el.required),false);
   await page.evaluate(()=>{const form=document.querySelector('#ptsp-letter-send');form.requestSubmit();form.requestSubmit()});
   await page.waitForSelector('.disposisi-success');assert.equal(await page.evaluate(()=>window.__posts.filter(p=>!p.action).length),1);assert(await page.evaluate(()=>window.__posts.find(p=>!p.action).clientRequestId.length===36));

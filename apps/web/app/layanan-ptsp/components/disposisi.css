@@ -30,11 +30,11 @@
 .disposisi-item-footer>span { display:flex; flex-wrap:wrap; align-items:center; gap:7px; overflow-wrap:anywhere; }
 .disposisi-item-footer svg { flex-shrink:0; }
 .disposisi-form { display:flex; flex-direction:column; gap:16px; min-width:0; overflow-wrap:anywhere; }
-.disposisi-form label { display:flex; flex-direction:column; gap:8px; font-size:.85rem; font-weight:600; }
+.disposisi-form label,.disposisi-field { display:flex; flex-direction:column; gap:8px; font-size:.85rem; font-weight:600; }
 .disposisi-form label small { color:var(--n-muted,#64748b); font-weight:400; }
-.disposisi-form select,.disposisi-form textarea { padding:11px; border-radius:8px; border:1px solid var(--n-border,#cbd5e1); font:inherit; background:var(--n-card,#fff); color:inherit; width:100%; min-width:0; box-sizing:border-box; }
+.disposisi-form textarea { padding:11px; border-radius:8px; border:1px solid var(--n-border,#cbd5e1); font:inherit; background:var(--n-card,#fff); color:inherit; width:100%; min-width:0; box-sizing:border-box; }
 .disposisi-form textarea { resize:vertical; }
-.disposisi-form select:disabled,.disposisi-form textarea:disabled { opacity:.6; }
+.disposisi-form textarea:disabled { opacity:.6; }
 .disposisi-info { display:flex; gap:10px; background:var(--n-soft,#eff6ff); border-radius:10px; padding:14px; font-size:.8rem; line-height:1.6; }
 .disposisi-info svg { flex-shrink:0; color:var(--n-primary,#2563eb); margin-top:3px; }
 .disposisi-info p { margin:0; }

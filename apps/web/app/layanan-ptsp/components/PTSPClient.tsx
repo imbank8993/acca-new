@@ -527,7 +527,7 @@ export default function PTSPClient({ user }: { user: any }) {
                                         {/* 4. ActionButton & ActionGroup */}
                                         <td className="ptsp-table__cell ptsp-table__cell--right">
                                             <ActionGroup>
-                                                {canEdit && <button type="button" className="ptsp-lampiran-badge" title="Kirim pemberitahuan surat masuk" onClick={() => setDispositionSource({table: activeTab, row})}><i className="bi bi-send" /> Beri tahu</button>}
+                                                {canEdit && <button type="button" className="ptsp-lampiran-badge" title="Disposisi surat masuk" onClick={() => setDispositionSource({table: activeTab, row})}><i className="bi bi-send" /> Disposisi</button>}
                                                 <ActionButton
                                                     action="view"
                                                     title="Lihat Detail"
@@ -626,7 +626,7 @@ export default function PTSPClient({ user }: { user: any }) {
                                         </div>
                                         <div className="ptsp-card-item__actions">
                                             <ActionGroup>
-                                                {canEdit && <button type="button" className="ptsp-lampiran-badge" title="Kirim pemberitahuan surat masuk" onClick={() => setDispositionSource({table: activeTab, row})}><i className="bi bi-send" /> Beri tahu</button>}
+                                                {canEdit && <button type="button" className="ptsp-lampiran-badge" title="Disposisi surat masuk" onClick={() => setDispositionSource({table: activeTab, row})}><i className="bi bi-send" /> Disposisi</button>}
                                                 <ActionButton
                                                     action="view"
                                                     title="Lihat Detail"
