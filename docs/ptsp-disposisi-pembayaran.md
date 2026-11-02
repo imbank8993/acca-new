@@ -1,19 +1,25 @@
-# Disposisi PTSP dan akumulasi pembayaran klinik
+# Pemberitahuan surat masuk PTSP dan akumulasi pembayaran
 
-Pembayaran klinik mengelompokkan kegiatan yang tampil berdasarkan ID guru dan status pembayaran. Kolom Total Akumulasi mempertahankan rincian setiap kegiatan. Satu tombol membayar seluruh sesi belum dibayar dalam kelompok tersebut. Konfirmasi memuat jumlah sesi dan total transfer. Backend memeriksa pemilik, persetujuan laporan, status sesi, serta tarif saat penyimpanan; seluruh sesi diperbarui dalam transaksi serializable.
+## Pemberitahuan surat masuk
 
-Petugas ADMIN, ADMINISTRATOR, PTSP, OP_PTSP, dan OP_LAYANAN dapat mendisposisikan permohonan dari tombol Disposisi pada daftar desktop maupun seluler. Tracking diselesaikan ke data formulir sumber agar seluruh detail dan lampiran ikut diteruskan. Tujuan dipilih dari akun aktif. Disposisi menyimpan salinan detail permohonan dan tautan lampiran, nama pengirim/penerima, serta instruksi. Notifikasi pribadi dikirim di aplikasi. Penerima diberi akses halaman layanan-ptsp, dengan tampilan khusus kotak disposisinya sendiri. Tidak ada pengiriman WhatsApp dalam alur disposisi ini.
+Fitur PTSP merupakan pemberitahuan bahwa ada surat/permohonan masuk. Petugas memilih pengguna penerima dan dapat menambahkan pesan opsional. Tidak ada instruksi disposisi, status proses, maupun laporan tindak lanjut wajib. Penerima melihat detail permohonan dan lampiran asli, serta dapat mengunduh PDF. Nama pemohon dan nomor WhatsApp ditampilkan sebagai teks.
 
-Penerima dapat mengunduh PDF detail permohonan dan membuka lampiran secara terpisah, kemudian memperbarui status dan catatan tindak lanjut. PDF dibentuk saat diunduh dan menampilkan status terkini. Nama pemohon dan nomor WhatsApp berupa teks. Disposisi selesai wajib menyertakan hasil tindak lanjut. Permohonan sumber yang sudah didisposisikan tidak dapat dihapus agar lampiran tetap tersedia.
+Status pemberitahuan adalah Belum dibaca atau Sudah dibaca. Membuka detail menandai dibaca hanya untuk penerima. Petugas yang memantau kiriman pengguna lain tidak mengubah status tersebut. Jika pembaruan status gagal, penerima dapat mencoba tombol Tandai dibaca. Data layanan sumber tidak diubah oleh aktivitas membaca.
 
-## Aktivasi
+Daftar memakai paginasi 12 kiriman dan filter belum dibaca; ringkasan menghitung seluruh kiriman dalam lingkup hak akses. Notifikasi aplikasi membuka surat tertentu melalui parameter surat, termasuk kiriman di halaman lama. Pengiriman menggunakan ID percobaan sehingga retry dengan isi sama tidak membuat surat atau notifikasi ganda. Perubahan isi/penerima membuat ID percobaan baru.
 
-Migrasi `apps/api/prisma/sql/20261102_ptsp_disposisi.sql` sudah dimasukkan ke workflow deployment sebelum aplikasi dimulai ulang. Untuk instalasi manual, jalankan migrasi tersebut melalui Prisma db execute sebelum menjalankan versi baru. Perubahan ini belum diterapkan ke server oleh sesi pengembangan ini.
+Sumber masalah karakter kacau adalah teks antarmuka yang pernah tersimpan dengan encoding keliru. Separator kini memakai ikon; label data memakai pemetaan nama yang dapat dibaca. Metadata penyimpanan, token pelacakan, dan nama kolom internal tidak ditampilkan dalam detail/PDF. Tautan lampiran dibatasi ke HTTP(S) atau lokasi lokal aplikasi yang aman.
 
-## Pemeriksaan
+Nama tabel dan endpoint lama ptsp_disposisi dipertahankan untuk kompatibilitas. Migrasi 20261102_ptsp_surat_masuk.sql menambahkan read_at dan client_request_id tanpa menghapus kiriman sebelumnya, serta memperbarui judul dan tautan notifikasi lama. Workflow deployment menjalankan migrasi setelah 20261102_ptsp_disposisi.sql sebelum aplikasi dimulai ulang. Tidak ada pengiriman WhatsApp dalam alur ini.
+
+## Pembayaran
+
+Pembayaran klinik mengelompokkan kegiatan berdasarkan ID guru dan status pembayaran. Total Akumulasi tetap mempertahankan rincian kegiatan. Backend memeriksa kepemilikan, persetujuan, status, dan tarif sebelum memperbarui seluruh sesi dalam transaksi serializable. Filter bulan dan tahun berlaku untuk daftar, ringkasan, dan rekapan pembayaran; filter tab Nominal mengikuti tanggal terakhir perubahan tarif aktif.
+
+## Verifikasi
 
 - TypeScript frontend dan backend.
-- `node apps/api/test/ptsp-disposisi-payment.test.cjs`: pembayaran gabungan, validasi total/status/pemilik, izin akses disposisi, tindak lanjut, salinan lampiran, akses halaman penerima, migrasi berulang, serta pembuatan PDF beberapa halaman dan penolakan unduhan tanpa izin.
-- `node apps/web/scripts/test-payment-nominal.cjs`: pembacaan nominal pembayaran lama.
+- node apps/api/test/ptsp-disposisi-payment.test.cjs: validasi pembayaran, isolasi akses penerima, tanda dibaca, penyimpanan lampiran, idempotensi pengiriman, paginasi, migrasi berulang, dan PDF beberapa halaman.
+- node apps/web/test/ptsp-letter-ui.cjs: pengujian browser lokal dengan data sintetis, lebar 320-1280 piksel, mode terang/gelap, label dan encoding, detail/lampiran, tanda dibaca, pesan opsional, pencegahan klik ganda, dan pesan kesalahan aman.
 
-Pemeriksaan database memakai PostgreSQL lokal sementara (PGlite), tanpa mengubah data aplikasi. Integrasi sesi pengguna dan tampilan browser pada server berjalan masih memerlukan pemeriksaan setelah deployment.
+Pengujian memakai database sementara dan halaman lokal, tanpa mengubah data produksi. Pengujian akun sebenarnya pada server tetap memerlukan deployment yang berhasil.

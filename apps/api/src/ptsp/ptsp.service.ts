@@ -75,19 +75,30 @@ export class PtspService {
     return { ok: true, data: users.map(u => ({ id: u.auth_id, nama: u.nama || u.nama_lengkap || 'Pengguna', role: u.role })) };
   }
 
-  async listDispositions(user: any) {
-    const rows = this.canManage(user.roles)
-      ? await this.prisma.$queryRaw<any[]>`SELECT * FROM ptsp_disposisi ORDER BY created_at DESC LIMIT 200`
-      : await this.prisma.$queryRaw<any[]>`SELECT * FROM ptsp_disposisi WHERE recipient_id = ${user.authId}::uuid ORDER BY created_at DESC LIMIT 200`;
-    return { ok: true, data: rows };
+  async listDispositions(user: any, pageInput = '1', unreadOnly = false) {
+    const page = Math.max(1, Math.min(100000, Number(pageInput) || 1));
+    if (!Number.isInteger(page)) throw new BadRequestException('Halaman tidak valid');
+    const manage = this.canManage(user.roles);
+    const [summary] = await this.prisma.$queryRaw<any[]>`SELECT COUNT(*)::int AS total, COUNT(*) FILTER (WHERE read_at IS NULL)::int AS unread FROM ptsp_disposisi WHERE (${manage} OR recipient_id = ${user.authId}::uuid)`;
+    const total = unreadOnly ? summary.unread : summary.total;
+    const currentPage = Math.min(page, Math.max(1, Math.ceil(total / 12)));
+    const rows = await this.prisma.$queryRaw<any[]>`SELECT * FROM ptsp_disposisi WHERE (${manage} OR recipient_id = ${user.authId}::uuid) AND (${unreadOnly} = false OR read_at IS NULL) ORDER BY created_at DESC, id DESC LIMIT 12 OFFSET ${(currentPage - 1) * 12}`;
+    return { ok: true, data: rows, total, page: currentPage, pageSize: 12, summary };
+  }
+
+  async markLetterRead(user: any, id: string) {
+    const row = await this.getDisposition(user, id);
+    if (row.recipient_id !== user.authId) throw new ForbiddenException('Hanya penerima dapat menandai pemberitahuan dibaca');
+    await this.prisma.$executeRaw`UPDATE ptsp_disposisi SET read_at = COALESCE(read_at, now()), updated_at = CASE WHEN read_at IS NULL THEN now() ELSE updated_at END WHERE id = ${id}::uuid AND recipient_id = ${user.authId}::uuid`;
+    return { ok: true };
   }
 
   async getDisposition(user: any, id: string) {
-    if (!UUID_RE.test(id)) throw new BadRequestException('ID disposisi tidak valid');
+    if (!UUID_RE.test(id)) throw new BadRequestException('ID pemberitahuan tidak valid');
     const rows = await this.prisma.$queryRaw<any[]>`SELECT * FROM ptsp_disposisi WHERE id = ${id}::uuid`;
     const row = rows[0];
-    if (!row) throw new NotFoundException('Disposisi tidak ditemukan');
-    if (!this.canManage(user.roles) && row.recipient_id !== user.authId) throw new ForbiddenException('Disposisi ini bukan untuk Anda');
+    if (!row) throw new NotFoundException('Pemberitahuan tidak ditemukan');
+    if (!this.canManage(user.roles) && row.recipient_id !== user.authId) throw new ForbiddenException('Pemberitahuan ini bukan untuk Anda');
     return row;
   }
 
@@ -95,8 +106,10 @@ export class PtspService {
     if (!this.canManage(user.roles)) throw new ForbiddenException('Akses ditolak');
     let table = String(input?.table || '');
     let id = String(input?.id || '');
-    const instructions = String(input?.instructions || '').trim();
-    if (!PTSP_TABLES[table] || !id || !UUID_RE.test(String(input?.recipientId)) || !instructions || instructions.length > 4000) throw new BadRequestException('Lengkapi tujuan dan instruksi disposisi (maksimal 4000 karakter)');
+    let instructions = String(input?.message ?? input?.instructions ?? '').trim();
+    const clientRequestId = String(input?.clientRequestId || '');
+    if (clientRequestId && !UUID_RE.test(clientRequestId)) throw new BadRequestException('ID pengiriman tidak valid');
+    if (!Object.prototype.hasOwnProperty.call(PTSP_TABLES, table) || !id || !UUID_RE.test(String(input?.recipientId)) || instructions.length > 4000) throw new BadRequestException('Pilih penerima aktif dan isi pesan maksimal 4000 karakter');
     const recipient = await this.prisma.public_users.findFirst({ where: { auth_id: input.recipientId, aktif: true } });
     if (!recipient) throw new BadRequestException('Pengguna tujuan tidak aktif');
     if (table !== 'ptsp_master_tracking' && !/^\d+$/.test(id)) throw new BadRequestException('ID permohonan tidak valid');
@@ -105,34 +118,27 @@ export class PtspService {
     if (!request) throw new NotFoundException('Permohonan tidak ditemukan');
     if (table === 'ptsp_master_tracking') {
       const childTable = String(request.table_name).startsWith('ptsp_') ? String(request.table_name) : `ptsp_${request.table_name}`;
-      if (!PTSP_TABLES[childTable] || childTable === table) throw new BadRequestException('Layanan tracking tidak valid');
+      if (!Object.prototype.hasOwnProperty.call(PTSP_TABLES, childTable) || childTable === table) throw new BadRequestException('Layanan tracking tidak valid');
       request = await (this.prisma as any)[childTable].findFirst({ where: { tracking_token: { in: [request.id, request.tracking_token].filter(Boolean) } } });
       if (!request) throw new NotFoundException('Detail permohonan tidak ditemukan');
       table = childTable; id = String(request.id);
     }
+    if (!instructions) instructions = `Ada surat masuk untuk layanan ${PTSP_TABLES[table]}. Silakan lihat detail permohonan dan lampiran.`;
     const snapshot = JSON.stringify({ layanan: PTSP_TABLES[table], ...this.buildRow(request, table) });
     return this.prisma.$transaction(async tx => {
-      const rows = await tx.$queryRaw<any[]>`INSERT INTO ptsp_disposisi (table_name, request_id, sender_id, recipient_id, sender_name, recipient_name, instructions, snapshot) VALUES (${table}, ${id}, ${user.authId}::uuid, ${recipient.auth_id}::uuid, ${String(user.nama || user.nama_lengkap || 'Petugas PTSP')}, ${String(recipient.nama || recipient.nama_lengkap || 'Pengguna')}, ${instructions}, ${snapshot}::jsonb) RETURNING *`;
+      const rows = await tx.$queryRaw<any[]>`INSERT INTO ptsp_disposisi (table_name, request_id, sender_id, recipient_id, sender_name, recipient_name, instructions, snapshot, client_request_id) VALUES (${table}, ${id}, ${user.authId}::uuid, ${recipient.auth_id}::uuid, ${String(user.nama || user.nama_lengkap || 'Petugas PTSP')}, ${String(recipient.nama || recipient.nama_lengkap || 'Pengguna')}, ${instructions}, ${snapshot}::jsonb, COALESCE(NULLIF(${clientRequestId}, '')::uuid, gen_random_uuid())) ON CONFLICT (sender_id, client_request_id) DO UPDATE SET client_request_id = EXCLUDED.client_request_id RETURNING *`;
       // Assignment gives the recipient access to their inbox, never to all requests.
       const currentRecipient = await tx.public_users.findUnique({ where: { id: recipient.id } });
       let overrides: any = currentRecipient?.page_overrides || {};
       if (typeof overrides === 'string') { try { overrides = JSON.parse(overrides); } catch { overrides = {}; } }
+      if (!overrides || typeof overrides !== 'object' || Array.isArray(overrides)) overrides = {};
       await tx.public_users.update({ where: { id: recipient.id }, data: { page_overrides: {
         ...overrides, add: [...new Set([...(Array.isArray(overrides.add) ? overrides.add : []), 'layanan-ptsp'])],
         remove: (Array.isArray(overrides.remove) ? overrides.remove : []).filter((p: string) => p !== 'layanan-ptsp'),
       } } });
-      await tx.notifications.create({ data: { type: 'PTSP_DISPOSISI', title: 'Disposisi surat masuk PTSP', message: instructions, link: '/layanan-ptsp', recipient_user_id: recipient.auth_id, created_by: String(user.nama || 'PTSP'), source_table: 'ptsp_disposisi', source_id: rows[0].id } });
+      await tx.notifications.upsert({ where: { id: rows[0].id }, create: { id: rows[0].id, type: 'PTSP_SURAT_MASUK', title: 'Pemberitahuan surat masuk PTSP', message: rows[0].instructions, link: `/layanan-ptsp?surat=${rows[0].id}`, recipient_user_id: rows[0].recipient_id, created_by: String(user.nama || 'PTSP'), source_table: 'ptsp_disposisi', source_id: rows[0].id }, update: {} });
       return { ok: true, data: rows[0] };
     });
-  }
-
-  async updateDisposition(user: any, id: string, input: any) {
-    const row = await this.getDisposition(user, id);
-    if (row.recipient_id !== user.authId) throw new ForbiddenException('Hanya penerima dapat mengisi tindak lanjut');
-    if (!['Menunggu', 'Diproses', 'Selesai'].includes(input?.status) || typeof input?.followUp !== 'string' || input.followUp.length > 4000) throw new BadRequestException('Status atau catatan tidak valid');
-    if (input.status === 'Selesai' && !input.followUp.trim()) throw new BadRequestException('Isi hasil tindak lanjut sebelum menyelesaikan disposisi');
-    await this.prisma.$executeRaw`UPDATE ptsp_disposisi SET status = ${input.status}, follow_up = ${input.followUp.trim()}, updated_at = now() WHERE id = ${id}::uuid`;
-    return { ok: true };
   }
 
   async getConfig() {
@@ -217,7 +223,7 @@ export class PtspService {
   }
 
   async getTableData(table: string, page = 1, pageSize = 20, search = '') {
-    if (!table || !PTSP_TABLES[table]) {
+    if (!table || !Object.prototype.hasOwnProperty.call(PTSP_TABLES, table)) {
       throw new BadRequestException('Tabel tidak valid');
     }
 
@@ -266,7 +272,7 @@ export class PtspService {
       throw new ForbiddenException('Akses ditolak. Peran tidak memiliki izin PTSP.');
     }
 
-    if (!table || !PTSP_TABLES[table]) {
+    if (!table || !Object.prototype.hasOwnProperty.call(PTSP_TABLES, table)) {
       throw new BadRequestException('Tabel tidak valid');
     }
     if (!id) {
@@ -426,7 +432,7 @@ export class PtspService {
       throw new ForbiddenException('Akses ditolak. Peran tidak memiliki izin PTSP.');
     }
 
-    if (!table || !PTSP_TABLES[table]) {
+    if (!table || !Object.prototype.hasOwnProperty.call(PTSP_TABLES, table)) {
       throw new BadRequestException('Tabel tidak valid');
     }
     if (!id) {
@@ -447,7 +453,7 @@ export class PtspService {
     }
 
     const linked = await this.prisma.$queryRaw<any[]>`SELECT id FROM ptsp_disposisi WHERE table_name = ${table} AND request_id = ${String(id)} LIMIT 1`;
-    if (linked.length) throw new BadRequestException('Permohonan sudah didisposisikan. Data dan lampiran dipertahankan untuk tindak lanjut.');
+    if (linked.length) throw new BadRequestException('Permohonan sudah diberitahukan kepada pengguna. Data dan lampiran dipertahankan untuk penerima.');
     await delegate.delete({ where: whereId });
 
     return {

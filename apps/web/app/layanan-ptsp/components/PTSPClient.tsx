@@ -36,7 +36,7 @@ const PTSP_TABS = [
 
 const FIELD_LABELS: Record<string, string> = {
     short_code: 'Short Code', no_wa: 'No. WA', service_type: 'Jenis Layanan',
-    table_name: 'Nama Tabel', status: 'Status', progress: 'Progres', created_at: 'Tanggal',
+    table_name: 'Layanan', status: 'Status', progress: 'Progres', created_at: 'Tanggal',
     nama: 'Nama', wa: 'No. WA', instansi: 'Instansi', tujuan: 'Tujuan',
     bertemu_dengan: 'Bertemu Dengan', catatan_admin: 'Catatan Admin',
     kelas: 'Kelas', tanggal_mulai: 'Tgl Mulai', tanggal_selesai: 'Tgl Selesai',
@@ -230,6 +230,7 @@ export default function PTSPClient({ user }: { user: any }) {
 
     /* ── Cell renderer ── */
     const renderCell = (key: string, value: unknown): React.ReactNode => {
+        if (key === 'table_name') return <span>{PTSP_TABS.find(t => t.key === String(value) || t.key === `ptsp_${value}`)?.label || 'Layanan PTSP'}</span>
         if (key === 'status') {
             const rawPct = parseInt(String(value ?? 1), 10)
             const pct = isNaN(rawPct) ? 1 : Math.min(Math.max(rawPct, 0), 100)
@@ -526,7 +527,7 @@ export default function PTSPClient({ user }: { user: any }) {
                                         {/* 4. ActionButton & ActionGroup */}
                                         <td className="ptsp-table__cell ptsp-table__cell--right">
                                             <ActionGroup>
-                                                {canEdit && <button type="button" className="ptsp-lampiran-badge" title="Disposisikan permohonan" onClick={() => setDispositionSource({table: activeTab, row})}><i className="bi bi-send" /> Disposisi</button>}
+                                                {canEdit && <button type="button" className="ptsp-lampiran-badge" title="Kirim pemberitahuan surat masuk" onClick={() => setDispositionSource({table: activeTab, row})}><i className="bi bi-send" /> Beri tahu</button>}
                                                 <ActionButton
                                                     action="view"
                                                     title="Lihat Detail"
@@ -625,7 +626,7 @@ export default function PTSPClient({ user }: { user: any }) {
                                         </div>
                                         <div className="ptsp-card-item__actions">
                                             <ActionGroup>
-                                                {canEdit && <button type="button" className="ptsp-lampiran-badge" title="Disposisikan permohonan" onClick={() => setDispositionSource({table: activeTab, row})}><i className="bi bi-send" /> Disposisi</button>}
+                                                {canEdit && <button type="button" className="ptsp-lampiran-badge" title="Kirim pemberitahuan surat masuk" onClick={() => setDispositionSource({table: activeTab, row})}><i className="bi bi-send" /> Beri tahu</button>}
                                                 <ActionButton
                                                     action="view"
                                                     title="Lihat Detail"
@@ -715,7 +716,9 @@ export default function PTSPClient({ user }: { user: any }) {
                                 const renderField = (c: string, raw: unknown) => {
                                     let displayVal: React.ReactNode = '—'
                                     if (raw != null) {
-                                        if (c === 'status') {
+                                        if (c === 'table_name') {
+                                            displayVal = PTSP_TABS.find(t => t.key === String(raw) || t.key === `ptsp_${raw}`)?.label || 'Layanan PTSP'
+                                        } else if (c === 'status') {
                                             const rawPct = parseInt(String(raw), 10)
                                             const pct = isNaN(rawPct) ? 1 : Math.min(Math.max(rawPct, 0), 100)
                                             const badgeClass = getStatusBadgeClass(pct)

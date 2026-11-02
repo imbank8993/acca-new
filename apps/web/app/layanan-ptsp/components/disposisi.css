@@ -1,1 +1,71 @@
-.disposisi-panel{background:var(--n-card,#fff);border:1px solid var(--n-border,#dbe3ef);border-radius:16px;padding:24px;margin-bottom:20px;color:var(--n-text,#18324e)}.disposisi-heading{display:flex;justify-content:space-between;gap:16px;align-items:center}.disposisi-heading h2{font-size:1.25rem;margin:6px 0}.disposisi-heading p,.disposisi-hint{color:var(--n-muted,#64748b);font-size:.82rem}.disposisi-eyebrow{font-size:.65rem;letter-spacing:.12em;font-weight:700;color:#3083ff}.disposisi-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:20px 0}.disposisi-stats div{background:var(--n-soft,#f3f7fc);padding:14px;border-radius:10px;display:flex;gap:12px;align-items:center}.disposisi-stats strong{font-size:1.4rem}.disposisi-stats span{font-size:.8rem}.disposisi-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;max-height:480px;overflow:auto}.disposisi-item{font:inherit;text-align:left;border:1px solid var(--n-border,#dbe3ef);background:var(--n-card,#fff);color:inherit;border-radius:12px;padding:16px;cursor:pointer}.disposisi-item:hover{border-color:#3083ff}.disposisi-item>div{display:flex;justify-content:space-between;gap:8px}.disposisi-item p{font-size:.8rem;white-space:pre-wrap;overflow-wrap:anywhere}.disposisi-item small{color:var(--n-muted,#64748b);font-size:.7rem}.disposisi-state{font-size:.7rem;border-radius:6px;padding:3px 7px;background:var(--n-soft,#eaf2ff)}.disposisi-form{display:flex;flex-direction:column;gap:16px;white-space:pre-wrap;overflow-wrap:anywhere}.disposisi-form label{display:flex;flex-direction:column;gap:8px;font-size:.85rem;font-weight:600}.disposisi-form select,.disposisi-form textarea{padding:10px;border-radius:8px;border:1px solid var(--n-border,#cbd5e1);font:inherit;background:var(--n-card,#fff);color:inherit;width:100%}.disposisi-form dt{font-size:.7rem;color:var(--n-muted,#64748b);text-transform:uppercase}.disposisi-form dd{margin:4px 0 12px}.disposisi-error{color:#dc2626;font-size:.85rem}.disposisi-empty{padding:24px;text-align:center;color:var(--n-muted,#64748b);font-size:.85rem}.disposisi-download{display:block;padding:12px;border-radius:8px;border:1px solid var(--n-border,#dbe3ef);background:var(--n-soft,#f3f7fc);color:var(--n-primary,#2563eb);font:inherit;text-align:left;cursor:pointer;text-decoration:none}@media(max-width:600px){.disposisi-panel{padding:16px}.disposisi-heading{align-items:flex-start;flex-direction:column}.disposisi-stats{gap:6px}.disposisi-stats div{flex-direction:column;gap:4px;padding:10px}.disposisi-list{grid-template-columns:1fr}}
+/* Letter inbox: natural page flow, with shared application colors. */
+.disposisi-panel { background:var(--n-card,#fff); border:1px solid var(--n-border,#dbe3ef); border-radius:16px; padding:24px; margin-bottom:20px; color:var(--n-text,#18324e); min-width:0; }
+.disposisi-heading { display:flex; justify-content:space-between; gap:20px; align-items:flex-start; }
+.disposisi-heading-title { display:flex; gap:14px; min-width:0; }
+.disposisi-heading-icon { display:flex; align-items:center; justify-content:center; width:48px; height:48px; flex-shrink:0; background:var(--n-soft,#eff6ff); color:var(--n-primary,#2563eb); border-radius:13px; }
+.disposisi-heading h2 { font-size:1.2rem; line-height:1.4; margin:5px 0; font-weight:700; }
+.disposisi-heading p,.disposisi-hint { color:var(--n-muted,#64748b); font-size:.8rem; line-height:1.6; margin:0; }
+.disposisi-eyebrow { font-size:.65rem; letter-spacing:.12em; font-weight:700; color:var(--n-primary,#2563eb); }
+.disposisi-stats { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; margin:22px 0; }
+.disposisi-stats>div { display:flex; align-items:center; gap:12px; border:1px solid var(--n-border,#dbe3ef); border-radius:12px; padding:16px; }
+.disposisi-stats svg { color:var(--n-primary,#2563eb); flex-shrink:0; }
+.disposisi-stats span { display:flex; flex-direction:column; color:var(--n-muted,#64748b); font-size:.75rem; gap:5px; }
+.disposisi-stats strong { font-size:1.5rem; line-height:1.1; color:var(--n-text,#18324e); }
+.disposisi-toolbar { display:flex; justify-content:space-between; align-items:center; gap:10px; margin:0 0 14px; font-size:.75rem; color:var(--n-muted,#64748b); }
+.disposisi-filters { display:flex; gap:6px; }
+.disposisi-filters button { cursor:pointer; border:1px solid var(--n-border,#dbe3ef); color:var(--n-muted,#64748b); font:inherit; font-weight:600; background:transparent; padding:7px 12px; border-radius:8px; }
+.disposisi-filters button[aria-pressed=true] { background:var(--n-soft,#eff6ff); border-color:var(--n-primary,#2563eb); color:var(--n-primary,#2563eb); }
+.disposisi-list { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+.disposisi-item { font:inherit; text-align:left; border:1px solid var(--n-border,#dbe3ef); background:var(--n-card,#fff); color:inherit; border-radius:12px; padding:18px; cursor:pointer; display:flex; flex-direction:column; min-width:0; transition:border-color .15s,box-shadow .15s; }
+.disposisi-item:hover { border-color:var(--n-primary,#2563eb); box-shadow:0 3px 12px #18324e0a; }
+.disposisi-item:focus-visible,.disposisi-filters button:focus-visible { outline:2px solid var(--n-primary,#2563eb); outline-offset:3px; }
+.disposisi-item-top { display:flex; justify-content:space-between; align-items:flex-start; gap:12px; margin-bottom:16px; }
+.disposisi-service { display:flex; align-items:center; gap:7px; font-size:.8rem; font-weight:700; color:var(--n-primary,#2563eb); }
+.disposisi-service svg { flex-shrink:0; }
+.disposisi-state { font-size:.7rem; border-radius:6px; padding:4px 7px; background:var(--n-soft,#eff6ff); color:var(--n-primary,#2563eb); white-space:nowrap; }
+.disposisi-state.is-read { background:var(--n-soft,#f1f5f9); color:var(--n-muted,#64748b); }
+.disposisi-applicant { font-size:.9rem; margin-bottom:4px; overflow-wrap:anywhere; }
+.disposisi-phone { font-size:.76rem; color:var(--n-muted,#64748b); }
+.disposisi-message { font-size:.8rem; line-height:1.6; white-space:pre-wrap; overflow-wrap:anywhere; margin:12px 0 16px; }
+.disposisi-item-footer { display:flex; flex-wrap:wrap; justify-content:space-between; gap:8px; font-size:.72rem; color:var(--n-muted,#64748b); border-top:1px solid var(--n-border,#dbe3ef); padding-top:12px; margin-top:auto; }
+.disposisi-item-footer>span { display:flex; flex-wrap:wrap; align-items:center; gap:7px; overflow-wrap:anywhere; }
+.disposisi-item-footer svg { flex-shrink:0; }
+.disposisi-form { display:flex; flex-direction:column; gap:16px; min-width:0; overflow-wrap:anywhere; }
+.disposisi-form label { display:flex; flex-direction:column; gap:8px; font-size:.85rem; font-weight:600; }
+.disposisi-form label small { color:var(--n-muted,#64748b); font-weight:400; }
+.disposisi-form select,.disposisi-form textarea { padding:11px; border-radius:8px; border:1px solid var(--n-border,#cbd5e1); font:inherit; background:var(--n-card,#fff); color:inherit; width:100%; min-width:0; box-sizing:border-box; }
+.disposisi-form textarea { resize:vertical; }
+.disposisi-form select:disabled,.disposisi-form textarea:disabled { opacity:.6; }
+.disposisi-info { display:flex; gap:10px; background:var(--n-soft,#eff6ff); border-radius:10px; padding:14px; font-size:.8rem; line-height:1.6; }
+.disposisi-info svg { flex-shrink:0; color:var(--n-primary,#2563eb); margin-top:3px; }
+.disposisi-info p { margin:0; }
+.disposisi-detail-meta,.disposisi-details { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; margin:0; }
+.disposisi-detail-meta>div { display:flex; flex-direction:column; gap:5px; font-size:.8rem; }
+.disposisi-detail-meta span,.disposisi-details dt { font-size:.72rem; color:var(--n-muted,#64748b); }
+.disposisi-details dd { margin:5px 0 0; font-size:.82rem; line-height:1.6; white-space:pre-wrap; }
+.disposisi-note { background:var(--n-soft,#f3f7fc); border-radius:10px; padding:14px; font-size:.82rem; }
+.disposisi-note p { margin:8px 0 0; white-space:pre-wrap; line-height:1.6; }
+.disposisi-section-title { display:flex; align-items:center; gap:8px; font-size:.88rem; margin:6px 0 0; font-weight:700; }
+.disposisi-error,.disposisi-success { border-radius:8px; padding:12px; font-size:.8rem; line-height:1.5; }
+.disposisi-error { color:#b91c1c; background:#fef2f2; border:1px solid #fecaca; }
+.disposisi-success { color:#166534; background:#f0fdf4; border:1px solid #bbf7d0; }
+.disposisi-empty { padding:32px 12px; text-align:center; color:var(--n-muted,#64748b); font-size:.8rem; display:flex; flex-direction:column; align-items:center; gap:10px; }
+.disposisi-empty strong { font-size:.9rem; color:var(--n-text,#18324e); }
+.disposisi-empty p { max-width:420px; line-height:1.6; margin:0; }
+.disposisi-download { display:flex; align-items:center; gap:10px; padding:12px; border-radius:8px; border:1px solid var(--n-border,#dbe3ef); background:var(--n-soft,#f3f7fc); color:var(--n-primary,#2563eb); font:inherit; font-size:.8rem; text-align:left; cursor:pointer; text-decoration:none; }
+.disposisi-download svg { flex-shrink:0; }
+.disposisi-pagination { display:flex; align-items:center; justify-content:center; gap:12px; margin-top:18px; font-size:.75rem; }
+@media(max-width:767px) {
+    .disposisi-panel { padding:16px; }
+    .disposisi-heading { flex-direction:column; gap:12px; }
+    .disposisi-heading h2 { font-size:1.05rem; }
+    .disposisi-heading-icon { width:38px; height:38px; }
+    .disposisi-stats { gap:6px; margin:18px 0; }
+    .disposisi-stats>div { flex-direction:column; align-items:flex-start; padding:11px; gap:8px; }
+    .disposisi-stats span { font-size:.7rem; min-height:58px; justify-content:space-between; }
+    .disposisi-stats strong { font-size:1.25rem; }
+    .disposisi-list { grid-template-columns:minmax(0,1fr); }
+    .disposisi-item { padding:14px; }
+    .disposisi-toolbar { flex-wrap:wrap; }
+    .disposisi-detail-meta,.disposisi-details { grid-template-columns:minmax(0,1fr); }
+}

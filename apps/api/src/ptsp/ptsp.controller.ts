@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Delete, Body, Query, Request, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Delete, BadRequestException, Body, Query, Request, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PtspService } from './ptsp.service';
@@ -14,13 +14,15 @@ export class PtspController {
   async recipients(@Request() req: any) { return this.ptspService.dispositionRecipients(req.user); }
 
   @Get('disposisi')
-  async dispositions(@Request() req: any, @Query('id') id?: string) {
-    return id ? { ok: true, data: await this.ptspService.getDisposition(req.user, id) } : this.ptspService.listDispositions(req.user);
+  async dispositions(@Request() req: any, @Query('id') id?: string, @Query('page') page?: string, @Query('unread') unread?: string) {
+    return id ? { ok: true, data: await this.ptspService.getDisposition(req.user, id) } : this.ptspService.listDispositions(req.user, page, unread === 'true');
   }
 
   @Post('disposisi')
   async disposition(@Request() req: any, @Body() body: any) {
-    return body.action === 'follow_up' ? this.ptspService.updateDisposition(req.user, body.id, body) : this.ptspService.createDisposition(req.user, body);
+    if (body.action === 'mark_read') return this.ptspService.markLetterRead(req.user, body.id);
+    if (body.action) throw new BadRequestException('Aksi pemberitahuan tidak valid');
+    return this.ptspService.createDisposition(req.user, body);
   }
 
   @Get('config')

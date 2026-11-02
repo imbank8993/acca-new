@@ -4716,9 +4716,13 @@ model ptsp_disposisi {
   snapshot Json
   status String @default("Menunggu")
   follow_up String @default("")
+  read_at DateTime? @db.Timestamptz(6)
+  client_request_id String @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+
   created_at DateTime @default(now()) @db.Timestamptz(6)
   updated_at DateTime @default(now()) @db.Timestamptz(6)
 
+  @@unique([sender_id, client_request_id], map: "idx_ptsp_letter_delivery")
   @@index([recipient_id, created_at(sort: Desc)], map: "idx_ptsp_disposisi_recipient")
   @@index([table_name, request_id], map: "idx_ptsp_disposisi_request")
   @@schema("public")

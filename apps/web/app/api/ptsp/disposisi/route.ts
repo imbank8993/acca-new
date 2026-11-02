@@ -5,7 +5,7 @@ export const dynamic = 'force-dynamic';
 export async function GET(req: NextRequest) {
   const recipients = req.nextUrl.searchParams.get('recipients') === 'true';
   const id = req.nextUrl.searchParams.get('id');
-  const { status, body } = await nestFetchAsUser(`/ptsp/disposisi${recipients ? '/recipients' : id ? '?id=' + encodeURIComponent(id) : ''}`, extractRequestToken(req) || '');
+  const { status, body } = await nestFetchAsUser(`/ptsp/disposisi${recipients ? '/recipients' : id ? '?id=' + encodeURIComponent(id) : '?' + new URLSearchParams({ page: req.nextUrl.searchParams.get('page') || '1', unread: req.nextUrl.searchParams.get('unread') || 'false' }).toString()}`, extractRequestToken(req) || '');
   return NextResponse.json(body, { status });
 }
 export async function POST(req: NextRequest) {
