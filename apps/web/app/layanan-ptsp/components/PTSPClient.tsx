@@ -15,6 +15,7 @@ import { Settings, Save } from 'lucide-react'
 import { DesktopFab } from '@/components/ui/DesktopFab'
 import Modal, { ModalHeader, ModalBody, ModalFooter, ModalDetailGrid, ModalDetailField } from '@/components/ui/Modal'
 import './ptsp-settings.css'
+import DisposisiPanel from './DisposisiPanel'
 
 /* ──────────────────────────────────────────────────────────
    CONSTANTS & TYPES
@@ -130,6 +131,7 @@ export default function PTSPClient({ user }: { user: any }) {
     const [search, setSearch] = useState('')
     const [searchInput, setSearchInput] = useState('')
     const [editRow, setEditRow] = useState<Row | null>(null)
+    const [dispositionSource, setDispositionSource] = useState<{table: string; row: any} | null>(null)
     const [viewRow, setViewRow] = useState<Row | null>(null)
     const [statusRow, setStatusRow] = useState<Row | null>(null)
     const [rowToDelete, setRowToDelete] = useState<Row | null>(null)
@@ -154,9 +156,8 @@ export default function PTSPClient({ user }: { user: any }) {
     // Check if user has edit permissions (ADMIN or PTSP role)
     const canEdit = (() => {
         if (!user) return false
-        const roleStr = (user.role || '').toUpperCase()
-        const roles = roleStr.split(/[,|]/).map((r: string) => r.trim())
-        return roles.includes('ADMIN') || roles.includes('PTSP')
+        const roles = [...(Array.isArray(user.roles) ? user.roles : []), ...(user.role || '').split(/[,|]/)].map((r: string) => r.trim().toUpperCase())
+        return roles.some((r: string) => ['ADMIN', 'ADMINISTRATOR', 'PTSP', 'OP_PTSP', 'OP_LAYANAN'].includes(r))
     })()
 
     useEffect(() => {
@@ -181,6 +182,7 @@ export default function PTSPClient({ user }: { user: any }) {
     const currentTab = PTSP_TABS.find(t => t.key === activeTab)!
 
     const fetchRows = useCallback(async (tabKey: string, p = 1, q = '') => {
+        if (!canEdit) { setLoading(false); return }
         setLoading(true)
         try {
             const params = new URLSearchParams({ table: tabKey, page: String(p), pageSize: String(PAGE_SIZE) })
@@ -190,9 +192,8 @@ export default function PTSPClient({ user }: { user: any }) {
             if (json.ok) { setRows(json.data); setTotal(json.total); setPage(p) }
         } catch (e) { console.error(e) }
         finally { setLoading(false) }
-    }, [])
+    }, [canEdit])
 
-    useEffect(() => { fetchRows(activeTab, 1, '') }, [activeTab])
 
     useEffect(() => {
         clearTimeout(debounceRef.current as any)
@@ -203,7 +204,7 @@ export default function PTSPClient({ user }: { user: any }) {
         return () => clearTimeout(debounceRef.current as any)
     }, [searchInput])
 
-    useEffect(() => { fetchRows(activeTab, 1, search) }, [activeTab, search])
+    useEffect(() => { fetchRows(activeTab, 1, search) }, [activeTab, search, fetchRows])
 
     /* ── Column order per tab ── */
     const COL_ORDER: Record<string, string[]> = {
@@ -350,8 +351,11 @@ export default function PTSPClient({ user }: { user: any }) {
     const tab = currentTab
     const tabColor = tab.color
 
+    if (!canEdit) return <DisposisiPanel canManage={false} user={user} onClose={() => {}} />
+
     return (
         <>
+            <DisposisiPanel canManage={canEdit} user={user} source={dispositionSource} onClose={() => setDispositionSource(null)} />
             {canEdit && <>
                 <DesktopFab label="Pengaturan PTSP" icon={<Settings size={20} />} mobileIcon="gear-fill" onClick={() => setSettingsOpen(true)} title="Pengaturan layanan dan WhatsApp PTSP" />
             </>}
@@ -522,6 +526,7 @@ export default function PTSPClient({ user }: { user: any }) {
                                         {/* 4. ActionButton & ActionGroup */}
                                         <td className="ptsp-table__cell ptsp-table__cell--right">
                                             <ActionGroup>
+                                                {canEdit && <button type="button" className="ptsp-lampiran-badge" title="Disposisikan permohonan" onClick={() => setDispositionSource({table: activeTab, row})}><i className="bi bi-send" /> Disposisi</button>}
                                                 <ActionButton
                                                     action="view"
                                                     title="Lihat Detail"
@@ -620,6 +625,7 @@ export default function PTSPClient({ user }: { user: any }) {
                                         </div>
                                         <div className="ptsp-card-item__actions">
                                             <ActionGroup>
+                                                {canEdit && <button type="button" className="ptsp-lampiran-badge" title="Disposisikan permohonan" onClick={() => setDispositionSource({table: activeTab, row})}><i className="bi bi-send" /> Disposisi</button>}
                                                 <ActionButton
                                                     action="view"
                                                     title="Lihat Detail"

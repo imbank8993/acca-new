@@ -481,11 +481,21 @@ export default function PembayaranPage({ user: propUser }: PembayaranPageProps =
         sudah: klinikSlots.filter(s => s.status === 'paid').length,
     }), [klinikSlots]);
 
-    const handleTandaiKlinik = async (slot: KlinikSlot) => {
+    const klinikGroups = useMemo(() => {
+        const groups = new Map<string, KlinikSlot[]>();
+        filteredKlinikSlots.forEach(slot => {
+            const key = `${slot.guru_id}:${slot.status === 'paid' ? 'paid' : 'unpaid'}`;
+            groups.set(key, [...(groups.get(key) || []), slot]);
+        });
+        return [...groups.values()];
+    }, [filteredKlinikSlots]);
+
+    const handleTandaiKlinik = async (slots: KlinikSlot[]) => {
+        const slot = slots[0];
         const nominal = getTarif('KLINIK');
         const confirm = await swalConfirm({
             title: 'Tandai Sudah Dibayar?',
-            text: `Honor klinik ${slot.nama_guru} (${slot.mapel}) sebesar ${fmtRupiah(nominal)} akan ditandai sudah dibayarkan.`,
+            text: `Honor klinik ${slot.nama_guru} (${slot.mapel}) untuk ${slots.length} kegiatan, total ${fmtRupiah(nominal * slots.length)}, akan ditandai dibayar dalam satu transfer.`,
             icon: 'question', confirmText: 'Ya, Tandai', cancelText: 'Batal', confirmColor: '#16a34a',
         });
         if (!confirm.isConfirmed) return;
@@ -494,7 +504,7 @@ export default function PembayaranPage({ user: propUser }: PembayaranPageProps =
             const res = await authFetch('/api/klinik', {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action: 'mark_paid', id: slot.id }),
+                body: JSON.stringify({ action: 'mark_paid_batch', ids: slots.map(s => s.id), expectedTotal: nominal * slots.length }),
             });
             const data = await res.json();
             if (!res.ok || !data.ok) throw new Error(data.error || 'Gagal memproses');
@@ -880,7 +890,7 @@ export default function PembayaranPage({ user: propUser }: PembayaranPageProps =
                                         <th>Penerima</th>
                                         <th>Tanggal</th>
                                         <th>Kegiatan</th>
-                                        <th>Nominal</th>
+                                        <th>Nominal</th><th>Total Akumulasi</th>
                                         <th>Status</th>
                                         <th>Aksi</th>
                                     </tr>
@@ -888,50 +898,26 @@ export default function PembayaranPage({ user: propUser }: PembayaranPageProps =
                                 <tbody>
                                     {loadingKlinik && (
                                         <tr>
-                                            <td colSpan={7} className="gap-td-center" style={{ padding: '24px 0' }}>
+                                            <td colSpan={8} className="gap-td-center" style={{ padding: '24px 0' }}>
                                                 <Spinner variant="buble" />
                                             </td>
                                         </tr>
                                     )}
                                     {!loadingKlinik && filteredKlinikSlots.length === 0 && (
-                                        <tr><td colSpan={7} className="gap-td-center">Tidak ada laporan klinik yang disetujui</td></tr>
+                                        <tr><td colSpan={8} className="gap-td-center">Tidak ada laporan klinik yang disetujui</td></tr>
                                     )}
-                                    {filteredKlinikSlots.map((slot, i) => (
+                                    {klinikGroups.map((group, i) => group.map((slot, j) => (
                                         <tr key={slot.id}>
-                                            <td>{i + 1}</td>
-                                            <td>
-                                                <div className="gap-td-name">{slot.nama_guru}</div>
-                                                <div className="gap-td-nip">NIP. {slot.guru?.nip || '-'}</div>
-                                            </td>
+                                            <td>{i + 1}.{j + 1}</td>
+                                            <td><div className="gap-td-name">{slot.nama_guru}</div><div className="gap-td-nip">NIP. {slot.guru?.nip || '-'}</div></td>
                                             <td>{new Date(slot.tanggal).toLocaleDateString('id-ID', { dateStyle: 'medium' })}</td>
                                             <td>{slot.mapel} — {slot.topik}</td>
-                                            <td style={{ fontWeight: 700 }}>{slot.status === 'paid'
-                                                ? slot.nominal_dibayarkan == null ? 'Nominal belum tercatat' : fmtRupiah(slot.nominal_dibayarkan)
-                                                : fmtRupiah(getTarif('KLINIK'))}</td>
-                                            <td>
-                                                <span className={`gap-badge gap-badge--${slot.status === 'paid' ? 'sudah' : 'belum'}`}>
-                                                    {slot.status === 'paid' ? 'Dibayar' : 'Belum'}
-                                                </span>
-                                            </td>
-                                            <td>
-                                                <div className="gap-actions-cell">
-                                                    {isBendahara ? (
-                                                        slot.status === 'paid' ? (
-                                                            <button onClick={() => handleBatalKlinik(slot)} className="gap-btn-icon gap-btn-icon--danger" title="Batalkan Tanda Dibayar" disabled={savingKlinik}>
-                                                                <i className="bi bi-x-circle" />
-                                                            </button>
-                                                        ) : (
-                                                            <button onClick={() => handleTandaiKlinik(slot)} className="gap-btn-icon gap-btn-icon--success" title="Tandai Dibayar" disabled={savingKlinik}>
-                                                                <i className="bi bi-check-circle" />
-                                                            </button>
-                                                        )
-                                                    ) : (
-                                                        <span style={{ color: 'var(--n-muted)', fontSize: '0.8rem' }}>-</span>
-                                                    )}
-                                                </div>
-                                            </td>
+                                            <td style={{ fontWeight: 700 }}>{slot.status === 'paid' ? slot.nominal_dibayarkan == null ? 'Nominal belum tercatat' : fmtRupiah(slot.nominal_dibayarkan) : fmtRupiah(getTarif('KLINIK'))}</td>
+                                            {j === 0 && <td rowSpan={group.length} style={{ fontWeight: 700, background: 'var(--n-soft)' }}>{group.some(s => s.status === 'paid' && s.nominal_dibayarkan == null) ? 'Nominal belum lengkap' : fmtRupiah(group.reduce((sum, s) => sum + (s.status === 'paid' ? parseNominal(s.nominal_dibayarkan) : getTarif('KLINIK')), 0))}<div className="gap-td-nip">{group.length} kegiatan{slot.status !== 'paid' ? ' · 1 transfer' : ''}</div></td>}
+                                            <td><span className={`gap-badge gap-badge--${slot.status === 'paid' ? 'sudah' : 'belum'}`}>{slot.status === 'paid' ? 'Dibayar' : 'Belum'}</span></td>
+                                            <td>{isBendahara && (slot.status === 'paid' ? <button onClick={() => handleBatalKlinik(slot)} className="gap-btn-icon gap-btn-icon--danger" title="Batalkan Tanda Dibayar" disabled={savingKlinik}><i className="bi bi-x-circle" /></button> : j === 0 && <button onClick={() => handleTandaiKlinik(group)} className="gap-btn-icon gap-btn-icon--success" title="Tandai seluruh kegiatan penerima dibayar dalam satu transfer" disabled={savingKlinik}><i className="bi bi-check-circle" /></button>)}</td>
                                         </tr>
-                                    ))}
+                                    )))}
                                 </tbody>
                             </table>
                         </div>

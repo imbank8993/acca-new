@@ -1,0 +1,294 @@
+{
+  "totals": {
+    "classes": 19,
+    "subjects": 38,
+    "source_rows": 869,
+    "student_subjects": 653,
+    "raw_remedial": 289,
+    "remedial_student_subjects": 211,
+    "incomplete_student_subjects": 653,
+    "unmapped_score_rows": 10,
+    "duplicate_score_rows": 0,
+    "outside_roster": 0
+  },
+  "class_summary": [
+    {
+      "kelas": "X A",
+      "mapel": 5,
+      "rekap_siswa": 90,
+      "remedial": 24
+    },
+    {
+      "kelas": "X B",
+      "mapel": 1,
+      "rekap_siswa": 18,
+      "remedial": 0
+    },
+    {
+      "kelas": "X C",
+      "mapel": 2,
+      "rekap_siswa": 36,
+      "remedial": 18
+    },
+    {
+      "kelas": "X D",
+      "mapel": 2,
+      "rekap_siswa": 36,
+      "remedial": 15
+    },
+    {
+      "kelas": "XI A",
+      "mapel": 2,
+      "rekap_siswa": 36,
+      "remedial": 4
+    },
+    {
+      "kelas": "XI B",
+      "mapel": 3,
+      "rekap_siswa": 54,
+      "remedial": 1
+    },
+    {
+      "kelas": "XI C",
+      "mapel": 2,
+      "rekap_siswa": 36,
+      "remedial": 0
+    },
+    {
+      "kelas": "XI D",
+      "mapel": 1,
+      "rekap_siswa": 18,
+      "remedial": 0
+    },
+    {
+      "kelas": "XI Fisika 1",
+      "mapel": 1,
+      "rekap_siswa": 10,
+      "remedial": 10
+    },
+    {
+      "kelas": "XI Fisika 3",
+      "mapel": 1,
+      "rekap_siswa": 7,
+      "remedial": 5
+    },
+    {
+      "kelas": "XI Kimia 1",
+      "mapel": 1,
+      "rekap_siswa": 17,
+      "remedial": 0
+    },
+    {
+      "kelas": "XI Matematika Lanjut 1",
+      "mapel": 1,
+      "rekap_siswa": 18,
+      "remedial": 18
+    },
+    {
+      "kelas": "XI Matematika Lanjut 2",
+      "mapel": 1,
+      "rekap_siswa": 18,
+      "remedial": 18
+    },
+    {
+      "kelas": "XI Matematika Lanjut 3",
+      "mapel": 1,
+      "rekap_siswa": 19,
+      "remedial": 19
+    },
+    {
+      "kelas": "XI Sosiologi 2",
+      "mapel": 1,
+      "rekap_siswa": 9,
+      "remedial": 0
+    },
+    {
+      "kelas": "XII A",
+      "mapel": 3,
+      "rekap_siswa": 63,
+      "remedial": 16
+    },
+    {
+      "kelas": "XII B",
+      "mapel": 3,
+      "rekap_siswa": 60,
+      "remedial": 17
+    },
+    {
+      "kelas": "XII C",
+      "mapel": 3,
+      "rekap_siswa": 48,
+      "remedial": 26
+    },
+    {
+      "kelas": "XII D",
+      "mapel": 4,
+      "rekap_siswa": 60,
+      "remedial": 20
+    }
+  ],
+  "unmapped": [
+    {
+      "id": "1b2a3c0f-62d2-4367-9f7e-7092a2b584ed",
+      "nip": "199808292023211002",
+      "kelas": "XI Fisika 1",
+      "mapel": "Fisika",
+      "semester": 1,
+      "nisn": "0107438963",
+      "jenis": "Kuis",
+      "tagihan": "KUIS_1",
+      "materi_tp": "SUM 3",
+      "nilai": "80.00",
+      "catatan": null,
+      "created_at": "2026-10-19T01:54:17.800Z",
+      "updated_at": "2026-10-19T01:54:17.800Z",
+      "tahun_ajaran": "2026/2027"
+    },
+    {
+      "id": "9cd77aad-62e1-4af8-88ac-988061f73733",
+      "nip": "199808292023211002",
+      "kelas": "XI Fisika 1",
+      "mapel": "Fisika",
+      "semester": 1,
+      "nisn": "0107374820",
+      "jenis": "Kuis",
+      "tagihan": "KUIS_1",
+      "materi_tp": "SUM 3",
+      "nilai": "75.00",
+      "catatan": null,
+      "created_at": "2026-10-19T01:54:17.775Z",
+      "updated_at": "2026-10-19T01:54:17.775Z",
+      "tahun_ajaran": "2026/2027"
+    },
+    {
+      "id": "38b6a175-4615-4c48-b02a-cdee1d065959",
+      "nip": "199808292023211002",
+      "kelas": "XI Fisika 1",
+      "mapel": "Fisika",
+      "semester": 1,
+      "nisn": "0109066210",
+      "jenis": "Kuis",
+      "tagihan": "KUIS_1",
+      "materi_tp": "SUM 3",
+      "nilai": "75.00",
+      "catatan": null,
+      "created_at": "2026-10-19T01:54:17.788Z",
+      "updated_at": "2026-10-19T01:54:17.788Z",
+      "tahun_ajaran": "2026/2027"
+    },
+    {
+      "id": "eae2f402-e4c1-4473-a339-5f7dd7bd7054",
+      "nip": "199808292023211002",
+      "kelas": "XI Fisika 1",
+      "mapel": "Fisika",
+      "semester": 1,
+      "nisn": "0108030170",
+      "jenis": "Kuis",
+      "tagihan": "KUIS_1",
+      "materi_tp": "SUM 3",
+      "nilai": "90.00",
+      "catatan": null,
+      "created_at": "2026-10-19T01:54:17.721Z",
+      "updated_at": "2026-10-19T01:54:17.721Z",
+      "tahun_ajaran": "2026/2027"
+    },
+    {
+      "id": "a7e31567-a4a9-40f0-bf7a-a79d5f822303",
+      "nip": "199808292023211002",
+      "kelas": "XI Fisika 1",
+      "mapel": "Fisika",
+      "semester": 1,
+      "nisn": "0091281960",
+      "jenis": "Kuis",
+      "tagihan": "KUIS_1",
+      "materi_tp": "SUM 3",
+      "nilai": "80.00",
+      "catatan": null,
+      "created_at": "2026-10-19T01:54:17.733Z",
+      "updated_at": "2026-10-19T01:54:17.733Z",
+      "tahun_ajaran": "2026/2027"
+    },
+    {
+      "id": "4011de50-7e29-4119-8a10-25e203fe5a65",
+      "nip": "199808292023211002",
+      "kelas": "XI Fisika 1",
+      "mapel": "Fisika",
+      "semester": 1,
+      "nisn": "0102816008",
+      "jenis": "Kuis",
+      "tagihan": "KUIS_1",
+      "materi_tp": "SUM 3",
+      "nilai": "50.00",
+      "catatan": null,
+      "created_at": "2026-10-19T01:54:17.694Z",
+      "updated_at": "2026-10-19T01:54:17.694Z",
+      "tahun_ajaran": "2026/2027"
+    },
+    {
+      "id": "5048ca1d-39c5-41ff-95f0-165e46f311a3",
+      "nip": "199808292023211002",
+      "kelas": "XI Fisika 1",
+      "mapel": "Fisika",
+      "semester": 1,
+      "nisn": "0097508851",
+      "jenis": "Kuis",
+      "tagihan": "KUIS_1",
+      "materi_tp": "SUM 3",
+      "nilai": "75.00",
+      "catatan": null,
+      "created_at": "2026-10-19T01:54:17.815Z",
+      "updated_at": "2026-10-19T01:54:17.815Z",
+      "tahun_ajaran": "2026/2027"
+    },
+    {
+      "id": "8be65d81-6173-4e76-be8e-33bd3f141498",
+      "nip": "199808292023211002",
+      "kelas": "XI Fisika 1",
+      "mapel": "Fisika",
+      "semester": 1,
+      "nisn": "3096576329",
+      "jenis": "Kuis",
+      "tagihan": "KUIS_1",
+      "materi_tp": "SUM 3",
+      "nilai": "90.00",
+      "catatan": null,
+      "created_at": "2026-10-19T01:54:17.647Z",
+      "updated_at": "2026-10-19T01:54:17.647Z",
+      "tahun_ajaran": "2026/2027"
+    },
+    {
+      "id": "a8c9dcdf-5ed4-4b02-8e11-44eb83462642",
+      "nip": "199808292023211002",
+      "kelas": "XI Fisika 1",
+      "mapel": "Fisika",
+      "semester": 1,
+      "nisn": "0093904204",
+      "jenis": "Kuis",
+      "tagihan": "KUIS_1",
+      "materi_tp": "SUM 3",
+      "nilai": "75.00",
+      "catatan": null,
+      "created_at": "2026-10-19T01:54:17.707Z",
+      "updated_at": "2026-10-19T01:54:17.707Z",
+      "tahun_ajaran": "2026/2027"
+    },
+    {
+      "id": "15479caf-7979-482d-a3d8-117d6d46f22b",
+      "nip": "198303052009121006",
+      "kelas": "XI Matematika Lanjut 3",
+      "mapel": "Matematika Tingkat Lanjut",
+      "semester": 1,
+      "nisn": "0099927912",
+      "jenis": "Kuis",
+      "tagihan": "KUIS_1",
+      "materi_tp": "SUM 1",
+      "nilai": null,
+      "catatan": null,
+      "created_at": "2026-07-22T01:37:44.303Z",
+      "updated_at": "2026-07-22T01:37:46.172Z",
+      "tahun_ajaran": "2026/2027"
+    }
+  ],
+  "duplicates": [],
+  "outside_roster": []
+}

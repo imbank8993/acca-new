@@ -1,0 +1,236 @@
+{
+  "total": [
+    4087,
+    119,
+    "97,1%"
+  ],
+  "monthly": {
+    "2026-07": [
+      601,
+      18,
+      "97,0%"
+    ],
+    "2026-08": [
+      1063,
+      40,
+      "96,2%"
+    ],
+    "2026-09": [
+      1314,
+      40,
+      "97,0%"
+    ],
+    "2026-10": [
+      1109,
+      21,
+      "98,1%"
+    ]
+  },
+  "teachers": {
+    "Achmad Zaini Bayhaqi, S.Psi.": [
+      82,
+      8,
+      "90,2%"
+    ],
+    "Adrianah, S.Pd., M.Pd.": [
+      0,
+      0,
+      "-"
+    ],
+    "Agrianur Rahman, S.Pd., M.Pd.": [
+      84,
+      0,
+      "100,0%"
+    ],
+    "Ahmad Syahid Syah, S.H": [
+      0,
+      0,
+      "-"
+    ],
+    "Akademik IC Gowa": [
+      49,
+      0,
+      "100,0%"
+    ],
+    "Anang Tegas Pribadi, S.Pd.I., M.Pd.": [
+      80,
+      2,
+      "97,5%"
+    ],
+    "Andi Aan Fadriawan, S.Pd., M.Pd.": [
+      81,
+      1,
+      "98,8%"
+    ],
+    "Andri Adi Mustika, S.Pd., Gr., M.Pd.": [
+      53,
+      3,
+      "94,3%"
+    ],
+    "Ayu Mutmainnah Halim, S.Pd., M.Si.": [
+      120,
+      2,
+      "98,3%"
+    ],
+    "Burhanuddin, S.Ag., M.Fil.I.": [
+      0,
+      0,
+      "-"
+    ],
+    "Dian Fitri Nurmalasari, S.H.": [
+      70,
+      8,
+      "88,6%"
+    ],
+    "Dini Aminarti, S.Pd., M.Pd.": [
+      0,
+      0,
+      "-"
+    ],
+    "Dr. Dahnial, S.Pd. Gr., M.Si.": [
+      112,
+      1,
+      "99,1%"
+    ],
+    "H. Muhammad Ilham, S.Si., Gr., M.P.Fis.": [
+      67,
+      0,
+      "100,0%"
+    ],
+    "Hasmirawati, S.Pd.I., Gr., M.Pd.": [
+      179,
+      3,
+      "98,3%"
+    ],
+    "Hasrianti, S.Hum., Gr., M.Pd.I.": [
+      150,
+      3,
+      "98,0%"
+    ],
+    "Hidayatullah, S.Pd, M.Pd.": [
+      42,
+      0,
+      "100,0%"
+    ],
+    "Imran, S.Si.": [
+      68,
+      4,
+      "94,1%"
+    ],
+    "Jumadil, S.Pd.": [
+      129,
+      2,
+      "98,4%"
+    ],
+    "Khaidir Khairunnas, S.Pd.I., M.Pd.": [
+      82,
+      4,
+      "95,1%"
+    ],
+    "Khalifah Annisa, S.Pd., M.Hum.": [
+      107,
+      2,
+      "98,1%"
+    ],
+    "M. Rasyidi, S.Pd.I., M.A.": [
+      98,
+      0,
+      "100,0%"
+    ],
+    "Muh. Fathanah, S.Pd., Gr.": [
+      194,
+      8,
+      "95,9%"
+    ],
+    "Muh. Ikhsan Marikhar, S.Pd., M.Pd.": [
+      117,
+      3,
+      "97,4%"
+    ],
+    "Muh. Rifqi Fadhil, S.Pd.": [
+      171,
+      3,
+      "98,2%"
+    ],
+    "Muhammad Alauddin Nur, S.Pd., Gr., M.Pd.": [
+      135,
+      9,
+      "93,3%"
+    ],
+    "Muhammad Fadil Ilham, S.Si.": [
+      122,
+      0,
+      "100,0%"
+    ],
+    "Mujahidin, S.Pd.": [
+      83,
+      2,
+      "97,6%"
+    ],
+    "Mursyidah Mutia Izza, S.Pd.": [
+      133,
+      2,
+      "98,5%"
+    ],
+    "Nasriyanti Natsir, S.E., M.M.": [
+      138,
+      0,
+      "100,0%"
+    ],
+    "Nur Amalia, S.Pd.": [
+      83,
+      3,
+      "96,4%"
+    ],
+    "Nurhaliza Putri, S.Hum.": [
+      54,
+      2,
+      "96,3%"
+    ],
+    "Nurkhalida, S.Pd., M.Pd.": [
+      91,
+      0,
+      "100,0%"
+    ],
+    "Nurmadinah, S.Pd.": [
+      159,
+      6,
+      "96,2%"
+    ],
+    "Nurul Inayah Khairaty, S.Pd., M.Pd.": [
+      184,
+      20,
+      "89,1%"
+    ],
+    "Raviqa, S.S., M.Hum.": [
+      100,
+      5,
+      "95,0%"
+    ],
+    "Rezky Amaliah Malik, S.Pd.": [
+      147,
+      2,
+      "98,6%"
+    ],
+    "Syaharuddin Abbas, S.S.": [
+      81,
+      4,
+      "95,1%"
+    ],
+    "Syamsuriadi, S.Pd., M.Pd.": [
+      123,
+      4,
+      "96,7%"
+    ],
+    "Syarifah Rosmawati, M. Pd": [
+      178,
+      2,
+      "98,9%"
+    ],
+    "Zulqadry, S.Pd., Gr.": [
+      141,
+      1,
+      "99,3%"
+    ]
+  }
+}

@@ -466,7 +466,8 @@ model auth_users {
   activity_logs                       activity_logs[]
   bank_folders                        bank_folders[]
   cbt_profiles                        cbt_profiles?
-  config_surat                        config_surat[]  informasi_akademik                  informasi_akademik[]
+  config_surat                        config_surat[]
+  informasi_akademik                  informasi_akademik[]
   lckh_submissions                    lckh_submissions[]
   surat_surat_created_byTousers       surat[]                 @relation("surat_created_byTousers")
   surat_surat_penandatangan_idTousers surat[]                 @relation("surat_penandatangan_idTousers")
@@ -4701,3 +4702,24 @@ enum sv_tahap {
   @@schema("public")
 }
 
+
+// Snapshot preserves the request and its attachment links as dispatched.
+model ptsp_disposisi {
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  table_name String
+  request_id String
+  sender_id String @db.Uuid
+  recipient_id String @db.Uuid
+  sender_name String
+  recipient_name String
+  instructions String
+  snapshot Json
+  status String @default("Menunggu")
+  follow_up String @default("")
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  updated_at DateTime @default(now()) @db.Timestamptz(6)
+
+  @@index([recipient_id, created_at(sort: Desc)], map: "idx_ptsp_disposisi_recipient")
+  @@index([table_name, request_id], map: "idx_ptsp_disposisi_request")
+  @@schema("public")
+}

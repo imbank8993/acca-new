@@ -1,0 +1,289 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[margin=16mm,top=49mm,bottom=19mm,headheight=34mm,headsep=5mm]{geometry}
+\usepackage{fontspec}
+\setmainfont{Times New Roman}
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx,array,longtable}
+\usepackage[table]{xcolor}
+\usepackage{fancyhdr}
+\usepackage[hidelinks]{hyperref}
+\hypersetup{pdftitle={Program Remedial dan Pengayaan Matematika Fase F XI - Fungsi},pdfauthor={Imran, S.Si.}}
+\setlength{\parindent}{0pt}
+\setlength{\LTpre}{3pt}\setlength{\LTpost}{4pt}
+\setlength{\emergencystretch}{2em}
+\linespread{1.08}
+\pagestyle{fancy}\fancyhf{}
+\renewcommand{\headrulewidth}{0pt}
+\fancyhead[C]{\begin{minipage}{\textwidth}
+\noindent\begin{minipage}[c]{23mm}
+\centering\includegraphics[width=20mm,height=23mm,keepaspectratio]{logo.png}
+\end{minipage}%
+\begin{minipage}[c]{132mm}\centering
+{\fontsize{10.2}{12}\selectfont\bfseries KEMENTERIAN AGAMA REPUBLIK INDONESIA\\
+KANTOR KEMENTERIAN AGAMA KABUPATEN GOWA}\\[2pt]
+{\fontsize{13}{15}\selectfont\bfseries MAN INSAN CENDEKIA GOWA}\\[2pt]
+{\fontsize{8.3}{10.5}\selectfont
+\mbox{Jl. Pendidikan Desa Belapunrangan, Kec. Parangloe, Gowa, Sulawesi Selatan 92173}\\
+\mbox{Telp. 085173279846 $\cdot$ Pos-el: insancendekiagowa@gmail.com $\cdot$ Laman: icgowa.sch.id}}
+\end{minipage}%
+\begin{minipage}[c]{23mm}\strut\end{minipage}
+\par\vspace{2mm}\hrule height1.2pt\vspace{1.2pt}\hrule height.4pt
+\end{minipage}}
+\fancyfoot[L]{\fontsize{8}{10}\selectfont Program Remedial dan Pengayaan Matematika $|$ Imran, S.Si.}
+\fancyfoot[R]{\fontsize{8}{10}\selectfont\thepage}
+\begin{document}
+\begin{center}\bfseries\large PROGRAM REMEDIAL DAN PENGAYAAN\\[2pt] MATEMATIKA FASE F KELAS XI - MATERI FUNGSI\end{center}\medskip
+\begin{center}TAHUN PELAJARAN 2026/2027\end{center}
+\vspace{19.84251969pt}
+{\small\setlength{\tabcolsep}{2mm}\renewcommand{\arraystretch}{1.35}\begin{longtable}{|>{\raggedright\arraybackslash}p{49.324mm}|>{\raggedright\arraybackslash}p{120.226mm}|}\hline
+Satuan pendidikan & MAN Insan Cendekia Gowa\\ \hline
+Mata pelajaran & Matematika\\ \hline
+Fase / kelas & F / XI\\ \hline
+Elemen & Aljabar dan Fungsi\\ \hline
+Lingkup materi & Representasi fungsi, komposisi, invers, transformasi, dan pemodelan\\ \hline
+Guru penyusun & Imran, S.Si.\\ \hline
+Semester & Ganjil\\ \hline
+Alokasi rencana & Remedial: 6 JP; pengayaan: 4 JP. Satu JP direncanakan 45 menit. Pelaksanaan sesuai kebutuhan dan jadwal madrasah.\\ \hline
+\end{longtable}}\medskip
+\vspace{8mm}\noindent\begin{minipage}[t]{.61\linewidth}Mengetahui,\\Kepala Madrasah,\\[22mm]Dr. Burhanuddin, S.Ag., M.Fil.I.\\NIP 197609152007101001\end{minipage}\hfill\begin{minipage}[t]{.35\linewidth}Gowa, 13 Juli 2026\\Guru Mata Pelajaran,\\[22mm]\textbf{Imran, S.Si.}\\NIP 199309082019031013\end{minipage}
+\clearpage
+\begin{center}\bfseries\large A. LANDASAN DAN ARAH PROGRAM\end{center}\medskip
+{\small\setlength{\tabcolsep}{2mm}\renewcommand{\arraystretch}{1.35}\begin{longtable}{|>{\raggedright\arraybackslash}p{60.554mm}|>{\raggedright\arraybackslash}p{108.996mm}|}\hline
+\rowcolor{gray!10}\textbf{Acuan} & \textbf{Penerapan dalam program}\\ \hline
+\endfirsthead
+\rowcolor{gray!10}\textbf{Acuan} & \textbf{Penerapan dalam program}\\ \hline
+\endhead
+KMA 450 Tahun 2024 sebagaimana diubah dengan KMA 1503 Tahun 2025 & Kurikulum madrasah, layanan sesuai kebutuhan murid, serta integrasi nilai cinta ilmu, kepedulian, dan saling membantu. [1]\\ \hline
+Permendikdasmen 13 Tahun 2025 & Perubahan kerangka kurikulum nasional yang menjadi konteks CP 2025. [2]\\ \hline
+Permendikdasmen 1 Tahun 2026 & Rujukan standar proses terbaru; perencanaan, pelaksanaan, dan penilaian proses pembelajaran. [3]\\ \hline
+Permendikbudristek 21 Tahun 2022 & Rujukan standar penilaian; pengumpulan bukti belajar dan pelaporan kemajuan. [4]\\ \hline
+Keputusan Kepala BSKAP 046/H/KR/2025 & Acuan CP Matematika Fase F, elemen Aljabar dan Fungsi. [5]\\ \hline
+Panduan Pembelajaran dan Asesmen, revisi 2025 & Pendampingan pada kompetensi yang belum dikuasai, asesmen formatif, dan pengayaan untuk pendalaman. [6]\\ \hline
+\end{longtable}}\medskip
+\par\medskip\noindent\textbf{CP yang menjadi acuan}\par\smallskip
+“Menentukan fungsi invers, komposisi fungsi, dan transformasi fungsi untuk memodelkan situasi dunia nyata menggunakan fungsi yang sesuai (linear, kuadrat, eksponensial).” [5]\par\medskip
+{\small Keterangan pemutakhiran: penjelasan resmi Kemendikdasmen tanggal 23 Juni 2026 menyatakan perubahan CP melalui Keputusan Kepala BKPDM Nomor 020 Tahun 2026 terbatas pada Agama dan Budi Pekerti. CP Matematika tetap menggunakan keputusan tahun 2025. [7]\par}\medskip
+\par\medskip\noindent\textbf{Tujuan dan lingkup}\par\smallskip
+Program memberi bantuan terarah pada kesulitan fungsi dan memperluas kemampuan murid yang telah menguasainya. Representasi, domain, dan range dipakai sebagai prasyarat; sasaran unit diturunkan ke TP1-TP5. Capaian fase merupakan target akhir fase, sedangkan unit ini direncanakan untuk kelas XI sesuai ATP madrasah.\par\medskip
+{\small Identifikasi peserta, tanggal kegiatan, dan hasil belajar diisi setelah asesmen nyata. Dokumen ini merupakan rencana program beserta instrumennya.\par}\medskip
+\clearpage
+\begin{center}\bfseries\large B. TUJUAN DAN KRITERIA KETERCAPAIAN\end{center}\medskip
+{\small\setlength{\tabcolsep}{2mm}\renewcommand{\arraystretch}{1.35}\begin{longtable}{|>{\raggedright\arraybackslash}p{16.269mm}|>{\raggedright\arraybackslash}p{67.787mm}|>{\raggedright\arraybackslash}p{81.344mm}|}\hline
+\rowcolor{gray!10}\textbf{Kode} & \textbf{Tujuan pembelajaran unit} & \textbf{Bukti ketercapaian yang diamati}\\ \hline
+\endfirsthead
+\rowcolor{gray!10}\textbf{Kode} & \textbf{Tujuan pembelajaran unit} & \textbf{Bukti ketercapaian yang diamati}\\ \hline
+\endhead
+TP1 & Membaca representasi fungsi serta menentukan nilai, domain, dan range pada konteks yang diberikan. & Menetapkan satu keluaran tiap masukan; nilai fungsi tepat; domain dan range sesuai batas konteks.\\ \hline
+TP2 & Menentukan komposisi dua fungsi dan menafsirkan urutan proses. & Menuliskan urutan substitusi; memperoleh rumus dan nilai yang benar; memeriksa kecocokan domain.\\ \hline
+TP3 & Menentukan invers fungsi yang dapat dibalik serta memeriksanya. & Menukar peran masukan-keluaran; memperoleh invers benar; memeriksa komposisi identitas dan pembatasan domain bila diperlukan.\\ \hline
+TP4 & Menganalisis perubahan grafik fungsi akibat translasi, refleksi, atau skala. & Mengaitkan perubahan rumus dengan grafik; menempatkan titik acuan; memberi penjelasan arah/perubahan.\\ \hline
+TP5 & Membangun dan mengevaluasi model fungsi linear, kuadrat, atau eksponensial. & Menentukan variabel, rumus, domain dan satuan; menyelesaikan pertanyaan konteks; menjelaskan makna dan keterbatasan model.\\ \hline
+\end{longtable}}\medskip
+\par\medskip\noindent\textbf{Rubrik ketercapaian per TP}\par\smallskip
+{\small\setlength{\tabcolsep}{2mm}\renewcommand{\arraystretch}{1.35}\begin{longtable}{|>{\raggedright\arraybackslash}p{41.693mm}|>{\raggedright\arraybackslash}p{127.857mm}|}\hline
+\rowcolor{gray!10}\textbf{Level} & \textbf{Deskripsi operasional}\\ \hline
+\endfirsthead
+\rowcolor{gray!10}\textbf{Level} & \textbf{Deskripsi operasional}\\ \hline
+\endhead
+1 - Perlu dukungan intensif & Konsep utama belum tampak; penyelesaian belum sesuai meskipun diberi pertanyaan penuntun.\\ \hline
+2 - Berkembang & Sebagian langkah tepat, tetapi masih terdapat kesalahan konsep atau memerlukan arahan langsung pada langkah utama.\\ \hline
+3 - Tercapai & Bukti esensial pada kolom di atas tampak secara mandiri; langkah dan penjelasan dapat dipertanggungjawabkan.\\ \hline
+4 - Melampaui & Memenuhi level 3 serta memeriksa dengan cara lain atau memberi generalisasi/contoh baru yang sah.\\ \hline
+\end{longtable}}\medskip
+{\small KKTP program: setiap TP ditargetkan minimal level 3. TP level 1-2 mendapat remedial terarah; TP yang telah tercapai dapat diberi pengayaan. Pengelompokan bersifat fleksibel per TP. Rubrik dan batas level ini merupakan rancangan guru untuk unit ini, bukan ambang angka nasional.\par}\medskip
+\clearpage
+\begin{center}\bfseries\large C. PEMETAAN KEBUTUHAN BELAJAR\end{center}\medskip
+Gunakan hasil pembelajaran reguler, tugas sebelumnya, wawancara singkat, dan asesmen awal pada halaman berikut. Catat jenis kesalahan, bukan hanya jumlah jawaban benar. Sampaikan TP dan rubrik sebelum kegiatan. [6]\par\medskip
+{\small\setlength{\tabcolsep}{2mm}\renewcommand{\arraystretch}{1.35}\begin{longtable}{|>{\raggedright\arraybackslash}p{33.597mm}|>{\raggedright\arraybackslash}p{67.194mm}|>{\raggedright\arraybackslash}p{64.609mm}|}\hline
+\rowcolor{gray!10}\textbf{Temuan} & \textbf{Layanan yang dipilih} & \textbf{Bukti kemajuan}\\ \hline
+\endfirsthead
+\rowcolor{gray!10}\textbf{Temuan} & \textbf{Layanan yang dipilih} & \textbf{Bukti kemajuan}\\ \hline
+\endhead
+TP1 belum tercapai & Model mesin fungsi, diagram panah, tabel masukan-keluaran; bantu membedakan domain dan range. & Murid menyusun tabel baru dan menjelaskan batas masukan dengan bahasanya sendiri.\\ \hline
+TP2 belum tercapai & Kartu proses bertingkat; warna berbeda untuk fungsi luar dan dalam; contoh terurai lalu bantuan dikurangi. & Murid menyusun dan memeriksa komposisi baru dengan urutan yang tepat.\\ \hline
+TP3 belum tercapai & Operasi balik bertahap; pasangan titik \((x,y)\) dan \((y,x)\); pemeriksaan melalui substitusi. & Murid memperoleh invers dan menjelaskan mengapa domain kuadrat perlu dibatasi.\\ \hline
+TP4 belum tercapai & Kertas berpetak atau aplikasi grafik; bandingkan titik acuan sebelum dan sesudah transformasi. & Murid menafsirkan perubahan rumus dan menggambar minimal tiga titik tepat.\\ \hline
+TP5 belum tercapai & Tabel variabel-satuan, gambar situasi, dan pemeriksaan kewajaran hasil. & Murid menghasilkan model dan alasan pemilihan domain yang dapat diterima.\\ \hline
+TP terkait telah tercapai & Pilihan tugas pengayaan dengan pembuktian sederhana, evaluasi model, dan komunikasi hasil. & Produk, penjelasan individual, dan refleksi tentang batas model.\\ \hline
+\end{longtable}}\medskip
+\par\medskip\noindent\textbf{Dukungan dan suasana belajar}\par\smallskip
+Kelompok kecil dibentuk berdasarkan kesulitan yang sama tanpa pelabelan kemampuan tetap. Guru mencontohkan cara berpikir, memberi umpan balik spesifik, dan memindahkan tanggung jawab secara bertahap. Tutor sebaya membantu diskusi dan tidak menggantikan pendampingan guru.\par\medskip
+Sediakan lembar cetak, waktu tambahan, pembacaan instruksi, atau jawaban lisan sesuai kebutuhan. Keterbatasan perangkat tidak mengurangi akses. Budaya cinta ilmu tampak melalui kejujuran proses; cinta diri dan sesama melalui bantuan yang menghargai usaha dan tidak mempermalukan kesalahan. [1]\par\medskip
+\clearpage
+\begin{center}\bfseries\large LAMPIRAN 1. ASESMEN AWAL\end{center}\medskip
+{\small Nama: \_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_  Kelas: \_\_\_\_\_\_\_\_\_\_\par}\medskip
+{\small Waktu rencana: 30 menit. Kerjakan mandiri dan tuliskan alasan. Tanda \(\circ\) menyatakan komposisi; \(f^{-1}\) menyatakan invers fungsi.\par}\medskip
+\noindent\textbf{D1 / TP1.} Sewa alat mengikuti \(C(t) = 5\,000t + 10\,000\) rupiah, dengan lama sewa \(t = 1, 2, 3\) jam. Tentukan \(C(2)\), domain, dan range. Mengapa hubungan ini merupakan fungsi?\par\vspace{10mm}
+\noindent\textbf{D2 / TP2.} Diketahui \(f(x) = 2x + 1\) dan \(g(x) = x^2\). Tentukan \((g\circ f)(x)\) dan \((f\circ g)(x)\). Apakah keduanya sama? Jelaskan urutan prosesnya. Domain kedua fungsi adalah bilangan real.\par\vspace{10mm}
+\noindent\textbf{D3 / TP3.} Diketahui \(f(x) = 3x - 6\) pada bilangan real. Tentukan \(f^{-1}(x)\), lalu periksa dengan menghitung \(f\bigl(f^{-1}(x)\bigr)\). Jelaskan peran masukan dan keluaran yang dipertukarkan.\par\vspace{10mm}
+\noindent\textbf{D4 / TP4.} Grafik \(y = x^2\) berubah menjadi \(y = (x - 2)^2 + 3\). Jelaskan kedua pergeseran dan koordinat titik puncak grafik baru.\par\vspace{10mm}
+\noindent\textbf{D5 / TP5.} Sebuah program menabung dimulai dengan saldo Rp20.000 dan penambahan tetap Rp5.000 per pekan tanpa bunga. Buat model \(S(n)\), tentukan domain n dari saat awal hingga akhir pekan keempat, hitung \(S(4)\), dan sebutkan satu asumsi model.\par\vspace{10mm}
+{\small Guru memberi level 1-4 untuk tiap TP menggunakan rubrik, lalu mengonfirmasi alasan melalui pertanyaan lisan bila bukti tertulis belum memadai. Tidak menempatkan semua murid pada satu layanan hanya berdasarkan nilai total.\par}\medskip
+\clearpage
+\begin{center}\bfseries\large D. RENCANA PROGRAM REMEDIAL\end{center}\medskip
+Peserta: murid dengan bukti TP level 1-2. Layanan dipilih hanya untuk TP yang belum tercapai. Rencana maksimum satu siklus adalah 3 pertemuan × 2 JP; durasi dapat dikurangi atau ditambah menurut perkembangan. Tanggal ditetapkan setelah pemetaan.\par\medskip
+{\small\setlength{\tabcolsep}{2mm}\renewcommand{\arraystretch}{1.35}\begin{longtable}{|>{\raggedright\arraybackslash}p{21.989mm}|>{\raggedright\arraybackslash}p{83.068mm}|>{\raggedright\arraybackslash}p{17.102mm}|>{\raggedright\arraybackslash}p{39.091mm}|}\hline
+\rowcolor{gray!10}\textbf{Pertemuan} & \textbf{Fokus dan kegiatan} & \textbf{Waktu} & \textbf{Bukti / keputusan}\\ \hline
+\endfirsthead
+\rowcolor{gray!10}\textbf{Pertemuan} & \textbf{Fokus dan kegiatan} & \textbf{Waktu} & \textbf{Bukti / keputusan}\\ \hline
+\endhead
+R1\newline TP1-TP2 & Memahami: wawancara kesalahan dan contoh mesin fungsi (15 menit). Mengaplikasi: tabel dan kartu urutan proses dengan contoh terurai (35 menit), latihan berpasangan lalu mandiri (30 menit). Merefleksi: tiket keluar (10 menit). & 2 JP\newline 90 menit & Dua contoh baru dijelaskan mandiri; TP yang tercapai tidak diulang pada R2.\\ \hline
+R2\newline TP3-TP4 & Memahami: operasi balik dan pasangan titik (15 menit). Mengaplikasi: bimbingan invers linear dan kuadrat terbatas (30 menit), grafik transformasi dengan titik acuan (35 menit). Merefleksi: jelaskan satu kesalahan awal (10 menit). & 2 JP\newline 90 menit & Murid memeriksa invers dan memberi arah pergeseran yang benar; guru mencatat bantuan yang masih diperlukan.\\ \hline
+R3\newline TP5 dan asesmen ulang & Memahami: tentukan variabel dan batas konteks (15 menit). Mengaplikasi: model tabungan/penurunan pemakaian (20 menit), asesmen ulang sesuai TP sasaran (40 menit). Merefleksi: umpan balik individual dan rencana lanjutan (15 menit). & 2 JP\newline 90 menit & Nilai level TP dari bukti terbaru, bandingkan dengan bukti awal, lalu putuskan selesai atau layanan lanjutan.\\ \hline
+\end{longtable}}\medskip
+\par\medskip\noindent\textbf{Keputusan setelah remedial}\par\smallskip
+Jika TP mencapai level 3, murid kembali ke pembelajaran reguler atau masuk pengayaan pada TP tersebut. Jika belum, guru menelusuri kesalahan tersisa, mengubah bantuan, dan menjadwalkan siklus singkat berikutnya. Remedial meliputi pembelajaran ulang dan pendampingan, tidak berhenti pada pemberian tes. [6]\par\medskip
+{\small Simpan hasil awal dan bukti terbaru beserta umpan balik. Pelaporan nilai mengikuti mekanisme madrasah; program ini tidak menetapkan pembatasan otomatis nilai remedial.\par}\medskip
+\clearpage
+\begin{center}\bfseries\large LAMPIRAN 2. LEMBAR KERJA REMEDIAL\end{center}\medskip
+{\small Nama: \_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_  Kelas: \_\_\_\_\_\_\_\_\_\_\par}\medskip
+{\small Gunakan lembar tambahan jika perlu. Guru memilih butir sesuai TP sasaran. Jelaskan langkah, periksa hasil, lalu tulis bagian yang sudah dipahami.\par}\medskip
+\noindent\textbf{R1 / TP1.} Lengkapi tabel \(f(x) = 2x + 3\) untuk \(x = -1, 0, 1\). Tulis domain dan range. Bantuan: hitung hasil perkalian terlebih dahulu, lalu tambahkan 3.\par\vspace{8mm}
+\noindent\textbf{R2 / TP2.} Diketahui \(f(x) = x + 2\) dan \(g(x) = 3x\), dengan domain real. Gambarkan alur \(x\;\longmapsto\;f(x)\;\longmapsto\;g\bigl(f(x)\bigr)\), tuliskan rumusnya, lalu hitung hasil saat \(x = 4\). Bandingkan dengan \(f(g(4))\).\par\vspace{8mm}
+\noindent\textbf{R3 / TP3.} Tentukan invers \(f(x) = 2x + 5\) pada domain real dan periksa \(f\bigl(f^{-1}(x)\bigr)\). Selanjutnya, apakah \(q(x) = x^2\) pada domain real mempunyai invers yang juga fungsi? Jelaskan dan berikan satu pembatasan domain yang membuatnya dapat dibalik.\par\vspace{9mm}
+\noindent\textbf{R4 / TP4.} Dari \(p(x) = x^2\) diperoleh \(h(x) = (x + 1)^2 - 4\). Tentukan pergeseran, titik puncak, serta \(h(-2)\), \(h(-1)\), dan \(h(0)\). Sketsakan grafik pada kertas berpetak.\par\vspace{9mm}
+\noindent\textbf{R5 / TP5.} Pemakaian kertas dimodelkan \(P(n)=80\left(\frac{1}{2}\right)^n\) lembar per pekan, untuk \(n = 0, 1, 2, 3\) setelah program digitalisasi. Hitung nilai-nilainya, jelaskan mengapa model eksponensial, dan makna pengali \(\frac{1}{2}\). Sebutkan satu keterbatasan model.\par\vspace{8mm}
+{\small Refleksi: Kesalahan yang saya perbaiki: \_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\newline Cara memeriksa jawaban saya: \_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\par}\medskip
+\clearpage
+\begin{center}\bfseries\large LAMPIRAN 3. ASESMEN ULANG\end{center}\medskip
+{\small Nama: \_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_  Kelas: \_\_\_\_\_\_\_\_\_\_\par}\medskip
+{\small Waktu rencana: 40 menit. Guru memilih TP yang perlu dinilai ulang. Kerjakan secara mandiri; bantuan pembelajaran diberikan kembali setelah asesmen bila masih diperlukan.\par}\medskip
+\noindent\textbf{U1 / TP1.} Biaya pengiriman \(C(n) = 4\,000n + 6\,000\) rupiah, untuk \(n = 1, 2, 3\) paket. Tentukan \(C(3)\), domain, dan range. Jelaskan mengapa hubungan ini merupakan fungsi.\par\vspace{8mm}
+\noindent\textbf{U2 / TP2.} Diketahui \(f(x) = x - 1\) dan \(g(x) = 2x + 3\), keduanya berdomain real. Tentukan \(g(f(x))\) dan \(f(g(x))\), hitung \(g(f(4))\), dan jelaskan urutan yang menghasilkan jawaban tersebut.\par\vspace{8mm}
+\noindent\textbf{U3 / TP3.} Diketahui \(f(x) = 4x - 8\) pada domain real. Tentukan inversnya dan periksa \(f\bigl(f^{-1}(x)\bigr)\). Untuk \(q(x) = x^2\) dengan \(x \geq  0\), tuliskan invers dan domain inversnya.\par\vspace{8mm}
+\noindent\textbf{U4 / TP4.} Dari \(p(x) = x^2\) diperoleh \(h(x) = -(x - 3)^2 + 2\). Jelaskan transformasinya, tentukan titik puncak, dan hitung nilai \(h(2)\), \(h(3)\), \(h(4)\) sebagai pemeriksaan.\par\vspace{8mm}
+\noindent\textbf{U5 / TP5.} Pemakaian listrik awal 160 kWh per pekan dimodelkan turun 25\% setiap pekan. Nyatakan \(E(n)\), domain n dari saat awal hingga akhir pekan ketiga, hitung E(2), dan jelaskan asumsi serta keterbatasan model.\par\vspace{8mm}
+\par\medskip\noindent\textbf{Penetapan hasil}\par\smallskip
+{\small Gunakan rubrik TP pada bagian B dan kunci pada lampiran guru. Tandai bukti yang sudah tampak dan satu perbaikan berikutnya. TP tercapai jika seluruh bukti esensialnya tampak mandiri pada level 3; kesalahan konsep tidak ditutupi oleh kelebihan skor pada TP lain.\par}\medskip
+\clearpage
+\begin{center}\bfseries\large E. RENCANA PROGRAM PENGAYAAN\end{center}\medskip
+Peserta: murid yang telah mencapai level 3-4 pada TP sasaran. Murid dapat mengikuti pengayaan suatu TP sambil menyelesaikan remedial TP lain. Tugas memperluas penalaran dan pemodelan, bukan menambah banyak soal sejenis.\par\medskip
+{\small\setlength{\tabcolsep}{2mm}\renewcommand{\arraystretch}{1.35}\begin{longtable}{|>{\raggedright\arraybackslash}p{23.214mm}|>{\raggedright\arraybackslash}p{116.070mm}|>{\raggedright\arraybackslash}p{26.116mm}|}\hline
+\rowcolor{gray!10}\textbf{Pertemuan} & \textbf{Kegiatan} & \textbf{Waktu / produk}\\ \hline
+\endfirsthead
+\rowcolor{gray!10}\textbf{Pertemuan} & \textbf{Kegiatan} & \textbf{Waktu / produk}\\ \hline
+\endhead
+P1 & Memahami (15 menit): pilih konteks, rumuskan variabel dan asumsi. Mengaplikasi (60 menit): kerjakan proyek A atau B dalam pasangan, uji dengan tabel/grafik, dan berikan argumen. Merefleksi (15 menit): periksa kecocokan rumus dan konteks. & 2 JP / 90 menit\newline Draf model dan catatan pemeriksaan.\\ \hline
+P2 & Mengaplikasi (35 menit): perbaiki model berdasarkan masukan. Mengomunikasikan (35 menit): presentasi singkat dan verifikasi individual. Merefleksi (20 menit): evaluasi keterbatasan model dan rencana penerapan. & 2 JP / 90 menit\newline Laporan 1-2 halaman, grafik/tabel, dan refleksi individual.\\ \hline
+\end{longtable}}\medskip
+\par\medskip\noindent\textbf{Proyek A - Urutan diskon yang adil}\par\smallskip
+Harga barang awal x rupiah dengan \(x \geq  25\,000\). \(D(x) = 0{,}8x\) merupakan diskon 20\%; \(V(x) = x - 20\,000\) merupakan voucher. Bandingkan \(A(x) = V(D(x))\) dan \(B(x) = D(V(x))\).\par\medskip
+Tugas: (1) turunkan kedua rumus dan hitung pada \(x = 100\,000\); (2) buktikan selisih keduanya untuk semua x pada domain; (3) tentukan \(A^{-1}(y)\) dan \(B^{-1}(y)\) beserta domain invers; (4) rekomendasikan urutan paling menguntungkan pembeli dengan alasan; (5) sebutkan asumsi tentang syarat promo. Hubungkan dengan komunikasi harga yang jujur.\par\medskip
+\par\medskip\noindent\textbf{Proyek B - Model pengurangan penggunaan kertas}\par\smallskip
+Gunakan model \(P(n)=160\left(\frac{3}{4}\right)^n\) untuk \(n = 0, 1, 2, \ldots\); \(Q(n)=160\left(\frac{3}{4}\right)^{n+1}\). Semua data dalam tugas ini adalah data simulasi, bukan hasil pengukuran madrasah.\par\medskip
+Tugas: (1) buat tabel P dan Q untuk n = 0 sampai 3; (2) tunjukkan \(Q(n)=0{,}75P(n)\) dan tafsirkan pergeserannya jika fungsi diperluas ke waktu real; (3) cari pekan pertama ketika \(P(n)\) kurang dari 80; (4) jelaskan keterbatasan model kontinu untuk jumlah lembar; (5) usulkan satu cara menguji model dengan data nyata tanpa mengarang data.\par\medskip
+\clearpage
+\begin{center}\bfseries\large F. RUBRIK PENGAYAAN DAN REFLEKSI\end{center}\medskip
+{\small\setlength{\tabcolsep}{2mm}\renewcommand{\arraystretch}{1.35}\begin{longtable}{|>{\raggedright\arraybackslash}p{27.873mm}|>{\raggedright\arraybackslash}p{26.606mm}|>{\raggedright\arraybackslash}p{29.140mm}|>{\raggedright\arraybackslash}p{35.474mm}|>{\raggedright\arraybackslash}p{38.008mm}|}\hline
+\rowcolor{gray!10}\textbf{Aspek} & \textbf{Level 1} & \textbf{Level 2} & \textbf{Level 3} & \textbf{Level 4}\\ \hline
+\endfirsthead
+\rowcolor{gray!10}\textbf{Aspek} & \textbf{Level 1} & \textbf{Level 2} & \textbf{Level 3} & \textbf{Level 4}\\ \hline
+\endhead
+Model dan domain & Variabel/model belum sesuai. & Sebagian rumus tepat; domain belum jelas. & Rumus, variabel, satuan, dan domain benar. & Memeriksa batas domain dan memberi alternatif model yang sah.\\ \hline
+Prosedur dan pembuktian & Langkah utama tidak benar. & Ada langkah benar dengan arahan. & Perhitungan tepat dan argumen runtut secara mandiri. & Memberi generalisasi atau pemeriksaan berbeda.\\ \hline
+Evaluasi konteks & Tidak menafsirkan hasil. & Penafsiran sebagian sesuai. & Kesimpulan sesuai hasil dan menyebut asumsi. & Menguji keterbatasan serta memberi usul validasi.\\ \hline
+Komunikasi individual & Belum dapat menjelaskan proses. & Penjelasan bergantung pada pasangan. & Mampu menjelaskan kontribusi dan alasan sendiri. & Mampu menanggapi sanggahan dan memperbaiki penjelasan.\\ \hline
+\end{longtable}}\medskip
+{\small Target produk: minimal level 3 pada keempat aspek. Skala ini ditetapkan guru untuk tugas pengayaan. Penjelasan individual wajib digunakan agar penilaian tidak hanya mengikuti hasil kelompok. Nilai kerja sama dicatat sebagai umpan balik dan tidak menggantikan bukti kompetensi matematika.\par}\medskip
+\par\medskip\noindent\textbf{Refleksi murid}\par\smallskip
+\noindent\textbf{1.} Konsep fungsi apa yang paling membantu menyelesaikan tugas?\par\vspace{6mm}
+\noindent\textbf{2.} Bagaimana saya memeriksa kebenaran rumus atau grafik?\par\vspace{6mm}
+\noindent\textbf{3.} Asumsi apa yang dapat membuat model kurang sesuai kenyataan?\par\vspace{6mm}
+\noindent\textbf{4.} Bantuan apa yang saya perlukan dan langkah apa yang akan saya coba?\par\vspace{6mm}
+\par\medskip\noindent\textbf{Refleksi guru}\par\smallskip
+{\small TP yang paling sering belum tercapai: \_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\newline Bantuan yang efektif dan bukti keberhasilannya: \_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\newline Perubahan kegiatan untuk siklus berikutnya: \_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\newline Peserta yang membutuhkan koordinasi lanjutan: \_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\par}\medskip
+\clearpage
+\begin{center}\bfseries\large LAMPIRAN 4. KUNCI ASESMEN AWAL\\[2pt] DAN LEMBAR KERJA REMEDIAL\end{center}\medskip
+{\small\setlength{\tabcolsep}{2mm}\renewcommand{\arraystretch}{1.35}\begin{longtable}{|>{\raggedright\arraybackslash}p{16.677mm}|>{\raggedright\arraybackslash}p{152.873mm}|}\hline
+\rowcolor{gray!10}\textbf{Butir} & \textbf{Jawaban dan bukti yang diperiksa}\\ \hline
+\endfirsthead
+\rowcolor{gray!10}\textbf{Butir} & \textbf{Jawaban dan bukti yang diperiksa}\\ \hline
+\endhead
+D1 & \(C(2)\) = Rp20.000; domain \(\{1, 2, 3\}\); range \(\{15\,000, 20\,000, 25\,000\}\) rupiah. Setiap lama sewa memiliki tepat satu biaya.\\ \hline
+D2 & \(g\bigl(f(x)\bigr)=(2x+1)^2=4x^2+4x+1\); \(f\bigl(g(x)\bigr)=2x^2+1\). Tidak sama sebagai fungsi; proses yang dikerjakan lebih dahulu berada di bagian dalam. Domain keduanya real.\\ \hline
+D3 & \(y=3x-6\;\Longrightarrow\;x=\frac{y+6}{3}\), sehingga \(f^{-1}(x)=\frac{x+6}{3}\). Pemeriksaan: \(3\left[\frac{x+6}{3}\right]-6=x\). Invers mengembalikan keluaran menjadi masukan semula.\\ \hline
+D4 & Bergeser 2 satuan ke kanan dan 3 ke atas; titik puncak \((2, 3)\).\\ \hline
+D5 & \(S(n) = 20\,000 + 5\,000n\); domain \(\{0, 1, 2, 3, 4\}\); \(S(4)\) = Rp40.000. Contoh asumsi: tidak ada penarikan, bunga, atau perubahan setoran.\\ \hline
+R1 & \(f(-1) = 1\), \(f(0) = 3\), \(f(1) = 5\). Domain \(\{-1, 0, 1\}\); range \(\{1, 3, 5\}\).\\ \hline
+R2 & \(x\;\longmapsto\;x+2\;\longmapsto\;3(x+2)\); \(g(f(x)) = 3x + 6\). Pada \(x = 4\) hasilnya 18; \(f\bigl(g(4)\bigr)=14\). Domain real.\\ \hline
+R3 & \(f^{-1}(x)=\frac{x-5}{2}\); \(2\left[\frac{x-5}{2}\right]+5=x\). q pada domain real tidak satu-satu, misalnya \(q(-2)=q(2)=4\). Dapat dibatasi \(x \geq  0\); inversnya \(\sqrt{x}\) dengan domain \(x \geq  0\).\\ \hline
+R4 & Bergeser 1 ke kiri dan 4 ke bawah; puncak \((-1, -4)\). \(h(-2) = -3\), \(h(-1) = -4\), \(h(0) = -3\).\\ \hline
+R5 & \(P(0)\), \(P(1)\), \(P(2)\), \(P(3)\) berturut-turut 80, 40, 20, 10 lembar. Faktor pengali tetap \(\frac{1}{2}\), berarti turun 50\% tiap pekan. Model tidak selalu dapat diteruskan karena jumlah lembar diskret dan penurunan nyata tidak selalu konstan.\\ \hline
+\end{longtable}}\medskip
+{\small Jawaban ekuivalen yang benar diterima. Periksa penalaran, penggunaan domain/satuan, dan kemandirian sesuai TP; hasil akhir tanpa penjelasan belum cukup untuk menetapkan seluruh bukti ketercapaian.\par}\medskip
+\clearpage
+\begin{center}\bfseries\large LAMPIRAN 5. KUNCI ASESMEN ULANG\\[2pt] DAN PENGAYAAN\end{center}\medskip
+{\small\setlength{\tabcolsep}{2mm}\renewcommand{\arraystretch}{1.35}\begin{longtable}{|>{\raggedright\arraybackslash}p{27.795mm}|>{\raggedright\arraybackslash}p{141.755mm}|}\hline
+\rowcolor{gray!10}\textbf{Butir} & \textbf{Jawaban / panduan pemeriksaan}\\ \hline
+\endfirsthead
+\rowcolor{gray!10}\textbf{Butir} & \textbf{Jawaban / panduan pemeriksaan}\\ \hline
+\endhead
+U1 & \(C(3)\) = Rp18.000; domain \(\{1, 2, 3\}\); range \(\{10\,000, 14\,000, 18\,000\}\) rupiah. Satu banyak paket menentukan tepat satu biaya.\\ \hline
+U2 & \(g(f(x)) = 2x + 1\); \(f(g(x)) = 2x + 2\); \(g\bigl(f(4)\bigr)=9\). Urutan: \(4\;\longmapsto\;f(4)=3\;\longmapsto\;g(3)=9\).\\ \hline
+U3 & \(f^{-1}(x)=\frac{x+8}{4}\); \(f\bigl(f^{-1}(x)\bigr)=4\left[\frac{x+8}{4}\right]-8=x\). Untuk q pada \(x \geq  0\), \(q^{-1}(x)=\sqrt{x}\) dengan domain \(x \geq  0\).\\ \hline
+U4 & Refleksi terhadap sumbu x, kemudian translasi 3 ke kanan dan 2 ke atas. Puncak \((3, 2)\); \(h(2) = 1\), \(h(3) = 2\), \(h(4) = 1\).\\ \hline
+U5 & \(E(n)=160(0{,}75)^n\) kWh; domain \(\{0, 1, 2, 3\}\); \(E(2) = 90\) kWh. Asumsi: pengurangan 25\% konsisten dan pembandingnya pekan sebelumnya. Keterbatasan: kebutuhan listrik tidak mungkin terus turun dengan pola tetap tanpa batas.\\ \hline
+Proyek A & \(A(x) = 0{,}8x - 20\,000\); \(B(x) = 0{,}8x - 16\,000\). Pada \(x = 100\,000\): A = Rp60.000 dan B = Rp64.000. \(B(x)-A(x)=4\,000\) sehingga A selalu lebih murah pada domain yang diberikan.\\ \hline
+Invers proyek A & \(A^{-1}(y)=\frac{y+20\,000}{0{,}8}\) dengan \(y \geq  0\); \(B^{-1}(y)=\frac{y+16\,000}{0{,}8}\) dengan \(y \geq  4\,000\). Keduanya berkodomain harga awal \(x \geq  25\,000\). Syarat promo dan pembulatan diabaikan dalam model.\\ \hline
+Proyek B & Tabel P untuk \(n = 0, 1, 2, 3\): 160; 120; 90; 67,5. Tabel Q: 120; 90; 67,5; 50,625. \(Q(n)=P(n+1)=0{,}75P(n)\). Pada perluasan real, grafik bergeser 1 ke kiri. Pada domain pekan, Q adalah pola yang satu langkah lebih maju.\\ \hline
+Evaluasi proyek B & \(P(2)=90\geq80\) dan \(P(3)=67{,}5<80\), sehingga pekan pertama adalah \(n = 3\). Nilai pecahan merepresentasikan model/rerata, bukan jumlah lembar teramati. Usul validasi: ukur pemakaian mingguan dengan prosedur tetap, bandingkan dengan prediksi, dan perbaiki parameter.\\ \hline
+\end{longtable}}\medskip
+\clearpage
+\begin{center}\bfseries\large LAMPIRAN 6. FORMAT PELAKSANAAN\\[2pt] DAN TINDAK LANJUT\end{center}\medskip
+\par\medskip\noindent\textbf{1. Pemetaan dan keputusan per peserta}\par\smallskip
+{\small\setlength{\tabcolsep}{2mm}\renewcommand{\arraystretch}{1.35}\begin{longtable}{|>{\raggedright\arraybackslash}p{10.030mm}|>{\raggedright\arraybackslash}p{37.611mm}|>{\raggedright\arraybackslash}p{20.059mm}|>{\raggedright\arraybackslash}p{17.552mm}|>{\raggedright\arraybackslash}p{22.566mm}|>{\raggedright\arraybackslash}p{45.133mm}|}\hline
+\rowcolor{gray!10}\textbf{No} & \textbf{Nama / kelas} & \textbf{TP sasaran} & \textbf{Level awal} & \textbf{Layanan} & \textbf{Level akhir / tindak lanjut}\\ \hline
+\endfirsthead
+\rowcolor{gray!10}\textbf{No} & \textbf{Nama / kelas} & \textbf{TP sasaran} & \textbf{Level awal} & \textbf{Layanan} & \textbf{Level akhir / tindak lanjut}\\ \hline
+\endhead
+1 & \rule{0pt}{8mm} &  &  &  & \\ \hline
+2 & \rule{0pt}{8mm} &  &  &  & \\ \hline
+3 & \rule{0pt}{8mm} &  &  &  & \\ \hline
+4 & \rule{0pt}{8mm} &  &  &  & \\ \hline
+5 & \rule{0pt}{8mm} &  &  &  & \\ \hline
+6 & \rule{0pt}{8mm} &  &  &  & \\ \hline
+\end{longtable}}\medskip
+\par\medskip\noindent\textbf{2. Jurnal pelaksanaan}\par\smallskip
+{\small\setlength{\tabcolsep}{2mm}\renewcommand{\arraystretch}{1.35}\begin{longtable}{|>{\raggedright\arraybackslash}p{26.434mm}|>{\raggedright\arraybackslash}p{29.078mm}|>{\raggedright\arraybackslash}p{47.582mm}|>{\raggedright\arraybackslash}p{58.156mm}|}\hline
+\rowcolor{gray!10}\textbf{Tanggal / JP} & \textbf{TP / kelompok} & \textbf{Bantuan atau tugas} & \textbf{Bukti belajar / umpan balik}\\ \hline
+\endfirsthead
+\rowcolor{gray!10}\textbf{Tanggal / JP} & \textbf{TP / kelompok} & \textbf{Bantuan atau tugas} & \textbf{Bukti belajar / umpan balik}\\ \hline
+\endhead
+\rule{0pt}{8mm} &  &  & \\ \hline
+\rule{0pt}{8mm} &  &  & \\ \hline
+\rule{0pt}{8mm} &  &  & \\ \hline
+\end{longtable}}\medskip
+\par\medskip\noindent\textbf{3. Rekap evaluasi program}\par\smallskip
+{\small\setlength{\tabcolsep}{2mm}\renewcommand{\arraystretch}{1.35}\begin{longtable}{|>{\raggedright\arraybackslash}p{77.826mm}|>{\raggedright\arraybackslash}p{91.724mm}|}\hline
+Jumlah peserta remedial / pengayaan & \_\_\_\_\_\_\_\_\_\_\_\_ / \_\_\_\_\_\_\_\_\_\_\_\_\\ \hline
+TP yang tercapai setelah layanan & \_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\\ \hline
+TP yang masih perlu dukungan & \_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\\ \hline
+Tindak lanjut dan jadwal berikutnya & \_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\\ \hline
+Dokumen bukti & Hasil awal, lembar kerja, asesmen ulang, produk, rubrik, dan catatan umpan balik.\\ \hline
+\end{longtable}}\medskip
+{\small Lembar ini diisi setelah kegiatan berdasarkan bukti yang tersedia. Kehadiran atau selesainya tugas saja tidak menggantikan bukti ketercapaian TP.\par}\medskip
+\clearpage
+\begin{center}\bfseries\large DAFTAR RUJUKAN RESMI\end{center}\medskip
+[1] Kementerian Agama. KMA Nomor 1503 Tahun 2025 tentang perubahan atas KMA Nomor 450 Tahun 2024; terutama Bab IV Pembelajaran dan Asesmen.\par\medskip
+\href{https://sulteng.kemenag.go.id/files/show/20251020162801surat-penyampaian-kma-kurikulum-2025%2Blampiran_compressed-tzR.pdf}{\small\textcolor{blue}{Buka sumber resmi}}\par
+\vspace{8.50393701pt}
+[2] Permendikdasmen Nomor 13 Tahun 2025 tentang perubahan ketentuan kurikulum; tercantum dalam dasar hukum Keputusan Kepala BSKAP 046/H/KR/2025.\par\medskip
+\href{https://bpmpbabel.kemendikdasmen.go.id/PPID/wp-content/uploads/2025/07/KepKaBSKAP-046_2025-ttg-CP.pdf}{\small\textcolor{blue}{Buka sumber resmi}}\par
+\vspace{8.50393701pt}
+[3] Kemendikdasmen. Abstrak resmi Permendikdasmen Nomor 1 Tahun 2026 tentang Standar Proses. Berlaku 5 Januari 2026 dan menggantikan standar proses tahun 2022.\par\medskip
+\href{https://jdih.kemendikdasmen.go.id/sjdih/siperpu/dokumen/abstraksi/Abstrak%20RPM%20Standar%20Proses.pdf}{\small\textcolor{blue}{Buka sumber resmi}}\par
+\vspace{8.50393701pt}
+[4] Pusat Standar dan Kebijakan Pendidikan. Laman Standar Nasional Pendidikan, bagian Standar Penilaian; memuat rujukan Permendikbudristek Nomor 21 Tahun 2022.\par\medskip
+\href{https://pskp.kemendikdasmen.go.id/standar-nasional-pendidikan-a/standar-proses}{\small\textcolor{blue}{Buka sumber resmi}}\par
+\vspace{8.50393701pt}
+[5] Keputusan Kepala BSKAP Nomor 046/H/KR/2025. Lampiran II, Matematika, Fase F, elemen 6.2 Aljabar dan Fungsi.\par\medskip
+\href{https://bpmpbabel.kemendikdasmen.go.id/PPID/wp-content/uploads/2025/07/KepKaBSKAP-046_2025-ttg-CP.pdf}{\small\textcolor{blue}{Buka sumber resmi}}\par
+\vspace{8.50393701pt}
+[6] Kemendikdasmen. Panduan Pembelajaran dan Asesmen, Edisi Revisi 2025. Bagian kriteria ketercapaian, remedial, pengayaan, dan pengolahan hasil asesmen.\par\medskip
+\href{https://kurikulum.kemendikdasmen.go.id/file/1755668120_manage_file.pdf}{\small\textcolor{blue}{Buka sumber resmi}}\par
+\vspace{8.50393701pt}
+[7] Kemendikdasmen. Siaran pers 23 Juni 2026 tentang ruang lingkup pembaruan CP melalui Keputusan Kepala BKPDM Nomor 020 Tahun 2026.\par\medskip
+\href{https://www.kemendikdasmen.go.id/siaran-pers/15636-capaian-pembelajaran-baru-telah-terbit-yang-berubah-hanya-mata-pelajaran-agama-dan-budi-pekerti}{\small\textcolor{blue}{Buka sumber resmi}}\par
+\vspace{8.50393701pt}
+{\small Pemeriksaan sumber: 31 Oktober 2026. Rencana waktu, perangkat tugas, rubrik, dan format administrasi dalam program ini disusun untuk kebutuhan unit oleh guru dan dapat diselaraskan dengan ATP serta kebijakan penilaian madrasah.\par}\medskip
+\end{document}

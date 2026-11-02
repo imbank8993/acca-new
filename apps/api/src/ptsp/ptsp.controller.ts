@@ -10,6 +10,19 @@ import { PtspService } from './ptsp.service';
 export class PtspController {
   constructor(private readonly ptspService: PtspService) {}
 
+  @Get('disposisi/recipients')
+  async recipients(@Request() req: any) { return this.ptspService.dispositionRecipients(req.user); }
+
+  @Get('disposisi')
+  async dispositions(@Request() req: any, @Query('id') id?: string) {
+    return id ? { ok: true, data: await this.ptspService.getDisposition(req.user, id) } : this.ptspService.listDispositions(req.user);
+  }
+
+  @Post('disposisi')
+  async disposition(@Request() req: any, @Body() body: any) {
+    return body.action === 'follow_up' ? this.ptspService.updateDisposition(req.user, body.id, body) : this.ptspService.createDisposition(req.user, body);
+  }
+
   @Get('config')
   async getConfig() { return { ok: true, data: await this.ptspService.getConfig() }; }
 
@@ -26,7 +39,7 @@ export class PtspController {
     @Query('search') search?: string,
   ) {
     const roles = req.user?.roles || (req.user?.role ? String(req.user.role).split(/[,|]/).map((r: string) => r.trim().toUpperCase()) : []);
-    const isPtspOrAdmin = roles.includes('ADMIN') || roles.includes('ADMINISTRATOR') || roles.includes('PTSP') || roles.includes('OP_LAYANAN');
+    const isPtspOrAdmin = roles.includes('ADMIN') || roles.includes('ADMINISTRATOR') || roles.includes('PTSP') || roles.includes('OP_LAYANAN') || roles.includes('OP_PTSP');
     
     if (!isPtspOrAdmin) {
       throw new (require('@nestjs/common').ForbiddenException)('Anda tidak berhak mengakses layanan PTSP');

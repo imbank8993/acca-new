@@ -2276,6 +2276,24 @@ export class KlinikService {
   }
 
   async handlePatch(req: any, action: string, id: any, payload: any) {
+    if (action === 'mark_paid_batch') {
+      const user = req.user;
+      if (!isAdminUser(user) && !user.roles?.includes('BENDAHARA_KOMITE')) throw new ForbiddenException('Hanya Bendahara Komite/Admin yang dapat menandai pembayaran');
+      const ids = [...new Set(Array.isArray(payload.ids) ? payload.ids : [])];
+      if (!ids.length || ids.length > 500 || ids.some(v => typeof v !== 'string')) throw new HttpException('Daftar sesi tidak valid', 400);
+      return this.prisma.$transaction(async tx => {
+        const slots = await tx.klinik_slots.findMany({ where: { id: { in: ids } } });
+        const laporan = await tx.klinik_laporan.findMany({ where: { slot_id: { in: ids }, status: 'Approved' } });
+        if (slots.length !== ids.length || laporan.length !== ids.length || slots.some(s => s.status !== 'finished' || s.guru_id == null) || new Set(slots.map(s => String(s.guru_id))).size !== 1) throw new HttpException('Sesi harus milik satu penerima, disetujui, dan belum dibayar. Muat ulang data.', 409);
+        const tarif = await tx.tarif_honor.findFirst({ where: { modul: 'KLINIK' } });
+        const nominal = Number(tarif?.nominal);
+        if (!tarif || !Number.isFinite(nominal) || nominal < 0) throw new HttpException('Tarif klinik belum valid', 409);
+        if (Number(payload.expectedTotal) !== nominal * ids.length) throw new HttpException('Tarif berubah. Muat ulang data sebelum menandai pembayaran.', 409);
+        const result = await tx.klinik_slots.updateMany({ where: { id: { in: ids }, status: 'finished' }, data: { status: 'paid', nominal_dibayarkan: nominal, dibayarkan_at: new Date() } });
+        if (result.count !== ids.length) throw new HttpException('Status pembayaran berubah. Muat ulang data.', 409);
+        return { ok: true, count: result.count, total: nominal * result.count };
+      }, { isolationLevel: 'Serializable' });
+    }
     return handlePatch(req, action, id, payload, createPrismaDbAdapter(this.prisma));
   }
 }

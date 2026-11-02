@@ -69,6 +69,72 @@ const SEARCH_COLS: Record<string, string[]> = {
 export class PtspService {
   constructor(private readonly prisma: PrismaService) {}
 
+  async dispositionRecipients(user: any) {
+    if (!this.canManage(user.roles)) throw new ForbiddenException('Akses ditolak');
+    const users = await this.prisma.public_users.findMany({ where: { aktif: true, auth_id: { not: null } }, select: { auth_id: true, nama: true, nama_lengkap: true, role: true }, orderBy: { nama: 'asc' } });
+    return { ok: true, data: users.map(u => ({ id: u.auth_id, nama: u.nama || u.nama_lengkap || 'Pengguna', role: u.role })) };
+  }
+
+  async listDispositions(user: any) {
+    const rows = this.canManage(user.roles)
+      ? await this.prisma.$queryRaw<any[]>`SELECT * FROM ptsp_disposisi ORDER BY created_at DESC LIMIT 200`
+      : await this.prisma.$queryRaw<any[]>`SELECT * FROM ptsp_disposisi WHERE recipient_id = ${user.authId}::uuid ORDER BY created_at DESC LIMIT 200`;
+    return { ok: true, data: rows };
+  }
+
+  async getDisposition(user: any, id: string) {
+    if (!UUID_RE.test(id)) throw new BadRequestException('ID disposisi tidak valid');
+    const rows = await this.prisma.$queryRaw<any[]>`SELECT * FROM ptsp_disposisi WHERE id = ${id}::uuid`;
+    const row = rows[0];
+    if (!row) throw new NotFoundException('Disposisi tidak ditemukan');
+    if (!this.canManage(user.roles) && row.recipient_id !== user.authId) throw new ForbiddenException('Disposisi ini bukan untuk Anda');
+    return row;
+  }
+
+  async createDisposition(user: any, input: any) {
+    if (!this.canManage(user.roles)) throw new ForbiddenException('Akses ditolak');
+    let table = String(input?.table || '');
+    let id = String(input?.id || '');
+    const instructions = String(input?.instructions || '').trim();
+    if (!PTSP_TABLES[table] || !id || !UUID_RE.test(String(input?.recipientId)) || !instructions || instructions.length > 4000) throw new BadRequestException('Lengkapi tujuan dan instruksi disposisi (maksimal 4000 karakter)');
+    const recipient = await this.prisma.public_users.findFirst({ where: { auth_id: input.recipientId, aktif: true } });
+    if (!recipient) throw new BadRequestException('Pengguna tujuan tidak aktif');
+    if (table !== 'ptsp_master_tracking' && !/^\d+$/.test(id)) throw new BadRequestException('ID permohonan tidak valid');
+    if (table === 'ptsp_master_tracking' && !UUID_RE.test(id)) throw new BadRequestException('ID tracking tidak valid');
+    let request = await (this.prisma as any)[table].findUnique({ where: { id: table === 'ptsp_master_tracking' ? id : BigInt(id) } });
+    if (!request) throw new NotFoundException('Permohonan tidak ditemukan');
+    if (table === 'ptsp_master_tracking') {
+      const childTable = String(request.table_name).startsWith('ptsp_') ? String(request.table_name) : `ptsp_${request.table_name}`;
+      if (!PTSP_TABLES[childTable] || childTable === table) throw new BadRequestException('Layanan tracking tidak valid');
+      request = await (this.prisma as any)[childTable].findFirst({ where: { tracking_token: { in: [request.id, request.tracking_token].filter(Boolean) } } });
+      if (!request) throw new NotFoundException('Detail permohonan tidak ditemukan');
+      table = childTable; id = String(request.id);
+    }
+    const snapshot = JSON.stringify({ layanan: PTSP_TABLES[table], ...this.buildRow(request, table) });
+    return this.prisma.$transaction(async tx => {
+      const rows = await tx.$queryRaw<any[]>`INSERT INTO ptsp_disposisi (table_name, request_id, sender_id, recipient_id, sender_name, recipient_name, instructions, snapshot) VALUES (${table}, ${id}, ${user.authId}::uuid, ${recipient.auth_id}::uuid, ${String(user.nama || user.nama_lengkap || 'Petugas PTSP')}, ${String(recipient.nama || recipient.nama_lengkap || 'Pengguna')}, ${instructions}, ${snapshot}::jsonb) RETURNING *`;
+      // Assignment gives the recipient access to their inbox, never to all requests.
+      const currentRecipient = await tx.public_users.findUnique({ where: { id: recipient.id } });
+      let overrides: any = currentRecipient?.page_overrides || {};
+      if (typeof overrides === 'string') { try { overrides = JSON.parse(overrides); } catch { overrides = {}; } }
+      await tx.public_users.update({ where: { id: recipient.id }, data: { page_overrides: {
+        ...overrides, add: [...new Set([...(Array.isArray(overrides.add) ? overrides.add : []), 'layanan-ptsp'])],
+        remove: (Array.isArray(overrides.remove) ? overrides.remove : []).filter((p: string) => p !== 'layanan-ptsp'),
+      } } });
+      await tx.notifications.create({ data: { type: 'PTSP_DISPOSISI', title: 'Disposisi surat masuk PTSP', message: instructions, link: '/layanan-ptsp', recipient_user_id: recipient.auth_id, created_by: String(user.nama || 'PTSP'), source_table: 'ptsp_disposisi', source_id: rows[0].id } });
+      return { ok: true, data: rows[0] };
+    });
+  }
+
+  async updateDisposition(user: any, id: string, input: any) {
+    const row = await this.getDisposition(user, id);
+    if (row.recipient_id !== user.authId) throw new ForbiddenException('Hanya penerima dapat mengisi tindak lanjut');
+    if (!['Menunggu', 'Diproses', 'Selesai'].includes(input?.status) || typeof input?.followUp !== 'string' || input.followUp.length > 4000) throw new BadRequestException('Status atau catatan tidak valid');
+    if (input.status === 'Selesai' && !input.followUp.trim()) throw new BadRequestException('Isi hasil tindak lanjut sebelum menyelesaikan disposisi');
+    await this.prisma.$executeRaw`UPDATE ptsp_disposisi SET status = ${input.status}, follow_up = ${input.followUp.trim()}, updated_at = now() WHERE id = ${id}::uuid`;
+    return { ok: true };
+  }
+
   async getConfig() {
     const [row, notificationsRow] = await Promise.all([
       this.prisma.site_settings.findUnique({ where: { key: 'ptsp_service_config' } }),
@@ -114,7 +180,7 @@ export class PtspService {
 
   private canManage(roles: string[] = []): boolean {
     const upper = roles.map((r) => r.toUpperCase());
-    return upper.some((r) => ['ADMIN', 'ADMINISTRATOR', 'PTSP', 'OP_LAYANAN'].includes(r));
+    return upper.some((r) => ['ADMIN', 'ADMINISTRATOR', 'PTSP', 'OP_LAYANAN', 'OP_PTSP'].includes(r));
   }
 
   private getDisplayCols(table: string): string[] {
@@ -380,6 +446,8 @@ export class PtspService {
       throw new NotFoundException(`Row dengan id=${id} tidak ditemukan`);
     }
 
+    const linked = await this.prisma.$queryRaw<any[]>`SELECT id FROM ptsp_disposisi WHERE table_name = ${table} AND request_id = ${String(id)} LIMIT 1`;
+    if (linked.length) throw new BadRequestException('Permohonan sudah didisposisikan. Data dan lampiran dipertahankan untuk tindak lanjut.');
     await delegate.delete({ where: whereId });
 
     return {

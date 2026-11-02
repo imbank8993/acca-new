@@ -1,0 +1,97 @@
+{
+  "guide_pages": 9,
+  "sop_sha256": "363ea94948f0c47a8edac9fba68e660e232c62d3894f916e82ec92ee2ffde86a",
+  "minimum_minutes": 75,
+  "programme_windows": [
+    [
+      "Senin",
+      "16:00",
+      "17:15"
+    ],
+    [
+      "Selasa",
+      "16:00",
+      "17:15"
+    ],
+    [
+      "Rabu",
+      "16:00",
+      "17:15"
+    ],
+    [
+      "Kamis",
+      "16:00",
+      "17:15"
+    ],
+    [
+      "Jumat",
+      "16:15",
+      "17:30"
+    ],
+    [
+      "Senin",
+      "20:30",
+      "21:45"
+    ],
+    [
+      "Selasa",
+      "20:30",
+      "21:45"
+    ],
+    [
+      "Rabu",
+      "20:30",
+      "21:45"
+    ],
+    [
+      "Kamis",
+      "20:45",
+      "22:00"
+    ]
+  ],
+  "breakdown_minutes": [
+    10,
+    25,
+    25,
+    15
+  ],
+  "schedule_conflicts": 0,
+  "guide_layout": [
+    {
+      "page": 1,
+      "bottom": 239.5
+    },
+    {
+      "page": 2,
+      "bottom": 167.0
+    },
+    {
+      "page": 3,
+      "bottom": 120.5
+    },
+    {
+      "page": 4,
+      "bottom": 227.0
+    },
+    {
+      "page": 5,
+      "bottom": 180.5
+    },
+    {
+      "page": 6,
+      "bottom": 258.5
+    },
+    {
+      "page": 7,
+      "bottom": 198.5
+    },
+    {
+      "page": 8,
+      "bottom": 148.5
+    },
+    {
+      "page": 9,
+      "bottom": 285.5
+    }
+  ]
+}
