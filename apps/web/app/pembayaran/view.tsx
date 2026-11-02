@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { authFetch } from '@/lib/auth-fetch';
+import { matchesPaymentPeriod, paymentDatePeriod } from '@/lib/payment-period';
 import { swalSuccess, swalError, swalConfirm } from '@/lib/swal-premium';
 import Swal from 'sweetalert2';
 import MaintenanceBanner from '@/components/MaintenanceBanner';
@@ -152,8 +153,8 @@ export default function PembayaranPage({ user: propUser }: PembayaranPageProps =
     const [savingTarifModul, setSavingTarifModul] = useState<string | null>(null);
     const [tarifDraft, setTarifDraft] = useState<Record<string, string>>({});
 
-    const [rekapanBulan, setRekapanBulan] = useState(new Date().getMonth() + 1);
-    const [rekapanTahun, setRekapanTahun] = useState(new Date().getFullYear());
+    const [periodMonth, setPeriodMonth] = useState(0);
+    const [periodYear, setPeriodYear] = useState(0);
 
     const [docPreview, setDocPreview] = useState<{
         open: boolean;
@@ -331,8 +332,22 @@ export default function PembayaranPage({ user: propUser }: PembayaranPageProps =
         finally { setSavingTarifModul(null); }
     };
 
+    const periodSubmissions = useMemo(() => submissions.filter(s => matchesPaymentPeriod(s, periodMonth, periodYear)), [submissions, periodMonth, periodYear]);
+    const periodKlinikSlots = useMemo(() => klinikSlots.filter(s => matchesPaymentPeriod(paymentDatePeriod(s.tanggal, true), periodMonth, periodYear)), [klinikSlots, periodMonth, periodYear]);
+    const periodEkskulSubmissions = useMemo(() => ekskulSubmissions.filter(s => matchesPaymentPeriod(s, periodMonth, periodYear)), [ekskulSubmissions, periodMonth, periodYear]);
+    const periodTarifList = useMemo(() => tarifList.filter(t => matchesPaymentPeriod(paymentDatePeriod(t.updated_at), periodMonth, periodYear)), [tarifList, periodMonth, periodYear]);
+    const periodYears = useMemo(() => {
+        const currentYear = Number(new Intl.DateTimeFormat('en', { year: 'numeric', timeZone: 'Asia/Makassar' }).format(new Date()));
+        const years = new Set([currentYear, currentYear - 1]);
+        [...submissions, ...ekskulSubmissions].forEach(s => { if (s.tahun) years.add(Number(s.tahun)); });
+        klinikSlots.forEach(s => { const period = paymentDatePeriod(s.tanggal, true); if (period) years.add(period.tahun); });
+        tarifList.forEach(t => { const period = paymentDatePeriod(t.updated_at); if (period) years.add(period.tahun); });
+        if (periodYear) years.add(periodYear);
+        return [...years].sort((a, b) => b - a);
+    }, [submissions, ekskulSubmissions, klinikSlots, tarifList, periodYear]);
+
     const filteredEkskulSubmissions = useMemo(() => {
-        let list = ekskulSubmissions;
+        let list = periodEkskulSubmissions;
         if (ekskulFilterBayar === 'BELUM') list = list.filter(s => !s.dibayarkan);
         else if (ekskulFilterBayar === 'SUDAH') list = list.filter(s => s.dibayarkan);
         if (ekskulSearchQuery.trim()) {
@@ -344,13 +359,13 @@ export default function PembayaranPage({ user: propUser }: PembayaranPageProps =
             );
         }
         return list;
-    }, [ekskulSubmissions, ekskulFilterBayar, ekskulSearchQuery]);
+    }, [periodEkskulSubmissions, ekskulFilterBayar, ekskulSearchQuery]);
 
     const ekskulStats = useMemo(() => ({
-        total: ekskulSubmissions.length,
-        belum: ekskulSubmissions.filter(s => !s.dibayarkan).length,
-        sudah: ekskulSubmissions.filter(s => s.dibayarkan).length,
-    }), [ekskulSubmissions]);
+        total: periodEkskulSubmissions.length,
+        belum: periodEkskulSubmissions.filter(s => !s.dibayarkan).length,
+        sudah: periodEkskulSubmissions.filter(s => s.dibayarkan).length,
+    }), [periodEkskulSubmissions]);
 
     const handleTandaiEkskul = async (sub: EkskulSubmission, dibayarkan: boolean) => {
         let catatanInput = '';
@@ -456,7 +471,7 @@ export default function PembayaranPage({ user: propUser }: PembayaranPageProps =
     };
 
     const filteredKlinikSlots = useMemo(() => {
-        let list = klinikSlots;
+        let list = periodKlinikSlots;
         if (klinikFilterBayar === 'BELUM') list = list.filter(s => s.status !== 'paid');
         else if (klinikFilterBayar === 'SUDAH') list = list.filter(s => s.status === 'paid');
         if (klinikSearchQuery.trim()) {
@@ -473,13 +488,13 @@ export default function PembayaranPage({ user: propUser }: PembayaranPageProps =
                 || b.tanggal.localeCompare(a.tanggal)
                 || a.id.localeCompare(b.id);
         });
-    }, [klinikSlots, klinikFilterBayar, klinikSearchQuery]);
+    }, [periodKlinikSlots, klinikFilterBayar, klinikSearchQuery]);
 
     const klinikStats = useMemo(() => ({
-        total: klinikSlots.length,
-        belum: klinikSlots.filter(s => s.status !== 'paid').length,
-        sudah: klinikSlots.filter(s => s.status === 'paid').length,
-    }), [klinikSlots]);
+        total: periodKlinikSlots.length,
+        belum: periodKlinikSlots.filter(s => s.status !== 'paid').length,
+        sudah: periodKlinikSlots.filter(s => s.status === 'paid').length,
+    }), [periodKlinikSlots]);
 
     const klinikGroups = useMemo(() => {
         const groups = new Map<string, KlinikSlot[]>();
@@ -537,7 +552,7 @@ export default function PembayaranPage({ user: propUser }: PembayaranPageProps =
     };
 
     const filteredSubmissions = useMemo(() => {
-        let list = submissions;
+        let list = periodSubmissions;
         if (filterBayar === 'BELUM') list = list.filter(s => !s.dibayarkan);
         else if (filterBayar === 'SUDAH') list = list.filter(s => s.dibayarkan);
         if (searchQuery.trim()) {
@@ -548,16 +563,16 @@ export default function PembayaranPage({ user: propUser }: PembayaranPageProps =
             );
         }
         return list;
-    }, [submissions, filterBayar, searchQuery]);
+    }, [periodSubmissions, filterBayar, searchQuery]);
 
     const statsCount = useMemo(() => ({
-        total: submissions.length,
-        belum: submissions.filter(s => !s.dibayarkan).length,
-        sudah: submissions.filter(s => s.dibayarkan).length,
-    }), [submissions]);
+        total: periodSubmissions.length,
+        belum: periodSubmissions.filter(s => !s.dibayarkan).length,
+        sudah: periodSubmissions.filter(s => s.dibayarkan).length,
+    }), [periodSubmissions]);
 
     const rekapanData = useMemo(() => {
-        const guruAsuhPaid = submissions.filter(s => s.dibayarkan && (rekapanBulan === 0 || s.bulan === rekapanBulan) && s.tahun === rekapanTahun);
+        const guruAsuhPaid = periodSubmissions.filter(s => s.dibayarkan);
         let totalGuruAsuh = 0;
         guruAsuhPaid.forEach(sub => {
             const cData = getCatatanData(sub.catatan_pembayaran);
@@ -565,22 +580,11 @@ export default function PembayaranPage({ user: propUser }: PembayaranPageProps =
             totalGuruAsuh += parseNominal(nominal);
         });
 
-        const klinikPaid = klinikSlots.filter(s => {
-            if (s.status !== 'paid') return false;
-            if (!s.tanggal) return false;
-            const match = s.tanggal.match(/^(\d{4})-(\d{2})/);
-            if (match) {
-                const y = parseInt(match[1], 10);
-                const m = parseInt(match[2], 10);
-                return (rekapanBulan === 0 || m === rekapanBulan) && y === rekapanTahun;
-            }
-            const d = new Date(s.tanggal);
-            return (rekapanBulan === 0 || (d.getMonth() + 1) === rekapanBulan) && d.getFullYear() === rekapanTahun;
-        });
+        const klinikPaid = periodKlinikSlots.filter(s => s.status === 'paid');
         const totalKlinik = klinikPaid.reduce((sum, slot) => sum + parseNominal(slot.nominal_dibayarkan), 0);
         const klinikTanpaNominal = klinikPaid.filter(slot => slot.nominal_dibayarkan == null).length;
 
-        const ekskulPaid = ekskulSubmissions.filter(s => s.dibayarkan && (rekapanBulan === 0 || s.bulan === rekapanBulan) && s.tahun === rekapanTahun);
+        const ekskulPaid = periodEkskulSubmissions.filter(s => s.dibayarkan);
         let totalEkskul = 0;
         ekskulPaid.forEach(sub => {
             const cData = getCatatanData(sub.catatan_pembayaran);
@@ -598,7 +602,7 @@ export default function PembayaranPage({ user: propUser }: PembayaranPageProps =
             ekskul: totalEkskul,
             total: totalGuruAsuh + totalKlinik + totalEkskul
         };
-    }, [submissions, klinikSlots, ekskulSubmissions, rekapanBulan, rekapanTahun, getTarif]);
+    }, [periodSubmissions, periodKlinikSlots, periodEkskulSubmissions, getTarif]);
 
     const handleTandai = async (sub: Submission, dibayarkan: boolean) => {
         let catatanInput = '';
@@ -728,6 +732,23 @@ export default function PembayaranPage({ user: propUser }: PembayaranPageProps =
                 ariaLabel="Modul Pembayaran"
                 variant="slider"
             />
+
+            <FilterToolbar alwaysExpanded>
+                <FilterSelect
+                    label={activeTab === 'NOMINAL' ? 'Bulan Perubahan Tarif' : 'Bulan Kegiatan / Laporan'}
+                    icon="calendar3"
+                    value={periodMonth === 0 ? 'ALL' : String(periodMonth)}
+                    onChange={value => setPeriodMonth(value === 'ALL' ? 0 : Number(value))}
+                    options={[{ value: 'ALL', label: 'Semua Bulan' }, ...BULAN.map((label, i) => ({ value: String(i + 1), label }))]}
+                />
+                <FilterSelect
+                    label={activeTab === 'NOMINAL' ? 'Tahun Perubahan Tarif' : 'Tahun'}
+                    icon="calendar-event"
+                    value={periodYear === 0 ? 'ALL' : String(periodYear)}
+                    onChange={value => setPeriodYear(value === 'ALL' ? 0 : Number(value))}
+                    options={[{ value: 'ALL', label: 'Semua Tahun' }, ...periodYears.map(year => ({ value: String(year), label: String(year) }))]}
+                />
+            </FilterToolbar>
 
             {activeTab === 'GURU_ASUH' && (
                 <>
@@ -1071,7 +1092,7 @@ export default function PembayaranPage({ user: propUser }: PembayaranPageProps =
                 <div className="gap-table-card">
                     <div className="gap-toolbar">
                         <div style={{ fontSize: '0.85rem', color: 'var(--n-muted)' }}>
-                            <i className="bi bi-info-circle" /> Atur tarif honor per kegiatan. Guru Asuh dihitung per bulan; Klinik dan Ekstrakurikuler dihitung per pertemuan.
+                            <i className="bi bi-info-circle" /> Atur tarif honor per kegiatan. Guru Asuh dihitung per bulan; Klinik dan Ekstrakurikuler dihitung per pertemuan. Filter periode mengikuti tanggal terakhir tarif diubah; nilai yang ditampilkan adalah tarif aktif.
                         </div>
                     </div>
                     <div className="gap-table-wrap">
@@ -1093,10 +1114,10 @@ export default function PembayaranPage({ user: propUser }: PembayaranPageProps =
                                         </td>
                                     </tr>
                                 )}
-                                {!loadingTarif && tarifList.length === 0 && (
-                                    <tr><td colSpan={5} className="gap-td-center">Tarif belum tersedia. Jalankan migrasi tarif_honor terlebih dahulu.</td></tr>
+                                {!loadingTarif && periodTarifList.length === 0 && (
+                                    <tr><td colSpan={5} className="gap-td-center">Tidak ada tarif pada periode yang dipilih.</td></tr>
                                 )}
-                                {tarifList.map(t => (
+                                {periodTarifList.map(t => (
                                     <tr key={t.modul}>
                                         <td className="gap-td-name">{t.label}</td>
                                         <td>
@@ -1151,19 +1172,6 @@ export default function PembayaranPage({ user: propUser }: PembayaranPageProps =
                             Total belum lengkap: {rekapanData.klinikTanpaNominal} pembayaran klinik lama belum memiliki nominal tersimpan dan belum termasuk dalam total.
                         </p>
                     )}
-                    <div className="gap-toolbar" style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                        <select className="gap-select" value={rekapanBulan} onChange={e => setRekapanBulan(Number(e.target.value))}>
-                            <option value={0}>Semua Bulan</option>
-                            {BULAN.map((b, i) => <option key={i} value={i + 1}>{b}</option>)}
-                        </select>
-                        <input 
-                            type="number" 
-                            className="gap-select" 
-                            style={{ width: '100px' }} 
-                            value={rekapanTahun} 
-                            onChange={e => setRekapanTahun(Number(e.target.value))} 
-                        />
-                    </div>
                     <div className="gap-table-wrap">
                         <table className="gap-table">
                             <thead>
