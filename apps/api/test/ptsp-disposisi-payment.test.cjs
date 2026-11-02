@@ -72,3 +72,20 @@ test('letter migrations preserve existing notices, paginate privately, and make 
   const deploy=fs.readFileSync('.github/workflows/deploy.yml','utf8');assert(deploy.indexOf('20261102_ptsp_surat_masuk.sql')<deploy.indexOf('docker compose up -d'));
  }finally{await db.close()}
 });
+
+
+test('deployment gate catches missing read columns and both deployment paths migrate before startup',async()=>{
+ const {verifyLetterSchema}=require('../prisma/verify-ptsp-db.cjs');
+ const db=new PGlite();try{
+  await db.exec('CREATE TABLE notifications (type text,title text,link text,source_id text,source_table text)');
+  await db.exec(fs.readFileSync('apps/api/prisma/sql/20261102_ptsp_disposisi.sql','utf8'));
+  const client={$queryRawUnsafe:async(sql)=>(await db.query(sql)).rows};
+  await assert.rejects(verifyLetterSchema(client),/read_at/);
+  await db.exec(fs.readFileSync('apps/api/prisma/sql/20261102_ptsp_surat_masuk.sql','utf8'));
+  await verifyLetterSchema(client);
+  for(const file of ['scripts/deploy.sh','.github/workflows/deploy.yml']){
+   const source=fs.readFileSync(file,'utf8'),migration=source.indexOf('20261102_ptsp_surat_masuk.sql'),gate=source.indexOf('verify-ptsp-db.cjs --letters'),start=source.indexOf('docker compose up -d');
+   assert(migration>=0 && migration<gate && gate<start,file+' must migrate and verify before starting services');
+  }
+ }finally{await db.close()}
+});

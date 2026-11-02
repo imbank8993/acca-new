@@ -23,3 +23,9 @@ Pembayaran klinik mengelompokkan kegiatan berdasarkan ID guru dan status pembaya
 - node apps/web/test/ptsp-letter-ui.cjs: pengujian browser lokal dengan data sintetis, lebar 320-1280 piksel, mode terang/gelap, label dan encoding, detail/lampiran, tanda dibaca, pesan opsional, pencegahan klik ganda, dan pesan kesalahan aman.
 
 Pengujian memakai database sementara dan halaman lokal, tanpa mengubah data produksi. Pengujian akun sebenarnya pada server tetap memerlukan deployment yang berhasil.
+
+## Kegagalan memuat setelah pembaruan
+
+Jika kode baru memakai read_at sementara database belum dimigrasikan, PostgreSQL mengembalikan 42703 (column read_at does not exist), lalu halaman menampilkan pesan gagal memuat. Ini berbeda dengan daftar surat kosong. Migrasi 20261102_ptsp_surat_masuk.sql memperbaiki struktur tanpa menghapus surat.
+
+Deployment otomatis maupun scripts/deploy.sh kini menjalankan kedua migrasi PTSP lalu verify-ptsp-db.cjs --letters sebelum menjalankan versi baru. Pemeriksaan menolak database yang belum memiliki read_at, client_request_id, dan indeks pencegah pengiriman ganda. Pengujian regresi memverifikasi skema lama ditolak dan skema setelah migrasi diterima.

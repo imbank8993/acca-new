@@ -20,10 +20,25 @@ async function main() {
       if (!rows[0]?.exists) missing.push(table);
     }
     if (missing.length) throw new Error(`Tabel acca_db belum tersedia: ${missing.join(', ')}`);
+    if (process.argv.includes('--letters')) await verifyLetterSchema(prisma);
     console.log(`Verified ${REQUIRED_TABLES.length} PTSP tables in acca_db.`);
   } finally {
     await prisma.$disconnect();
   }
 }
 
-main().catch((error) => { console.error(error); process.exit(1); });
+async function verifyLetterSchema(prisma) {
+  const columns = await prisma.$queryRawUnsafe(
+    "SELECT column_name FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'ptsp_disposisi'",
+  );
+  const names = new Set(columns.map(row => row.column_name));
+  const missing = ['read_at', 'client_request_id'].filter(name => !names.has(name));
+  if (missing.length) throw new Error(`Migrasi pemberitahuan PTSP belum lengkap: ${missing.join(', ')}`);
+  const indexes = await prisma.$queryRawUnsafe(
+    "SELECT indexname FROM pg_indexes WHERE schemaname = 'public' AND tablename = 'ptsp_disposisi' AND indexname = 'idx_ptsp_letter_delivery'",
+  );
+  if (!indexes.length) throw new Error('Indeks pencegah kiriman ganda PTSP belum tersedia');
+}
+
+module.exports = { verifyLetterSchema };
+if (require.main === module) main().catch((error) => { console.error(error); process.exit(1); });

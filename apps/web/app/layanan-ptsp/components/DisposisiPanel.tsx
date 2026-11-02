@@ -134,11 +134,9 @@ export default function DisposisiPanel({ canManage, user, source, onClose }: Pro
 
     return <section className="disposisi-panel" aria-label="Pemberitahuan surat masuk">
         <header className="disposisi-heading">
-            <div className="disposisi-heading-title"><span className="disposisi-heading-icon"><Inbox size={24} /></span><div>
-                <span className="disposisi-eyebrow">LAYANAN PTSP</span>
-                <h2>{canManage ? 'Pemberitahuan surat masuk' : 'Surat masuk untuk Anda'}</h2>
-                <p>Informasi permohonan dan lampiran surat yang dibagikan kepada pengguna.</p>
-            </div></div>
+            <div className="disposisi-heading-title"><span className="disposisi-heading-icon"><Inbox size={24} /></span>
+                <h2>Pemberitahuan surat masuk</h2>
+            </div>
             <Button variant="secondary" size="sm" leftIcon={<RefreshCw size={15} />} onClick={load} disabled={loading}>Muat ulang</Button>
         </header>
         <div className="disposisi-stats">
