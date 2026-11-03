@@ -1047,6 +1047,23 @@ th.pay-col-action { text-align: right !important; }
     margin: 0 12px 12px;
 }
 
+.pay-mobile-cards { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; min-width: 0; }
+.pay-mobile-cards--in-card { padding: 12px; }
+.pay-mobile-card { display: flex; flex-direction: column; gap: 12px; min-width: 0; padding: 16px; border: 1px solid var(--n-border); border-radius: 18px; background: var(--n-card); box-shadow: var(--n-shadow-soft); overflow-wrap: anywhere; }
+.pay-mobile-card__top { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; min-width: 0; }
+.pay-mobile-card__top > strong { min-width: 0; color: var(--n-ink); line-height: 1.4; }
+.pay-mobile-card__top .pay-badge { flex-shrink: 0; }
+.pay-mobile-card__meta { display: flex; flex-wrap: wrap; gap: 5px 14px; color: var(--n-muted); font-size: 0.78rem; }
+.pay-mobile-card__facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 16px; margin: 0; padding: 12px 0; border-top: 1px solid var(--n-border); border-bottom: 1px solid var(--n-border); }
+.pay-mobile-card__facts > div { min-width: 0; }
+.pay-mobile-card__facts dt { color: var(--n-muted); font-size: 0.7rem; }
+.pay-mobile-card__facts dd { margin: 3px 0 0; color: var(--n-ink); font-size: 0.9rem; font-weight: 700; overflow-wrap: anywhere; }
+.pay-mobile-card__files { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; min-width: 0; }
+.pay-mobile-card__files > span { width: 100%; color: var(--n-muted); font-size: 0.72rem; font-weight: 700; }
+.pay-mobile-card__files .pay-file { max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
+.pay-mobile-card__actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 8px; }
+.pay-mobile-card__actions .ab-actions-row { flex-wrap: wrap; justify-content: flex-end; }
+
 .pay-timeline {
     list-style: none;
     margin: 0;
@@ -1136,7 +1153,8 @@ th.pay-col-action { text-align: right !important; }
 .mui-sheet .pay-sessions__actions { grid-area: actions; }
 
 @media (max-width: 1023.98px) {
-    .pay-stats { gap: 8px; }
+    .pay-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+    .pay-stats > :last-child:nth-child(odd) { grid-column: 1 / -1; }
 
     .pay-stat {
         flex-direction: column;
@@ -1152,15 +1170,16 @@ th.pay-col-action { text-align: right !important; }
         font-size: 0.9rem;
     }
 
-    .pay-stat__value { font-size: 0.95rem; }
+    .pay-stat__value { font-size: 0.95rem; white-space: normal; overflow: visible; text-overflow: clip; overflow-wrap: anywhere; }
+    .pay-stat__sub { white-space: normal; overflow: visible; text-overflow: clip; overflow-wrap: anywhere; }
     .pay-stat__label, .pay-stat__sub { font-size: 0.68rem; }
 }
 
 @media (max-width: 639.98px) {
     .pay { gap: 12px; }
-    .pay-stat { padding: 10px; }
-    .pay-stat__icon { display: none; }
-    .pay-stat__value { font-size: 0.85rem; white-space: normal; }
+    .pay-stat { padding: 14px; }
+    .pay-stat__icon { display: inline-flex; }
+    .pay-stat__value { font-size: clamp(0.9rem, 4vw, 1.15rem); }
     .pay-card__head, .pay-section-head { padding: 14px; }
     .pay-ampra { padding: 12px 14px; }
     .pay-timeline { padding: 4px 14px 14px; }

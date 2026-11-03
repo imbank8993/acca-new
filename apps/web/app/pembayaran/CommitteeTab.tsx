@@ -10,6 +10,7 @@ import { DesktopFab } from '@/components/ui/DesktopFab';
 import { DetailHeader } from '@/components/ui/DetailHeader';
 import FilterToolbar, { FilterSearch, FilterSelect } from '@/components/ui/FilterToolbar';
 import { Spinner } from '@/components/ui/Spinner';
+import { useIsMobile } from '@/hooks/use-breakpoint';
 import DocViewerModal from '@/components/ui/DocViewerModal';
 import { BULAN, fmtRupiah, fmtTanggal, StatCards, StatusBadge, EmptyState, type BadgeTone } from './parts';
 
@@ -39,6 +40,7 @@ type FormKind = 'activity' | 'single-item' | 'payment' | 'history' | 'delete-ite
 const isViewable = (url: string) => /\.(pdf|png|jpe?g|webp|gif)(\?|$)/i.test(url);
 
 export default function CommitteeTab() {
+    const isMobile = useIsMobile();
     const [activities, setActivities] = useState<any[]>([]);
     const [data, setData] = useState<any>(null);
     const [selected, setSelected] = useState('');
@@ -261,6 +263,18 @@ export default function CommitteeTab() {
                             {activities.length ? 'Ubah kata kunci atau status pencarian.' : 'Tambahkan kegiatan untuk mulai mengisi ampra.'}
                         </EmptyState>
                     </div>
+                ) : isMobile ? (
+                    <div className="pay-mobile-cards" aria-label="Daftar kegiatan pengajuan komite">
+                        {filtered.map(a => {
+                            const st = statusOf(a.total, a.paid);
+                            return <article className="pay-mobile-card" key={a.id}>
+                                <div className="pay-mobile-card__top"><strong>{a.title}</strong><StatusBadge tone={toneOf(st)}>{st}</StatusBadge></div>
+                                <div className="pay-mobile-card__meta"><span><i className="bi bi-person" /> {a.owner_name}</span><span><i className="bi bi-calendar3" /> {dateRange(a.start_date, a.end_date)}</span></div>
+                                <dl className="pay-mobile-card__facts"><div><dt>Anggaran</dt><dd>{fmtRupiah(a.total)}</dd></div><div><dt>Dibayar Bendahara</dt><dd>{fmtRupiah(a.paid)}</dd></div><div><dt>Sisa</dt><dd>{fmtRupiah(Number(a.total) - Number(a.paid))}</dd></div></dl>
+                                <Button variant="outline" size="sm" onClick={() => void open(a.id)}>Lihat Kegiatan</Button>
+                            </article>;
+                        })}
+                    </div>
                 ) : (
                     <div className="pay-card pay-table-wrap">
                         <table className="pay-table" aria-label="Daftar kegiatan pengajuan komite">
@@ -312,7 +326,20 @@ export default function CommitteeTab() {
                     <div><h4>Item</h4><span className="pay-cell-muted">{items.length} item · {fmtRupiah(total)} · dibayar bendahara {fmtRupiah(paid)}</span></div>
                     {canEdit && <Button size="sm" variant="primary" icon="add" onClick={() => start('single-item')}>Tambah Item</Button>}
                 </div>
-                {items.length === 0 ? <EmptyState icon="list-check" title="Belum ada item">Tambahkan item beserta harganya.</EmptyState> : (
+                {items.length === 0 ? <EmptyState icon="list-check" title="Belum ada item">Tambahkan item beserta harganya.</EmptyState> : isMobile ? (
+                    <div className="pay-mobile-cards pay-mobile-cards--in-card" aria-label="Item pengajuan komite">
+                        {items.map(item => {
+                            const st = statusOf(item.amount, item.paid);
+                            return <article className="pay-mobile-card" key={item.id}>
+                                <div className="pay-mobile-card__top"><strong>{item.description}</strong><StatusBadge tone={Number(item.amount) === 0 ? 'unpaid' : toneOf(st)}>{Number(item.amount) === 0 ? 'Perlu Harga' : st}</StatusBadge></div>
+                                <div className="pay-mobile-card__meta"><span>{BULAN[item.month - 1]} {item.year}</span><span>{item.recipient || 'Tanpa penerima'}</span></div>
+                                <dl className="pay-mobile-card__facts"><div><dt>Jumlah</dt><dd>{Number(item.quantity)} {item.unit}</dd></div><div><dt>Harga Satuan</dt><dd>{fmtRupiah(item.unit_price)}</dd></div><div><dt>Total Item</dt><dd>{fmtRupiah(item.amount)}</dd></div><div><dt>Dibayar PJ</dt><dd>{fmtRupiah(item.advanced || 0)}</dd></div><div><dt>Diganti ke PJ</dt><dd>{fmtRupiah(item.reimbursed || 0)}</dd></div><div><dt>Dibayar Bendahara</dt><dd>{fmtRupiah(item.paid)}</dd></div></dl>
+                                {(item.attachments || []).length > 0 && <div className="pay-mobile-card__files"><span>Lampiran item</span>{fileLinks(item.attachments)}</div>}
+                                <div className="pay-mobile-card__actions">{itemActions(item)}</div>
+                            </article>;
+                        })}
+                    </div>
+                ) : (
                     <div className="pay-table-wrap"><table className="pay-table" aria-label="Item pengajuan komite">
                         <thead><tr><th>Periode</th><th>Item / Penerima</th><th>Jumlah</th><th className="pay-num">Harga Satuan</th><th className="pay-num">Total</th><th>Lampiran Item</th><th className="pay-num">Dibayar PJ</th><th className="pay-num">Diganti ke PJ</th><th className="pay-num">Dibayar Bendahara</th><th>Status Bendahara</th><th>Aksi</th></tr></thead>
                         <tbody>{items.map(item => {
@@ -329,7 +356,23 @@ export default function CommitteeTab() {
                     </table></div>
                 )}
                 <div className="pay-section-head"><div><h4>Riwayat Pembayaran</h4><span className="pay-cell-muted">{itemPayments.length} catatan pembayaran</span></div></div>
-                {itemPayments.length === 0 ? <EmptyState icon="receipt" title="Belum ada pembayaran">Pembayaran PJ dan bendahara akan muncul di sini.</EmptyState> : (
+                {itemPayments.length === 0 ? <EmptyState icon="receipt" title="Belum ada pembayaran">Pembayaran PJ dan bendahara akan muncul di sini.</EmptyState> : isMobile ? (
+                    <div className="pay-mobile-cards pay-mobile-cards--in-card" aria-label="Riwayat pembayaran item">
+                        {itemPayments.map((payment: any) => {
+                            const item = items.find((i: any) => i.id === payment.item_id);
+                            return <article className="pay-mobile-card" key={payment.id}>
+                                <div className="pay-mobile-card__top"><strong>{item?.description || 'Item'}</strong><StatusBadge tone={payment.voided_at ? 'void' : 'paid'}>{payment.voided_at ? 'Dibatalkan' : 'Tercatat'}</StatusBadge></div>
+                                <div className="pay-mobile-card__meta"><span>{fmtTanggal(day(payment.paid_on))}</span><span>{flowLabel(payment.flow)}</span></div>
+                                <dl className="pay-mobile-card__facts"><div><dt>Nominal</dt><dd>{fmtRupiah(payment.amount)}</dd></div><div><dt>Rekening Tujuan</dt><dd>{payment.destination_account || '—'}</dd></div><div><dt>Pencatat</dt><dd>{payment.actor_name}</dd></div>{payment.note && <div><dt>Catatan</dt><dd>{payment.note}</dd></div>}{payment.void_reason && <div><dt>Alasan Pembatalan</dt><dd>{payment.void_reason}</dd></div>}</dl>
+                                <div className="pay-mobile-card__files"><span>Bukti Transfer</span>{fileLinks(payment.attachments?.length ? payment.attachments : [{ name: 'Bukti transfer', url: payment.proof_url }])}</div>
+                                {!payment.voided_at && (canPay || (canRecordAdvance && payment.flow === 'PJ_ADVANCE' && payment.actor_id === ownerId)) && <div className="pay-mobile-card__actions"><ActionGroup>
+                                    <ActionButton action="edit" tooltip="Edit bukti pembayaran" onClick={() => start('edit-proof', { ...payment, term_id: item?.term_id, itemId: payment.item_id, revision: item?.revision, attachments: payment.attachments?.length ? payment.attachments : [{ name: 'Bukti transfer', url: payment.proof_url }] })} />
+                                    <ActionButton action="reject" tooltip="Batalkan pembayaran" onClick={() => start('cancel-payment', { ...payment, term_id: item?.term_id, itemId: payment.item_id, revision: item?.revision })} />
+                                </ActionGroup></div>}
+                            </article>;
+                        })}
+                    </div>
+                ) : (
                     <div className="pay-table-wrap"><table className="pay-table" aria-label="Riwayat pembayaran item">
                         <thead><tr><th>Tanggal</th><th>Item</th><th>Alur / Rekening Tujuan</th><th className="pay-num">Nominal</th><th>Lampiran</th><th>Catatan / Pencatat</th><th>Status</th><th>Aksi</th></tr></thead>
                         <tbody>{itemPayments.map((payment: any) => {
