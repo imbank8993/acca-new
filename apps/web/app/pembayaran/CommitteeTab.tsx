@@ -34,7 +34,7 @@ async function api(url: string, body?: any) {
 }
 
 type Attachment = { name: string; url: string };
-type FormKind = 'activity' | 'term' | 'item' | 'payment' | 'history' | 'delete-item' | 'cancel-payment' | 'edit-proof';
+type FormKind = 'activity' | 'single-item' | 'payment' | 'history' | 'delete-item' | 'cancel-payment' | 'edit-proof';
 
 const isViewable = (url: string) => /\.(pdf|png|jpe?g|webp|gif)(\?|$)/i.test(url);
 
@@ -42,7 +42,6 @@ export default function CommitteeTab() {
     const [activities, setActivities] = useState<any[]>([]);
     const [data, setData] = useState<any>(null);
     const [selected, setSelected] = useState('');
-    const [termId, setTermId] = useState('');
     const [canPay, setCanPay] = useState(false);
     const [canEdit, setCanEdit] = useState(false);
     const [loading, setLoading] = useState(true);
@@ -75,7 +74,6 @@ export default function CommitteeTab() {
         setCanRecordAdvance(r.canRecordAdvance);
         setOwnerId(r.ownerId);
         setCanPay(r.canPay);
-        setTermId(old => r.data.terms.some((t: any) => t.id === old) ? old : r.data.terms[0]?.id || '');
     }, []);
 
     useEffect(() => { void loadList(); }, [loadList]);
@@ -139,8 +137,8 @@ export default function CommitteeTab() {
         setBusy(true);
         setFormError('');
         try {
-            const body = { ...form, activityId: selected, termId, quantity: Number(form.quantity), unit_price: Number(form.unit_price), amount: Number(form.amount) };
-            if (form.kind === 'term' || form.kind === 'payment' || form.kind === 'edit-proof') {
+            const body = { ...form, activityId: selected, termId: form.term_id, quantity: Number(form.quantity), unit_price: Number(form.unit_price), amount: Number(form.amount) };
+            if (form.kind === 'single-item' || form.kind === 'payment' || form.kind === 'edit-proof') {
                 const attachments: Attachment[] = [...(form.attachments || [])];
                 if (attachments.length + (form.files?.length || 0) > 10) throw new Error('Maksimal 10 lampiran.');
                 for (const f of form.files || []) attachments.push(await upload(f));
@@ -154,7 +152,6 @@ export default function CommitteeTab() {
             await loadList();
             await loadDetail(activityId);
             setSelected(activityId);
-            if (form.kind === 'term') setTermId(r.id);
             setForm(null);
             setNotice(form.kind === 'payment' ? 'Pembayaran berhasil dicatat.' : form.kind === 'cancel-payment' ? 'Pembayaran dibatalkan dan riwayatnya tetap tersimpan.' : 'Data berhasil disimpan.');
         } catch (err: any) { setFormError(err.message); }
@@ -167,14 +164,10 @@ export default function CommitteeTab() {
     /* ------------------------------ Turunan ------------------------------- */
 
     const activity = data?.activity;
-    const terms: any[] = data?.terms || [];
-    const term = terms.find((t: any) => t.id === termId);
-    const items: any[] = (data?.items || []).filter((i: any) => i.term_id === termId);
-    const total = (data?.items || []).reduce((s: number, i: any) => s + Number(i.amount), 0);
-    const paid = (data?.payments || []).filter((p: any) => !p.voided_at && p.flow !== 'PJ_ADVANCE').reduce((s: number, p: any) => s + Number(p.amount), 0);
-    const termPaid = items.reduce((s: number, i: any) => s + Number(i.paid), 0);
-    const termTotal = items.reduce((s: number, i: any) => s + Number(i.amount), 0);
-    const termPayments = (data?.payments || []).filter((p: any) => items.some((i: any) => i.id === p.item_id));
+    const items: any[] = data?.items || [];
+    const total = items.reduce((sum: number, item: any) => sum + Number(item.amount), 0);
+    const paid = (data?.payments || []).filter((p: any) => !p.voided_at && p.flow !== 'PJ_ADVANCE').reduce((sum: number, p: any) => sum + Number(p.amount), 0);
+    const itemPayments: any[] = data?.payments || [];
 
     const filtered = useMemo(() => activities.filter(a =>
         `${a.title} ${a.owner_name}`.toLowerCase().includes(search.toLowerCase())
@@ -187,16 +180,15 @@ export default function CommitteeTab() {
 
     const titles: Record<FormKind, string> = {
         activity: form?.id ? 'Edit Kegiatan' : 'Tambah Kegiatan',
-        term: form?.id ? 'Edit Item' : 'Tambah Item',
-        item: form?.id ? 'Edit Rincian Biaya' : 'Tambah Rincian Biaya',
+        'single-item': form?.id ? 'Edit Item' : 'Tambah Item',
         payment: 'Catat Pembayaran',
         history: 'Riwayat Perubahan',
-        'delete-item': 'Hapus Rincian Biaya',
+        'delete-item': 'Hapus Item',
         'cancel-payment': 'Batalkan Pembayaran',
         'edit-proof': 'Edit Bukti Pembayaran',
     };
     const icons: Record<FormKind, string> = {
-        activity: 'calendar2-week', term: 'journal-text', item: 'list-check', payment: 'wallet2',
+        activity: 'calendar2-week', 'single-item': 'list-check', payment: 'wallet2',
         history: 'clock-history', 'delete-item': 'trash', 'cancel-payment': 'x-octagon', 'edit-proof': 'paperclip',
     };
     const variantOf = (kind: FormKind) => kind === 'delete-item' || kind === 'cancel-payment' ? 'delete' : form?.id ? 'edit' : kind === 'history' ? 'default' : 'add';
@@ -209,8 +201,8 @@ export default function CommitteeTab() {
         };
         return (
             <ActionGroup>
-                {canEdit && (!hasPayments || canPay) && <ActionButton action="edit" tooltip="Edit rincian" onClick={() => start('item', item)} />}
-                {canEdit && !hasPayments && <ActionButton action="delete" tooltip="Hapus rincian" onClick={() => start('delete-item', item)} />}
+                {canEdit && (!hasPayments || canPay) && <ActionButton action="edit" tooltip="Edit item" onClick={() => start('single-item', item)} />}
+                {canEdit && !hasPayments && <ActionButton action="delete" tooltip="Hapus item" onClick={() => start('delete-item', item)} />}
                 {canRecordAdvance && recipientRemaining(item) > 0 && <Button size="sm" variant="outline" onClick={() => pay('PJ_ADVANCE')}>Catat Bayar PJ</Button>}
                 {canPay && recipientRemaining(item) > 0 && <Button size="sm" variant="primary" onClick={() => pay('DIRECT')}>Bayar Langsung</Button>}
                 {canPay && outstandingAdvance(item) > 0 && <Button size="sm" variant="primary" onClick={() => pay('REIMBURSEMENT')}>Ganti Dana PJ</Button>}
@@ -240,7 +232,7 @@ export default function CommitteeTab() {
                 <StatCards
                     items={[
                         { label: 'Kegiatan', icon: 'calendar2-week', tone: 'blue', value: activities.length, sub: `${activities.filter(a => statusOf(a.total, a.paid) === 'Lunas').length} lunas` },
-                        { label: 'Total Anggaran', icon: 'wallet2', tone: 'violet', value: fmtRupiah(listStats.total), sub: 'Seluruh rincian biaya' },
+                        { label: 'Total Anggaran', icon: 'wallet2', tone: 'violet', value: fmtRupiah(listStats.total), sub: 'Seluruh item' },
                         { label: 'Dibayar Bendahara', icon: 'check2-circle', tone: 'green', value: fmtRupiah(listStats.paid), sub: `Sisa ${fmtRupiah(listStats.total - listStats.paid)}`, progress: percent(listStats.paid, listStats.total) },
                     ]}
                 />
@@ -301,7 +293,7 @@ export default function CommitteeTab() {
                 avatar={false}
             >
                 <Button size="sm" variant="outline" icon="history" onClick={() => start('history')}>Riwayat</Button>
-                {canEdit && <Button size="sm" variant="edit" icon="edit" onClick={() => start('activity', activity)}>Edit Kegiatan</Button>}
+                {canEdit && <ActionButton action="edit" tooltip="Edit kegiatan" onClick={() => start('activity', activity)} />}
             </DetailHeader>
 
             {alerts}
@@ -309,136 +301,53 @@ export default function CommitteeTab() {
 
             <StatCards
                 items={[
-                    { label: 'Total Kegiatan', icon: 'wallet2', tone: 'blue', value: fmtRupiah(total), sub: `${terms.length} item` },
+                    { label: 'Total Kegiatan', icon: 'wallet2', tone: 'blue', value: fmtRupiah(total), sub: `${items.length} item` },
                     { label: 'Dibayar Bendahara', icon: 'check2-circle', tone: 'green', value: fmtRupiah(paid), sub: `${percent(paid, total)}% dari total`, progress: percent(paid, total) },
                     { label: 'Sisa Pembayaran', icon: 'hourglass-split', tone: 'amber', value: fmtRupiah(total - paid), sub: total - paid > 0 ? 'Belum dibayarkan' : 'Tidak ada sisa' },
                 ]}
             />
 
             <div className="pay-card">
-                <div className="pay-card__head">
-                    <div className="pay-term-pick">
-                        <span className="pay-card__eyebrow">Item</span>
-                        {terms.length ? (
-                            <InlineSelect
-                                title="Pilih item kegiatan"
-                                minWidth="240px"
-                                value={termId}
-                                onChange={setTermId}
-                                options={terms.map((t: any) => ({ value: t.id, label: `${BULAN[t.month - 1]} ${t.year} · ${t.title}` }))}
-                            />
-                        ) : <strong>Belum ada item</strong>}
-                    </div>
-                    <div className="pay-actions">
-                        {term && canEdit && <Button size="sm" variant="outline" icon="edit" onClick={() => start('term', term)}>Edit Item</Button>}
-                        {canEdit && <Button size="sm" variant="primary" icon="add" onClick={() => start('term')}>Tambah Item</Button>}
-                    </div>
+                <div className="pay-section-head">
+                    <div><h4>Item</h4><span className="pay-cell-muted">{items.length} item · {fmtRupiah(total)} · dibayar bendahara {fmtRupiah(paid)}</span></div>
+                    {canEdit && <Button size="sm" variant="primary" icon="add" onClick={() => start('single-item')}>Tambah Item</Button>}
                 </div>
-
-                {!term ? (
-                    <EmptyState icon="journal-plus" title="Belum ada item">
-                        {canEdit ? 'Tambahkan item pertama untuk mengisi rincian ampra.' : 'PJ kegiatan belum menambahkan item.'}
-                    </EmptyState>
-                ) : (
-                    <>
-                        <div className="pay-ampra">
-                            <span className="pay-ampra__label"><i className="bi bi-paperclip" /> Lampiran ampra</span>
-                            <span className="pay-ampra__files">
-                                {(term.attachments || []).map((a: Attachment, i: number) => isViewable(a.url) ? (
-                                    <button key={i} type="button" className="pay-file" onClick={() => setPreview({ url: a.url, title: a.name })}>
-                                        <i className="bi bi-file-earmark" /> {a.name}
-                                    </button>
-                                ) : (
-                                    <a key={i} className="pay-file" href={a.url} target="_blank" rel="noopener noreferrer">
-                                        <i className="bi bi-file-earmark-arrow-down" /> {a.name}
-                                    </a>
-                                ))}
-                                {!term.attachments?.length && <span className="pay-cell-muted">Belum ada lampiran.</span>}
-                            </span>
-                        </div>
-
-                        <div className="pay-section-head">
-                            <div>
-                                <h4>Rincian Biaya</h4>
-                                <span className="pay-cell-muted">{items.length} rincian · {fmtRupiah(termTotal)} · dibayar bendahara {fmtRupiah(termPaid)}</span>
-                            </div>
-                            {canEdit && <Button size="sm" variant="outline" icon="add" onClick={() => start('item')}>Tambah Rincian</Button>}
-                        </div>
-
-                        {items.length === 0 ? (
-                            <EmptyState icon="list-check" title="Belum ada rincian biaya">Tambahkan rincian biaya untuk item ini.</EmptyState>
-                        ) : (
-                            <div className="pay-table-wrap">
-                                <table className="pay-table">
-                                    <thead>
-                                        <tr>
-                                            <th>Uraian / Penerima</th>
-                                            <th>Jumlah</th>
-                                            <th className="pay-num">Harga Satuan</th>
-                                            <th className="pay-num">Subtotal</th>
-                                            <th className="pay-num">Dibayar PJ</th><th className="pay-num">Diganti ke PJ</th><th className="pay-num">Dibayar Bendahara</th>
-                                            <th>Status Bendahara</th>
-                                            <th className="pay-col-action">Aksi</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {items.map((item: any) => {
-                                            const st = statusOf(item.amount, item.paid);
-                                            return (
-                                                <tr key={item.id}>
-                                                    <td>
-                                                        <div className="pay-cell-stack">
-                                                            <span className="pay-cell-strong">{item.description}</span>
-                                                            <span className="pay-cell-muted">{item.recipient || '—'}</span>
-                                                        </div>
-                                                    </td>
-                                                    <td className="pay-nowrap">{Number(item.quantity)} {item.unit}</td>
-                                                    <td className="pay-num">{fmtRupiah(item.unit_price)}</td>
-                                                    <td className="pay-num pay-amount">{fmtRupiah(item.amount)}</td>
-                                                    <td className="pay-num">{fmtRupiah(item.advanced || 0)}</td><td className="pay-num">{fmtRupiah(item.reimbursed || 0)}</td><td className="pay-num">{fmtRupiah(item.paid)}</td>
-                                                    <td><StatusBadge tone={toneOf(st)}>{st}</StatusBadge></td>
-                                                    <td className="pay-col-action">{itemActions(item)}</td>
-                                                </tr>
-                                            );
-                                        })}
-                                    </tbody>
-                                </table>
-                            </div>
-                        )}
-
-                        <div className="pay-section-head">
-                            <div>
-                                <h4>Riwayat Pembayaran Item</h4>
-                                <span className="pay-cell-muted">{termPayments.length} catatan pembayaran</span>
-                            </div>
-                        </div>
-                        {termPayments.length === 0 ? (
-                            <EmptyState icon="receipt" title="Belum ada pembayaran">Pembayaran PJ dan bendahara akan muncul di sini.</EmptyState>
-                        ) : (
-                            <div className="pay-table-wrap">
-                                <table className="pay-table" aria-label="Riwayat pembayaran item">
-                                    <thead><tr><th>Tanggal</th><th>Rincian</th><th>Alur / Rekening Tujuan</th><th className="pay-num">Nominal</th><th>Lampiran</th><th>Catatan / Pencatat</th><th>Status</th><th>Aksi</th></tr></thead>
-                                    <tbody>{termPayments.map((p: any) => {
-                                        const item = items.find((i: any) => i.id === p.item_id);
-                                        return <tr key={p.id}>
-                                            <td>{fmtTanggal(day(p.paid_on))}</td><td>{item?.description}</td>
-                                            <td><div className="pay-cell-stack"><strong>{flowLabel(p.flow)}</strong><span>{p.destination_account || '—'}</span></div></td>
-                                            <td className="pay-num">{fmtRupiah(p.amount)}</td>
-                                            <td><div className="pay-cell-stack">{fileLinks(p.attachments?.length ? p.attachments : [{ name: 'Bukti transfer', url: p.proof_url }])}</div></td>
-                                            <td><div className="pay-cell-stack"><span>{p.note}</span><span className="pay-cell-muted">{p.actor_name}</span>{p.void_reason && <span>Alasan pembatalan: {p.void_reason}</span>}</div></td>
-                                            <td><StatusBadge tone={p.voided_at ? 'void' : 'paid'}>{p.voided_at ? 'Dibatalkan' : 'Tercatat'}</StatusBadge></td>
-                                            <td>{!p.voided_at && (canPay || (canRecordAdvance && p.flow === 'PJ_ADVANCE' && p.actor_id === ownerId)) && (
-                                                <ActionGroup>
-                                                <ActionButton action="edit" tooltip="Edit bukti pembayaran" onClick={() => start('edit-proof', { ...p, itemId: p.item_id, revision: item?.revision, attachments: p.attachments?.length ? p.attachments : [{ name: 'Bukti transfer', url: p.proof_url }] })} />
-                                                <ActionButton action="reject" tooltip="Batalkan pembayaran" onClick={() => start('cancel-payment', { ...p, itemId: p.item_id, revision: item?.revision })} />
-                                                </ActionGroup>
-                                            )}</td>
-                                        </tr>;
-                                    })}</tbody>
-                                </table>
-                            </div>
-                        )}
-                    </>
+                {items.length === 0 ? <EmptyState icon="list-check" title="Belum ada item">Tambahkan item beserta harganya.</EmptyState> : (
+                    <div className="pay-table-wrap"><table className="pay-table" aria-label="Item pengajuan komite">
+                        <thead><tr><th>Periode</th><th>Item / Penerima</th><th>Jumlah</th><th className="pay-num">Harga Satuan</th><th className="pay-num">Total</th><th>Lampiran Item</th><th className="pay-num">Dibayar PJ</th><th className="pay-num">Diganti ke PJ</th><th className="pay-num">Dibayar Bendahara</th><th>Status Bendahara</th><th>Aksi</th></tr></thead>
+                        <tbody>{items.map(item => {
+                            const st = statusOf(item.amount, item.paid);
+                            return <tr key={item.id}>
+                                <td>{BULAN[item.month - 1]} {item.year}</td>
+                                <td><div className="pay-cell-stack"><strong>{item.description}</strong><span className="pay-cell-muted">{item.recipient || '—'}</span></div></td>
+                                <td>{Number(item.quantity)} {item.unit}</td><td className="pay-num">{fmtRupiah(item.unit_price)}</td><td className="pay-num">{fmtRupiah(item.amount)}</td>
+                                <td><div className="pay-cell-stack">{fileLinks(item.attachments || [])}</div></td>
+                                <td className="pay-num">{fmtRupiah(item.advanced || 0)}</td><td className="pay-num">{fmtRupiah(item.reimbursed || 0)}</td><td className="pay-num">{fmtRupiah(item.paid)}</td>
+                                <td><StatusBadge tone={Number(item.amount) === 0 ? 'unpaid' : toneOf(st)}>{Number(item.amount) === 0 ? 'Perlu Harga' : st}</StatusBadge></td><td>{itemActions(item)}</td>
+                            </tr>;
+                        })}</tbody>
+                    </table></div>
+                )}
+                <div className="pay-section-head"><div><h4>Riwayat Pembayaran</h4><span className="pay-cell-muted">{itemPayments.length} catatan pembayaran</span></div></div>
+                {itemPayments.length === 0 ? <EmptyState icon="receipt" title="Belum ada pembayaran">Pembayaran PJ dan bendahara akan muncul di sini.</EmptyState> : (
+                    <div className="pay-table-wrap"><table className="pay-table" aria-label="Riwayat pembayaran item">
+                        <thead><tr><th>Tanggal</th><th>Item</th><th>Alur / Rekening Tujuan</th><th className="pay-num">Nominal</th><th>Lampiran</th><th>Catatan / Pencatat</th><th>Status</th><th>Aksi</th></tr></thead>
+                        <tbody>{itemPayments.map((payment: any) => {
+                            const item = items.find((i: any) => i.id === payment.item_id);
+                            return <tr key={payment.id}>
+                                <td>{fmtTanggal(day(payment.paid_on))}</td><td>{item?.description}</td>
+                                <td><div className="pay-cell-stack"><strong>{flowLabel(payment.flow)}</strong><span>{payment.destination_account || '—'}</span></div></td>
+                                <td className="pay-num">{fmtRupiah(payment.amount)}</td>
+                                <td><div className="pay-cell-stack">{fileLinks(payment.attachments?.length ? payment.attachments : [{ name: 'Bukti transfer', url: payment.proof_url }])}</div></td>
+                                <td><div className="pay-cell-stack"><span>{payment.note}</span><span className="pay-cell-muted">{payment.actor_name}</span>{payment.void_reason && <span>Alasan pembatalan: {payment.void_reason}</span>}</div></td>
+                                <td><StatusBadge tone={payment.voided_at ? 'void' : 'paid'}>{payment.voided_at ? 'Dibatalkan' : 'Tercatat'}</StatusBadge></td>
+                                <td>{!payment.voided_at && (canPay || (canRecordAdvance && payment.flow === 'PJ_ADVANCE' && payment.actor_id === ownerId)) && <ActionGroup>
+                                    <ActionButton action="edit" tooltip="Edit bukti pembayaran" onClick={() => start('edit-proof', { ...payment, term_id: item?.term_id, itemId: payment.item_id, revision: item?.revision, attachments: payment.attachments?.length ? payment.attachments : [{ name: 'Bukti transfer', url: payment.proof_url }] })} />
+                                    <ActionButton action="reject" tooltip="Batalkan pembayaran" onClick={() => start('cancel-payment', { ...payment, term_id: item?.term_id, itemId: payment.item_id, revision: item?.revision })} />
+                                </ActionGroup>}</td>
+                            </tr>;
+                        })}</tbody>
+                    </table></div>
                 )}
             </div>
 
@@ -508,84 +417,24 @@ export default function CommitteeTab() {
                         )}
                     </>
                 );
-            case 'term':
-                return (
-                    <>
-                        <ModalField label="Nama item" required>
-                            <input required maxLength={300} placeholder="Contoh: Honor tentor" value={form.title} onChange={e => change('title', e.target.value)} />
-                        </ModalField>
-                        <div className="pay-form-row">
-                            <ModalField label="Bulan" required>
-                                <InlineSelect title="Bulan item" value={String(form.month)} onChange={v => change('month', Number(v))} options={BULAN.map((label, i) => ({ value: String(i + 1), label }))} />
-                            </ModalField>
-                            <ModalField label="Tahun" required>
-                                <input required type="number" min={2000} max={2200} value={form.year} onChange={e => change('year', Number(e.target.value))} />
-                            </ModalField>
-                        </div>
-                        {!form.id && terms.length > 0 && (
-                            <ModalField label="Salin rincian dari">
-                                <InlineSelect
-                                    title="Salin rincian item"
-                                    value={form.copyFrom || ''}
-                                    onChange={v => change('copyFrom', v)}
-                                    options={[{ value: '', label: 'Mulai dengan rincian kosong' }, ...terms.map((t: any) => ({ value: t.id, label: `${BULAN[t.month - 1]} ${t.year} · ${t.title}` }))]}
-                                />
-                            </ModalField>
-                        )}
-                        <ModalField label="Lampiran ampra" hint="PDF, gambar, atau Excel. Maksimal 10 berkas, 15 MB per berkas.">
-                            <ModalFileInput multiple files={form.files || []} onPick={files => change('files', files)} accept=".pdf,.jpg,.jpeg,.png,.webp,.xls,.xlsx" disabled={busy} />
-                        </ModalField>
-                        {(form.attachments || []).length > 0 && (
-                            <ul className="pay-attach">
-                                {form.attachments.map((a: Attachment, i: number) => (
-                                    <li key={i}>
-                                        <i className="bi bi-file-earmark-check" />
-                                        <span title={a.name}>{a.name}</span>
-                                        <button type="button" onClick={() => change('attachments', form.attachments.filter((_: any, j: number) => j !== i))} aria-label={`Lepas ${a.name}`}>
-                                            <i className="bi bi-x-lg" />
-                                        </button>
-                                    </li>
-                                ))}
-                            </ul>
-                        )}
-                        {form.id && termPayments.some((p: any) => !p.voided_at) && canPay && (
-                            <ModalField label="Alasan koreksi" required>
-                                <input required value={form.reason} onChange={e => change('reason', e.target.value)} />
-                            </ModalField>
-                        )}
-                    </>
-                );
-            case 'item':
-                return (
-                    <>
-                        <ModalField label="Uraian biaya" required>
-                            <input required maxLength={300} value={form.description} onChange={e => change('description', e.target.value)} placeholder="Contoh: Konsumsi peserta" />
-                        </ModalField>
-                        <ModalField label="Nama penerima / penyedia">
-                            <input maxLength={200} value={form.recipient} onChange={e => change('recipient', e.target.value)} />
-                        </ModalField>
-                        <div className="pay-form-row pay-form-row--3">
-                            <ModalField label="Jumlah" required>
-                                <input required type="number" step="0.01" min="0.01" value={form.quantity} onChange={e => change('quantity', e.target.value)} />
-                            </ModalField>
-                            <ModalField label="Satuan" required>
-                                <input required maxLength={40} value={form.unit} onChange={e => change('unit', e.target.value)} />
-                            </ModalField>
-                            <ModalField label="Harga satuan (Rp)" required>
-                                <input required type="number" step="1" min="1" value={form.unit_price} onChange={e => change('unit_price', e.target.value)} />
-                            </ModalField>
-                        </div>
-                        <div className="pay-subtotal">
-                            <span>Subtotal</span>
-                            <strong>{fmtRupiah(Math.round(Math.round(Number(form.quantity) * 100) * Number(form.unit_price) / 100))}</strong>
-                        </div>
-                        {(Number(form.paid) + Number(form.advanced || 0)) > 0 && (
-                            <ModalField label="Alasan koreksi" required hint="Riwayat sebelum dan sesudah perubahan disimpan.">
-                                <input required value={form.reason} onChange={e => change('reason', e.target.value)} />
-                            </ModalField>
-                        )}
-                    </>
-                );
+            case 'single-item':
+                return <>
+                    <ModalField label="Nama item" required><input required maxLength={300} value={form.description} onChange={e => change('description', e.target.value)} placeholder="Contoh: Honor tentor" /></ModalField>
+                    <div className="pay-form-row">
+                        <ModalField label="Bulan" required><InlineSelect title="Bulan item" value={String(form.month)} onChange={v => change('month', Number(v))} options={BULAN.map((label, i) => ({ value: String(i + 1), label }))} /></ModalField>
+                        <ModalField label="Tahun" required><input required type="number" min={2000} max={2200} value={form.year} onChange={e => change('year', Number(e.target.value))} /></ModalField>
+                    </div>
+                    <ModalField label="Nama penerima / penyedia"><input maxLength={200} value={form.recipient} onChange={e => change('recipient', e.target.value)} /></ModalField>
+                    <div className="pay-form-row pay-form-row--3">
+                        <ModalField label="Jumlah" required><input required type="number" step="0.01" min="0.01" value={form.quantity} onChange={e => change('quantity', e.target.value)} /></ModalField>
+                        <ModalField label="Satuan" required><input required maxLength={40} value={form.unit} onChange={e => change('unit', e.target.value)} /></ModalField>
+                        <ModalField label="Harga satuan (Rp)" required><input required type="number" step="1" min="1" value={form.unit_price} onChange={e => change('unit_price', e.target.value)} /></ModalField>
+                    </div>
+                    <div className="pay-subtotal"><span>Total item</span><strong>{fmtRupiah(Math.round(Math.round(Number(form.quantity) * 100) * Number(form.unit_price) / 100))}</strong></div>
+                    <ModalField label="Lampiran item" hint="PDF, gambar, atau Excel. Maksimal 10 berkas, 15 MB per berkas."><ModalFileInput multiple files={form.files || []} onPick={files => change('files', files)} accept=".pdf,.jpg,.jpeg,.png,.webp,.xls,.xlsx" disabled={busy} /></ModalField>
+                    {(form.attachments || []).length > 0 && <ul className="pay-attach">{form.attachments.map((a: Attachment, i: number) => <li key={i}><span title={a.name}>{a.name}</span><button type="button" aria-label={`Lepas ${a.name}`} onClick={() => change('attachments', form.attachments.filter((_: any, j: number) => j !== i))}><i className="bi bi-x-lg" /></button></li>)}</ul>}
+                    {(Number(form.paid) + Number(form.advanced || 0)) > 0 && <ModalField label="Alasan koreksi" required><input required value={form.reason} onChange={e => change('reason', e.target.value)} /></ModalField>}
+                </>;
             case 'payment':
                 return (
                     <>
@@ -595,7 +444,7 @@ export default function CommitteeTab() {
                         </ModalField>
                         <div className="pay-summary">
                             <div className="pay-summary__who">
-                                <span className="pay-summary__label">Rincian</span>
+                                <span className="pay-summary__label">Item</span>
                                 <strong>{form.description}</strong>
                                 <span className="pay-summary__detail">{form.recipient || 'Tanpa penerima'}</span>
                             </div>
@@ -632,7 +481,7 @@ export default function CommitteeTab() {
                     </ModalField>
                 </>;
             case 'delete-item':
-                return <p className="pay-confirm">Hapus rincian <strong>“{form.description}”</strong> dari item ini? Tindakan ini tidak dapat dibatalkan.</p>;
+                return <p className="pay-confirm">Hapus item <strong>“{form.description}”</strong>? Tindakan ini tidak dapat dibatalkan.</p>;
             case 'cancel-payment':
                 return (
                     <>

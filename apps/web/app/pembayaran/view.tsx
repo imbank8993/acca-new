@@ -696,8 +696,8 @@ export default function PembayaranPage({ user: propUser, komiteOnly = false }: P
             {isBendahara && !row.paid && row.onPay && (
                 <ActionButton action="approve" tooltip="Tandai Dibayar" disabled={busy} onClick={row.onPay} />
             )}
-            {isBendahara && row.paid && row.onEditProof && <Button size="sm" variant="outline" icon="edit" onClick={row.onEditProof}>{row.proofs.length ? 'Edit Bukti' : 'Unggah Bukti'}</Button>}
-            {isBendahara && row.paid && (row.sessions?.length || 0) > 1 && <Button size="sm" variant="outline" icon="edit" onClick={() => setExpanded(old => ({ ...old, [row.key]: !old[row.key] }))}>Unggah / Edit Bukti</Button>}
+            {isBendahara && row.paid && row.onEditProof && <ActionButton action={row.proofs.length ? 'edit' : 'file'} tooltip={row.proofs.length ? 'Edit bukti' : 'Unggah bukti'} onClick={row.onEditProof} />}
+            {isBendahara && row.paid && (row.sessions?.length || 0) > 1 && <ActionButton action="file" tooltip="Kelola bukti setiap sesi" onClick={() => setExpanded(old => ({ ...old, [row.key]: !old[row.key] }))} />}
             {isBendahara && row.paid && row.onCancel && (
                 <ActionButton action="reject" tooltip="Batalkan Pembayaran" disabled={busy} onClick={row.onCancel} />
             )}
@@ -725,7 +725,7 @@ export default function PembayaranPage({ user: propUser, komiteOnly = false }: P
                             ))}
                             {isBendahara && slot.status === 'paid' && (
                                 <>
-                                <Button size="sm" variant="outline" onClick={() => editKlinikProof(slot)}>{proofs.length ? 'Edit Bukti' : 'Unggah Bukti'}</Button>
+                                <ActionButton action={proofs.length ? 'edit' : 'file'} size="sm" tooltip={proofs.length ? 'Edit bukti' : 'Unggah bukti'} onClick={() => editKlinikProof(slot)} />
                                 <ActionButton action="reject" size="sm" tooltip="Batalkan pembayaran sesi ini" disabled={busy} onClick={() => cancelKlinik(slot)} />
                                 </>
                             )}
@@ -994,7 +994,7 @@ export default function PembayaranPage({ user: propUser, komiteOnly = false }: P
                             {isBendahara && !sheetRow.paid && sheetRow.onPay && (
                                 <Button variant="primary" leftIcon={<i className="bi bi-check2-circle" />} disabled={busy} onClick={() => { setSheetKey(null); sheetRow.onPay!(); }}>Tandai Dibayar</Button>
                             )}
-                            {isBendahara && sheetRow.paid && sheetRow.onEditProof && <Button variant="outline" icon="edit" onClick={sheetRow.onEditProof}>{sheetRow.proofs.length ? 'Edit Bukti' : 'Unggah Bukti'}</Button>}
+                            {isBendahara && sheetRow.paid && sheetRow.onEditProof && <ActionButton action={sheetRow.proofs.length ? 'edit' : 'file'} tooltip={sheetRow.proofs.length ? 'Edit bukti' : 'Unggah bukti'} onClick={sheetRow.onEditProof} />}
                             {isBendahara && sheetRow.paid && sheetRow.onCancel && (
                                 <Button variant="danger" leftIcon={<i className="bi bi-x-circle" />} disabled={busy} onClick={() => { setSheetKey(null); sheetRow.onCancel!(); }}>Batalkan</Button>
                             )}

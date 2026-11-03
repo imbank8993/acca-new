@@ -133,3 +133,38 @@ test('routine proof replacement preserves paid dates and historical amounts for 
   row.status='finished';row.dibayarkan=false;await assert.rejects(updatePaymentProof(db,admin,body));
  }
 });
+
+test('one priced item owns its attachments and payments without a separate detail row',async()=>{
+ const {db,service:s,sql}=await fixture();try{
+  const {id:activityId}=await s.save(pj,{kind:'activity',title:'Pelatihan',description:'',start_date:'2026-11-01',end_date:'2026-11-30'});
+  const files=[{name:'Ampra.pdf',url:'https://example.com/ampra.pdf'},{name:'Kuitansi.png',url:'https://example.com/kuitansi.png'}];
+  const input={kind:'single-item',activityId,description:'Honor tentor',recipient:'Tentor A',month:11,year:2026,quantity:2,unit:'orang',unit_price:50000,attachments:files};
+  const first=await s.save(pj,input),second=await s.save(pj,{...input,description:'Konsumsi',quantity:1,unit:'paket',unit_price:25000,attachments:[]});
+  let detail=(await s.detail(pj,activityId)).data;
+  assert.equal(detail.items.length,2);assert.equal(detail.terms.length,2);assert.equal(detail.items.find(i=>i.id===first.id).amount,'100000');
+  assert.equal(detail.items.find(i=>i.id===first.id).attachments.length,2);
+  assert.equal(Number((await s.list(pj)).data[0].total),125000);
+  await assert.rejects(s.save(pj,{...input,month:12}));
+  const current=detail.items.find(i=>i.id===first.id);
+  await s.save(pj,{...input,id:first.id,revision:current.revision,unit_price:60000,attachments:[files[1]]});
+  detail=(await s.detail(pj,activityId)).data;const edited=detail.items.find(i=>i.id===first.id);
+  assert.equal(edited.amount,'120000');assert.equal(edited.attachments[0].name,files[1].name);assert.equal(edited.attachments[0].url,files[1].url);
+  await db.exec(sql);assert.equal((await s.detail(pj,activityId)).data.items.find(i=>i.id===first.id).attachments[0].url,files[1].url);
+  await s.save(pj,{kind:'delete-item',activityId,termId:edited.term_id,id:first.id,revision:edited.revision});
+  assert.equal((await s.detail(pj,activityId)).data.items.length,1);
+  assert.equal((await s.list(pj)).data[0].total,'25000');
+  assert(second.id);
+ }finally{await db.close()}
+});
+
+test('legacy empty item stays visible as a draft until its price is entered',async()=>{
+ const {db,service:s,sql}=await fixture();try{
+  const {id:activityId}=await s.save(pj,{kind:'activity',title:'Pelatihan',description:'',start_date:'2026-11-01',end_date:'2026-11-30'});
+  const {id:termId}=await s.save(pj,{kind:'term',activityId,title:'Honor tentor',month:11,year:2026,attachments:[{name:'Ampra.pdf',url:'https://example.com/ampra.pdf'}]});
+  await db.exec(sql);let detail=(await s.detail(pj,activityId)).data;
+  const draft=detail.items.find(i=>i.term_id===termId);assert(draft);assert.equal(Number(draft.amount),0);assert.equal(draft.description,'Honor tentor');assert.equal(draft.attachments[0].name,'Ampra.pdf');
+  await db.exec(sql);detail=(await s.detail(pj,activityId)).data;assert.equal(detail.items.length,1);
+  await s.save(pj,{kind:'single-item',activityId,id:draft.id,revision:draft.revision,description:'Honor tentor',recipient:'Tentor',month:11,year:2026,quantity:1,unit:'orang',unit_price:75000,attachments:draft.attachments});
+  assert.equal(Number((await s.detail(pj,activityId)).data.items[0].amount),75000);
+ }finally{await db.close()}
+});

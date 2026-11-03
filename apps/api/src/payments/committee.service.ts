@@ -47,7 +47,7 @@ export class CommitteeService {
   async detail(user: any, activityId: string) {
     const activity = await this.activity(this.prisma,user,activityId);
     const terms: any[] = await this.prisma.$queryRaw`SELECT * FROM committee_terms WHERE activity_id=${activityId}::uuid ORDER BY year,month,created_at`;
-    const items: any[] = await this.prisma.$queryRaw`SELECT i.*,i.quantity::text AS quantity,i.unit_price::text AS unit_price,i.amount::text AS amount,coalesce((SELECT sum(p.amount) FROM committee_payments p WHERE p.item_id=i.id AND p.voided_at IS NULL AND p.flow<>'PJ_ADVANCE'),0)::text AS paid,coalesce((SELECT sum(p.amount) FROM committee_payments p WHERE p.item_id=i.id AND p.voided_at IS NULL AND p.flow='PJ_ADVANCE'),0)::text AS advanced,coalesce((SELECT sum(p.amount) FROM committee_payments p WHERE p.item_id=i.id AND p.voided_at IS NULL AND p.flow='REIMBURSEMENT'),0)::text AS reimbursed FROM committee_items i JOIN committee_terms t ON t.id=i.term_id WHERE t.activity_id=${activityId}::uuid ORDER BY i.created_at`;
+    const items: any[] = await this.prisma.$queryRaw`SELECT i.*,t.month,t.year,i.quantity::text AS quantity,i.unit_price::text AS unit_price,i.amount::text AS amount,coalesce((SELECT sum(p.amount) FROM committee_payments p WHERE p.item_id=i.id AND p.voided_at IS NULL AND p.flow<>'PJ_ADVANCE'),0)::text AS paid,coalesce((SELECT sum(p.amount) FROM committee_payments p WHERE p.item_id=i.id AND p.voided_at IS NULL AND p.flow='PJ_ADVANCE'),0)::text AS advanced,coalesce((SELECT sum(p.amount) FROM committee_payments p WHERE p.item_id=i.id AND p.voided_at IS NULL AND p.flow='REIMBURSEMENT'),0)::text AS reimbursed FROM committee_items i JOIN committee_terms t ON t.id=i.term_id WHERE t.activity_id=${activityId}::uuid ORDER BY i.created_at`;
     const payments: any[] = await this.prisma.$queryRaw`SELECT p.*,p.amount::text AS amount FROM committee_payments p JOIN committee_items i ON i.id=p.item_id JOIN committee_terms t ON t.id=i.term_id WHERE t.activity_id=${activityId}::uuid ORDER BY p.created_at DESC`;
     const history: any[] = await this.prisma.$queryRaw`SELECT id,action,reason,actor_name,created_at,snapshot FROM committee_history WHERE activity_id=${activityId}::uuid ORDER BY created_at DESC LIMIT 100`;
     return { ok: true, data: serialize({ activity,terms,items,payments,history }), canRecordAdvance: activity.owner_id === requireStaff(user), ownerId: requireStaff(user), canEdit: activity.owner_id === requireStaff(user) || isTreasurer(user), canPay: isTreasurer(user) };
@@ -55,7 +55,7 @@ export class CommitteeService {
   async save(user: any, body: any) {
     const owner = requireStaff(user);
     const kind = body.kind;
-    if (!['activity','term','item','payment','delete-item','cancel-payment','edit-proof'].includes(kind)) throw new BadRequestException('Tindakan tidak valid.');
+    if (!['activity','term','item','single-item','payment','delete-item','cancel-payment','edit-proof'].includes(kind)) throw new BadRequestException('Tindakan tidak valid.');
     if (kind==='payment' && body.flow!=='PJ_ADVANCE' && !isTreasurer(user)) throw new ForbiddenException('Hanya Bendahara Komite/Admin yang dapat mencatat pembayaran.');
     try {
       return await this.prisma.$transaction(async tx => {
@@ -85,6 +85,36 @@ export class CommitteeService {
         // One activity lock orders term edits, item corrections, and partial payments.
         await tx.$queryRaw`SELECT id FROM committee_activities WHERE id=${activityId}::uuid FOR UPDATE`;
         const reason=typeof body.reason==='string'?body.reason.trim().slice(0,1000):'';
+        if (kind==='single-item') {
+          const description=text(body.description,'Nama item'), recipient=text(body.recipient||'','Penerima',200,true);
+          const unit=text(body.unit||'paket','Satuan',40),qty=body.quantity,price=body.unit_price,month=body.month,year=body.year;
+          if (!Number.isInteger(month)||month<1||month>12||!Number.isInteger(year)||year<2000||year>2200) throw new BadRequestException('Bulan/tahun item tidak valid.');
+          const first=`${year}-${String(month).padStart(2,'0')}-01`,last=new Date(Date.UTC(year,month,0)).toISOString().slice(0,10);
+          if(first>new Date(activity.end_date).toISOString().slice(0,10)||last<new Date(activity.start_date).toISOString().slice(0,10)) throw new BadRequestException('Item harus berada dalam periode kegiatan.');
+          if(typeof qty!=='number'||!Number.isFinite(qty)||qty<=0||qty>1000000||Math.abs(qty*100-Math.round(qty*100))>0.00001||!Number.isSafeInteger(price)||price<=0||price>1000000000000||!Number.isSafeInteger(Math.round(qty*price))||qty*price>1000000000000) throw new BadRequestException('Jumlah/harga tidak valid.');
+          if(!Array.isArray(body.attachments)||body.attachments.length>10) throw new BadRequestException('Maksimal 10 lampiran item.');
+          const attachments=body.attachments.map((a:any)=>({name:text(a.name,'Nama lampiran',200),url:committeeFileUrl(a.url)}));
+          const itemId=body.id?id(body.id):randomUUID();
+          const old:any[]=body.id?await tx.$queryRaw`SELECT i.*,i.amount::text AS amount,t.activity_id,t.month,t.year,coalesce((SELECT sum(p.amount) FROM committee_payments p WHERE p.item_id=i.id AND p.voided_at IS NULL AND p.flow<>'PJ_ADVANCE'),0)::text AS paid,coalesce((SELECT sum(p.amount) FROM committee_payments p WHERE p.item_id=i.id AND p.voided_at IS NULL AND p.flow='PJ_ADVANCE'),0)::text AS advanced,coalesce((SELECT sum(p.amount) FROM committee_payments p WHERE p.item_id=i.id AND p.voided_at IS NULL AND p.flow='REIMBURSEMENT'),0)::text AS reimbursed FROM committee_items i JOIN committee_terms t ON t.id=i.term_id WHERE i.id=${itemId}::uuid AND t.activity_id=${activityId}::uuid FOR UPDATE`:[];
+          if(body.id){
+            if(!old.length||old[0].revision!==body.revision) throw new ConflictException('Item berubah. Muat ulang data.');
+            const active=Number(old[0].paid)+Number(old[0].advanced)-Number(old[0].reimbursed);
+            if(active&&(!isTreasurer(user)||!reason)) throw new ConflictException('Item yang sudah dibayar hanya dapat dikoreksi bendahara dengan alasan perubahan.');
+            if(Math.round(Math.round(qty*100)*price/100)<active) throw new ConflictException('Nominal item tidak boleh di bawah pembayaran aktif.');
+            if(old[0].month!==month||old[0].year!==year){
+              const siblings:any[]=await tx.$queryRaw`SELECT count(*)::int AS count FROM committee_items WHERE term_id=${old[0].term_id}::uuid`;
+              if(siblings[0].count>1) throw new ConflictException('Periode item lama yang berbagi kelompok tidak dapat diubah.');
+              await tx.$executeRaw`UPDATE committee_terms SET month=${month},year=${year},updated_at=now() WHERE id=${old[0].term_id}::uuid`;
+            }
+            await tx.$executeRaw`UPDATE committee_items SET description=${description},recipient=${recipient},quantity=${qty},unit=${unit},unit_price=${price},attachments=${JSON.stringify(attachments)}::jsonb,revision=revision+1,updated_at=now() WHERE id=${itemId}::uuid`;
+          } else {
+            const termId=randomUUID();
+            await tx.$executeRaw`INSERT INTO committee_terms(id,activity_id,title,month,year,attachments) VALUES (${termId}::uuid,${activityId}::uuid,${description},${month},${year},'[]'::jsonb)`;
+            await tx.$executeRaw`INSERT INTO committee_items(id,term_id,description,recipient,quantity,unit,unit_price,attachments,attachments_migrated) VALUES (${itemId}::uuid,${termId}::uuid,${description},${recipient},${qty},${unit},${price},${JSON.stringify(attachments)}::jsonb,true)`;
+          }
+          await this.audit(tx,user,activityId,body.id?'Item diperbarui':'Item dibuat',{before:old[0]||null,after:{id:itemId,description,recipient,quantity:qty,unit,unit_price:price,month,year,attachments}},reason);
+          return {ok:true,id:itemId};
+        }
         if (kind==='term') {
           const title=text(body.title,'Nama item'), month=body.month, year=body.year;
           if (!Number.isInteger(month)||month<1||month>12||!Number.isInteger(year)||year<2000||year>2200) throw new BadRequestException('Bulan/tahun item tidak valid.');

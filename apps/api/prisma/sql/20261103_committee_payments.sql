@@ -37,6 +37,18 @@ ALTER TABLE public.committee_terms DROP CONSTRAINT IF EXISTS committee_terms_act
 ALTER TABLE public.committee_payments ADD COLUMN IF NOT EXISTS flow text NOT NULL DEFAULT 'DIRECT' CHECK (flow IN ('DIRECT','PJ_ADVANCE','REIMBURSEMENT'));
 ALTER TABLE public.committee_payments ADD COLUMN IF NOT EXISTS attachments jsonb NOT NULL DEFAULT '[]';
 ALTER TABLE public.committee_payments ADD COLUMN IF NOT EXISTS destination_account text NOT NULL DEFAULT '';
+ALTER TABLE public.committee_items ADD COLUMN IF NOT EXISTS attachments jsonb NOT NULL DEFAULT '[]';
+ALTER TABLE public.committee_items ADD COLUMN IF NOT EXISTS attachments_migrated boolean NOT NULL DEFAULT false;
+UPDATE public.committee_items i SET attachments=t.attachments, attachments_migrated=true
+FROM public.committee_terms t WHERE i.term_id=t.id AND NOT i.attachments_migrated;
+-- An old item without a price remains visible as a draft that can be priced.
+ALTER TABLE public.committee_items DROP CONSTRAINT IF EXISTS committee_items_unit_price_check;
+ALTER TABLE public.committee_items ADD CONSTRAINT committee_items_unit_price_check CHECK(unit_price>=0);
+ALTER TABLE public.committee_terms ADD COLUMN IF NOT EXISTS item_migrated boolean NOT NULL DEFAULT false;
+INSERT INTO public.committee_items(id,term_id,description,recipient,quantity,unit,unit_price,attachments,attachments_migrated)
+SELECT gen_random_uuid(),t.id,t.title,'',1,'paket',0,t.attachments,true FROM public.committee_terms t
+WHERE NOT t.item_migrated AND NOT EXISTS (SELECT 1 FROM public.committee_items i WHERE i.term_id=t.id);
+UPDATE public.committee_terms SET item_migrated=true WHERE NOT item_migrated;
 CREATE INDEX IF NOT EXISTS committee_activity_owner ON public.committee_activities(owner_id);
 CREATE INDEX IF NOT EXISTS committee_term_activity ON public.committee_terms(activity_id);
 CREATE INDEX IF NOT EXISTS committee_item_term ON public.committee_items(term_id);
