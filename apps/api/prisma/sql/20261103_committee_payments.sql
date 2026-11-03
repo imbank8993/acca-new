@@ -32,6 +32,11 @@ CREATE TABLE IF NOT EXISTS public.committee_history (
 ALTER TABLE public.committee_payments ADD COLUMN IF NOT EXISTS voided_at timestamptz;
 ALTER TABLE public.committee_payments ADD COLUMN IF NOT EXISTS voided_by uuid;
 ALTER TABLE public.committee_payments ADD COLUMN IF NOT EXISTS void_reason text;
+-- Existing payments remain direct treasury payments. Items may share a month.
+ALTER TABLE public.committee_terms DROP CONSTRAINT IF EXISTS committee_terms_activity_id_month_year_key;
+ALTER TABLE public.committee_payments ADD COLUMN IF NOT EXISTS flow text NOT NULL DEFAULT 'DIRECT' CHECK (flow IN ('DIRECT','PJ_ADVANCE','REIMBURSEMENT'));
+ALTER TABLE public.committee_payments ADD COLUMN IF NOT EXISTS attachments jsonb NOT NULL DEFAULT '[]';
+ALTER TABLE public.committee_payments ADD COLUMN IF NOT EXISTS destination_account text NOT NULL DEFAULT '';
 CREATE INDEX IF NOT EXISTS committee_activity_owner ON public.committee_activities(owner_id);
 CREATE INDEX IF NOT EXISTS committee_term_activity ON public.committee_terms(activity_id);
 CREATE INDEX IF NOT EXISTS committee_item_term ON public.committee_items(term_id);

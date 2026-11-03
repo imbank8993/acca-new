@@ -229,7 +229,7 @@ export default function BulkPaymentModal({ initialKind, initialMonth, initialYea
                 </div>
                 <p className="bp-hint">Bukti dicocokkan dengan tagihan yang sudah disahkan dan belum dibayar pada periode ini. Gambar dibaca secara lokal di server ACCA.</p>
                 {!loading && configured && !candidates.length && (
-                    <p className="bp-hint bp-hint--warn">Tidak ada tagihan siap bayar dengan nominal valid untuk pilihan ini. Periksa persetujuan laporan dan tarif honor.</p>
+                    <p className="bp-hint bp-hint--warn">Tidak ada tagihan siap bayar dengan nominal valid untuk pilihan ini. Periksa persetujuan {kind === 'GURU_ASUH' ? 'kegiatan' : 'laporan'} dan tarif honor.</p>
                 )}
 
                 {rows.length > 0 && (

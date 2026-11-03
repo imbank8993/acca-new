@@ -99,7 +99,9 @@ export interface PayTarget {
     recipient: string;
     /** Baris rincian di bawah nama, mis. "Oktober 2026 · 4 laporan". */
     detail: ReactNode;
-    amount: number;
+    amount: number | null;
+    editProof?: boolean;
+    initialNote?: { text: string; url: string };
     /** Rincian perhitungan nominal (opsional), mis. "3 × Rp 50.000". */
     amountNote?: ReactNode;
     /** Simpan pembayaran. `note.url` sudah berisi tautan bukti bila ada. */
@@ -109,7 +111,7 @@ export interface PayTarget {
 const MAX_PROOF_BYTES = 25 * 1024 * 1024;
 
 export function MarkPaidModal({ target, onClose }: { target: PayTarget; onClose: () => void }) {
-    const [text, setText] = useState('');
+    const [text, setText] = useState(target.initialNote?.text || '');
     const [files, setFiles] = useState<File[]>([]);
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState('');
@@ -130,7 +132,7 @@ export function MarkPaidModal({ target, onClose }: { target: PayTarget; onClose:
         setBusy(true);
         setError('');
         try {
-            let url = '';
+            let url = target.initialNote?.url || '';
             if (files[0]) {
                 const body = new FormData();
                 body.append('file', files[0]);
@@ -139,7 +141,9 @@ export function MarkPaidModal({ target, onClose }: { target: PayTarget; onClose:
                 const data = await res.json();
                 if (!res.ok || !data.ok) throw new Error(data.error || 'Gagal mengunggah bukti pembayaran.');
                 url = data.publicUrl || data.url || data.file_url || '';
+                if (!url) throw new Error('Tautan bukti belum tersedia. Coba unggah kembali.');
             }
+            if (target.editProof && !url) throw new Error('Pilih bukti pembayaran terlebih dahulu.');
             await target.submit({ text: text.trim(), url });
             onClose();
         } catch (err: any) {
@@ -152,8 +156,8 @@ export function MarkPaidModal({ target, onClose }: { target: PayTarget; onClose:
     return (
         <Modal
             size="md"
-            variant="add"
-            title="Tandai Sudah Dibayar"
+            variant={target.editProof ? "edit" : "add"}
+            title={target.editProof ? "Unggah / Edit Bukti Pembayaran" : "Tandai Sudah Dibayar"}
             subtitle="Lampirkan bukti transfer agar tercetak di rekapan."
             icon="wallet2"
             labelledBy="pay-mark-title"
@@ -170,14 +174,15 @@ export function MarkPaidModal({ target, onClose }: { target: PayTarget; onClose:
                         </div>
                         <div className="pay-summary__amount">
                             <span className="pay-summary__label">Nominal</span>
-                            <strong>{fmtRupiah(target.amount)}</strong>
+                            <strong>{target.amount === null ? 'Nominal belum tercatat' : fmtRupiah(target.amount)}</strong>
                             {target.amountNote && <span className="pay-summary__detail">{target.amountNote}</span>}
                         </div>
                     </div>
 
                     {error && <div className="pay-alert pay-alert--error" role="alert"><i className="bi bi-exclamation-circle" />{error}</div>}
 
-                    <ModalField label="Bukti pembayaran" hint="Opsional · gambar atau PDF, maksimal 25 MB.">
+                    <ModalField label="Bukti pembayaran" required={target.editProof} hint={target.editProof ? "Pilih file baru untuk mengganti bukti. Gambar atau PDF, maksimal 25 MB." : "Opsional · gambar atau PDF, maksimal 25 MB."}>
+                        {target.initialNote?.url && <span className="pay-cell-muted">Bukti sebelumnya tersimpan. Unggah file baru untuk menggantinya.</span>}
                         <ModalFileInput files={files} onPick={pick} accept="image/*,.pdf" disabled={busy} placeholder="Pilih bukti transfer atau jatuhkan di sini" />
                     </ModalField>
                     <ModalField label="Catatan" hint="Opsional · mis. nomor referensi transfer.">
@@ -186,7 +191,7 @@ export function MarkPaidModal({ target, onClose }: { target: PayTarget; onClose:
                 </ModalBody>
                 <ModalFooter>
                     <Button type="button" variant="cancel" disabled={busy} onClick={onClose}>Batal</Button>
-                    <Button type="submit" variant="primary" isLoading={busy} leftIcon={<i className="bi bi-check2-circle" />}>Tandai Dibayar</Button>
+                    <Button type="submit" variant="primary" isLoading={busy} leftIcon={<i className="bi bi-check2-circle" />}>{target.editProof ? 'Simpan Bukti' : 'Tandai Dibayar'}</Button>
                 </ModalFooter>
             </form>
         </Modal>

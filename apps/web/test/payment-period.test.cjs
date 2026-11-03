@@ -45,11 +45,10 @@ function pageData(periodMonth, periodYear, { legacy = false, rateMultiplier = 1 
     const source = fs.readFileSync('apps/web/app/pembayaran/view.tsx', 'utf8');
     const tree = ts.createSourceFile('view.tsx', source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
     const component = tree.statements.find(n => ts.isFunctionDeclaration(n) && n.name?.text === 'PembayaranPage');
-    const names = new Set(['periodSubmissions', 'periodKlinikSlots', 'periodEkskulSubmissions', 'periodTarifList',
-        'filteredSubmissions', 'filteredKlinikSlots', 'filteredEkskulSubmissions', 'statsCount', 'klinikStats', 'ekskulStats', 'klinikGroups', 'rekapanData']);
+    const names = new Set(['periodSubmissions', 'periodKlinikSlots', 'periodEkskulSubmissions', 'klinikRows', 'rekapan']);
     const selectors = component.body.statements.filter(n => ts.isVariableStatement(n)
         && n.declarationList.declarations.some(d => names.has(d.name.getText(tree)))).map(n => n.getText(tree)).join('\n');
-    const js = ts.transpileModule(selectors + '\nglobalThis.result = { filteredSubmissions, filteredEkskulSubmissions, filteredKlinikSlots, periodTarifList, statsCount, klinikStats, ekskulStats, klinikGroups, rekapanData };', {
+    const js = ts.transpileModule(selectors + '\nglobalThis.result = { periodSubmissions, periodEkskulSubmissions, periodKlinikSlots, klinikRows, rekapan };', {
         compilerOptions: { target: ts.ScriptTarget.ES2022 },
     }).outputText;
     const context = {
@@ -71,46 +70,42 @@ function pageData(periodMonth, periodYear, { legacy = false, rateMultiplier = 1 
         ],
         tarifList: [{ id: 't-oct', updated_at: '2026-09-30T17:00:00Z' }, { id: 't-old', updated_at: '2025-10-01T00:00:00Z' }],
         getTarif: key => rateMultiplier * ({ GURU_ASUH: 200000, EKSKUL_INTERNAL: 50000, EKSKUL_EKSTERNAL: 100000 }[key] || 75000),
-        getCatatanData: raw => raw ? JSON.parse(raw) : ({ nominal: null }), parseNominal: Number,
+        getCatatanData: raw => ({ text: '', url: '', nominal: null, ...(raw ? JSON.parse(raw) : {}) }), parseNominal: Number,
+        klinikEvidence: {}, klinikProofs: () => [], fmtTanggal: String, fmtRupiah: String,
     };
     vm.runInNewContext(js, context);
     return context.result;
 }
 
-test('every tab, summary card, payment group, and recap respects the chosen period', () => {
+test('routine rows, payment groups, and recap respect the chosen period', () => {
     const data = pageData(10, 2026);
-    assert.equal(data.filteredSubmissions.length, 1);
-    assert.equal(data.filteredEkskulSubmissions.length, 1);
-    assert.equal(data.filteredKlinikSlots.length, 2);
-    assert.equal(data.periodTarifList.length, 1);
-    assert.equal(data.periodTarifList[0].id, 't-oct');
-    assert.equal(data.statsCount.total, 1);
-    assert.equal(data.klinikStats.total, 2);
-    assert.equal(data.ekskulStats.total, 1);
-    const pending = data.klinikGroups.find(group => group[0].status !== 'paid');
+    assert.equal(data.periodSubmissions.length, 1);
+    assert.equal(data.periodEkskulSubmissions.length, 1);
+    assert.equal(data.periodKlinikSlots.length, 2);
+    assert.equal(data.klinikRows.reduce((n, row) => n + row.sessions.length, 0), 2);
+    const pending = data.klinikRows.find(row => !row.paid).sessions;
     assert.equal(pending.length, 1);
     assert.equal(pending[0].id, 'k-oct-unpaid');
-    assert.equal(data.rekapanData.guruAsuh, 200000);
-    assert.equal(data.rekapanData.klinik, 75000);
-    assert.equal(data.rekapanData.ekskul, 200000);
-    assert.equal(data.rekapanData.total, 475000);
+    assert.equal(data.rekapan.categories.find(c => c.key === 'GURU_ASUH').total, 200000);
+    assert.equal(data.rekapan.categories.find(c => c.key === 'KLINIK').total, 75000);
+    assert.equal(data.rekapan.categories.find(c => c.key === 'EKSKUL').total, 200000);
+    assert.equal(data.rekapan.total, 475000);
 });
 
 test('all-period and empty-period selections produce consistent rows and totals', () => {
     const all = pageData(0, 0);
-    assert.equal(all.statsCount.total, 2);
-    assert.equal(all.klinikStats.total, 4);
-    assert.equal(all.ekskulStats.total, 2);
-    assert.equal(all.rekapanData.total, 1075000);
+    assert.equal(all.periodSubmissions.length, 2);
+    assert.equal(all.periodKlinikSlots.length, 4);
+    assert.equal(all.periodEkskulSubmissions.length, 2);
+    assert.equal(all.rekapan.total, 1075000);
     const empty = pageData(1, 2030);
-    assert.equal(empty.statsCount.total, 0);
-    assert.equal(empty.klinikGroups.length, 0);
-    assert.equal(empty.periodTarifList.length, 0);
-    assert.equal(empty.rekapanData.total, 0);
+    assert.equal(empty.periodSubmissions.length, 0);
+    assert.equal(empty.klinikRows.length, 0);
+    assert.equal(empty.rekapan.total, 0);
 });
 test('recap uses historical snapshots and explicitly counts missing amounts instead of current tariffs', () => {
-    assert.equal(pageData(10,2026,{rateMultiplier:100}).rekapanData.total,475000);
+    assert.equal(pageData(10,2026,{rateMultiplier:100}).rekapan.total,475000);
     const legacy=pageData(10,2026,{legacy:true});
-    assert.equal(legacy.rekapanData.total,75000);
-    assert.equal(legacy.rekapanData.nominalBelumTercatat,2);
+    assert.equal(legacy.rekapan.total,75000);
+    assert.equal(legacy.rekapan.missing,2);
 });

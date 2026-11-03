@@ -73,6 +73,7 @@ interface PayRow {
     docLabel?: string;
     onPay?: () => void;
     onCancel?: () => void;
+    onEditProof?: () => void;
     /** Klinik: sesi-sesi di bawah satu penerima. */
     sessions?: KlinikSlot[];
 }
@@ -341,7 +342,7 @@ export default function PembayaranPage({ user: propUser, komiteOnly = false }: P
 
     const viewGuruAsuhDoc = async (sub: Submission) => {
         try {
-            Swal.fire({ title: 'Memuat Laporan...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+            Swal.fire({ title: 'Memuat Kegiatan...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
             const res = await fetch('/api/guru-asuh/laporan-submission/preview', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -351,7 +352,7 @@ export default function PembayaranPage({ user: propUser, komiteOnly = false }: P
             Swal.close();
             if (!res.ok || !json.ok) throw new Error(json.error || 'Gagal memuat pratinjau dokumen');
             setDocPreview({
-                title: `Laporan Guru Asuh - ${sub.nama_guru_snap || 'Guru'} (${BULAN[sub.bulan - 1] || sub.bulan} ${sub.tahun})`,
+                title: `Kegiatan Guru Asuh - ${sub.nama_guru_snap || 'Guru'} (${BULAN[sub.bulan - 1] || sub.bulan} ${sub.tahun})`,
                 html: json.html,
             });
         } catch (e: any) {
@@ -380,7 +381,7 @@ export default function PembayaranPage({ user: propUser, komiteOnly = false }: P
         const nominal = getTarif('GURU_ASUH');
         setPayTarget({
             recipient: sub.nama_guru_snap || 'Guru',
-            detail: `Guru Asuh · ${BULAN[sub.bulan - 1]} ${sub.tahun} · ${sub.total_laporan} laporan`,
+            detail: `Guru Asuh · ${BULAN[sub.bulan - 1]} ${sub.tahun} · ${sub.total_laporan} kegiatan`,
             amount: nominal,
             submit: async ({ text, url }) => {
                 // Nominal disnapshot saat pembayaran disahkan; server menolak bila tarif sudah berubah.
@@ -435,6 +436,22 @@ export default function PembayaranPage({ user: propUser, komiteOnly = false }: P
         });
     };
 
+    const editRoutineProof = (kind: RoutineKind, row: { id: string; catatan_pembayaran?: string | null }, recipient: string, amount: number | null, detail: string, fallbackUrl = '') => {
+        const note = getCatatanData(row.catatan_pembayaran || null);
+        setSheetKey(null);
+        setPayTarget({ recipient, detail, amount, editProof: true, initialNote: { text: note.text, url: note.url || fallbackUrl },
+            submit: async ({ text, url }) => {
+                await sendJson('/api/payments/proof', 'POST', { kind, id: row.id, expectedNote: row.catatan_pembayaran ?? null, text, url });
+                if (kind === 'KLINIK') await fetchKlinikSlots();
+                else if (kind === 'GURU_ASUH') await fetchSubmissions();
+                else await fetchEkskulSubmissions();
+                swalSuccess('Berhasil', 'Bukti pembayaran diperbarui.');
+            },
+        });
+    };
+
+    const editKlinikProof = (slot: KlinikSlot) => editRoutineProof('KLINIK', slot, slot.nama_guru || 'Guru', slot.nominal_dibayarkan == null ? null : parseNominal(slot.nominal_dibayarkan), `Klinik · ${slot.mapel} · ${fmtTanggal(slot.tanggal)}`, klinikEvidence[slot.id] ? `/api/pembayaran-massal/bukti?id=${klinikEvidence[slot.id]}` : '');
+
     const cancelGuruAsuh = (sub: Submission) => confirmCancel(
         `Pembayaran Guru Asuh ${sub.nama_guru_snap || ''} akan dikembalikan ke Belum Dibayar.`,
         async () => { await sendJson('/api/guru-asuh/laporan-submission/pembayaran', 'POST', { id: sub.id, dibayarkan: false, catatan: null }); fetchSubmissions(); },
@@ -466,9 +483,9 @@ export default function PembayaranPage({ user: propUser, komiteOnly = false }: P
 
     const klinikProofs = (slot: KlinikSlot) => {
         const proofs: string[] = [];
-        if (klinikEvidence[slot.id]) proofs.push(`/api/pembayaran-massal/bukti?id=${klinikEvidence[slot.id]}`);
         const url = getCatatanData(slot.catatan_pembayaran).url;
         if (isProofUrl(url)) proofs.push(url);
+        else if (klinikEvidence[slot.id]) proofs.push(`/api/pembayaran-massal/bukti?id=${klinikEvidence[slot.id]}`);
         return proofs;
     };
 
@@ -480,16 +497,17 @@ export default function PembayaranPage({ user: propUser, komiteOnly = false }: P
             name,
             nip: sub.nip,
             period: `${BULAN[sub.bulan - 1]} ${sub.tahun}`,
-            detail: `${sub.total_laporan} laporan`,
-            detailText: `${sub.total_laporan} laporan`,
+            detail: `${sub.total_laporan} kegiatan`,
+            detailText: `${sub.total_laporan} kegiatan`,
             amount: sub.dibayarkan ? c.nominal : getTarif('GURU_ASUH'),
             paid: !!sub.dibayarkan,
             note: sub.dibayarkan ? c.text : '',
             proofs: sub.dibayarkan && isProofUrl(c.url) ? [{ url: c.url, title: `Bukti Pembayaran - ${name}` }] : [],
             onDoc: () => viewGuruAsuhDoc(sub),
-            docLabel: 'Lihat Laporan',
+            docLabel: 'Lihat Kegiatan',
             onPay: () => payGuruAsuh(sub),
             onCancel: () => cancelGuruAsuh(sub),
+            onEditProof: () => editRoutineProof('GURU_ASUH', sub, name, c.nominal, `Guru Asuh · ${BULAN[sub.bulan - 1]} ${sub.tahun}`),
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }), [periodSubmissions, getTarif]);
@@ -523,6 +541,7 @@ export default function PembayaranPage({ user: propUser, komiteOnly = false }: P
             docLabel: 'Lihat PDF Laporan',
             onPay: () => payEkskul(sub),
             onCancel: () => cancelEkskul(sub),
+            onEditProof: () => editRoutineProof('EKSKUL', sub, name, c.nominal, `${ekskulName} · ${BULAN[sub.bulan - 1]} ${sub.tahun}`),
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }), [periodEkskulSubmissions, getTarif]);
@@ -559,6 +578,7 @@ export default function PembayaranPage({ user: propUser, komiteOnly = false }: P
                 note: notes.join(' · '),
                 proofs: proofUrls.map((url, i) => ({ url, title: `Bukti Pembayaran - ${name}${proofUrls.length > 1 ? ` (${i + 1})` : ''}` })),
                 onPay: () => payKlinik(sessions),
+                onEditProof: sessions.length === 1 ? () => editKlinikProof(first) : undefined,
                 sessions,
             };
         });
@@ -597,7 +617,7 @@ export default function PembayaranPage({ user: propUser, komiteOnly = false }: P
             categories: [
                 { key: 'KLINIK', label: 'Klinik Pembelajaran', icon: 'heart-pulse', tone: 'rose', count: klinikPaid.length, unit: 'kegiatan', total: klinik },
                 { key: 'EKSKUL', label: 'Ekstrakurikuler', icon: 'person-plus', tone: 'violet', count: ekskulPaid.length, unit: 'laporan', total: ekskul },
-                { key: 'GURU_ASUH', label: 'Guru Asuh', icon: 'person-heart', tone: 'blue', count: guruAsuhPaid.length, unit: 'laporan', total: guruAsuh },
+                { key: 'GURU_ASUH', label: 'Guru Asuh', icon: 'person-heart', tone: 'blue', count: guruAsuhPaid.length, unit: 'kegiatan', total: guruAsuh },
             ],
             total: guruAsuh + klinik + ekskul,
             missing,
@@ -647,7 +667,7 @@ export default function PembayaranPage({ user: propUser, komiteOnly = false }: P
     const unpaidRows = allRows.filter(r => !r.paid);
     const paidRows = allRows.filter(r => r.paid);
     const countOf = (rows: PayRow[]) => kind === 'KLINIK' ? rows.reduce((n, r) => n + (r.sessions?.length || 0), 0) : rows.length;
-    const unit = kind === 'KLINIK' ? 'kegiatan' : 'laporan';
+    const unit = kind === 'EKSKUL' ? 'laporan' : 'kegiatan';
     const totalCount = countOf(allRows);
     const paidCount = countOf(paidRows);
     const sheetRow = sheetKey ? visibleRows.find(r => r.key === sheetKey) || null : null;
@@ -676,6 +696,8 @@ export default function PembayaranPage({ user: propUser, komiteOnly = false }: P
             {isBendahara && !row.paid && row.onPay && (
                 <ActionButton action="approve" tooltip="Tandai Dibayar" disabled={busy} onClick={row.onPay} />
             )}
+            {isBendahara && row.paid && row.onEditProof && <Button size="sm" variant="outline" icon="edit" onClick={row.onEditProof}>{row.proofs.length ? 'Edit Bukti' : 'Unggah Bukti'}</Button>}
+            {isBendahara && row.paid && (row.sessions?.length || 0) > 1 && <Button size="sm" variant="outline" icon="edit" onClick={() => setExpanded(old => ({ ...old, [row.key]: !old[row.key] }))}>Unggah / Edit Bukti</Button>}
             {isBendahara && row.paid && row.onCancel && (
                 <ActionButton action="reject" tooltip="Batalkan Pembayaran" disabled={busy} onClick={row.onCancel} />
             )}
@@ -702,7 +724,10 @@ export default function PembayaranPage({ user: propUser, komiteOnly = false }: P
                                 </button>
                             ))}
                             {isBendahara && slot.status === 'paid' && (
+                                <>
+                                <Button size="sm" variant="outline" onClick={() => editKlinikProof(slot)}>{proofs.length ? 'Edit Bukti' : 'Unggah Bukti'}</Button>
                                 <ActionButton action="reject" size="sm" tooltip="Batalkan pembayaran sesi ini" disabled={busy} onClick={() => cancelKlinik(slot)} />
+                                </>
                             )}
                         </span>
                     </li>
@@ -713,7 +738,7 @@ export default function PembayaranPage({ user: propUser, komiteOnly = false }: P
 
     const emptyRoutine = {
         KLINIK: 'Belum ada laporan klinik yang disetujui pada periode ini.',
-        GURU_ASUH: 'Belum ada laporan Guru Asuh yang disahkan pada periode ini.',
+        GURU_ASUH: 'Belum ada kegiatan Guru Asuh yang disahkan pada periode ini.',
         EKSKUL: 'Belum ada laporan ekstrakurikuler yang disahkan pada periode ini.',
     } as const;
 
@@ -803,7 +828,7 @@ export default function PembayaranPage({ user: propUser, komiteOnly = false }: P
                                             <th className="pay-col-no">No</th>
                                             <th>Penerima</th>
                                             <th>{kind === 'KLINIK' ? 'Tanggal' : 'Periode'}</th>
-                                            <th>{kind === 'EKSKUL' ? 'Ekstrakurikuler' : kind === 'KLINIK' ? 'Kegiatan' : 'Laporan'}</th>
+                                            <th>{kind === 'EKSKUL' ? 'Ekstrakurikuler' : 'Kegiatan'}</th>
                                             <th>Nominal</th>
                                             <th>Status</th>
                                             <th className="pay-col-action">Aksi</th>
@@ -965,10 +990,11 @@ export default function PembayaranPage({ user: propUser, komiteOnly = false }: P
                     labelledBy="pay-sheet-title"
                     footer={(
                         <>
-                            {sheetRow.onDoc && <Button variant="outline" leftIcon={<i className="bi bi-file-earmark-text" />} onClick={sheetRow.onDoc}>Laporan</Button>}
+                            {sheetRow.onDoc && <Button variant="outline" leftIcon={<i className="bi bi-file-earmark-text" />} onClick={sheetRow.onDoc}>{kind === 'GURU_ASUH' ? 'Kegiatan' : 'Laporan'}</Button>}
                             {isBendahara && !sheetRow.paid && sheetRow.onPay && (
                                 <Button variant="primary" leftIcon={<i className="bi bi-check2-circle" />} disabled={busy} onClick={() => { setSheetKey(null); sheetRow.onPay!(); }}>Tandai Dibayar</Button>
                             )}
+                            {isBendahara && sheetRow.paid && sheetRow.onEditProof && <Button variant="outline" icon="edit" onClick={sheetRow.onEditProof}>{sheetRow.proofs.length ? 'Edit Bukti' : 'Unggah Bukti'}</Button>}
                             {isBendahara && sheetRow.paid && sheetRow.onCancel && (
                                 <Button variant="danger" leftIcon={<i className="bi bi-x-circle" />} disabled={busy} onClick={() => { setSheetKey(null); sheetRow.onCancel!(); }}>Batalkan</Button>
                             )}

@@ -1,6 +1,7 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { canReadPayments } from './payment-access';
+import { updatePaymentProof } from './payment-proof';
 export function paymentNote(value: any) {
   try {
     const p=typeof value==='string'?JSON.parse(value):value;
@@ -11,6 +12,7 @@ export function paymentNote(value: any) {
 @Injectable()
 export class PaymentReportsService {
  constructor(private prisma:PrismaService){}
+ updateProof(user:any,body:any) { return updatePaymentProof(this.prisma,user,body); }
  async report(user:any,query:any) {
   if (!await canReadPayments(this.prisma,user)) throw new ForbiddenException('Anda tidak memiliki akses rekapan pembayaran rutin.');
   const month=Number(query.month),year=Number(query.year),category=query.category||'ALL';
@@ -30,7 +32,7 @@ export class PaymentReportsService {
     const receipts:any[]=await tx.$queryRaw`SELECT id,selected FROM payment_receipts WHERE kind='KLINIK' AND month=${month} AND year=${year} AND applied_at IS NOT NULL ORDER BY applied_at DESC`;
     const links=new Map<string,string>();
     receipts.forEach(r=>{(r.selected?.ids||[]).forEach((id:string)=>{if(!links.has(id))links.set(id,`/api/pembayaran-massal/bukti?id=${r.id}`);});});
-    data.forEach(s=>rows.push({id:s.id,category:'KLINIK',name:s.nama_guru||'Guru',nip:'',description:`${s.mapel||'Klinik'}: ${s.topik||'Kegiatan klinik'} (${s.tanggal.toISOString().slice(0,10)})`,quantity:1,amount:s.nominal_dibayarkan==null?null:Number(s.nominal_dibayarkan),paidOn:s.dibayarkan_at,proofUrl:links.get(s.id)||paymentNote(s.catatan_pembayaran).url}));
+    data.forEach(s=>rows.push({id:s.id,category:'KLINIK',name:s.nama_guru||'Guru',nip:'',description:`${s.mapel||'Klinik'}: ${s.topik||'Kegiatan klinik'} (${s.tanggal.toISOString().slice(0,10)})`,quantity:1,amount:s.nominal_dibayarkan==null?null:Number(s.nominal_dibayarkan),paidOn:s.dibayarkan_at,proofUrl:paymentNote(s.catatan_pembayaran).url||links.get(s.id)}));
    }
    const profil=await tx.profil_sekolah.findFirst({orderBy:{updated_at:'desc'}});
    const categories=['GURU_ASUH','KLINIK','EKSKUL'].filter(c=>category==='ALL'||category===c);

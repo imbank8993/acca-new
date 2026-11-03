@@ -34,19 +34,102 @@ test('PJ creates a four-month activity without approval; partial payments, corre
  }finally{await db.close()}});
 test('migration is repeatable and preserves access changes after initial installation',async()=>{const {db,sql}=await fixture();try{assert.equal((await db.query("SELECT * FROM role_pages WHERE role='GURU' AND page_id='pengajuan-komite'")).rows.length,1);await db.exec("DELETE FROM role_pages WHERE role='GURU'");await db.exec(sql);assert.equal((await db.query("SELECT * FROM role_pages WHERE role='GURU'")).rows.length,0)}finally{await db.close()}});
 test('monthly report excludes committee data, never reads current tariffs, and marks missing historical snapshots',async()=>{
+ let manualProof=null;
  const db={role_pages:{findFirst:async()=>null},$transaction:async fn=>fn({
   laporan_guru_asuh_submissions:{findMany:async p=>{assert.equal(p.where.bulan,11);assert.equal(p.where.tahun,2026);assert.equal(p.where.dibayarkan,true);return [{id:'g1',nama_guru_snap:'Siti',nip:'123',catatan_pembayaran:'{"nominal":100000,"url":"https://file.icgowa.sch.id/proof.png"}'},{id:'g2',nama_guru_snap:'Ahmad',catatan_pembayaran:null}]}},
   laporan_ekskul_submissions:{findMany:async()=>[{id:'e1',pembina_nama:'Ali',catatan_pembayaran:'{"nominal":250000}',ekskul:{nama_ekskul:'Pramuka'},total_pertemuan:4}]},
-  klinik_slots:{findMany:async()=>[{id:'c1',nama_guru:'Nina',tanggal:new Date('2026-11-02'),nominal_dibayarkan:50000}]},
+  klinik_slots:{findMany:async()=>[{id:'c1',nama_guru:'Nina',tanggal:new Date('2026-11-02'),nominal_dibayarkan:50000,catatan_pembayaran:manualProof}]},
   tarif_honor:{findMany:async()=>{throw new Error('Current tariffs must not affect historical reports')}},
   profil_sekolah:{findFirst:async()=>({nama:'Madrasah Contoh'})},$queryRaw:async()=>[{id:'proof-id',selected:{ids:['c1']}}]
  })};
  const s=new PaymentReportsService(db);await assert.rejects(s.report(pj,{month:11,year:2026}));await assert.rejects(s.report(admin,{month:11,year:2026,category:'KOMITE'}));
  const report=await s.report(admin,{month:11,year:2026});assert.equal(report.data.rows.length,4);assert.equal(report.data.missingAmounts,1);assert.equal(report.data.summary.reduce((s,r)=>s+r.total,0),400000);assert(report.data.rows.find(r=>r.id==='c1').proofUrl.includes('proof-id'));
+ manualProof=JSON.stringify({url:'https://example.com/replacement.pdf'});const updated=await s.report(admin,{month:11,year:2026,category:'KLINIK'});assert.equal(updated.data.rows[0].proofUrl,'https://example.com/replacement.pdf');
 });
 test('manual payment snapshots use authoritative amounts, reject changed totals and unsafe proofs, and preserve zero tariffs',async()=>{
  const db={tarif_honor:{findMany:async()=>[{modul:'GURU_ASUH',nominal:100000},{modul:'EKSKUL_INTERNAL',nominal:25000},{modul:'EKSKUL_EKSTERNAL',nominal:50000}]},ekskul_pertemuan:{findMany:async()=>[{status_pelatih:'Internal'},{status_pelatih:'Eksternal'}]}};
  assert.equal(JSON.parse(await paymentSnapshot(db,'GURU_ASUH','id','{}')).nominal,100000);assert.equal(JSON.parse(await paymentSnapshot(db,'EKSKUL','id','{}')).nominal,75000);
  await assert.rejects(paymentSnapshot(db,'GURU_ASUH','id','{"nominal":50000}'));await assert.rejects(paymentSnapshot(db,'GURU_ASUH','id','{"url":"javascript:alert(1)"}'));await assert.rejects(paymentSnapshot(db,'GURU_ASUH','id','{"url":"//example.com/file"}'));
  db.tarif_honor.findMany=async()=>[{modul:'GURU_ASUH',nominal:0}];assert.equal(JSON.parse(await paymentSnapshot(db,'GURU_ASUH','id','{}')).nominal,0);
+});
+
+test('PJ advances and treasury reimbursements keep separate balances, proofs and access checks',async()=>{
+ const {db,service:s,sql}=await fixture();
+ try {
+  const {randomUUID}=require('node:crypto');
+  const {id:activityId}=await s.save(pj,{kind:'activity',title:'Honor tentor',description:'',start_date:'2026-11-01',end_date:'2026-11-30'});
+  const {id:termId}=await s.save(pj,{kind:'term',activityId,title:'Honor',month:11,year:2026,attachments:[]});
+  await s.save(pj,{kind:'term',activityId,title:'Konsumsi',month:11,year:2026,attachments:[]});
+  const {id:itemId}=await s.save(pj,{kind:'item',activityId,termId,description:'Honor tentor',recipient:'Tentor',quantity:1,unit_price:100000});
+  const current=async()=>(await s.detail(pj,activityId)).data.items[0];
+  const files=[{name:'Transfer.pdf',url:'https://file.icgowa.sch.id/transfer.pdf'},{name:'Kuitansi.png',url:'https://file.icgowa.sch.id/kuitansi.png'}];
+  const payload=async(flow,amount)=>({kind:'payment',activityId,termId,id:itemId,revision:(await current()).revision,flow,amount,paid_on:'2026-11-03',attachments:files,destination_account:'Bank Contoh 123456 a.n. Penerima',requestId:randomUUID()});
+  await assert.rejects(s.save(admin,await payload('REIMBURSEMENT',1)));
+  const advance=await payload('PJ_ADVANCE',60000);
+  await assert.rejects(s.save(other,advance));await assert.rejects(s.save(admin,advance));
+  await assert.rejects(s.save(pj,{...advance,destination_account:''}));
+  await assert.rejects(s.save(pj,{...advance,attachments:[]}));
+  await assert.rejects(s.save(pj,{...advance,attachments:Array(11).fill(files[0])}));
+  await assert.rejects(s.save(pj,{...advance,attachments:[{name:'bad',url:'javascript:alert(1)'}]}));
+  const recorded=await s.save(pj,advance);await s.save(pj,advance);
+  assert.equal(Number((await current()).advanced),60000);assert.equal(Number((await current()).paid),0);
+  assert.equal(Number((await s.list(pj)).data[0].paid),0);
+  await assert.rejects(s.save(pj,{...advance,attachments:[files[0]]}));
+  await assert.rejects(s.save(admin,await payload('DIRECT',40001)));
+  await assert.rejects(s.save(pj,await payload('PJ_ADVANCE',40001)));
+  await assert.rejects(s.save(pj,await payload('REIMBURSEMENT',10000)));
+  await assert.rejects(s.save(admin,await payload('REIMBURSEMENT',60001)));
+  await assert.rejects(s.save(pj,{kind:'item',activityId,termId,id:itemId,revision:(await current()).revision,description:'Edit',quantity:1,unit_price:100000}));
+  await assert.rejects(s.save(admin,{kind:'item',activityId,termId,id:itemId,revision:(await current()).revision,description:'Edit',quantity:1,unit_price:50000,reason:'Too low'}));
+  const reimb=await payload('REIMBURSEMENT',30000);reimb.destination_account='Bank PJ 654321 a.n. PJ';
+  const reimbursement=await s.save(admin,reimb);await s.save(admin,reimb);
+  assert.equal(Number((await current()).reimbursed),30000);assert.equal(Number((await current()).paid),30000);
+  const cancel=async(id)=>({kind:'cancel-payment',activityId,termId,itemId,id,revision:(await current()).revision,reason:'Koreksi pencatatan'});
+  await assert.rejects(s.save(pj,await cancel(recorded.id)));
+  await assert.rejects(s.save(pj,await cancel(reimbursement.id)));
+  await assert.rejects(s.save(other,await cancel(recorded.id)));
+  await s.save(admin,await payload('DIRECT',40000));
+  await s.save(admin,await payload('REIMBURSEMENT',30000));
+  assert.equal(Number((await current()).paid),100000);assert.equal(Number((await s.list(pj)).data[0].paid),100000);
+  await assert.rejects(s.save(admin,await payload('DIRECT',1)));
+  await assert.rejects(s.save(pj,await payload('PJ_ADVANCE',1)));
+  await assert.rejects(s.save(admin,await payload('REIMBURSEMENT',1)));
+  let d=(await s.detail(pj,activityId)).data;
+  assert.equal(d.payments.length,4);assert.equal(d.payments.find(p=>p.id===recorded.id).attachments.length,2);
+  assert.equal(d.payments.find(p=>p.id===reimbursement.id).destination_account,reimb.destination_account);
+  assert(d.history.some(h=>h.snapshot.payment?.flow==='PJ_ADVANCE'&&h.snapshot.payment.attachments.length===2));
+  await db.exec(sql);assert.equal(Number((await current()).paid),100000);
+  for(const p of d.payments.filter(p=>p.flow==='REIMBURSEMENT'))await s.save(admin,await cancel(p.id));
+  await s.save(pj,await cancel(recorded.id));await s.save(pj,await cancel(recorded.id));
+  assert.equal(Number((await current()).advanced),0);assert.equal(Number((await current()).paid),40000);
+  assert.equal((await s.detail(pj,activityId)).canRecordAdvance,true);
+  assert.equal((await s.detail(admin,activityId)).canRecordAdvance,false);
+ }finally{await db.close()}
+});
+
+test('committee proof replacement preserves accounting and audits old attachments',async()=>{
+ const {db,service:s}=await fixture();try{
+ const {randomUUID}=require('node:crypto');
+ const {id:activityId}=await s.save(pj,{kind:'activity',title:'Honor',description:'',start_date:'2026-11-01',end_date:'2026-11-30'});
+ const {id:termId}=await s.save(pj,{kind:'term',activityId,title:'Honor',month:11,year:2026,attachments:[]});
+ const {id:itemId}=await s.save(pj,{kind:'item',activityId,termId,description:'Honor',quantity:1,unit_price:100000});
+ const pay=await s.save(pj,{kind:'payment',activityId,termId,id:itemId,revision:1,flow:'PJ_ADVANCE',amount:100000,paid_on:'2026-11-03',proof_url:'https://example.com/old.pdf',destination_account:'Bank 123 Tentor',requestId:randomUUID()});
+ const edit={kind:'edit-proof',activityId,termId,id:pay.id,itemId,revision:2,attachments:[{name:'Pengganti.pdf',url:'https://example.com/new.pdf'}]};
+ await assert.rejects(s.save(other,edit));await assert.rejects(s.save(pj,{...edit,attachments:[]}));await s.save(pj,edit);await assert.rejects(s.save(pj,edit));
+ const d=(await s.detail(pj,activityId)).data;assert.equal(d.payments[0].proof_url,'https://example.com/new.pdf');assert.equal(Number(d.payments[0].amount),100000);assert.equal(Number(d.items[0].advanced),100000);assert(d.history.some(h=>h.action==='Bukti pembayaran diperbarui'&&h.snapshot.before.proof_url==='https://example.com/old.pdf'));
+ await s.save(pj,{kind:'cancel-payment',activityId,termId,id:pay.id,itemId,revision:3,reason:'Salah catat'});await assert.rejects(s.save(pj,{...edit,revision:4}));
+ }finally{await db.close()}
+});
+
+test('routine proof replacement preserves paid dates and historical amounts for all categories',async()=>{
+ const {updatePaymentProof}=load('payment-proof');
+ for(const [kind,model] of [['KLINIK','klinik_slots'],['GURU_ASUH','laporan_guru_asuh_submissions'],['EKSKUL','laporan_ekskul_submissions']]){
+  const oldNote=JSON.stringify({nominal:70000,paid_at:'2026-10-01',url:'https://example.com/old.pdf',text:'Lama'});
+  const row={id:'88888888-8888-4888-8888-888888888888',status:'paid',dibayarkan:true,catatan_pembayaran:oldNote,dibayarkan_at:'2026-10-01',nominal_dibayarkan:70000};let last;
+  const db={$transaction:async fn=>fn({[model]:{findUnique:async()=>row,updateMany:async args=>{last=args;return {count:1}}},tarif_honor:{findMany:()=>{throw new Error('Tariff must not be read')}}})};
+  const body={kind,id:row.id,expectedNote:oldNote,url:'https://example.com/new.pdf',text:'Baru',nominal:900000,dibayarkan_at:'2026-11-03'};
+  await assert.rejects(updatePaymentProof(db,pj,body));await assert.rejects(updatePaymentProof(db,admin,{...body,url:'javascript:alert(1)'}));await assert.rejects(updatePaymentProof(db,admin,{...body,expectedNote:null}));
+  await updatePaymentProof(db,admin,body);assert.deepEqual(Object.keys(last.data),['catatan_pembayaran']);const note=JSON.parse(last.data.catatan_pembayaran);assert.equal(note.nominal,70000);assert.equal(note.paid_at,'2026-10-01');assert.equal(note.url,body.url);assert.equal(note.proof_history[0].url,'https://example.com/old.pdf');
+  row.status='finished';row.dibayarkan=false;await assert.rejects(updatePaymentProof(db,admin,body));
+ }
 });
