@@ -4,7 +4,7 @@
 ========================================================= */
 
 @import '../monitoring.css';
-@import '../../pembayaran/pembayaran.css';
+@import './laporan-table.css';
 
 .mon-lap-wrap {
     /* Keep the public page above the fixed global ambient canvas (z-index: 0). */

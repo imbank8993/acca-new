@@ -10,6 +10,7 @@ import { PrismaService } from '../prisma/prisma.service';
  */
 import { createPrismaDbAdapter, type PrismaDbAdapter } from '../prisma/prisma-db-adapter';
 import { can } from '../access/access.service';
+import { parsePaymentNote } from '../payments/payment-snapshot';
 /**
  * Zona waktu madrasah. Seluruh jam pada klinik_slots disimpan sebagai waktu
  * DINDING setempat — `jam_mulai` "14:00" berarti pukul 14.00 waktu setempat
@@ -2241,7 +2242,7 @@ export async function handlePatch(req: any, action: string, id: any, payload: an
                 throw new ForbiddenException('Hanya Bendahara Komite/Admin yang dapat membatalkan pembayaran');
             }
             const { data, error } = await db.from('klinik_slots')
-                .update({ status: 'finished', nominal_dibayarkan: null, dibayarkan_at: null })
+                .update({ status: 'finished', nominal_dibayarkan: null, dibayarkan_at: null, catatan_pembayaran: null })
                 .eq('id', id)
                 .eq('status', 'paid')
                 .select().single();
@@ -2289,7 +2290,12 @@ export class KlinikService {
         const nominal = Number(tarif?.nominal);
         if (!tarif || !Number.isFinite(nominal) || nominal < 0) throw new HttpException('Tarif klinik belum valid', 409);
         if (Number(payload.expectedTotal) !== nominal * ids.length) throw new HttpException('Tarif berubah. Muat ulang data sebelum menandai pembayaran.', 409);
-        const result = await tx.klinik_slots.updateMany({ where: { id: { in: ids }, status: 'finished' }, data: { status: 'paid', nominal_dibayarkan: nominal, dibayarkan_at: new Date() } });
+        // Catatan & bukti manual (opsional) disimpan per sesi; nominal di dalamnya
+        // adalah tarif per sesi, sama dengan nominal_dibayarkan.
+        const note = parsePaymentNote(payload.catatan);
+        const paidAt = new Date();
+        const catatan_pembayaran = JSON.stringify({ text: note.text, url: note.url, nominal, paid_at: paidAt.toISOString() });
+        const result = await tx.klinik_slots.updateMany({ where: { id: { in: ids }, status: 'finished' }, data: { status: 'paid', nominal_dibayarkan: nominal, dibayarkan_at: paidAt, catatan_pembayaran } });
         if (result.count !== ids.length) throw new HttpException('Status pembayaran berubah. Muat ulang data.', 409);
         return { ok: true, count: result.count, total: nominal * result.count };
       }, { isolationLevel: 'Serializable' });

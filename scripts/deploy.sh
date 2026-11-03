@@ -33,6 +33,7 @@ docker compose run --rm --no-deps acca-api node node_modules/prisma/build/index.
 docker compose run --rm --no-deps acca-api node node_modules/prisma/build/index.js db execute --schema apps/api/prisma/schema.prisma --file apps/api/prisma/sql/20261103_payment_receipts.sql
 docker compose run --rm --no-deps acca-api node node_modules/prisma/build/index.js db execute --schema apps/api/prisma/schema.prisma --file apps/api/prisma/sql/20261103_committee_payments.sql
 docker compose run --rm --no-deps acca-api node node_modules/prisma/build/index.js db execute --schema apps/api/prisma/schema.prisma --file apps/api/prisma/sql/20261103_payment_report_verifications.sql
+docker compose run --rm --no-deps acca-api node node_modules/prisma/build/index.js db execute --schema apps/api/prisma/schema.prisma --file apps/api/prisma/sql/20261103_klinik_payment_note.sql
 docker compose run --rm --no-deps acca-api node apps/api/prisma/verify-ptsp-db.cjs --letters
 
 docker compose up -d --remove-orphans

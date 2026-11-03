@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, type ReactNode } from 'react';
 import { authFetch } from '@/lib/auth-fetch';
 import { matchesPaymentPeriod, paymentDatePeriod } from '@/lib/payment-period';
 import { swalSuccess, swalError, swalConfirm } from '@/lib/swal-premium';
@@ -9,213 +9,206 @@ import MaintenanceBanner from '@/components/MaintenanceBanner';
 import FilterToolbar, { FilterSearch, FilterSelect } from '@/components/ui/FilterToolbar';
 import { Spinner } from '@/components/ui/Spinner';
 import { Tab } from '@/components/ui/Tab';
+import { Button } from '@/components/ui/Button';
+import { ActionButton, ActionGroup } from '@/components/ui/ActionButtons';
+import { DesktopFab } from '@/components/ui/DesktopFab';
 import HtmlPreviewModal from '@/components/ui/HtmlPreviewModal';
 import DocViewerModal from '@/components/ui/DocViewerModal';
-import './pembayaran.css';
+import { MobileList, MobileListItem, MobileSheet, MobileKV, MobileSection } from '@/components/mobile';
+import { useIsMobile } from '@/hooks/use-breakpoint';
 import BulkPaymentModal from './BulkPaymentModal';
-import { Button } from '@/components/ui/Button';
 import CommitteeTab from './CommitteeTab';
 import PrintPaymentModal from './PrintPaymentModal';
+import {
+    BULAN, fmtRupiah, fmtTanggal, StatCards, StatusBadge, PayeeCell, EmptyState, MarkPaidModal,
+    type PayTarget,
+} from './parts';
+import './payment.css';
 
-const BULAN = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+/* ----------------------------------- Tipe ----------------------------------- */
 
 interface Submission {
     id: string; nip: string; nama_guru_snap: string | null; bulan: number; tahun: number;
-    status: 'Submitted' | 'Approved' | 'Revisi'; total_laporan: number;
-    approved_by_name?: string | null; approved_at?: string | null; pdf_url?: string | null;
-    dibayarkan: boolean; dibayarkan_at?: string | null; dibayarkan_by_name?: string | null; catatan_pembayaran?: string | null;
+    total_laporan: number; status: string; dibayarkan: boolean; dibayarkan_at: string | null;
+    catatan_pembayaran: string | null; pdf_url: string | null;
 }
 
 interface KlinikSlot {
-    nominal_dibayarkan?: number | string | null;
-    id: string; guru_id: number; nama_guru: string; mapel: string; topik: string;
-    tanggal: string; status: string; max_siswa: number;
-    klinik_peserta?: any[]; klinik_laporan?: any;
-    guru?: { nip: string; nama: string };
+    id: string; guru_id: string; nama_guru: string; mapel: string; topik: string; tanggal: string;
+    status: string; nominal_dibayarkan?: number | string | null; catatan_pembayaran?: string | null;
+    klinik_laporan?: any; guru?: { nip?: string | null; nama?: string | null } | null;
 }
 
 interface EkskulSubmission {
-    id: string; ekskul_id: string; pembina_nip: string; pembina_nama: string | null;
-    bulan: number; tahun: number; status: string; total_pertemuan: number;
-    jml_internal: number; jml_eksternal: number;
-    dibayarkan: boolean; dibayarkan_at?: string | null; dibayarkan_by_name?: string | null; catatan_pembayaran?: string | null;
-    pdf_url?: string | null;
-    ekskul?: { nama_ekskul: string };
+    id: string; ekskul_id: string; pembina_nip: string; pembina_nama: string; bulan: number; tahun: number;
+    total_pertemuan: number; jml_internal?: number; jml_eksternal?: number; status: string;
+    dibayarkan: boolean; dibayarkan_at: string | null; catatan_pembayaran: string | null;
+    pdf_url: string | null; ekskul?: { nama_ekskul: string };
 }
 
 interface TarifHonor {
-    id: string; modul: string; label: string; satuan: 'per_bulan' | 'per_pertemuan'; nominal: number;
+    modul: string; label: string; satuan: string; nominal: number | string;
     updated_at?: string | null; updated_by_name?: string | null;
 }
 
-/** Helper parsing nominal yang kebal terhadap number, string, Decimal object {s,e,d}, null, undefined */
+type TabKey = 'KLINIK' | 'GURU_ASUH' | 'EKSKUL' | 'KOMITE' | 'REKAPAN' | 'NOMINAL';
+type RoutineKind = 'KLINIK' | 'GURU_ASUH' | 'EKSKUL';
+const ROUTINE: TabKey[] = ['KLINIK', 'GURU_ASUH', 'EKSKUL'];
+
+/** Satu baris tagihan, sama bentuknya untuk ketiga tab pembayaran rutin. */
+interface PayRow {
+    key: string;
+    name: string;
+    nip?: string | null;
+    period: string;
+    detail: ReactNode;
+    detailText: string;
+    /** null = pembayaran lama yang nominalnya tidak tersimpan. */
+    amount: number | null;
+    amountNote?: ReactNode;
+    paid: boolean;
+    note?: string;
+    proofs: { url: string; title: string }[];
+    onDoc?: () => void;
+    docLabel?: string;
+    onPay?: () => void;
+    onCancel?: () => void;
+    /** Klinik: sesi-sesi di bawah satu penerima. */
+    sessions?: KlinikSlot[];
+}
+
+/* --------------------------------- Helper ----------------------------------- */
+
 function parseNominal(val: any): number {
-    if (val === null || val === undefined) return 0;
-    if (typeof val === 'number') return isNaN(val) ? 0 : val;
+    if (val == null) return 0;
+    if (typeof val === 'number') return Number.isFinite(val) ? val : 0;
+    if (typeof val === 'bigint') return Number(val);
     if (typeof val === 'string') {
-        const parsed = Number(val);
-        return isNaN(parsed) ? 0 : parsed;
+        const trimmed = val.trim();
+        if (!trimmed) return 0;
+        const cleaned = trimmed.replace(/\s+/g, '').replace(/^rp/i, '');
+        if (/^-?\d+(\.\d+)?$/.test(cleaned)) return Number(cleaned);
+        const normalized = cleaned.replace(/\./g, '').replace(/,/g, '.');
+        const parsed = Number(normalized);
+        return Number.isFinite(parsed) ? parsed : 0;
     }
-    // Handle Prisma Decimal object: { s, e, d: [250000] }
     if (typeof val === 'object') {
-        if (typeof val.toNumber === 'function') {
-            try { return val.toNumber(); } catch {}
+        const v: any = val;
+        if (typeof v.toNumber === 'function') {
+            const n = v.toNumber();
+            return Number.isFinite(n) ? n : 0;
         }
-        if (typeof val.toFixed === 'function') {
-            try { return Number(val.toFixed()); } catch {}
+        if (Array.isArray(v.d) && typeof v.e === 'number' && typeof v.s === 'number') {
+            const digits = v.d.map((part: number, idx: number) => idx === 0 ? String(part) : String(part).padStart(7, '0')).join('');
+            const n = Number(`${v.s < 0 ? '-' : ''}${digits}`) * Math.pow(10, v.e - digits.length + 1);
+            return Number.isFinite(n) ? n : 0;
         }
-        if (Array.isArray(val.d) && val.d.length > 0) {
-            const rawNum = Number(val.d.join(''));
-            if (!isNaN(rawNum)) {
-                return (val.s === -1 ? -1 : 1) * rawNum;
-            }
-        }
-        if ('toString' in val && typeof val.toString === 'function') {
-            const str = val.toString();
-            if (str && str !== '[object Object]') {
-                const parsed = Number(str);
-                if (!isNaN(parsed)) return parsed;
-            }
+        if (typeof v.toString === 'function') {
+            const s = v.toString();
+            if (s && s !== '[object Object]') return parseNominal(s);
         }
     }
-    return 0;
+    const n = Number(val);
+    return Number.isFinite(n) ? n : 0;
 }
 
-const fmtRupiah = (n: any) => {
-    const num = parseNominal(n);
-    return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(num);
-};
-
-/** klinik_laporan bisa datang sbg array (embed Supabase/Prisma) atau objek tunggal. */
 function getKlinikLaporan(slot: KlinikSlot): any {
-    return Array.isArray(slot.klinik_laporan) ? slot.klinik_laporan[0] : slot.klinik_laporan;
+    const laporan = slot.klinik_laporan;
+    return Array.isArray(laporan) ? laporan[0] : laporan;
 }
 
-/** Validasi protokol URL aman untuk mencegah Stored XSS */
-function isSafeHttpUrl(url: string | null | undefined): boolean {
+function isSafeHttpUrl(url: string | null | undefined): url is string {
     if (!url) return false;
     try {
-        const parsed = new URL(url, typeof window !== 'undefined' ? window.location.origin : 'http://localhost');
+        const parsed = new URL(url);
         return parsed.protocol === 'http:' || parsed.protocol === 'https:';
     } catch {
         return false;
     }
 }
 
-interface CatatanData {
-    text: string;
-    url: string;
-    nominal: number | null;
-    paid_at?: string | null;
+/** Tautan bukti dari catatan: URL http(s) atau path internal `/api/...`. */
+function isProofUrl(url: string | null | undefined): url is string {
+    return isSafeHttpUrl(url) || (!!url && /^\/(?![\/\\])/.test(url));
 }
 
+interface CatatanData { text: string; url: string; nominal: number | null; paid_at: string | null }
+
 const getCatatanData = (raw: string | null | undefined): CatatanData => {
-    if (!raw) return { text: '', url: '', nominal: null };
+    if (!raw) return { text: '', url: '', nominal: null, paid_at: null };
     try {
-        const trimmed = raw.trim();
-        if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
-            const p = JSON.parse(trimmed);
-            const storedNominal = typeof p.nominal==='number'||(typeof p.nominal==='string'&&/^\d+(?:\.0+)?$/.test(p.nominal.trim()))?Number(p.nominal):NaN;
-            const parsedNominal = Number.isSafeInteger(storedNominal)&&storedNominal>=0?storedNominal:null;
-            return {
-                text: typeof p.text === 'string' ? p.text : '',
-                url: typeof p.url === 'string' ? p.url : '',
-                nominal: parsedNominal !== null && Number.isFinite(parsedNominal) && parsedNominal >= 0 ? parsedNominal : null,
-                paid_at: typeof p.paid_at === 'string' ? p.paid_at : null,
-            };
-        }
-    } catch(e) {}
-    return { text: raw, url: '', nominal: null };
+        const parsed = JSON.parse(raw);
+        const nominal = typeof parsed.nominal === 'number' || (typeof parsed.nominal === 'string' && /^\d+(?:\.0+)?$/.test(parsed.nominal.trim())) ? Number(parsed.nominal) : null;
+        return {
+            text: parsed.text || '',
+            url: parsed.url || '',
+            nominal: Number.isSafeInteger(nominal) && nominal! >= 0 ? nominal : null,
+            paid_at: parsed.paid_at || null,
+        };
+    } catch {
+        return { text: raw, url: '', nominal: null, paid_at: null };
+    }
 };
+
+async function sendJson(url: string, method: string, body: any) {
+    const res = await authFetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.ok) throw new Error(data.error || data.message || 'Gagal memproses');
+    return data;
+}
+
+const sumAmounts = (rows: PayRow[]) => rows.reduce((s, r) => s + (r.amount ?? 0), 0);
+
+/* ---------------------------------- Halaman --------------------------------- */
 
 interface PembayaranPageProps {
     user?: any;
     komiteOnly?: boolean;
 }
 
-export default function PembayaranPage({ user: propUser, komiteOnly = false }: PembayaranPageProps = {}) {
-    const [user, setUser] = useState<any>(propUser || null);
-    const [loading, setLoading] = useState(false);
-    const [submissions, setSubmissions] = useState<Submission[]>([]);
-    const [saving, setSaving] = useState(false);
-    const [filterBayar, setFilterBayar] = useState('ALL');
-    const [searchQuery, setSearchQuery] = useState('');
-    const [activeTab, setActiveTab] = useState(komiteOnly ? 'KOMITE' : 'GURU_ASUH');
-    const [printOpen,setPrintOpen]=useState(false);
-    const [printUrl,setPrintUrl]=useState('');
-    useEffect(()=>()=>{if(printUrl)URL.revokeObjectURL(printUrl);},[printUrl]);
-    const [bulkOpen, setBulkOpen] = useState(false);
-    const [klinikEvidence, setKlinikEvidence] = useState<Record<string, string>>({});
+const TABS: { key: TabKey; label: string; shortLabel?: string; icon: string }[] = [
+    { key: 'KLINIK', label: 'Klinik Pembelajaran', shortLabel: 'Klinik', icon: 'heart-pulse' },
+    { key: 'GURU_ASUH', label: 'Guru Asuh', icon: 'person-heart' },
+    { key: 'EKSKUL', label: 'Ekstrakurikuler', shortLabel: 'Ekskul', icon: 'person-plus' },
+    { key: 'KOMITE', label: 'Pengajuan Komite', shortLabel: 'Komite', icon: 'clipboard-data-fill' },
+    { key: 'REKAPAN', label: 'Rekapan', icon: 'journal-check' },
+    { key: 'NOMINAL', label: 'Nominal', icon: 'cash-stack' },
+];
 
+export default function PembayaranPage({ user: propUser, komiteOnly = false }: PembayaranPageProps = {}) {
+    const isMobile = useIsMobile();
+    const [user, setUser] = useState<any>(propUser || null);
+    const [activeTab, setActiveTab] = useState<TabKey>(komiteOnly ? 'KOMITE' : 'GURU_ASUH');
+
+    const [submissions, setSubmissions] = useState<Submission[]>([]);
+    const [loading, setLoading] = useState(false);
     const [klinikSlots, setKlinikSlots] = useState<KlinikSlot[]>([]);
     const [loadingKlinik, setLoadingKlinik] = useState(false);
-    const [savingKlinik, setSavingKlinik] = useState(false);
-    const [klinikFilterBayar, setKlinikFilterBayar] = useState('ALL');
-    const [klinikSearchQuery, setKlinikSearchQuery] = useState('');
-
+    const [klinikEvidence, setKlinikEvidence] = useState<Record<string, string>>({});
     const [ekskulSubmissions, setEkskulSubmissions] = useState<EkskulSubmission[]>([]);
     const [loadingEkskul, setLoadingEkskul] = useState(false);
-    const [savingEkskul, setSavingEkskul] = useState(false);
-    const [ekskulFilterBayar, setEkskulFilterBayar] = useState('ALL');
-    const [ekskulSearchQuery, setEkskulSearchQuery] = useState('');
-
     const [tarifList, setTarifList] = useState<TarifHonor[]>([]);
     const [loadingTarif, setLoadingTarif] = useState(false);
     const [savingTarifModul, setSavingTarifModul] = useState<string | null>(null);
     const [tarifDraft, setTarifDraft] = useState<Record<string, string>>({});
+    const [busy, setBusy] = useState(false);
 
+    // Filter per tab rutin, supaya berpindah tab tidak saling menimpa.
+    const [statusFilter, setStatusFilter] = useState<Record<RoutineKind, string>>({ KLINIK: 'ALL', GURU_ASUH: 'ALL', EKSKUL: 'ALL' });
+    const [searchQuery, setSearchQuery] = useState<Record<RoutineKind, string>>({ KLINIK: '', GURU_ASUH: '', EKSKUL: '' });
     const [periodMonth, setPeriodMonth] = useState(0);
     const [periodYear, setPeriodYear] = useState(0);
 
-    const [docPreview, setDocPreview] = useState<{
-        open: boolean;
-        title: string;
-        html?: string;
-        fileUrl?: string;
-    } | null>(null);
+    const [payTarget, setPayTarget] = useState<PayTarget | null>(null);
+    const [sheetKey, setSheetKey] = useState<string | null>(null);
+    const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+    const [bulkOpen, setBulkOpen] = useState(false);
+    const [printOpen, setPrintOpen] = useState(false);
+    const [printUrl, setPrintUrl] = useState('');
+    useEffect(() => () => { if (printUrl) URL.revokeObjectURL(printUrl); }, [printUrl]);
+    const [docPreview, setDocPreview] = useState<{ title: string; html?: string; fileUrl?: string } | null>(null);
 
-    const handleViewGuruAsuhDoc = async (sub: Submission) => {
-        try {
-            Swal.fire({
-                title: 'Memuat Laporan...',
-                allowOutsideClick: false,
-                didOpen: () => Swal.showLoading(),
-            });
-            const res = await fetch('/api/guru-asuh/laporan-submission/preview', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ submissionId: sub.id }),
-            });
-            const json = await res.json();
-            Swal.close();
-            if (!res.ok || !json.ok) throw new Error(json.error || 'Gagal memuat pratinjau dokumen');
-            setDocPreview({
-                open: true,
-                title: `Laporan Guru Asuh - ${sub.nama_guru_snap || 'Guru'} (${BULAN[sub.bulan - 1] || sub.bulan} ${sub.tahun})`,
-                html: json.html,
-            });
-        } catch (e: any) {
-            Swal.close();
-            swalError('Gagal Membuka Dokumen', e.message);
-        }
-    };
-
-    const handleViewFile = (url: string, title: string = 'Bukti Pembayaran') => {
-        setDocPreview({
-            open: true,
-            title,
-            fileUrl: url,
-        });
-    };
-
-    const TABS = [
-        { id: 'KLINIK', label: 'Klinik Pembelajaran', icon: 'bi-heart-pulse' },
-        { id: 'GURU_ASUH', label: 'Guru Asuh', icon: 'bi-person-heart' },
-        { id: 'EKSKUL', label: 'Ekstrakurikuler', icon: 'bi-person-plus' },
-        { id: 'KOMITE', label: 'Pengajuan Komite', icon: 'bi-journal-richtext' },
-        { id: 'REKAPAN', label: 'Rekapan', icon: 'bi-journal-check' },
-        { id: 'NOMINAL', label: 'Nominal', icon: 'bi-cash-stack' },
-    ];
+    /* ------------------------------- Akses -------------------------------- */
 
     const userRoles = useMemo(() => {
         if (!user) return [];
@@ -233,23 +226,19 @@ export default function PembayaranPage({ user: propUser, komiteOnly = false }: P
     }, [isBendahara, user, userRoles]);
 
     useEffect(() => {
-        if (propUser) {
-            setUser(propUser);
-            return;
-        }
-        const init = async () => {
+        if (propUser) { setUser(propUser); return; }
+        (async () => {
             try {
                 const meRes = await fetch('/api/auth/me');
                 const meData = await meRes.json();
-                if (meData.ok && meData.user) {
-                    setUser(meData.user);
-                }
+                if (meData.ok && meData.user) setUser(meData.user);
             } catch (err) {
                 console.error('Error init user in pembayaran:', err);
             }
-        };
-        init();
+        })();
     }, [propUser]);
+
+    /* -------------------------------- Data -------------------------------- */
 
     const fetchSubmissions = useCallback(async () => {
         setLoading(true);
@@ -269,9 +258,7 @@ export default function PembayaranPage({ user: propUser, komiteOnly = false }: P
             if (data.ok) {
                 setTarifList(data.data || []);
                 const draft: Record<string, string> = {};
-                (data.data || []).forEach((t: TarifHonor) => { 
-                    draft[t.modul] = String(parseNominal(t.nominal)); 
-                });
+                (data.data || []).forEach((t: TarifHonor) => { draft[t.modul] = String(parseNominal(t.nominal)); });
                 setTarifDraft(draft);
             }
         } catch (e) { console.error(e); }
@@ -284,10 +271,8 @@ export default function PembayaranPage({ user: propUser, komiteOnly = false }: P
             const res = await authFetch('/api/klinik');
             const data = await res.json();
             if (data.ok) {
-                // Sesi yang laporannya sudah Approved atau status sudah paid
-                setKlinikSlots((data.data || []).filter((s: KlinikSlot) => 
-                    s.status === 'paid' || getKlinikLaporan(s)?.status === 'Approved'
-                ));
+                // Sesi yang laporannya sudah Approved atau sudah dibayar.
+                setKlinikSlots((data.data || []).filter((s: KlinikSlot) => s.status === 'paid' || getKlinikLaporan(s)?.status === 'Approved'));
             }
         } catch (e) { console.error(e); }
         finally { setLoadingKlinik(false); }
@@ -313,971 +298,731 @@ export default function PembayaranPage({ user: propUser, komiteOnly = false }: P
     }, []);
 
     useEffect(() => {
-        if (hasAccess && !komiteOnly) {
-            fetchSubmissions();
-            fetchTarif();
-        }
+        if (hasAccess && !komiteOnly) { fetchSubmissions(); fetchTarif(); }
     }, [hasAccess, komiteOnly, fetchSubmissions, fetchTarif]);
 
     useEffect(() => {
-        if (hasAccess && !komiteOnly && (activeTab === 'KLINIK' || activeTab === 'REKAPAN')) {
-            fetchKlinikSlots();
-        }
+        if (hasAccess && !komiteOnly && (activeTab === 'KLINIK' || activeTab === 'REKAPAN')) fetchKlinikSlots();
     }, [hasAccess, komiteOnly, activeTab, fetchKlinikSlots]);
 
     useEffect(() => {
-        if (hasAccess && !komiteOnly && activeTab === 'KLINIK') {
-            fetchKlinikEvidence();
-        }
+        if (hasAccess && !komiteOnly && activeTab === 'KLINIK') fetchKlinikEvidence();
     }, [hasAccess, komiteOnly, activeTab, fetchKlinikEvidence]);
 
     useEffect(() => {
-        if (hasAccess && !komiteOnly && (activeTab === 'EKSKUL' || activeTab === 'REKAPAN')) {
-            fetchEkskulSubmissions();
-        }
+        if (hasAccess && !komiteOnly && (activeTab === 'EKSKUL' || activeTab === 'REKAPAN')) fetchEkskulSubmissions();
     }, [hasAccess, komiteOnly, activeTab, fetchEkskulSubmissions]);
+
+    // Detail mobile ditutup saat tab berganti supaya tidak menampilkan baris tab lain.
+    useEffect(() => { setSheetKey(null); }, [activeTab]);
 
     const getTarif = useCallback((modul: string) => {
         const found = tarifList.find(t => t.modul === modul);
         return found ? parseNominal(found.nominal) : 0;
     }, [tarifList]);
 
+    /* ----------------------------- Periode -------------------------------- */
+
+    const periodSubmissions = useMemo(() => submissions.filter(s => matchesPaymentPeriod(s, periodMonth, periodYear)), [submissions, periodMonth, periodYear]);
+    const periodKlinikSlots = useMemo(() => klinikSlots.filter(s => matchesPaymentPeriod(paymentDatePeriod(s.tanggal, true), periodMonth, periodYear)), [klinikSlots, periodMonth, periodYear]);
+    const periodEkskulSubmissions = useMemo(() => ekskulSubmissions.filter(s => matchesPaymentPeriod(s, periodMonth, periodYear)), [ekskulSubmissions, periodMonth, periodYear]);
+    const periodYears = useMemo(() => {
+        const currentYear = Number(new Intl.DateTimeFormat('en', { year: 'numeric', timeZone: 'Asia/Makassar' }).format(new Date()));
+        const years = new Set([currentYear, currentYear - 1]);
+        [...submissions, ...ekskulSubmissions].forEach(s => { if (s.tahun) years.add(Number(s.tahun)); });
+        klinikSlots.forEach(s => { const period = paymentDatePeriod(s.tanggal, true); if (period) years.add(period.tahun); });
+        if (periodYear) years.add(periodYear);
+        return [...years].sort((a, b) => b - a);
+    }, [submissions, ekskulSubmissions, klinikSlots, periodYear]);
+
+    /* --------------------------- Aksi pembayaran --------------------------- */
+
+    const viewFile = (url: string, title = 'Bukti Pembayaran') => setDocPreview({ title, fileUrl: url });
+
+    const viewGuruAsuhDoc = async (sub: Submission) => {
+        try {
+            Swal.fire({ title: 'Memuat Laporan...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+            const res = await fetch('/api/guru-asuh/laporan-submission/preview', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ submissionId: sub.id }),
+            });
+            const json = await res.json();
+            Swal.close();
+            if (!res.ok || !json.ok) throw new Error(json.error || 'Gagal memuat pratinjau dokumen');
+            setDocPreview({
+                title: `Laporan Guru Asuh - ${sub.nama_guru_snap || 'Guru'} (${BULAN[sub.bulan - 1] || sub.bulan} ${sub.tahun})`,
+                html: json.html,
+            });
+        } catch (e: any) {
+            Swal.close();
+            swalError('Gagal Membuka Dokumen', e.message);
+        }
+    };
+
+    /** Konfirmasi lalu jalankan pembatalan status dibayar. */
+    const confirmCancel = async (text: string, run: () => Promise<void>) => {
+        const confirm = await swalConfirm({
+            title: 'Batalkan Status Dibayar?',
+            text,
+            icon: 'warning', confirmText: 'Ya, Batalkan', cancelText: 'Batal', confirmColor: '#dc2626',
+        });
+        if (!confirm.isConfirmed) return;
+        setBusy(true);
+        try {
+            await run();
+            swalSuccess('Berhasil', 'Status pembayaran dikembalikan ke Belum Dibayar.');
+        } catch (e: any) { swalError('Gagal', e.message); }
+        finally { setBusy(false); }
+    };
+
+    const payGuruAsuh = (sub: Submission) => {
+        const nominal = getTarif('GURU_ASUH');
+        setPayTarget({
+            recipient: sub.nama_guru_snap || 'Guru',
+            detail: `Guru Asuh · ${BULAN[sub.bulan - 1]} ${sub.tahun} · ${sub.total_laporan} laporan`,
+            amount: nominal,
+            submit: async ({ text, url }) => {
+                // Nominal disnapshot saat pembayaran disahkan; server menolak bila tarif sudah berubah.
+                const catatan = JSON.stringify({ text, url, nominal, paid_at: new Date().toISOString() });
+                await sendJson('/api/guru-asuh/laporan-submission/pembayaran', 'POST', { id: sub.id, dibayarkan: true, catatan });
+                swalSuccess('Berhasil', 'Ditandai sudah dibayarkan.');
+                fetchSubmissions();
+            },
+        });
+    };
+
+    const ekskulCounts = (sub: EkskulSubmission) => {
+        const internal = Number(sub.jml_internal ?? sub.total_pertemuan ?? 0) || 0;
+        const eksternal = Number(sub.jml_eksternal ?? 0) || 0;
+        return { internal, eksternal, nominal: internal * getTarif('EKSKUL_INTERNAL') + eksternal * getTarif('EKSKUL_EKSTERNAL') };
+    };
+
+    const payEkskul = (sub: EkskulSubmission) => {
+        const { internal, eksternal, nominal } = ekskulCounts(sub);
+        setPayTarget({
+            recipient: sub.pembina_nama || 'Pembina',
+            detail: `${sub.ekskul?.nama_ekskul || 'Ekstrakurikuler'} · ${BULAN[sub.bulan - 1]} ${sub.tahun}`,
+            amount: nominal,
+            amountNote: `Internal ${internal} × ${fmtRupiah(getTarif('EKSKUL_INTERNAL'))} + Eksternal ${eksternal} × ${fmtRupiah(getTarif('EKSKUL_EKSTERNAL'))}`,
+            submit: async ({ text, url }) => {
+                const catatan = JSON.stringify({ text, url, nominal, paid_at: new Date().toISOString() });
+                await sendJson('/api/ekskul/submission/pembayaran', 'POST', { id: sub.id, dibayarkan: true, catatan });
+                swalSuccess('Berhasil', 'Ditandai sudah dibayarkan.');
+                fetchEkskulSubmissions();
+            },
+        });
+    };
+
+    const payKlinik = (slots: KlinikSlot[]) => {
+        const nominal = getTarif('KLINIK');
+        const first = slots[0];
+        setPayTarget({
+            recipient: first.nama_guru || first.guru?.nama || 'Guru',
+            detail: `Klinik Pembelajaran · ${slots.length} kegiatan dibayar dalam satu transfer`,
+            amount: nominal * slots.length,
+            amountNote: `${slots.length} × ${fmtRupiah(nominal)}`,
+            submit: async ({ text, url }) => {
+                await sendJson('/api/klinik', 'PATCH', {
+                    action: 'mark_paid_batch',
+                    ids: slots.map(s => s.id),
+                    expectedTotal: nominal * slots.length,
+                    catatan: JSON.stringify({ text, url }),
+                });
+                swalSuccess('Berhasil', 'Ditandai sudah dibayarkan.');
+                fetchKlinikSlots();
+            },
+        });
+    };
+
+    const cancelGuruAsuh = (sub: Submission) => confirmCancel(
+        `Pembayaran Guru Asuh ${sub.nama_guru_snap || ''} akan dikembalikan ke Belum Dibayar.`,
+        async () => { await sendJson('/api/guru-asuh/laporan-submission/pembayaran', 'POST', { id: sub.id, dibayarkan: false, catatan: null }); fetchSubmissions(); },
+    );
+
+    const cancelEkskul = (sub: EkskulSubmission) => confirmCancel(
+        `Pembayaran ekstrakurikuler ${sub.ekskul?.nama_ekskul || ''} akan dikembalikan ke Belum Dibayar.`,
+        async () => { await sendJson('/api/ekskul/submission/pembayaran', 'POST', { id: sub.id, dibayarkan: false, catatan: null }); fetchEkskulSubmissions(); },
+    );
+
+    const cancelKlinik = (slot: KlinikSlot) => confirmCancel(
+        `Honor klinik ${slot.nama_guru} (${slot.mapel}, ${fmtTanggal(slot.tanggal)}) akan dikembalikan ke Belum Dibayar.`,
+        async () => { await sendJson('/api/klinik', 'PATCH', { action: 'unmark_paid', id: slot.id }); fetchKlinikSlots(); },
+    );
+
     const handleUpdateTarif = async (modul: string) => {
-        const raw = tarifDraft[modul] ?? '0';
-        const nominal = Number(raw);
+        const nominal = Number(tarifDraft[modul] ?? '0');
         if (isNaN(nominal) || nominal < 0) { swalError('Error', 'Nominal harus berupa angka >= 0'); return; }
         setSavingTarifModul(modul);
         try {
-            const res = await authFetch('/api/tarif-honor', {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ modul, nominal }),
-            });
-            const data = await res.json();
-            if (!res.ok || !data.ok) throw new Error(data.error || 'Gagal menyimpan tarif');
+            await sendJson('/api/tarif-honor', 'PUT', { modul, nominal });
             swalSuccess('Berhasil', 'Tarif honor diperbarui.');
             fetchTarif();
         } catch (e: any) { swalError('Error', e.message); }
         finally { setSavingTarifModul(null); }
     };
 
-    const periodSubmissions = useMemo(() => submissions.filter(s => matchesPaymentPeriod(s, periodMonth, periodYear)), [submissions, periodMonth, periodYear]);
-    const periodKlinikSlots = useMemo(() => klinikSlots.filter(s => matchesPaymentPeriod(paymentDatePeriod(s.tanggal, true), periodMonth, periodYear)), [klinikSlots, periodMonth, periodYear]);
-    const periodEkskulSubmissions = useMemo(() => ekskulSubmissions.filter(s => matchesPaymentPeriod(s, periodMonth, periodYear)), [ekskulSubmissions, periodMonth, periodYear]);
-    const periodTarifList = useMemo(() => tarifList.filter(t => matchesPaymentPeriod(paymentDatePeriod(t.updated_at), periodMonth, periodYear)), [tarifList, periodMonth, periodYear]);
-    const periodYears = useMemo(() => {
-        const currentYear = Number(new Intl.DateTimeFormat('en', { year: 'numeric', timeZone: 'Asia/Makassar' }).format(new Date()));
-        const years = new Set([currentYear, currentYear - 1]);
-        [...submissions, ...ekskulSubmissions].forEach(s => { if (s.tahun) years.add(Number(s.tahun)); });
-        klinikSlots.forEach(s => { const period = paymentDatePeriod(s.tanggal, true); if (period) years.add(period.tahun); });
-        tarifList.forEach(t => { const period = paymentDatePeriod(t.updated_at); if (period) years.add(period.tahun); });
-        if (periodYear) years.add(periodYear);
-        return [...years].sort((a, b) => b - a);
-    }, [submissions, ekskulSubmissions, klinikSlots, tarifList, periodYear]);
+    /* ---------------------------- Baris per tab ---------------------------- */
 
-    const filteredEkskulSubmissions = useMemo(() => {
-        let list = periodEkskulSubmissions;
-        if (ekskulFilterBayar === 'BELUM') list = list.filter(s => !s.dibayarkan);
-        else if (ekskulFilterBayar === 'SUDAH') list = list.filter(s => s.dibayarkan);
-        if (ekskulSearchQuery.trim()) {
-            const q = ekskulSearchQuery.toLowerCase();
-            list = list.filter(s => 
-                (s.pembina_nama || '').toLowerCase().includes(q) || 
-                (s.pembina_nip || '').toLowerCase().includes(q) || 
-                (s.ekskul?.nama_ekskul || '').toLowerCase().includes(q)
-            );
-        }
-        return [...list].sort((a, b) => Number(Boolean(a.dibayarkan)) - Number(Boolean(b.dibayarkan)));
-    }, [periodEkskulSubmissions, ekskulFilterBayar, ekskulSearchQuery]);
-
-    const ekskulStats = useMemo(() => ({
-        total: periodEkskulSubmissions.length,
-        belum: periodEkskulSubmissions.filter(s => !s.dibayarkan).length,
-        sudah: periodEkskulSubmissions.filter(s => s.dibayarkan).length,
-    }), [periodEkskulSubmissions]);
-
-    const handleTandaiEkskul = async (sub: EkskulSubmission, dibayarkan: boolean) => {
-        let catatanInput = '';
-        let buktiUrl = '';
-
-        const internalCount = Number(sub.jml_internal ?? sub.total_pertemuan ?? 0) || 0;
-        const eksternalCount = Number(sub.jml_eksternal ?? 0) || 0;
-        const calculatedNominal = internalCount * getTarif('EKSKUL_INTERNAL') + eksternalCount * getTarif('EKSKUL_EKSTERNAL');
-
-        if (dibayarkan) {
-            const { value: result, isDismissed } = await Swal.fire({
-                title: 'Catatan Pembayaran Ekstrakurikuler',
-                html: `
-                    <div style="text-align:left; padding:0 10px 15px; font-size:0.85rem; color:#475569;">
-                        Internal: <strong>${internalCount}</strong> pertemuan &nbsp;·&nbsp; Eksternal: <strong>${eksternalCount}</strong> pertemuan<br>
-                        Nominal yang akan dibayarkan: <strong>${fmtRupiah(calculatedNominal)}</strong>
-                    </div>
-                    <div style="text-align: left; padding: 0 10px;">
-                        <label style="font-size: 0.85rem; font-weight: 600; color: #475569; display: block; margin-bottom: 5px;">Catatan (Opsional)</label>
-                        <textarea id="swal-catatan" class="swal2-textarea" placeholder="Nomor bukti transfer, keterangan, dll..." style="margin: 0; width: 100%; box-sizing: border-box; min-height: 80px;"></textarea>
-                    </div>
-                    <div style="text-align: left; padding: 0 10px; margin-top: 15px;">
-                        <label style="font-size: 0.85rem; font-weight: 600; color: #475569; display: block; margin-bottom: 5px;">Bukti Pembayaran (Opsional)</label>
-                        <input type="file" id="swal-file" class="swal2-file" accept="image/*,.pdf" style="margin: 0; display: block; width: 100%; box-sizing: border-box; border: 1px solid #cbd5e1; padding: 8px; border-radius: 6px; font-size: 0.85rem;">
-                    </div>
-                `,
-                showCancelButton: true,
-                confirmButtonText: 'Tandai Dibayar',
-                cancelButtonText: 'Batal',
-                confirmButtonColor: '#16a34a',
-                cancelButtonColor: '#64748b',
-                customClass: { confirmButton: 'whitespace-nowrap' },
-                preConfirm: () => {
-                    const textarea = document.getElementById('swal-catatan') as HTMLTextAreaElement;
-                    const fileInput = document.getElementById('swal-file') as HTMLInputElement;
-                    return {
-                        text: textarea?.value || '',
-                        file: fileInput?.files?.[0] || null
-                    };
-                }
-            });
-            if (isDismissed || !result) return;
-
-            catatanInput = result.text;
-            const file = result.file;
-
-            if (file) {
-                if (file.size > 25 * 1024 * 1024) {
-                    swalError('File Terlalu Besar', 'Ukuran berkas maksimal adalah 25 MB.');
-                    return;
-                }
-                setSavingEkskul(true);
-                const formData = new FormData();
-                formData.append('file', file);
-                formData.append('folder', 'pembayaran');
-
-                try {
-                    const uploadRes = await fetch('/api/upload', {
-                        method: 'POST',
-                        body: formData
-                    });
-                    const uploadData = await uploadRes.json();
-                    if (!uploadData.ok) throw new Error(uploadData.error || 'Gagal mengupload file bukti');
-                    buktiUrl = uploadData.publicUrl || uploadData.url || uploadData.file_url || '';
-                } catch (e: any) {
-                    swalError('Upload Gagal', e.message);
-                    setSavingEkskul(false);
-                    return;
-                }
-            }
-        } else {
-            const confirm = await swalConfirm({
-                title: 'Batalkan Tanda Dibayar?',
-                text: 'Status pembayaran akan dikembalikan ke Belum Dibayar.',
-                icon: 'warning', confirmText: 'Ya, Batalkan', cancelText: 'Batal', confirmColor: '#dc2626',
-            });
-            if (!confirm.isConfirmed) return;
-        }
-
-        // Snapshot nominal dan waktu saat pembayaran disahkan
-        const catatanFinal = dibayarkan
-            ? JSON.stringify({
-                text: catatanInput,
-                url: buktiUrl,
-                nominal: calculatedNominal,
-                paid_at: new Date().toISOString()
-            })
-            : null;
-
-        setSavingEkskul(true);
-        try {
-            const res = await authFetch('/api/ekskul/submission/pembayaran', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ id: sub.id, dibayarkan, catatan: catatanFinal }),
-            });
-            const data = await res.json();
-            if (!res.ok || !data.ok) throw new Error(data.error || 'Gagal memproses');
-            swalSuccess('Berhasil', dibayarkan ? 'Ditandai sudah dibayarkan.' : 'Tanda dibayar dibatalkan.');
-            fetchEkskulSubmissions();
-        } catch (e: any) { swalError('Error', e.message); }
-        finally { setSavingEkskul(false); }
+    const klinikProofs = (slot: KlinikSlot) => {
+        const proofs: string[] = [];
+        if (klinikEvidence[slot.id]) proofs.push(`/api/pembayaran-massal/bukti?id=${klinikEvidence[slot.id]}`);
+        const url = getCatatanData(slot.catatan_pembayaran).url;
+        if (isProofUrl(url)) proofs.push(url);
+        return proofs;
     };
 
-    const filteredKlinikSlots = useMemo(() => {
-        let list = periodKlinikSlots;
-        if (klinikFilterBayar === 'BELUM') list = list.filter(s => s.status !== 'paid');
-        else if (klinikFilterBayar === 'SUDAH') list = list.filter(s => s.status === 'paid');
-        if (klinikSearchQuery.trim()) {
-            const q = klinikSearchQuery.toLowerCase();
-            list = list.filter(s => 
-                (s.nama_guru || '').toLowerCase().includes(q) || 
-                (s.guru?.nip || '').toLowerCase().includes(q)
-            );
-        }
-        return [...list].sort((a, b) => {
-            const namaA = (a.nama_guru || a.guru?.nama || '').trim().replace(/\s+/g, ' ');
-            const namaB = (b.nama_guru || b.guru?.nama || '').trim().replace(/\s+/g, ' ');
-            return Number(a.status === 'paid') - Number(b.status === 'paid')
-                || namaA.localeCompare(namaB, 'id', { sensitivity: 'base' })
-                || b.tanggal.localeCompare(a.tanggal)
-                || a.id.localeCompare(b.id);
-        });
-    }, [periodKlinikSlots, klinikFilterBayar, klinikSearchQuery]);
+    const guruAsuhRows = useMemo<PayRow[]>(() => periodSubmissions.map(sub => {
+        const c = getCatatanData(sub.catatan_pembayaran);
+        const name = sub.nama_guru_snap || 'Guru';
+        return {
+            key: sub.id,
+            name,
+            nip: sub.nip,
+            period: `${BULAN[sub.bulan - 1]} ${sub.tahun}`,
+            detail: `${sub.total_laporan} laporan`,
+            detailText: `${sub.total_laporan} laporan`,
+            amount: sub.dibayarkan ? c.nominal : getTarif('GURU_ASUH'),
+            paid: !!sub.dibayarkan,
+            note: sub.dibayarkan ? c.text : '',
+            proofs: sub.dibayarkan && isProofUrl(c.url) ? [{ url: c.url, title: `Bukti Pembayaran - ${name}` }] : [],
+            onDoc: () => viewGuruAsuhDoc(sub),
+            docLabel: 'Lihat Laporan',
+            onPay: () => payGuruAsuh(sub),
+            onCancel: () => cancelGuruAsuh(sub),
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }), [periodSubmissions, getTarif]);
 
-    const klinikStats = useMemo(() => ({
-        total: periodKlinikSlots.length,
-        belum: periodKlinikSlots.filter(s => s.status !== 'paid').length,
-        sudah: periodKlinikSlots.filter(s => s.status === 'paid').length,
-    }), [periodKlinikSlots]);
+    const ekskulRows = useMemo<PayRow[]>(() => periodEkskulSubmissions.map(sub => {
+        const c = getCatatanData(sub.catatan_pembayaran);
+        const { internal, eksternal, nominal } = ekskulCounts(sub);
+        const name = sub.pembina_nama || 'Pembina';
+        const ekskulName = sub.ekskul?.nama_ekskul || 'Ekstrakurikuler';
+        return {
+            key: sub.id,
+            name,
+            nip: sub.pembina_nip,
+            period: `${BULAN[sub.bulan - 1]} ${sub.tahun}`,
+            detail: (
+                <div className="pay-cell-stack">
+                    <span className="pay-cell-strong">{ekskulName}</span>
+                    <span className="pay-chips">
+                        <span className="pay-chip pay-chip--blue">Internal {internal}</span>
+                        <span className="pay-chip pay-chip--violet">Eksternal {eksternal}</span>
+                    </span>
+                </div>
+            ),
+            detailText: `${ekskulName} · ${sub.total_pertemuan} pertemuan`,
+            amount: sub.dibayarkan ? c.nominal : nominal,
+            amountNote: sub.dibayarkan ? undefined : `${internal}×${fmtRupiah(getTarif('EKSKUL_INTERNAL'))} + ${eksternal}×${fmtRupiah(getTarif('EKSKUL_EKSTERNAL'))}`,
+            paid: !!sub.dibayarkan,
+            note: sub.dibayarkan ? c.text : '',
+            proofs: sub.dibayarkan && isProofUrl(c.url) ? [{ url: c.url, title: `Bukti Pembayaran - ${name}` }] : [],
+            onDoc: sub.pdf_url && isSafeHttpUrl(sub.pdf_url) ? () => viewFile(sub.pdf_url!, `Laporan Ekskul - ${ekskulName}`) : undefined,
+            docLabel: 'Lihat PDF Laporan',
+            onPay: () => payEkskul(sub),
+            onCancel: () => cancelEkskul(sub),
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }), [periodEkskulSubmissions, getTarif]);
 
-    const klinikGroups = useMemo(() => {
+    // Klinik dikelompokkan per penerima: sesi yang belum dibayar ditransfer sekaligus.
+    const klinikRows = useMemo<PayRow[]>(() => {
         const groups = new Map<string, KlinikSlot[]>();
-        filteredKlinikSlots.forEach(slot => {
+        periodKlinikSlots.forEach(slot => {
             const key = `${slot.guru_id}:${slot.status === 'paid' ? 'paid' : 'unpaid'}`;
             groups.set(key, [...(groups.get(key) || []), slot]);
         });
-        return [...groups.values()];
-    }, [filteredKlinikSlots]);
-
-    const handleTandaiKlinik = async (slots: KlinikSlot[]) => {
-        const slot = slots[0];
-        const nominal = getTarif('KLINIK');
-        const confirm = await swalConfirm({
-            title: 'Tandai Sudah Dibayar?',
-            text: `Honor klinik ${slot.nama_guru} (${slot.mapel}) untuk ${slots.length} kegiatan, total ${fmtRupiah(nominal * slots.length)}, akan ditandai dibayar dalam satu transfer.`,
-            icon: 'question', confirmText: 'Ya, Tandai', cancelText: 'Batal', confirmColor: '#16a34a',
+        return [...groups.entries()].map(([key, slots]) => {
+            const sessions = [...slots].sort((a, b) => a.tanggal.localeCompare(b.tanggal));
+            const first = sessions[0];
+            const paid = first.status === 'paid';
+            const name = (first.nama_guru || first.guru?.nama || 'Guru').trim().replace(/\s+/g, ' ');
+            const missing = paid && sessions.some(s => s.nominal_dibayarkan == null);
+            const amount = missing ? null : sessions.reduce((sum, s) => sum + (paid ? parseNominal(s.nominal_dibayarkan) : getTarif('KLINIK')), 0);
+            const proofUrls = [...new Set(sessions.flatMap(klinikProofs))];
+            const notes = [...new Set(sessions.map(s => getCatatanData(s.catatan_pembayaran).text).filter(Boolean))];
+            const dates = sessions.length === 1
+                ? fmtTanggal(first.tanggal)
+                : `${fmtTanggal(first.tanggal, { day: 'numeric', month: 'short' })} – ${fmtTanggal(sessions[sessions.length - 1].tanggal)}`;
+            return {
+                key,
+                name,
+                nip: first.guru?.nip,
+                period: dates,
+                detail: `${sessions.length} kegiatan`,
+                detailText: `${sessions.length} kegiatan`,
+                amount,
+                amountNote: !paid && sessions.length > 1 ? `${sessions.length} × ${fmtRupiah(getTarif('KLINIK'))}` : undefined,
+                paid,
+                note: notes.join(' · '),
+                proofs: proofUrls.map((url, i) => ({ url, title: `Bukti Pembayaran - ${name}${proofUrls.length > 1 ? ` (${i + 1})` : ''}` })),
+                onPay: () => payKlinik(sessions),
+                sessions,
+            };
         });
-        if (!confirm.isConfirmed) return;
-        setSavingKlinik(true);
-        try {
-            const res = await authFetch('/api/klinik', {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action: 'mark_paid_batch', ids: slots.map(s => s.id), expectedTotal: nominal * slots.length }),
-            });
-            const data = await res.json();
-            if (!res.ok || !data.ok) throw new Error(data.error || 'Gagal memproses');
-            swalSuccess('Berhasil', 'Ditandai sudah dibayarkan.');
-            fetchKlinikSlots();
-        } catch (e: any) { swalError('Error', e.message); }
-        finally { setSavingKlinik(false); }
-    };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [periodKlinikSlots, getTarif, klinikEvidence]);
 
-    const handleBatalKlinik = async (slot: KlinikSlot) => {
-        const confirm = await swalConfirm({
-            title: 'Batalkan Status Dibayar?',
-            text: `Honor klinik ${slot.nama_guru} (${slot.mapel}) akan dikembalikan ke Belum Dibayar.`,
-            icon: 'warning', confirmText: 'Ya, Batalkan', cancelText: 'Batal', confirmColor: '#dc2626',
-        });
-        if (!confirm.isConfirmed) return;
-        setSavingKlinik(true);
-        try {
-            const res = await authFetch('/api/klinik', {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action: 'unmark_paid', id: slot.id }),
-            });
-            const data = await res.json();
-            if (!res.ok || !data.ok) throw new Error(data.error || 'Gagal membatalkan status bayar');
-            swalSuccess('Berhasil', 'Status pembayaran dibatalkan.');
-            fetchKlinikSlots();
-        } catch (e: any) { swalError('Error', e.message); }
-        finally { setSavingKlinik(false); }
-    };
+    const routineRows: Record<RoutineKind, PayRow[]> = { KLINIK: klinikRows, GURU_ASUH: guruAsuhRows, EKSKUL: ekskulRows };
+    const routineLoading: Record<RoutineKind, boolean> = { KLINIK: loadingKlinik, GURU_ASUH: loading, EKSKUL: loadingEkskul };
 
-    const filteredSubmissions = useMemo(() => {
-        let list = periodSubmissions;
-        if (filterBayar === 'BELUM') list = list.filter(s => !s.dibayarkan);
-        else if (filterBayar === 'SUDAH') list = list.filter(s => s.dibayarkan);
-        if (searchQuery.trim()) {
-            const q = searchQuery.toLowerCase();
-            list = list.filter(s => 
-                (s.nama_guru_snap || '').toLowerCase().includes(q) || 
-                (s.nip || '').toLowerCase().includes(q)
-            );
-        }
-        return [...list].sort((a, b) => Number(Boolean(a.dibayarkan)) - Number(Boolean(b.dibayarkan)));
-    }, [periodSubmissions, filterBayar, searchQuery]);
+    const visibleRows = useMemo(() => {
+        if (!ROUTINE.includes(activeTab)) return [];
+        const kind = activeTab as RoutineKind;
+        const status = statusFilter[kind];
+        const q = searchQuery[kind].trim().toLowerCase();
+        return routineRows[kind]
+            .filter(r => status === 'ALL' || (status === 'SUDAH' ? r.paid : !r.paid))
+            .filter(r => !q || `${r.name} ${r.nip || ''} ${r.detailText}`.toLowerCase().includes(q))
+            .sort((a, b) => Number(a.paid) - Number(b.paid) || a.name.localeCompare(b.name, 'id', { sensitivity: 'base' }));
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [activeTab, statusFilter, searchQuery, klinikRows, guruAsuhRows, ekskulRows]);
 
-    const statsCount = useMemo(() => ({
-        total: periodSubmissions.length,
-        belum: periodSubmissions.filter(s => !s.dibayarkan).length,
-        sudah: periodSubmissions.filter(s => s.dibayarkan).length,
-    }), [periodSubmissions]);
+    /* ------------------------------ Rekapan ------------------------------- */
 
-    const rekapanData = useMemo(() => {
+    const rekapan = useMemo(() => {
         const guruAsuhPaid = periodSubmissions.filter(s => s.dibayarkan);
-        let totalGuruAsuh = 0;
-        guruAsuhPaid.forEach(sub => {
-            const cData = getCatatanData(sub.catatan_pembayaran);
-            const nominal = cData.nominal;
-            totalGuruAsuh += parseNominal(nominal);
-        });
-
         const klinikPaid = periodKlinikSlots.filter(s => s.status === 'paid');
-        const totalKlinik = klinikPaid.reduce((sum, slot) => sum + parseNominal(slot.nominal_dibayarkan), 0);
-        const klinikTanpaNominal = klinikPaid.filter(slot => slot.nominal_dibayarkan == null).length;
-
         const ekskulPaid = periodEkskulSubmissions.filter(s => s.dibayarkan);
-        let totalEkskul = 0;
-        ekskulPaid.forEach(sub => {
-            const cData = getCatatanData(sub.catatan_pembayaran);
-            const nominal = cData.nominal;
-            totalEkskul += parseNominal(nominal);
-        });
-
+        const noteSum = (list: { catatan_pembayaran: string | null }[]) => list.reduce((s, x) => s + parseNominal(getCatatanData(x.catatan_pembayaran).nominal), 0);
+        const guruAsuh = noteSum(guruAsuhPaid);
+        const ekskul = noteSum(ekskulPaid);
+        const klinik = klinikPaid.reduce((sum, slot) => sum + parseNominal(slot.nominal_dibayarkan), 0);
+        const missing = klinikPaid.filter(s => s.nominal_dibayarkan == null).length
+            + guruAsuhPaid.filter(s => getCatatanData(s.catatan_pembayaran).nominal === null).length
+            + ekskulPaid.filter(s => getCatatanData(s.catatan_pembayaran).nominal === null).length;
         return {
-            guruAsuh: totalGuruAsuh,
-            klinik: totalKlinik,
-            klinikTanpaNominal,
-            nominalBelumTercatat: klinikTanpaNominal + guruAsuhPaid.filter(s=>getCatatanData(s.catatan_pembayaran).nominal===null).length + ekskulPaid.filter(s=>getCatatanData(s.catatan_pembayaran).nominal===null).length,
-            ekskul: totalEkskul,
-            total: totalGuruAsuh + totalKlinik + totalEkskul
+            categories: [
+                { key: 'KLINIK', label: 'Klinik Pembelajaran', icon: 'heart-pulse', tone: 'rose', count: klinikPaid.length, unit: 'kegiatan', total: klinik },
+                { key: 'EKSKUL', label: 'Ekstrakurikuler', icon: 'person-plus', tone: 'violet', count: ekskulPaid.length, unit: 'laporan', total: ekskul },
+                { key: 'GURU_ASUH', label: 'Guru Asuh', icon: 'person-heart', tone: 'blue', count: guruAsuhPaid.length, unit: 'laporan', total: guruAsuh },
+            ],
+            total: guruAsuh + klinik + ekskul,
+            missing,
         };
     }, [periodSubmissions, periodKlinikSlots, periodEkskulSubmissions]);
 
-    const handleTandai = async (sub: Submission, dibayarkan: boolean) => {
-        let catatanInput = '';
-        let buktiUrl = '';
-        
-        const currentTarif = getTarif('GURU_ASUH');
-
-        if (dibayarkan) {
-            const { value: result, isDismissed } = await Swal.fire({
-                title: 'Catatan Pembayaran Guru Asuh',
-                html: `
-                    <div style="text-align:left; padding:0 10px 15px; font-size:0.85rem; color:#475569;">
-                        Penerima: <strong>${sub.nama_guru_snap || 'Guru'}</strong><br>
-                        Nominal yang akan dibayarkan: <strong>${fmtRupiah(currentTarif)}</strong>
-                    </div>
-                    <div style="text-align: left; padding: 0 10px; margin-top: 5px;">
-                        <label style="font-size: 0.85rem; font-weight: 600; color: #475569; display: block; margin-bottom: 5px;">Catatan (Opsional)</label>
-                        <textarea id="swal-catatan" class="swal2-textarea" placeholder="Nomor bukti transfer, keterangan, dll..." style="margin: 0; width: 100%; box-sizing: border-box; min-height: 80px;"></textarea>
-                    </div>
-                    <div style="text-align: left; padding: 0 10px; margin-top: 15px;">
-                        <label style="font-size: 0.85rem; font-weight: 600; color: #475569; display: block; margin-bottom: 5px;">Bukti Pembayaran (Opsional)</label>
-                        <input type="file" id="swal-file" class="swal2-file" accept="image/*,.pdf" style="margin: 0; display: block; width: 100%; box-sizing: border-box; border: 1px solid #cbd5e1; padding: 8px; border-radius: 6px; font-size: 0.85rem;">
-                    </div>
-                `,
-                showCancelButton: true,
-                confirmButtonText: 'Tandai Dibayar',
-                cancelButtonText: 'Batal',
-                confirmButtonColor: '#16a34a',
-                cancelButtonColor: '#64748b',
-                customClass: { confirmButton: 'whitespace-nowrap' },
-                preConfirm: () => {
-                    const textarea = document.getElementById('swal-catatan') as HTMLTextAreaElement;
-                    const fileInput = document.getElementById('swal-file') as HTMLInputElement;
-                    return {
-                        text: textarea?.value || '',
-                        file: fileInput?.files?.[0] || null
-                    };
-                }
-            });
-            if (isDismissed || !result) return;
-            
-            catatanInput = result.text;
-            const file = result.file;
-            
-            if (file) {
-                if (file.size > 25 * 1024 * 1024) {
-                    swalError('File Terlalu Besar', 'Ukuran berkas maksimal adalah 25 MB.');
-                    return;
-                }
-                setSaving(true);
-                const formData = new FormData();
-                formData.append('file', file);
-                formData.append('folder', 'pembayaran');
-                
-                try {
-                    const uploadRes = await fetch('/api/upload', {
-                        method: 'POST',
-                        body: formData
-                    });
-                    const uploadData = await uploadRes.json();
-                    if (!uploadData.ok) throw new Error(uploadData.error || 'Gagal mengupload file bukti');
-                    buktiUrl = uploadData.publicUrl || uploadData.url || uploadData.file_url || '';
-                } catch (e: any) {
-                    swalError('Upload Gagal', e.message);
-                    setSaving(false);
-                    return;
-                }
-            }
-        } else {
-            const confirm = await swalConfirm({
-                title: 'Batalkan Tanda Dibayar?',
-                text: 'Status pembayaran akan dikembalikan ke Belum Dibayar.',
-                icon: 'warning', confirmText: 'Ya, Batalkan', cancelText: 'Batal', confirmColor: '#dc2626',
-            });
-            if (!confirm.isConfirmed) return;
-        }
-
-        // Snapshot nominal dan waktu saat pembayaran disahkan
-        const catatanFinal = dibayarkan
-            ? JSON.stringify({
-                text: catatanInput,
-                url: buktiUrl,
-                nominal: currentTarif,
-                paid_at: new Date().toISOString()
-            })
-            : null;
-
-        setSaving(true);
-        try {
-            const res = await authFetch('/api/guru-asuh/laporan-submission/pembayaran', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ id: sub.id, dibayarkan, catatan: catatanFinal }),
-            });
-            const data = await res.json();
-            if (!res.ok || !data.ok) throw new Error(data.error || 'Gagal memproses');
-            swalSuccess('Berhasil', dibayarkan ? 'Ditandai sudah dibayarkan.' : 'Tanda dibayar dibatalkan.');
-            fetchSubmissions();
-        } catch (e: any) { swalError('Error', e.message); }
-        finally { setSaving(false); }
-    };
+    /* ------------------------------- Render ------------------------------- */
 
     if (!user) {
-        return (
-            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '300px' }}>
-                <Spinner variant="buble" />
-            </div>
-        );
+        return <div className="pay-loading"><Spinner variant="buble" /></div>;
     }
 
     if (!hasAccess && !komiteOnly) {
         return (
-            <div className="gap-denied">
-                <i className="bi bi-shield-lock" />
-                <h3>Akses Ditolak</h3>
-                <p>Halaman ini hanya untuk Bendahara Komite, Pimpinan, atau Pengguna yang diberikan akses.</p>
+            <div className="pay">
+                <EmptyState icon="shield-lock" title="Akses Ditolak">
+                    Halaman ini hanya untuk Bendahara Komite, Pimpinan, atau Pengguna yang diberikan akses.
+                </EmptyState>
             </div>
         );
     }
 
-    const periodFilterFields = (
+    const periodLabel = `${periodMonth ? BULAN[periodMonth - 1] : 'Semua bulan'}${periodYear ? ` ${periodYear}` : periodMonth ? ' · semua tahun' : ''}`;
+
+    const periodFilters = (
         <>
-                <FilterSelect
-                    label={activeTab === 'NOMINAL' ? 'Bulan Perubahan Tarif' : 'Bulan Kegiatan / Laporan'}
-                    icon="calendar3"
-                    value={periodMonth === 0 ? 'ALL' : String(periodMonth)}
-                    onChange={value => setPeriodMonth(value === 'ALL' ? 0 : Number(value))}
-                    options={[{ value: 'ALL', label: 'Semua Bulan' }, ...BULAN.map((label, i) => ({ value: String(i + 1), label }))]}
-                />
-                <FilterSelect
-                    label={activeTab === 'NOMINAL' ? 'Tahun Perubahan Tarif' : 'Tahun'}
-                    icon="calendar-event"
-                    value={periodYear === 0 ? 'ALL' : String(periodYear)}
-                    onChange={value => setPeriodYear(value === 'ALL' ? 0 : Number(value))}
-                    options={[{ value: 'ALL', label: 'Semua Tahun' }, ...periodYears.map(year => ({ value: String(year), label: String(year) }))]}
-                />
+            <FilterSelect
+                label="Bulan"
+                icon="calendar3"
+                value={periodMonth === 0 ? 'ALL' : String(periodMonth)}
+                onChange={value => setPeriodMonth(value === 'ALL' ? 0 : Number(value))}
+                options={[{ value: 'ALL', label: 'Semua Bulan' }, ...BULAN.map((label, i) => ({ value: String(i + 1), label }))]}
+            />
+            <FilterSelect
+                label="Tahun"
+                icon="calendar-event"
+                value={periodYear === 0 ? 'ALL' : String(periodYear)}
+                onChange={value => setPeriodYear(value === 'ALL' ? 0 : Number(value))}
+                options={[{ value: 'ALL', label: 'Semua Tahun' }, ...periodYears.map(year => ({ value: String(year), label: String(year) }))]}
+            />
         </>
     );
 
+    const isRoutine = ROUTINE.includes(activeTab);
+    const kind = activeTab as RoutineKind;
+    const allRows = isRoutine ? routineRows[kind] : [];
+    const unpaidRows = allRows.filter(r => !r.paid);
+    const paidRows = allRows.filter(r => r.paid);
+    const countOf = (rows: PayRow[]) => kind === 'KLINIK' ? rows.reduce((n, r) => n + (r.sessions?.length || 0), 0) : rows.length;
+    const unit = kind === 'KLINIK' ? 'kegiatan' : 'laporan';
+    const totalCount = countOf(allRows);
+    const paidCount = countOf(paidRows);
+    const sheetRow = sheetKey ? visibleRows.find(r => r.key === sheetKey) || null : null;
+
+    const amountCell = (row: PayRow) => (
+        <div className="pay-cell-stack">
+            <span className="pay-amount">{row.amount === null ? 'Nominal belum tercatat' : fmtRupiah(row.amount)}</span>
+            {row.amountNote && <span className="pay-cell-muted">{row.amountNote}</span>}
+        </div>
+    );
+
+    const proofLinks = (row: PayRow) => (row.proofs.length > 0 || row.note) ? (
+        <span className="pay-proofs">
+            {row.proofs.map(p => (
+                <button key={p.url} type="button" className="pay-link" onClick={() => viewFile(p.url, p.title)}>
+                    <i className="bi bi-receipt" /> Bukti
+                </button>
+            ))}
+            {row.note && <span className="pay-note" title={row.note}><i className="bi bi-chat-left-text" /> Catatan</span>}
+        </span>
+    ) : null;
+
+    const rowActions = (row: PayRow) => (
+        <ActionGroup>
+            {row.onDoc && <ActionButton action="file" tooltip={row.docLabel} onClick={row.onDoc} />}
+            {isBendahara && !row.paid && row.onPay && (
+                <ActionButton action="approve" tooltip="Tandai Dibayar" disabled={busy} onClick={row.onPay} />
+            )}
+            {isBendahara && row.paid && row.onCancel && (
+                <ActionButton action="reject" tooltip="Batalkan Pembayaran" disabled={busy} onClick={row.onCancel} />
+            )}
+        </ActionGroup>
+    );
+
+    const sessionList = (row: PayRow) => (
+        <ul className="pay-sessions">
+            {row.sessions!.map(slot => {
+                const proofs = klinikProofs(slot);
+                return (
+                    <li key={slot.id}>
+                        <span className="pay-sessions__date">{fmtTanggal(slot.tanggal, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}</span>
+                        <span className="pay-sessions__topic"><strong>{slot.mapel}</strong> — {slot.topik}</span>
+                        <span className="pay-sessions__amount">
+                            {slot.status === 'paid'
+                                ? slot.nominal_dibayarkan == null ? 'Nominal belum tercatat' : fmtRupiah(slot.nominal_dibayarkan)
+                                : fmtRupiah(getTarif('KLINIK'))}
+                        </span>
+                        <span className="pay-sessions__actions">
+                            {proofs.map(url => (
+                                <button key={url} type="button" className="pay-link" onClick={() => viewFile(url, `Bukti Pembayaran - ${slot.nama_guru}`)}>
+                                    <i className="bi bi-receipt" /> Bukti
+                                </button>
+                            ))}
+                            {isBendahara && slot.status === 'paid' && (
+                                <ActionButton action="reject" size="sm" tooltip="Batalkan pembayaran sesi ini" disabled={busy} onClick={() => cancelKlinik(slot)} />
+                            )}
+                        </span>
+                    </li>
+                );
+            })}
+        </ul>
+    );
+
+    const emptyRoutine = {
+        KLINIK: 'Belum ada laporan klinik yang disetujui pada periode ini.',
+        GURU_ASUH: 'Belum ada laporan Guru Asuh yang disahkan pada periode ini.',
+        EKSKUL: 'Belum ada laporan ekstrakurikuler yang disahkan pada periode ini.',
+    } as const;
+
     return (
-        <div className="gap">
-            {bulkOpen && <BulkPaymentModal initialKind={['GURU_ASUH', 'KLINIK', 'EKSKUL'].includes(activeTab) ? activeTab : 'GURU_ASUH'} initialMonth={periodMonth} initialYear={periodYear} onClose={() => setBulkOpen(false)} onApplied={() => { void fetchSubmissions(); void fetchKlinikSlots(); void fetchKlinikEvidence(); void fetchEkskulSubmissions(); }} />}
-            {!komiteOnly && canBulkUpload && activeTab!=='KOMITE' && <div className="bp-launch"><Button variant="outline" onClick={() => setBulkOpen(true)} leftIcon={<i className="bi bi-cloud-arrow-up" />}>Upload Bukti Massal</Button></div>}
+        <div className="pay">
             <Tab
-                tabs={TABS.filter(t=>!komiteOnly||t.id==='KOMITE').map(t => ({ key: t.id, label: t.label, icon: t.icon }))}
+                tabs={TABS.filter(t => !komiteOnly || t.key === 'KOMITE').map(t => ({ key: t.key, label: t.label, shortLabel: t.shortLabel, icon: t.icon }))}
                 activeTab={activeTab}
-                onChange={(key) => setActiveTab(key)}
+                onChange={key => setActiveTab(key)}
                 ariaLabel="Modul Pembayaran"
                 variant="slider"
             />
 
-            {activeTab==='KOMITE'&&<CommitteeTab/>}
-            {printOpen&&<PrintPaymentModal initialMonth={periodMonth} initialYear={periodYear} onClose={()=>setPrintOpen(false)} onReady={setPrintUrl}/>}
-            {printUrl&&<DocViewerModal fileUrl={printUrl} fileType="pdf" title="Rekapan Pembayaran Bulanan" onClose={()=>setPrintUrl('')}/>}
-
-            {['NOMINAL', 'REKAPAN'].includes(activeTab) && (
-                <FilterToolbar alwaysExpanded>{periodFilterFields}</FilterToolbar>
+            {/* Upload Bukti Massal hanya untuk tagihan rutin. Di mobile tombol
+                ini otomatis pindah ke tombol tengah BottomNav. */}
+            {!komiteOnly && canBulkUpload && isRoutine && (
+                <DesktopFab
+                    label="Upload Bukti Massal"
+                    mobileLabel="Upload Bukti"
+                    icon="cloud-arrow-up"
+                    onClick={() => setBulkOpen(true)}
+                />
             )}
 
-            {activeTab === 'GURU_ASUH' && (
-                <>
-                    <div className="gap-stats">
-                        <div className="gap-stat-item"><div className="gap-stat-val">{statsCount.total}</div><div className="gap-stat-lbl">Total</div></div>
-                        <div className="gap-stat-item amber"><div className="gap-stat-val">{statsCount.belum}</div><div className="gap-stat-lbl">Belum Dibayar</div></div>
-                        <div className="gap-stat-item green"><div className="gap-stat-val">{statsCount.sudah}</div><div className="gap-stat-lbl">Sudah Dibayar</div></div>
-                    </div>
+            {activeTab === 'KOMITE' && <CommitteeTab />}
 
-                    <FilterToolbar className="gap-payment-filters">
-                        {periodFilterFields}
+            {isRoutine && (
+                <>
+                    <StatCards
+                        items={[
+                            { label: 'Perlu Dibayar', icon: 'hourglass-split', tone: 'amber', value: `${countOf(unpaidRows)} ${unit}`, sub: fmtRupiah(sumAmounts(unpaidRows)) },
+                            {
+                                label: 'Sudah Dibayar', icon: 'check2-circle', tone: 'green', value: `${paidCount} ${unit}`, sub: fmtRupiah(sumAmounts(paidRows)),
+                                progress: totalCount ? (paidCount / totalCount) * 100 : 0,
+                            },
+                            { label: 'Total Tagihan', icon: 'wallet2', tone: 'blue', value: `${totalCount} ${unit}`, sub: periodLabel },
+                        ]}
+                    />
+
+                    <FilterToolbar>
+                        {periodFilters}
                         <FilterSelect
-                            label="Status Pembayaran"
+                            label="Status"
                             icon="funnel"
-                            value={filterBayar}
-                            onChange={(val) => setFilterBayar(val)}
+                            value={statusFilter[kind]}
+                            onChange={val => setStatusFilter(old => ({ ...old, [kind]: val || 'ALL' }))}
                             options={[
                                 { value: 'ALL', label: 'Semua Status' },
                                 { value: 'BELUM', label: 'Belum Dibayar' },
-                                { value: 'SUDAH', label: 'Sudah Dibayar' }
+                                { value: 'SUDAH', label: 'Sudah Dibayar' },
                             ]}
                         />
                         <FilterSearch
-                            value={searchQuery}
-                            onChange={setSearchQuery}
-                            placeholder="Cari nama atau NIP..."
+                            value={searchQuery[kind]}
+                            onChange={val => setSearchQuery(old => ({ ...old, [kind]: val }))}
+                            placeholder={kind === 'EKSKUL' ? 'Cari pembina, NIP, atau ekskul...' : 'Cari nama atau NIP...'}
                         />
                     </FilterToolbar>
 
-                    <div className="gap-table-card">
-                        <div className="gap-table-wrap">
-                    <table className="gap-table">
-                        <thead>
-                            <tr>
-                                <th>No</th>
-                                <th>Penerima</th>
-                                <th>Periode</th>
-                                <th>Jumlah Laporan</th>
-                                <th>Nominal</th>
-                                <th>Status</th>
-                                <th>Aksi</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {loading && (
-                                <tr>
-                                    <td colSpan={7} className="gap-td-center" style={{ padding: '24px 0' }}>
-                                        <Spinner variant="buble" />
-                                    </td>
-                                </tr>
-                            )}
-                            {!loading && filteredSubmissions.length === 0 && (
-                                <tr><td colSpan={7} className="gap-td-center">Tidak ada laporan</td></tr>
-                            )}
-                                {filteredSubmissions.map((sub, i) => {
-                                    const cData = getCatatanData(sub.catatan_pembayaran);
-                                    const nominalTampil = sub.dibayarkan ? cData.nominal : getTarif('GURU_ASUH');
-                                    return (
-                                        <tr key={sub.id}>
-                                            <td>{i + 1}</td>
-                                            <td>
-                                                <div className="gap-td-name">{sub.nama_guru_snap || 'Guru'}</div>
-                                                <div className="gap-td-nip">NIP. {sub.nip}</div>
-                                            </td>
-                                            <td>{BULAN[sub.bulan - 1]} {sub.tahun}</td>
-                                            <td>{sub.total_laporan} laporan</td>
-                                            <td style={{ fontWeight: 700 }}>{nominalTampil===null?'Nominal belum tercatat':fmtRupiah(nominalTampil)}</td>
-                                            <td>
-                                                <span className={`gap-badge gap-badge--${sub.dibayarkan ? 'sudah' : 'belum'}`}>
-                                                    {sub.dibayarkan ? 'Dibayar' : 'Belum'}
-                                                </span>
-                                                {sub.dibayarkan && (
-                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '6px' }}>
-                                                        {cData.text && (
-                                                            <div className="gap-td-note" title={cData.text}>
-                                                                <i className="bi bi-chat-left-text" /> Catatan
-                                                            </div>
-                                                        )}
-                                                        {isSafeHttpUrl(cData.url) && (
+                    {routineLoading[kind] && !allRows.length ? (
+                        <div className="pay-loading"><Spinner variant="buble" /></div>
+                    ) : visibleRows.length === 0 ? (
+                        <div className="pay-card">
+                            <EmptyState icon="inbox" title="Tidak ada tagihan">
+                                {allRows.length ? 'Tidak ada data yang cocok dengan filter.' : emptyRoutine[kind]}
+                            </EmptyState>
+                        </div>
+                    ) : isMobile ? (
+                        <MobileList label="Daftar tagihan">
+                            {visibleRows.map(row => (
+                                <MobileListItem
+                                    key={row.key}
+                                    title={row.name}
+                                    seed={row.name}
+                                    subtitle={`${row.amount === null ? 'Nominal belum tercatat' : fmtRupiah(row.amount)} · ${row.period}`}
+                                    badge={<StatusBadge tone={row.paid ? 'paid' : 'unpaid'}>{row.paid ? 'Dibayar' : 'Belum'}</StatusBadge>}
+                                    onClick={() => setSheetKey(row.key)}
+                                />
+                            ))}
+                        </MobileList>
+                    ) : (
+                        <div className="pay-card">
+                            <div className="pay-table-wrap">
+                                <table className="pay-table">
+                                    <thead>
+                                        <tr>
+                                            <th className="pay-col-no">No</th>
+                                            <th>Penerima</th>
+                                            <th>{kind === 'KLINIK' ? 'Tanggal' : 'Periode'}</th>
+                                            <th>{kind === 'EKSKUL' ? 'Ekstrakurikuler' : kind === 'KLINIK' ? 'Kegiatan' : 'Laporan'}</th>
+                                            <th>Nominal</th>
+                                            <th>Status</th>
+                                            <th className="pay-col-action">Aksi</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {visibleRows.map((row, i) => (
+                                            <FragmentRow key={row.key}>
+                                                <tr className={row.paid ? 'is-paid' : ''}>
+                                                    <td className="pay-col-no">{i + 1}</td>
+                                                    <td><PayeeCell name={row.name} sub={row.nip ? `NIP. ${row.nip}` : undefined} /></td>
+                                                    <td className="pay-nowrap">{row.period}</td>
+                                                    <td>
+                                                        {row.sessions ? (
                                                             <button
                                                                 type="button"
-                                                                onClick={() => handleViewFile(cData.url, `Bukti Pembayaran - ${sub.nama_guru_snap || 'Guru'}`)}
-                                                                className="gap-td-note"
-                                                                style={{ color: '#0ea5e9', background: 'none', border: 'none', padding: 0, cursor: 'pointer', textAlign: 'left', font: 'inherit' }}
-                                                                title="Lihat Bukti Pembayaran"
+                                                                className="pay-toggle"
+                                                                aria-expanded={!!expanded[row.key]}
+                                                                onClick={() => setExpanded(old => ({ ...old, [row.key]: !old[row.key] }))}
                                                             >
-                                                                <i className="bi bi-receipt" /> Bukti Pembayaran
+                                                                {row.detail}
+                                                                <i className={`bi bi-chevron-${expanded[row.key] ? 'up' : 'down'}`} aria-hidden="true" />
                                                             </button>
-                                                        )}
-                                                    </div>
-                                                )}
-                                            </td>
-                                            <td>
-                                        <div className="gap-actions-cell">
-                                            {(sub.pdf_url || sub.id) && (
-                                                <button
-                                                    type="button"
-                                                    onClick={() => handleViewGuruAsuhDoc(sub)}
-                                                    className="gap-btn-icon gap-btn-icon--info"
-                                                    title="Lihat Laporan Dokumen"
-                                                >
-                                                    <i className="bi bi-file-earmark-text" />
-                                                </button>
-                                            )}
-                                            {isBendahara && (
-                                                sub.dibayarkan ? (
-                                                    <button onClick={() => handleTandai(sub, false)} className="gap-btn-icon gap-btn-icon--danger" title="Batal Dibayar" disabled={saving}>
-                                                        <i className="bi bi-x-circle" />
-                                                    </button>
-                                                ) : (
-                                                    <button onClick={() => handleTandai(sub, true)} className="gap-btn-icon gap-btn-icon--success" title="Tandai Dibayar" disabled={saving}>
-                                                        <i className="bi bi-check-circle" />
-                                                    </button>
-                                                )
-                                            )}
-                                        </div>
-                                    </td>
-                                        </tr>
-                                    );
-                                })}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-            </>
-            )}
-
-            {activeTab === 'KLINIK' && (
-                <>
-                    <div className="gap-stats">
-                        <div className="gap-stat-item"><div className="gap-stat-val">{klinikStats.total}</div><div className="gap-stat-lbl">Total</div></div>
-                        <div className="gap-stat-item amber"><div className="gap-stat-val">{klinikStats.belum}</div><div className="gap-stat-lbl">Belum Dibayar</div></div>
-                        <div className="gap-stat-item green"><div className="gap-stat-val">{klinikStats.sudah}</div><div className="gap-stat-lbl">Sudah Dibayar</div></div>
-                    </div>
-
-                    <FilterToolbar className="gap-payment-filters">
-                        {periodFilterFields}
-                        <FilterSelect
-                            label="Status Pembayaran"
-                            icon="funnel"
-                            value={klinikFilterBayar}
-                            onChange={(val) => setKlinikFilterBayar(val)}
-                            options={[
-                                { value: 'ALL', label: 'Semua Status' },
-                                { value: 'BELUM', label: 'Belum Dibayar' },
-                                { value: 'SUDAH', label: 'Sudah Dibayar' }
-                            ]}
-                        />
-                        <FilterSearch
-                            value={klinikSearchQuery}
-                            onChange={setKlinikSearchQuery}
-                            placeholder="Cari nama atau NIP guru..."
-                        />
-                    </FilterToolbar>
-
-                    <div className="gap-table-card">
-                        <div className="gap-table-wrap">
-                            <table className="gap-table">
-                                <thead>
-                                    <tr>
-                                        <th>No</th>
-                                        <th>Penerima</th>
-                                        <th>Tanggal</th>
-                                        <th>Kegiatan</th>
-                                        <th>Nominal</th><th>Total Akumulasi</th>
-                                        <th>Status</th>
-                                        <th>Aksi</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {loadingKlinik && (
-                                        <tr>
-                                            <td colSpan={8} className="gap-td-center" style={{ padding: '24px 0' }}>
-                                                <Spinner variant="buble" />
-                                            </td>
-                                        </tr>
-                                    )}
-                                    {!loadingKlinik && filteredKlinikSlots.length === 0 && (
-                                        <tr><td colSpan={8} className="gap-td-center">Tidak ada laporan klinik yang disetujui</td></tr>
-                                    )}
-                                    {klinikGroups.map((group, i) => group.map((slot, j) => (
-                                        <tr key={slot.id}>
-                                            <td>{i + 1}.{j + 1}</td>
-                                            <td><div className="gap-td-name">{slot.nama_guru}</div><div className="gap-td-nip">NIP. {slot.guru?.nip || '-'}</div></td>
-                                            <td>{new Date(slot.tanggal).toLocaleDateString('id-ID', { dateStyle: 'medium' })}</td>
-                                            <td>{slot.mapel} — {slot.topik}</td>
-                                            <td style={{ fontWeight: 700 }}>{slot.status === 'paid' ? slot.nominal_dibayarkan == null ? 'Nominal belum tercatat' : fmtRupiah(slot.nominal_dibayarkan) : fmtRupiah(getTarif('KLINIK'))}</td>
-                                            {j === 0 && <td rowSpan={group.length} style={{ fontWeight: 700, background: 'var(--n-soft)' }}>{group.some(s => s.status === 'paid' && s.nominal_dibayarkan == null) ? 'Nominal belum lengkap' : fmtRupiah(group.reduce((sum, s) => sum + (s.status === 'paid' ? parseNominal(s.nominal_dibayarkan) : getTarif('KLINIK')), 0))}<div className="gap-td-nip">{group.length} kegiatan</div></td>}
-                                            <td><span className={`gap-badge gap-badge--${slot.status === 'paid' ? 'sudah' : 'belum'}`}>{slot.status === 'paid' ? 'Dibayar' : 'Belum'}</span>{slot.status === 'paid' && klinikEvidence[slot.id] && <button className="gap-btn-icon" title="Lihat Bukti Pembayaran" onClick={() => handleViewFile(`/api/pembayaran-massal/bukti?id=${klinikEvidence[slot.id]}`, `Bukti Pembayaran - ${slot.nama_guru}`)}><i className="bi bi-receipt" /> Bukti</button>}</td>
-                                            <td>{isBendahara && (slot.status === 'paid' ? <button onClick={() => handleBatalKlinik(slot)} className="gap-btn-icon gap-btn-icon--danger" title="Batalkan Tanda Dibayar" disabled={savingKlinik}><i className="bi bi-x-circle" /></button> : j === 0 && <button onClick={() => handleTandaiKlinik(group)} className="gap-btn-icon gap-btn-icon--success" title="Tandai seluruh kegiatan penerima dibayar dalam satu transfer" disabled={savingKlinik}><i className="bi bi-check-circle" /></button>)}</td>
-                                        </tr>
-                                    )))}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </>
-            )}
-
-            {activeTab === 'EKSKUL' && (
-                <>
-                    <div className="gap-stats">
-                        <div className="gap-stat-item"><div className="gap-stat-val">{ekskulStats.total}</div><div className="gap-stat-lbl">Total</div></div>
-                        <div className="gap-stat-item amber"><div className="gap-stat-val">{ekskulStats.belum}</div><div className="gap-stat-lbl">Belum Dibayar</div></div>
-                        <div className="gap-stat-item green"><div className="gap-stat-val">{ekskulStats.sudah}</div><div className="gap-stat-lbl">Sudah Dibayar</div></div>
-                    </div>
-
-                    <FilterToolbar className="gap-payment-filters">
-                        {periodFilterFields}
-                        <FilterSelect
-                            label="Status Pembayaran"
-                            icon="funnel"
-                            value={ekskulFilterBayar}
-                            onChange={(val) => setEkskulFilterBayar(val)}
-                            options={[
-                                { value: 'ALL', label: 'Semua Status' },
-                                { value: 'BELUM', label: 'Belum Dibayar' },
-                                { value: 'SUDAH', label: 'Sudah Dibayar' }
-                            ]}
-                        />
-                        <FilterSearch
-                            value={ekskulSearchQuery}
-                            onChange={setEkskulSearchQuery}
-                            placeholder="Cari nama pembina, NIP, atau ekskul..."
-                        />
-                    </FilterToolbar>
-
-                    <div className="gap-table-card">
-                        <div className="gap-table-wrap">
-                            <table className="gap-table">
-                                <thead>
-                                    <tr>
-                                        <th>No</th>
-                                        <th>Penerima</th>
-                                        <th>Periode</th>
-                                        <th>Ekstrakurikuler</th>
-                                        <th>Pertemuan</th>
-                                        <th>Nominal</th>
-                                        <th>Status</th>
-                                        <th>Aksi</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {loadingEkskul && (
-                                        <tr>
-                                            <td colSpan={8} className="gap-td-center" style={{ padding: '24px 0' }}>
-                                                <Spinner variant="buble" />
-                                            </td>
-                                        </tr>
-                                    )}
-                                    {!loadingEkskul && filteredEkskulSubmissions.length === 0 && (
-                                        <tr><td colSpan={8} className="gap-td-center">Tidak ada laporan ekstrakurikuler yang disahkan</td></tr>
-                                    )}
-                                    {filteredEkskulSubmissions.map((sub, i) => {
-                                        const cData = getCatatanData(sub.catatan_pembayaran);
-                                        const internalCount = Number(sub.jml_internal ?? sub.total_pertemuan ?? 0) || 0;
-                                        const eksternalCount = Number(sub.jml_eksternal ?? 0) || 0;
-                                        const calculatedRate = internalCount * getTarif('EKSKUL_INTERNAL') + eksternalCount * getTarif('EKSKUL_EKSTERNAL');
-                                        const nominalTampil = sub.dibayarkan ? cData.nominal : calculatedRate;
-
-                                        return (
-                                            <tr key={sub.id}>
-                                                <td>{i + 1}</td>
-                                                <td>
-                                                    <div className="gap-td-name">{sub.pembina_nama || 'Pembina'}</div>
-                                                    <div className="gap-td-nip">NIP. {sub.pembina_nip}</div>
-                                                </td>
-                                                <td>{BULAN[sub.bulan - 1]} {sub.tahun}</td>
-                                                <td>{sub.ekskul?.nama_ekskul || '-'}</td>
-                                                <td>
-                                                    {sub.total_pertemuan} kali
-                                                    <div style={{ display: 'flex', gap: '6px', marginTop: '4px' }}>
-                                                        <span style={{ backgroundColor: '#3b82f6', color: 'white', padding: '2px 6px', borderRadius: '4px', fontSize: '0.7rem' }}>Internal: {internalCount}</span>
-                                                        <span style={{ backgroundColor: '#8b5cf6', color: 'white', padding: '2px 6px', borderRadius: '4px', fontSize: '0.7rem' }}>Eksternal: {eksternalCount}</span>
-                                                    </div>
-                                                </td>
-                                                <td style={{ fontWeight: 700 }}>
-                                                    {nominalTampil===null?'Nominal belum tercatat':fmtRupiah(nominalTampil)}
-                                                    <div style={{ fontSize: '0.7rem', fontWeight: 400, color: 'var(--n-muted)', marginTop: '2px' }}>
-                                                        {internalCount}×{fmtRupiah(getTarif('EKSKUL_INTERNAL'))} + {eksternalCount}×{fmtRupiah(getTarif('EKSKUL_EKSTERNAL'))}
-                                                    </div>
-                                                </td>
-                                                <td>
-                                                    <span className={`gap-badge gap-badge--${sub.dibayarkan ? 'sudah' : 'belum'}`}>
-                                                        {sub.dibayarkan ? 'Dibayar' : 'Belum'}
-                                                    </span>
-                                                    {sub.dibayarkan && (
-                                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '6px' }}>
-                                                            {cData.text && (
-                                                                <div className="gap-td-note" title={cData.text}>
-                                                                    <i className="bi bi-chat-left-text" /> Catatan
-                                                                </div>
-                                                            )}
-                                                            {isSafeHttpUrl(cData.url) && (
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => handleViewFile(cData.url, `Bukti Pembayaran - ${sub.pembina_nama || 'Pembina'}`)}
-                                                                    className="gap-td-note"
-                                                                    style={{ color: '#0ea5e9', background: 'none', border: 'none', padding: 0, cursor: 'pointer', textAlign: 'left', font: 'inherit' }}
-                                                                    title="Lihat Bukti Pembayaran"
-                                                                >
-                                                                    <i className="bi bi-receipt" /> Bukti Pembayaran
-                                                                </button>
-                                                            )}
+                                                        ) : row.detail}
+                                                    </td>
+                                                    <td>{amountCell(row)}</td>
+                                                    <td>
+                                                        <div className="pay-cell-stack">
+                                                            <StatusBadge tone={row.paid ? 'paid' : 'unpaid'}>{row.paid ? 'Dibayar' : 'Belum Dibayar'}</StatusBadge>
+                                                            {proofLinks(row)}
                                                         </div>
-                                                    )}
-                                                </td>
-                                                <td>
-                                                    <div className="gap-actions-cell">
-                                                        {sub.pdf_url && isSafeHttpUrl(sub.pdf_url) && (
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => handleViewFile(sub.pdf_url!, `Laporan Ekskul - ${sub.ekskul?.nama_ekskul || 'Ekskul'}`)}
-                                                                className="gap-btn-icon gap-btn-icon--info"
-                                                                title="Lihat PDF Laporan"
-                                                            >
-                                                                <i className="bi bi-file-earmark-pdf" />
-                                                            </button>
-                                                        )}
-                                                        {isBendahara && (
-                                                            sub.dibayarkan ? (
-                                                                <button onClick={() => handleTandaiEkskul(sub, false)} className="gap-btn-icon gap-btn-icon--danger" title="Batal Dibayar" disabled={savingEkskul}>
-                                                                    <i className="bi bi-x-circle" />
-                                                                </button>
-                                                            ) : (
-                                                                <button onClick={() => handleTandaiEkskul(sub, true)} className="gap-btn-icon gap-btn-icon--success" title="Tandai Dibayar" disabled={savingEkskul}>
-                                                                    <i className="bi bi-check-circle" />
-                                                                </button>
-                                                            )
-                                                        )}
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        );
-                                    })}
-                                </tbody>
-                            </table>
+                                                    </td>
+                                                    <td className="pay-col-action">{rowActions(row)}</td>
+                                                </tr>
+                                                {row.sessions && expanded[row.key] && (
+                                                    <tr className="pay-subrow">
+                                                        <td />
+                                                        <td colSpan={6}>{sessionList(row)}</td>
+                                                    </tr>
+                                                )}
+                                            </FragmentRow>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
-                    </div>
+                    )}
                 </>
             )}
 
             {activeTab === 'NOMINAL' && (
-                <div className="gap-table-card">
-                    <div className="gap-toolbar">
-                        <div style={{ fontSize: '0.85rem', color: 'var(--n-muted)' }}>
-                            <i className="bi bi-info-circle" /> Atur tarif honor per kegiatan. Guru Asuh dihitung per bulan; Klinik dan Ekstrakurikuler dihitung per pertemuan. Filter periode mengikuti tanggal terakhir tarif diubah; nilai yang ditampilkan adalah tarif aktif.
+                <div className="pay-card">
+                    <div className="pay-card__head">
+                        <div>
+                            <h3>Tarif Honor</h3>
+                            <p>Guru Asuh dihitung per bulan; Klinik dan Ekstrakurikuler per pertemuan. Perubahan berlaku untuk pembayaran berikutnya.</p>
                         </div>
                     </div>
-                    <div className="gap-table-wrap">
-                        <table className="gap-table">
-                            <thead>
-                                <tr>
-                                    <th>Kegiatan</th>
-                                    <th>Satuan</th>
-                                    <th>Nominal</th>
-                                    <th>Terakhir Diubah</th>
-                                    <th style={{ width: '110px' }}>Aksi</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {loadingTarif && (
-                                    <tr>
-                                        <td colSpan={5} className="gap-td-center" style={{ padding: '24px 0' }}>
-                                            <Spinner variant="buble" />
-                                        </td>
-                                    </tr>
-                                )}
-                                {!loadingTarif && periodTarifList.length === 0 && (
-                                    <tr><td colSpan={5} className="gap-td-center">Tidak ada tarif pada periode yang dipilih.</td></tr>
-                                )}
-                                {periodTarifList.map(t => (
-                                    <tr key={t.modul}>
-                                        <td className="gap-td-name">{t.label}</td>
-                                        <td>
-                                            <span className={`gap-badge ${t.satuan === 'per_bulan' ? 'gap-badge--per-bulan' : 'gap-badge--per-pertemuan'}`}>
-                                                {t.satuan === 'per_bulan' ? 'Per Bulan' : 'Per Pertemuan'}
+                    {loadingTarif && !tarifList.length ? (
+                        <div className="pay-loading"><Spinner variant="buble" /></div>
+                    ) : tarifList.length === 0 ? (
+                        <EmptyState icon="cash-stack" title="Belum ada tarif" />
+                    ) : (
+                        <div className="pay-rates">
+                            {tarifList.map(t => {
+                                const current = String(parseNominal(t.nominal));
+                                const draft = tarifDraft[t.modul] ?? current;
+                                const dirty = draft !== current;
+                                return (
+                                    <div key={t.modul} className={`pay-rate ${dirty ? 'is-dirty' : ''}`}>
+                                        <div className="pay-rate__info">
+                                            <span className="pay-rate__name">{t.label}</span>
+                                            <span className="pay-rate__meta">
+                                                <span className={`pay-chip ${t.satuan === 'per_bulan' ? 'pay-chip--blue' : 'pay-chip--violet'}`}>
+                                                    {t.satuan === 'per_bulan' ? 'Per Bulan' : 'Per Pertemuan'}
+                                                </span>
+                                                <span>Diubah {fmtTanggal(t.updated_at)}{t.updated_by_name ? ` oleh ${t.updated_by_name}` : ''}</span>
                                             </span>
-                                        </td>
-                                        <td>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                                <span style={{ color: 'var(--n-muted)' }}>Rp</span>
+                                        </div>
+                                        <div className="pay-rate__edit">
+                                            <label className="pay-money">
+                                                <span>Rp</span>
                                                 <input
                                                     type="number"
                                                     min={0}
+                                                    inputMode="numeric"
+                                                    aria-label={`Nominal ${t.label}`}
                                                     disabled={!isBendahara}
-                                                    className="gap-select"
-                                                    style={{ minWidth: '140px', width: '160px', fontWeight: 700 }}
-                                                    value={tarifDraft[t.modul] ?? String(parseNominal(t.nominal))}
+                                                    value={draft}
                                                     onChange={e => setTarifDraft(prev => ({ ...prev, [t.modul]: e.target.value }))}
                                                 />
-                                            </div>
-                                        </td>
-                                        <td style={{ fontSize: '0.75rem', color: 'var(--n-muted)' }}>
-                                            {t.updated_at ? new Date(t.updated_at).toLocaleDateString('id-ID', { dateStyle: 'medium' }) : '-'}
-                                            {t.updated_by_name && <div>oleh {t.updated_by_name}</div>}
-                                        </td>
-                                        <td>
-                                            {isBendahara ? (
-                                                <button
-                                                    className="gap-btn-icon gap-btn-icon--success"
-                                                    style={{ width: 'auto', padding: '0 14px', fontSize: '0.8rem', fontWeight: 700 }}
+                                            </label>
+                                            {isBendahara && (
+                                                <Button
+                                                    size="sm"
+                                                    variant="primary"
+                                                    isLoading={savingTarifModul === t.modul}
+                                                    disabled={!dirty || savingTarifModul === t.modul}
                                                     onClick={() => handleUpdateTarif(t.modul)}
-                                                    disabled={savingTarifModul === t.modul || String(parseNominal(t.nominal)) === (tarifDraft[t.modul] ?? String(parseNominal(t.nominal)))}
                                                 >
-                                                    {savingTarifModul === t.modul ? 'Menyimpan...' : 'Simpan'}
-                                                </button>
-                                            ) : (
-                                                <span style={{ color: 'var(--n-muted)', fontSize: '0.8rem' }}>-</span>
+                                                    Simpan
+                                                </Button>
                                             )}
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
                 </div>
             )}
 
             {activeTab === 'REKAPAN' && (
-                <div className="gap-table-card">
-                    <div className="cp-toolbar" style={{padding:'0 16px'}}><span>Rekapan pembayaran rutin</span><Button variant="outline" icon="print" onClick={()=>setPrintOpen(true)}>Cetak Rekapan</Button></div>
-                    {rekapanData.nominalBelumTercatat > 0 && (
-                        <p role="status" style={{ padding: '12px 16px', color: '#92400e' }}>
-                            Total belum lengkap: {rekapanData.nominalBelumTercatat} pembayaran lama belum memiliki nominal tersimpan dan belum termasuk dalam total.
-                        </p>
-                    )}
-                    <div className="gap-table-wrap">
-                        <table className="gap-table">
-                            <thead>
-                                <tr>
-                                    <th>Kategori Pembayaran</th>
-                                    <th style={{ textAlign: 'right' }}>Total Terbayar</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {(loading || loadingKlinik || loadingEkskul) ? (
-                                    <tr>
-                                        <td colSpan={2} className="gap-td-center" style={{ padding: '24px 0' }}>
-                                            <Spinner variant="buble" />
-                                        </td>
-                                    </tr>
-                                ) : (
-                                    <>
-                                        <tr>
-                                            <td><i className="bi bi-heart-pulse" style={{ marginRight: '8px', color: '#ec4899' }} />Klinik Pembelajaran</td>
-                                            <td style={{ textAlign: 'right', fontWeight: 600 }}>{fmtRupiah(rekapanData.klinik)}</td>
-                                        </tr>
-                                        <tr>
-                                            <td><i className="bi bi-person-plus" style={{ marginRight: '8px', color: '#8b5cf6' }} />Ekstrakurikuler</td>
-                                            <td style={{ textAlign: 'right', fontWeight: 600 }}>{fmtRupiah(rekapanData.ekskul)}</td>
-                                        </tr>
-                                        <tr>
-                                            <td><i className="bi bi-person-heart" style={{ marginRight: '8px', color: '#3b82f6' }} />Guru Asuh</td>
-                                            <td style={{ textAlign: 'right', fontWeight: 600 }}>{fmtRupiah(rekapanData.guruAsuh)}</td>
-                                        </tr>
-                                    </>
-                                )}
-                            </tbody>
-                            <tfoot>
-                                <tr>
-                                    <td style={{ fontWeight: 800, fontSize: '1.1rem', padding: '16px' }}>Total Keseluruhan</td>
-                                    <td style={{ textAlign: 'right', fontWeight: 800, fontSize: '1.1rem', color: '#60a5fa', padding: '16px' }}>
-                                        {fmtRupiah(rekapanData.total)}
-                                    </td>
-                                </tr>
-                            </tfoot>
-                        </table>
+                <>
+                    <FilterToolbar alwaysExpanded>{periodFilters}</FilterToolbar>
+                    <div className="pay-card pay-recap">
+                        <div className="pay-recap__hero">
+                            <div>
+                                <span className="pay-recap__label">Total Terbayar · {periodLabel}</span>
+                                <strong className="pay-recap__total">
+                                    {(loading || loadingKlinik || loadingEkskul) ? <Spinner variant="buble" size={22} /> : fmtRupiah(rekapan.total)}
+                                </strong>
+                                <span className="pay-recap__hint">Pembayaran rutin: Klinik, Ekstrakurikuler, dan Guru Asuh. Pengajuan Komite dicatat terpisah.</span>
+                            </div>
+                            <Button variant="outline" icon="print" onClick={() => setPrintOpen(true)}>Cetak Rekapan</Button>
+                        </div>
+                        {rekapan.missing > 0 && (
+                            <div className="pay-alert pay-alert--warning" role="status">
+                                <i className="bi bi-exclamation-triangle" />
+                                {rekapan.missing} pembayaran lama belum memiliki nominal tersimpan dan belum termasuk dalam total.
+                            </div>
+                        )}
+                        <div className="pay-recap__list">
+                            {rekapan.categories.map(c => {
+                                const share = rekapan.total ? Math.round((c.total / rekapan.total) * 100) : 0;
+                                return (
+                                    <div key={c.key} className={`pay-recap__row pay-tone--${c.tone}`}>
+                                        <span className="pay-recap__icon" aria-hidden="true"><i className={`bi bi-${c.icon}`} /></span>
+                                        <div className="pay-recap__info">
+                                            <span className="pay-recap__name">{c.label}</span>
+                                            <span className="pay-cell-muted">{c.count} {c.unit} dibayar · {share}%</span>
+                                            <span className="pay-recap__bar" aria-hidden="true"><span style={{ width: `${share}%` }} /></span>
+                                        </div>
+                                        <strong className="pay-recap__amount">{fmtRupiah(c.total)}</strong>
+                                    </div>
+                                );
+                            })}
+                        </div>
                     </div>
-                </div>
+                </>
             )}
 
-            {docPreview?.open && docPreview.html && (
-                <HtmlPreviewModal
-                    html={docPreview.html}
-                    title={docPreview.title}
-                    onClose={() => setDocPreview(null)}
-                />
+            {/* Detail tagihan (mobile) */}
+            {isMobile && sheetRow && (
+                <MobileSheet
+                    title={sheetRow.name}
+                    subtitle={sheetRow.nip ? `NIP. ${sheetRow.nip}` : undefined}
+                    onClose={() => setSheetKey(null)}
+                    labelledBy="pay-sheet-title"
+                    footer={(
+                        <>
+                            {sheetRow.onDoc && <Button variant="outline" leftIcon={<i className="bi bi-file-earmark-text" />} onClick={sheetRow.onDoc}>Laporan</Button>}
+                            {isBendahara && !sheetRow.paid && sheetRow.onPay && (
+                                <Button variant="primary" leftIcon={<i className="bi bi-check2-circle" />} disabled={busy} onClick={() => { setSheetKey(null); sheetRow.onPay!(); }}>Tandai Dibayar</Button>
+                            )}
+                            {isBendahara && sheetRow.paid && sheetRow.onCancel && (
+                                <Button variant="danger" leftIcon={<i className="bi bi-x-circle" />} disabled={busy} onClick={() => { setSheetKey(null); sheetRow.onCancel!(); }}>Batalkan</Button>
+                            )}
+                        </>
+                    )}
+                >
+                    <MobileKV label="Status"><StatusBadge tone={sheetRow.paid ? 'paid' : 'unpaid'}>{sheetRow.paid ? 'Dibayar' : 'Belum Dibayar'}</StatusBadge></MobileKV>
+                    <MobileKV label={kind === 'KLINIK' ? 'Tanggal' : 'Periode'}>{sheetRow.period}</MobileKV>
+                    <MobileKV label="Rincian">{sheetRow.detail}</MobileKV>
+                    <MobileKV label="Nominal">{amountCell(sheetRow)}</MobileKV>
+                    {sheetRow.note && <MobileKV label="Catatan">{sheetRow.note}</MobileKV>}
+                    {sheetRow.proofs.length > 0 && (
+                        <MobileKV label="Bukti">
+                            <span className="pay-proofs">
+                                {sheetRow.proofs.map(p => (
+                                    <button key={p.url} type="button" className="pay-link" onClick={() => viewFile(p.url, p.title)}>
+                                        <i className="bi bi-receipt" /> Lihat bukti
+                                    </button>
+                                ))}
+                            </span>
+                        </MobileKV>
+                    )}
+                    {sheetRow.sessions && (
+                        <>
+                            <MobileSection>Rincian Kegiatan</MobileSection>
+                            {sessionList(sheetRow)}
+                        </>
+                    )}
+                </MobileSheet>
             )}
 
-            {docPreview?.open && docPreview.fileUrl && (
-                <DocViewerModal
-                    fileUrl={docPreview.fileUrl}
-                    title={docPreview.title}
-                    onClose={() => setDocPreview(null)}
+            {payTarget && <MarkPaidModal target={payTarget} onClose={() => setPayTarget(null)} />}
+
+            {bulkOpen && (
+                <BulkPaymentModal
+                    initialKind={isRoutine ? activeTab : 'GURU_ASUH'}
+                    initialMonth={periodMonth}
+                    initialYear={periodYear}
+                    onClose={() => setBulkOpen(false)}
+                    onApplied={() => { void fetchSubmissions(); void fetchKlinikSlots(); void fetchKlinikEvidence(); void fetchEkskulSubmissions(); }}
                 />
             )}
+            {printOpen && <PrintPaymentModal initialMonth={periodMonth} initialYear={periodYear} onClose={() => setPrintOpen(false)} onReady={setPrintUrl} />}
+            {printUrl && <DocViewerModal fileUrl={printUrl} fileType="pdf" title="Rekapan Pembayaran Bulanan" onClose={() => setPrintUrl('')} />}
+
+            {docPreview?.html && <HtmlPreviewModal html={docPreview.html} title={docPreview.title} onClose={() => setDocPreview(null)} />}
+            {docPreview?.fileUrl && <DocViewerModal fileUrl={docPreview.fileUrl} title={docPreview.title} onClose={() => setDocPreview(null)} />}
 
             <MaintenanceBanner pageKey="pembayaran" />
         </div>
     );
+}
+
+/** Pembungkus tanpa elemen untuk baris utama + baris rincian dalam satu map. */
+function FragmentRow({ children }: { children: ReactNode }) {
+    return <>{children}</>;
 }
