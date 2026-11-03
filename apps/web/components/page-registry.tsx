@@ -126,7 +126,8 @@ export const PAGE_COMPONENTS: Record<string, (user: User, onRefreshUser: () => P
     // MODUL KHUSUS
     'lckh': (user) => <LckhPage />,
     'lckh-approval': (user) => <LckhApprovalPage />,
-    'pembayaran': (user) => <PembayaranPage />,
+    'pembayaran': (user) => <PembayaranPage user={user} />,
+    'pengajuan-komite': (user) => <PembayaranPage user={user} komiteOnly />,
     'nilai': (user) => <NilaiPage />,
     'izin-guru': (user) => <IzinGuruPage />,
     'surat': (user) => <SuratPage />,

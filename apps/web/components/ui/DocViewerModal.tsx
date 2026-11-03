@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/Button';
 
 interface DocViewerModalProps {
     fileUrl: string;
+    fileType?: 'pdf' | 'image';
     title?: string;
     onClose: () => void;
 }
@@ -15,12 +16,12 @@ interface DocViewerModalProps {
  * Menampilkan berkas (foto/gambar bukti, dokumen PDF) secara langsung di dalam modal
  * tanpa mengekspos link mentah lokasi file atau endpoint backend ke user.
  */
-export default function DocViewerModal({ fileUrl, title, onClose }: DocViewerModalProps) {
+export default function DocViewerModal({ fileUrl, fileType, title, onClose }: DocViewerModalProps) {
     const [loading, setLoading] = useState(true);
 
     if (!fileUrl) return null;
 
-    const isPdf = fileUrl.toLowerCase().includes('.pdf') || fileUrl.startsWith('data:application/pdf') || fileUrl.includes('application/pdf');
+    const isPdf = fileType === 'pdf' || (fileType !== 'image' && (fileUrl.toLowerCase().includes('.pdf') || fileUrl.startsWith('data:application/pdf') || fileUrl.includes('application/pdf')));
 
     return (
         <Modal size="xl" className="dvm-modal" onClose={onClose} labelledBy="doc-viewer-title">

@@ -51,6 +51,8 @@ import { KokurikulerModule } from './kokurikuler/kokurikuler.module';
 import { PtspModule } from './ptsp/ptsp.module';
 import { AnalisisBebanModule } from './analisis-beban/analisis-beban.module';
 import { KinerjaGuruModule } from './kinerja-guru/kinerja-guru.module';
+import { PaymentReceiptsModule } from './payment-receipts/payment-receipts.module';
+import { PaymentsModule } from './payments/payments.module';
 
 import { NotificationsModule } from './notifications/notifications.module';
 import { BankDataModule } from './bank-data/bank-data.module';
@@ -60,6 +62,8 @@ import { CatatanPribadiModule } from './catatan-pribadi/catatan-pribadi.module';
 
 @Module({
   imports: [
+    PaymentReceiptsModule,
+    PaymentsModule,
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: ['apps/api/.env', '.env'],

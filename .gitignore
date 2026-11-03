@@ -15,6 +15,7 @@ node_modules/
 
 # testing
 coverage/
+/tmp/pdfs/
 
 # next.js
 .next/

@@ -45,7 +45,8 @@ describe('payment regressions', () => {
   });
   it.each(['guru', 'ekskul'])('allows cancelling an old paid revised %s report', async kind => {
     const table = { findUnique: jest.fn().mockResolvedValue({ id: 'id', status: 'Revisi' }), update: jest.fn().mockResolvedValue({}) };
-    const prisma = { laporan_guru_asuh_submissions: table, laporan_ekskul_submissions: table };
+    const prisma: any = { laporan_guru_asuh_submissions: table, laporan_ekskul_submissions: table };
+    prisma.$transaction = (fn: any) => fn(prisma);
     const service = kind === 'guru' ? new GuruAsuhService(prisma as any) : new EkskulSubmissionService(prisma as any);
     await service.postPembayaran(user, { id: 'id', dibayarkan: false });
     expect(table.update.mock.calls[0][0].data.dibayarkan).toBe(false);

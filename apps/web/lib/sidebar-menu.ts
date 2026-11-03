@@ -84,7 +84,7 @@ export const MENU_GROUPS: MenuGroupDef[] = [
     icon: 'fa-chart-line',
     pages: [
       'kinerja-guru', 'monitoring',
-      'e-supervisi', 'observasi-kelas', 'lckh-approval', 'pembayaran', 'um-kelulusan', 'catatan-keuangan', 'keuangan'
+      'e-supervisi', 'observasi-kelas', 'lckh-approval', 'pembayaran', 'pengajuan-komite', 'um-kelulusan', 'catatan-keuangan', 'keuangan'
     ],
   },
   {
@@ -129,6 +129,7 @@ export const PAGE_LABELS: Record<string, string> = {
   'lckh': 'LCKH',
   'lckh-approval': 'LCKH Approval',
   'pembayaran': 'Pembayaran',
+  'pengajuan-komite': 'Pengajuan Komite',
   'ketidakhadiran': 'Ketidakhadiran',
   'rekam-medis': 'Rekam Medis Siswa',
   'guru-asuh': 'Guru Asuh',

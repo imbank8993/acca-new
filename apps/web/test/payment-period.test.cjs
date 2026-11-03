@@ -41,7 +41,7 @@ test('tariff timestamps cross month and year boundaries in WITA', () => {
 
 // Evaluate the actual page's selectors to check that rows, payment groups, cards,
 // and recap totals all consume the same period rather than the unfiltered data.
-function pageData(periodMonth, periodYear) {
+function pageData(periodMonth, periodYear, { legacy = false, rateMultiplier = 1 } = {}) {
     const source = fs.readFileSync('apps/web/app/pembayaran/view.tsx', 'utf8');
     const tree = ts.createSourceFile('view.tsx', source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
     const component = tree.statements.find(n => ts.isFunctionDeclaration(n) && n.name?.text === 'PembayaranPage');
@@ -56,12 +56,12 @@ function pageData(periodMonth, periodYear) {
         periodMonth, periodYear, matchesPaymentPeriod, paymentDatePeriod, useMemo: fn => fn(),
         filterBayar: 'ALL', klinikFilterBayar: 'ALL', ekskulFilterBayar: 'ALL', searchQuery: '', klinikSearchQuery: '', ekskulSearchQuery: '',
         submissions: [
-            { id: 'g-oct', bulan: 10, tahun: 2026, dibayarkan: true },
+            { id: 'g-oct', bulan: 10, tahun: 2026, dibayarkan: true, catatan_pembayaran: legacy ? null : '{"nominal":200000}' },
             { id: 'g-nov', bulan: 11, tahun: 2026, dibayarkan: false },
         ],
         ekskulSubmissions: [
-            { id: 'e-oct', bulan: 10, tahun: 2026, dibayarkan: true, jml_internal: 2, jml_eksternal: 1 },
-            { id: 'e-old', bulan: 10, tahun: 2025, dibayarkan: true, jml_internal: 10 },
+            { id: 'e-oct', bulan: 10, tahun: 2026, dibayarkan: true, jml_internal: 2, jml_eksternal: 1, catatan_pembayaran: legacy ? null : '{"nominal":200000}' },
+            { id: 'e-old', bulan: 10, tahun: 2025, dibayarkan: true, jml_internal: 10, catatan_pembayaran: legacy ? null : '{"nominal":500000}' },
         ],
         klinikSlots: [
             { id: 'k-oct', guru_id: 1, tanggal: '2026-10-01', status: 'paid', nominal_dibayarkan: 75000 },
@@ -70,8 +70,8 @@ function pageData(periodMonth, periodYear) {
             { id: 'k-nov', guru_id: 1, tanggal: '2026-11-01', status: 'paid', nominal_dibayarkan: 100000 },
         ],
         tarifList: [{ id: 't-oct', updated_at: '2026-09-30T17:00:00Z' }, { id: 't-old', updated_at: '2025-10-01T00:00:00Z' }],
-        getTarif: key => ({ GURU_ASUH: 200000, EKSKUL_INTERNAL: 50000, EKSKUL_EKSTERNAL: 100000 }[key] || 75000),
-        getCatatanData: () => ({ nominal: null }), parseNominal: Number,
+        getTarif: key => rateMultiplier * ({ GURU_ASUH: 200000, EKSKUL_INTERNAL: 50000, EKSKUL_EKSTERNAL: 100000 }[key] || 75000),
+        getCatatanData: raw => raw ? JSON.parse(raw) : ({ nominal: null }), parseNominal: Number,
     };
     vm.runInNewContext(js, context);
     return context.result;
@@ -107,4 +107,10 @@ test('all-period and empty-period selections produce consistent rows and totals'
     assert.equal(empty.klinikGroups.length, 0);
     assert.equal(empty.periodTarifList.length, 0);
     assert.equal(empty.rekapanData.total, 0);
+});
+test('recap uses historical snapshots and explicitly counts missing amounts instead of current tariffs', () => {
+    assert.equal(pageData(10,2026,{rateMultiplier:100}).rekapanData.total,475000);
+    const legacy=pageData(10,2026,{legacy:true});
+    assert.equal(legacy.rekapanData.total,75000);
+    assert.equal(legacy.rekapanData.nominalBelumTercatat,2);
 });

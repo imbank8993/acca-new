@@ -48,6 +48,8 @@
     "@nestjs/swagger": "^8.1.1",
     "@nestjs/throttler": "^6.5.0",
     "@prisma/client": "^6.4.0",
+    "@tesseract.js-data/eng": "1.0.0",
+    "@tesseract.js-data/ind": "1.0.0",
     "bcryptjs": "^2.4.3",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.1",
@@ -60,7 +62,9 @@
     "reflect-metadata": "^0.2.2",
     "resend": "^6.28.1",
     "rxjs": "^7.8.1",
-    "sanitize-html": "^2.17.7"
+    "sanitize-html": "^2.17.7",
+    "sharp": "0.34.5",
+    "tesseract.js": "7.0.0"
   },
   "devDependencies": {
     "@nestjs/cli": "^10.4.9",

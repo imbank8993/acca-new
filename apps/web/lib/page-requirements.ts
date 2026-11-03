@@ -50,6 +50,7 @@ export const PAGE_ROLE_REQUIREMENTS: Record<string, PageRequirement> = {
         roleActions: { 'ADMIN': 'manage', 'BENDAHARA_KOMITE': 'manage' },
         description: 'Pembayaran Honor Guru Asuh'
     },
+    'pengajuan-komite': { allowedRoles:['ADMIN','ADMINISTRATOR','BENDAHARA_KOMITE','GURU','KAMAD','KTU','OP_MADRASAH'],defaultAction:'view',description:'Pengajuan Komite' },
 
     // === E-SUPERVISI ===
     'e-supervisi': {

@@ -6,6 +6,7 @@ import {
   ConflictException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { paymentSnapshot } from '../payments/payment-snapshot';
 import {
   resolveTahunAjaranSemester,
   calcDailyAttendanceMinutes,
@@ -250,9 +251,10 @@ export class GuruAsuhService {
       throw new BadRequestException('id dan dibayarkan (boolean) wajib diisi');
     }
 
-    const submission = await this.prisma.laporan_guru_asuh_submissions.findUnique({
+    return this.prisma.$transaction(async tx => {
+    const submission = await tx.laporan_guru_asuh_submissions.findUnique({
       where: { id },
-      select: { id: true, status: true },
+      select: { id: true, status: true, dibayarkan: true },
     });
 
     if (!submission) {
@@ -263,10 +265,11 @@ export class GuruAsuhService {
         'Hanya laporan berstatus Disahkan yang dapat ditandai pembayaran.',
       );
     }
+    if(dibayarkan && submission.dibayarkan) throw new ConflictException('Pembayaran sudah tercatat. Muat ulang data.');
 
     const authId = user.auth_id || user.authId || null;
     const reviewer = authId
-      ? await this.prisma.public_users.findFirst({
+      ? await tx.public_users.findFirst({
           where: { auth_id: authId },
           select: { nip: true, nama: true, nama_lengkap: true },
         })
@@ -275,7 +278,7 @@ export class GuruAsuhService {
 
     const updatePayload: any = {
       dibayarkan,
-      catatan_pembayaran: catatan || null,
+      catatan_pembayaran: dibayarkan ? await paymentSnapshot(tx,'GURU_ASUH',id,catatan) : null,
       updated_at: new Date(),
     };
     if (dibayarkan) {
@@ -288,12 +291,17 @@ export class GuruAsuhService {
       updatePayload.dibayarkan_by_name = null;
     }
 
-    const updated = await this.prisma.laporan_guru_asuh_submissions.update({
+    const updated = await tx.laporan_guru_asuh_submissions.update({
       where: { id },
       data: updatePayload,
     });
 
     return { ok: true, data: serializeBigInt(updated) };
+    }, {isolationLevel:'Serializable'}).catch((e: any) => {
+      // Dua petugas menandai tagihan yang sama bersamaan: tampilkan sebagai konflik, bukan error 500.
+      if (e?.code === 'P2034' || e?.meta?.code === '40001') throw new ConflictException('Data pembayaran sedang diperbarui. Muat ulang lalu coba kembali.');
+      throw e;
+    });
   }
 
   async approveSubmission(user: any, body: any) {

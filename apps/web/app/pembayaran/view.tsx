@@ -12,6 +12,10 @@ import { Tab } from '@/components/ui/Tab';
 import HtmlPreviewModal from '@/components/ui/HtmlPreviewModal';
 import DocViewerModal from '@/components/ui/DocViewerModal';
 import './pembayaran.css';
+import BulkPaymentModal from './BulkPaymentModal';
+import { Button } from '@/components/ui/Button';
+import CommitteeTab from './CommitteeTab';
+import PrintPaymentModal from './PrintPaymentModal';
 
 const BULAN = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
 
@@ -111,7 +115,8 @@ const getCatatanData = (raw: string | null | undefined): CatatanData => {
         const trimmed = raw.trim();
         if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
             const p = JSON.parse(trimmed);
-            const parsedNominal = p.nominal !== undefined && p.nominal !== null ? parseNominal(p.nominal) : null;
+            const storedNominal = typeof p.nominal==='number'||(typeof p.nominal==='string'&&/^\d+(?:\.0+)?$/.test(p.nominal.trim()))?Number(p.nominal):NaN;
+            const parsedNominal = Number.isSafeInteger(storedNominal)&&storedNominal>=0?storedNominal:null;
             return {
                 text: typeof p.text === 'string' ? p.text : '',
                 url: typeof p.url === 'string' ? p.url : '',
@@ -125,16 +130,22 @@ const getCatatanData = (raw: string | null | undefined): CatatanData => {
 
 interface PembayaranPageProps {
     user?: any;
+    komiteOnly?: boolean;
 }
 
-export default function PembayaranPage({ user: propUser }: PembayaranPageProps = {}) {
+export default function PembayaranPage({ user: propUser, komiteOnly = false }: PembayaranPageProps = {}) {
     const [user, setUser] = useState<any>(propUser || null);
     const [loading, setLoading] = useState(false);
     const [submissions, setSubmissions] = useState<Submission[]>([]);
     const [saving, setSaving] = useState(false);
     const [filterBayar, setFilterBayar] = useState('ALL');
     const [searchQuery, setSearchQuery] = useState('');
-    const [activeTab, setActiveTab] = useState('GURU_ASUH');
+    const [activeTab, setActiveTab] = useState(komiteOnly ? 'KOMITE' : 'GURU_ASUH');
+    const [printOpen,setPrintOpen]=useState(false);
+    const [printUrl,setPrintUrl]=useState('');
+    useEffect(()=>()=>{if(printUrl)URL.revokeObjectURL(printUrl);},[printUrl]);
+    const [bulkOpen, setBulkOpen] = useState(false);
+    const [klinikEvidence, setKlinikEvidence] = useState<Record<string, string>>({});
 
     const [klinikSlots, setKlinikSlots] = useState<KlinikSlot[]>([]);
     const [loadingKlinik, setLoadingKlinik] = useState(false);
@@ -201,6 +212,7 @@ export default function PembayaranPage({ user: propUser }: PembayaranPageProps =
         { id: 'KLINIK', label: 'Klinik Pembelajaran', icon: 'bi-heart-pulse' },
         { id: 'GURU_ASUH', label: 'Guru Asuh', icon: 'bi-person-heart' },
         { id: 'EKSKUL', label: 'Ekstrakurikuler', icon: 'bi-person-plus' },
+        { id: 'KOMITE', label: 'Pengajuan Komite', icon: 'bi-journal-richtext' },
         { id: 'REKAPAN', label: 'Rekapan', icon: 'bi-journal-check' },
         { id: 'NOMINAL', label: 'Nominal', icon: 'bi-cash-stack' },
     ];
@@ -212,6 +224,8 @@ export default function PembayaranPage({ user: propUser }: PembayaranPageProps =
     }, [user]);
     const isAdmin = useMemo(() => userRoles.some((r: string) => r.includes('ADMIN')), [userRoles]);
     const isBendahara = useMemo(() => isAdmin || userRoles.includes('BENDAHARA_KOMITE'), [isAdmin, userRoles]);
+    // Sama dengan isTreasurer di backend (payments/payment-access.ts).
+    const canBulkUpload = useMemo(() => userRoles.some((r: string) => ['ADMIN', 'ADMINISTRATOR', 'BENDAHARA_KOMITE'].includes(r)), [userRoles]);
     const hasAccess = useMemo(() => {
         if (isBendahara) return true;
         if (user?.pagesArray?.includes('pembayaran')) return true;
@@ -279,6 +293,15 @@ export default function PembayaranPage({ user: propUser }: PembayaranPageProps =
         finally { setLoadingKlinik(false); }
     }, []);
 
+    // Tautan bukti upload massal untuk sesi Klinik, hanya untuk periode yang sedang ditampilkan.
+    const fetchKlinikEvidence = useCallback(async () => {
+        try {
+            const params = new URLSearchParams({ action: 'evidence', month: String(periodMonth), year: String(periodYear) });
+            const res = await authFetch('/api/pembayaran-massal?' + params.toString());
+            if (res.ok) { const evidence = await res.json(); setKlinikEvidence(evidence.data || {}); }
+        } catch (e) { console.error(e); }
+    }, [periodMonth, periodYear]);
+
     const fetchEkskulSubmissions = useCallback(async () => {
         setLoadingEkskul(true);
         try {
@@ -290,23 +313,29 @@ export default function PembayaranPage({ user: propUser }: PembayaranPageProps =
     }, []);
 
     useEffect(() => {
-        if (hasAccess) {
+        if (hasAccess && !komiteOnly) {
             fetchSubmissions();
             fetchTarif();
         }
-    }, [hasAccess, fetchSubmissions, fetchTarif]);
+    }, [hasAccess, komiteOnly, fetchSubmissions, fetchTarif]);
 
     useEffect(() => {
-        if (hasAccess && (activeTab === 'KLINIK' || activeTab === 'REKAPAN')) {
+        if (hasAccess && !komiteOnly && (activeTab === 'KLINIK' || activeTab === 'REKAPAN')) {
             fetchKlinikSlots();
         }
-    }, [hasAccess, activeTab, fetchKlinikSlots]);
+    }, [hasAccess, komiteOnly, activeTab, fetchKlinikSlots]);
 
     useEffect(() => {
-        if (hasAccess && (activeTab === 'EKSKUL' || activeTab === 'REKAPAN')) {
+        if (hasAccess && !komiteOnly && activeTab === 'KLINIK') {
+            fetchKlinikEvidence();
+        }
+    }, [hasAccess, komiteOnly, activeTab, fetchKlinikEvidence]);
+
+    useEffect(() => {
+        if (hasAccess && !komiteOnly && (activeTab === 'EKSKUL' || activeTab === 'REKAPAN')) {
             fetchEkskulSubmissions();
         }
-    }, [hasAccess, activeTab, fetchEkskulSubmissions]);
+    }, [hasAccess, komiteOnly, activeTab, fetchEkskulSubmissions]);
 
     const getTarif = useCallback((modul: string) => {
         const found = tarifList.find(t => t.modul === modul);
@@ -577,7 +606,7 @@ export default function PembayaranPage({ user: propUser }: PembayaranPageProps =
         let totalGuruAsuh = 0;
         guruAsuhPaid.forEach(sub => {
             const cData = getCatatanData(sub.catatan_pembayaran);
-            const nominal = cData.nominal !== null ? cData.nominal : getTarif('GURU_ASUH');
+            const nominal = cData.nominal;
             totalGuruAsuh += parseNominal(nominal);
         });
 
@@ -589,10 +618,7 @@ export default function PembayaranPage({ user: propUser }: PembayaranPageProps =
         let totalEkskul = 0;
         ekskulPaid.forEach(sub => {
             const cData = getCatatanData(sub.catatan_pembayaran);
-            const internalCount = Number(sub.jml_internal ?? sub.total_pertemuan ?? 0) || 0;
-            const eksternalCount = Number(sub.jml_eksternal ?? 0) || 0;
-            const fallbackNominal = internalCount * getTarif('EKSKUL_INTERNAL') + eksternalCount * getTarif('EKSKUL_EKSTERNAL');
-            const nominal = cData.nominal !== null ? cData.nominal : fallbackNominal;
+            const nominal = cData.nominal;
             totalEkskul += parseNominal(nominal);
         });
 
@@ -600,10 +626,11 @@ export default function PembayaranPage({ user: propUser }: PembayaranPageProps =
             guruAsuh: totalGuruAsuh,
             klinik: totalKlinik,
             klinikTanpaNominal,
+            nominalBelumTercatat: klinikTanpaNominal + guruAsuhPaid.filter(s=>getCatatanData(s.catatan_pembayaran).nominal===null).length + ekskulPaid.filter(s=>getCatatanData(s.catatan_pembayaran).nominal===null).length,
             ekskul: totalEkskul,
             total: totalGuruAsuh + totalKlinik + totalEkskul
         };
-    }, [periodSubmissions, periodKlinikSlots, periodEkskulSubmissions, getTarif]);
+    }, [periodSubmissions, periodKlinikSlots, periodEkskulSubmissions]);
 
     const handleTandai = async (sub: Submission, dibayarkan: boolean) => {
         let catatanInput = '';
@@ -714,7 +741,7 @@ export default function PembayaranPage({ user: propUser }: PembayaranPageProps =
         );
     }
 
-    if (!hasAccess) {
+    if (!hasAccess && !komiteOnly) {
         return (
             <div className="gap-denied">
                 <i className="bi bi-shield-lock" />
@@ -745,13 +772,19 @@ export default function PembayaranPage({ user: propUser }: PembayaranPageProps =
 
     return (
         <div className="gap">
+            {bulkOpen && <BulkPaymentModal initialKind={['GURU_ASUH', 'KLINIK', 'EKSKUL'].includes(activeTab) ? activeTab : 'GURU_ASUH'} initialMonth={periodMonth} initialYear={periodYear} onClose={() => setBulkOpen(false)} onApplied={() => { void fetchSubmissions(); void fetchKlinikSlots(); void fetchKlinikEvidence(); void fetchEkskulSubmissions(); }} />}
+            {!komiteOnly && canBulkUpload && activeTab!=='KOMITE' && <div className="bp-launch"><Button variant="outline" onClick={() => setBulkOpen(true)} leftIcon={<i className="bi bi-cloud-arrow-up" />}>Upload Bukti Massal</Button></div>}
             <Tab
-                tabs={TABS.map(t => ({ key: t.id, label: t.label, icon: t.icon }))}
+                tabs={TABS.filter(t=>!komiteOnly||t.id==='KOMITE').map(t => ({ key: t.id, label: t.label, icon: t.icon }))}
                 activeTab={activeTab}
                 onChange={(key) => setActiveTab(key)}
                 ariaLabel="Modul Pembayaran"
                 variant="slider"
             />
+
+            {activeTab==='KOMITE'&&<CommitteeTab/>}
+            {printOpen&&<PrintPaymentModal initialMonth={periodMonth} initialYear={periodYear} onClose={()=>setPrintOpen(false)} onReady={setPrintUrl}/>}
+            {printUrl&&<DocViewerModal fileUrl={printUrl} fileType="pdf" title="Rekapan Pembayaran Bulanan" onClose={()=>setPrintUrl('')}/>}
 
             {['NOMINAL', 'REKAPAN'].includes(activeTab) && (
                 <FilterToolbar alwaysExpanded>{periodFilterFields}</FilterToolbar>
@@ -812,7 +845,7 @@ export default function PembayaranPage({ user: propUser }: PembayaranPageProps =
                             )}
                                 {filteredSubmissions.map((sub, i) => {
                                     const cData = getCatatanData(sub.catatan_pembayaran);
-                                    const nominalTampil = sub.dibayarkan && cData.nominal !== null ? cData.nominal : getTarif('GURU_ASUH');
+                                    const nominalTampil = sub.dibayarkan ? cData.nominal : getTarif('GURU_ASUH');
                                     return (
                                         <tr key={sub.id}>
                                             <td>{i + 1}</td>
@@ -822,7 +855,7 @@ export default function PembayaranPage({ user: propUser }: PembayaranPageProps =
                                             </td>
                                             <td>{BULAN[sub.bulan - 1]} {sub.tahun}</td>
                                             <td>{sub.total_laporan} laporan</td>
-                                            <td style={{ fontWeight: 700 }}>{fmtRupiah(nominalTampil)}</td>
+                                            <td style={{ fontWeight: 700 }}>{nominalTampil===null?'Nominal belum tercatat':fmtRupiah(nominalTampil)}</td>
                                             <td>
                                                 <span className={`gap-badge gap-badge--${sub.dibayarkan ? 'sudah' : 'belum'}`}>
                                                     {sub.dibayarkan ? 'Dibayar' : 'Belum'}
@@ -944,7 +977,7 @@ export default function PembayaranPage({ user: propUser }: PembayaranPageProps =
                                             <td>{slot.mapel} — {slot.topik}</td>
                                             <td style={{ fontWeight: 700 }}>{slot.status === 'paid' ? slot.nominal_dibayarkan == null ? 'Nominal belum tercatat' : fmtRupiah(slot.nominal_dibayarkan) : fmtRupiah(getTarif('KLINIK'))}</td>
                                             {j === 0 && <td rowSpan={group.length} style={{ fontWeight: 700, background: 'var(--n-soft)' }}>{group.some(s => s.status === 'paid' && s.nominal_dibayarkan == null) ? 'Nominal belum lengkap' : fmtRupiah(group.reduce((sum, s) => sum + (s.status === 'paid' ? parseNominal(s.nominal_dibayarkan) : getTarif('KLINIK')), 0))}<div className="gap-td-nip">{group.length} kegiatan</div></td>}
-                                            <td><span className={`gap-badge gap-badge--${slot.status === 'paid' ? 'sudah' : 'belum'}`}>{slot.status === 'paid' ? 'Dibayar' : 'Belum'}</span></td>
+                                            <td><span className={`gap-badge gap-badge--${slot.status === 'paid' ? 'sudah' : 'belum'}`}>{slot.status === 'paid' ? 'Dibayar' : 'Belum'}</span>{slot.status === 'paid' && klinikEvidence[slot.id] && <button className="gap-btn-icon" title="Lihat Bukti Pembayaran" onClick={() => handleViewFile(`/api/pembayaran-massal/bukti?id=${klinikEvidence[slot.id]}`, `Bukti Pembayaran - ${slot.nama_guru}`)}><i className="bi bi-receipt" /> Bukti</button>}</td>
                                             <td>{isBendahara && (slot.status === 'paid' ? <button onClick={() => handleBatalKlinik(slot)} className="gap-btn-icon gap-btn-icon--danger" title="Batalkan Tanda Dibayar" disabled={savingKlinik}><i className="bi bi-x-circle" /></button> : j === 0 && <button onClick={() => handleTandaiKlinik(group)} className="gap-btn-icon gap-btn-icon--success" title="Tandai seluruh kegiatan penerima dibayar dalam satu transfer" disabled={savingKlinik}><i className="bi bi-check-circle" /></button>)}</td>
                                         </tr>
                                     )))}
@@ -1014,7 +1047,7 @@ export default function PembayaranPage({ user: propUser }: PembayaranPageProps =
                                         const internalCount = Number(sub.jml_internal ?? sub.total_pertemuan ?? 0) || 0;
                                         const eksternalCount = Number(sub.jml_eksternal ?? 0) || 0;
                                         const calculatedRate = internalCount * getTarif('EKSKUL_INTERNAL') + eksternalCount * getTarif('EKSKUL_EKSTERNAL');
-                                        const nominalTampil = sub.dibayarkan && cData.nominal !== null ? cData.nominal : calculatedRate;
+                                        const nominalTampil = sub.dibayarkan ? cData.nominal : calculatedRate;
 
                                         return (
                                             <tr key={sub.id}>
@@ -1033,7 +1066,7 @@ export default function PembayaranPage({ user: propUser }: PembayaranPageProps =
                                                     </div>
                                                 </td>
                                                 <td style={{ fontWeight: 700 }}>
-                                                    {fmtRupiah(nominalTampil)}
+                                                    {nominalTampil===null?'Nominal belum tercatat':fmtRupiah(nominalTampil)}
                                                     <div style={{ fontSize: '0.7rem', fontWeight: 400, color: 'var(--n-muted)', marginTop: '2px' }}>
                                                         {internalCount}×{fmtRupiah(getTarif('EKSKUL_INTERNAL'))} + {eksternalCount}×{fmtRupiah(getTarif('EKSKUL_EKSTERNAL'))}
                                                     </div>
@@ -1177,9 +1210,10 @@ export default function PembayaranPage({ user: propUser }: PembayaranPageProps =
 
             {activeTab === 'REKAPAN' && (
                 <div className="gap-table-card">
-                    {rekapanData.klinikTanpaNominal > 0 && (
+                    <div className="cp-toolbar" style={{padding:'0 16px'}}><span>Rekapan pembayaran rutin</span><Button variant="outline" icon="print" onClick={()=>setPrintOpen(true)}>Cetak Rekapan</Button></div>
+                    {rekapanData.nominalBelumTercatat > 0 && (
                         <p role="status" style={{ padding: '12px 16px', color: '#92400e' }}>
-                            Total belum lengkap: {rekapanData.klinikTanpaNominal} pembayaran klinik lama belum memiliki nominal tersimpan dan belum termasuk dalam total.
+                            Total belum lengkap: {rekapanData.nominalBelumTercatat} pembayaran lama belum memiliki nominal tersimpan dan belum termasuk dalam total.
                         </p>
                     )}
                     <div className="gap-table-wrap">
