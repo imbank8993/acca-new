@@ -4,10 +4,8 @@
  */
 
 import { getStorageType } from '../file-storage';
-import { uploadToGoogleDrive, deleteFromGoogleDrive, makeGoogleDriveFilePublic } from './google-drive';
 import { uploadToCloudflareR2, deleteFromCloudflareR2, isCloudflareR2Url } from './cloudflare-storage';
 import { registerUpload, unregisterUpload } from './file-registry';
-import { getMimeTypeFromFileName, DEFAULT_MIME } from './mime';
 
 // Result types
 export interface UploadResult {
@@ -64,14 +62,6 @@ export async function uploadFile(
                     'Ubah penyimpanan aktif ke Cloudflare R2 di Pengaturan → Penyimpanan File.',
             };
 
-        case 'google_drive':
-            return {
-                ok: false,
-                error:
-                    'Penyimpanan Google Drive sudah tidak dipakai untuk unggahan baru. ' +
-                    'Ubah penyimpanan aktif ke Cloudflare R2 di Pengaturan → Penyimpanan File.',
-            };
-
         case 'hosting' as any:
             return {
                 ok: false,
@@ -107,7 +97,8 @@ export async function uploadFile(
 function detectStorageType(fileUrl: string): 'supabase' | 'google_drive' | 'cloudflare' | 'hosting' | null {
     if (!fileUrl) return null;
 
-    // Check Google Drive URL
+    // Tautan Google Drive bukan penyimpanan ACCA (mis. tautan yang ditempel pengguna):
+    // jangan pernah dihapus, cukup cabut catatannya.
     if (fileUrl.includes('drive.google.com') || fileUrl.includes('docs.google.com')) {
         return 'google_drive';
     }
@@ -142,7 +133,7 @@ export async function deleteFile(fileUrl: string, filePath?: string): Promise<De
     let result: DeleteResult;
     switch (detectedType) {
         /**
-         * Berkas lama di Supabase, Google Drive, dan Server Hosting tidak dihapus secara fisik.
+         * Berkas lama di Supabase dan Server Hosting, serta tautan Google Drive, tidak dihapus secara fisik.
          * Dijawab `ok` supaya pencabutan catatan registry dan alur hapus di
          * pemanggil tetap berjalan lancar tanpa terganggu.
          */
@@ -156,11 +147,11 @@ export async function deleteFile(fileUrl: string, filePath?: string): Promise<De
             break;
 
         case 'google_drive':
-            console.warn(`[deleteFile] Google Drive: berkas fisik dilewati → ${fileUrl}`);
+            console.warn(`[deleteFile] Tautan Google Drive dilewati → ${fileUrl}`);
             result = {
                 ok: true,
                 manualCleanup: true,
-                warning: 'Berkas fisik di Google Drive dilewati dan dapat dihapus manual jika diperlukan.',
+                warning: 'Tautan Google Drive bukan penyimpanan ACCA, berkasnya tidak dihapus.',
             };
             break;
 
@@ -191,51 +182,6 @@ export async function deleteFile(fileUrl: string, filePath?: string): Promise<De
 
 // `handleSupabaseUpload` dan `handleSupabaseDelete` dihapus — lihat catatan pada
 // `case 'supabase'` di uploadFile() dan deleteFile().
-
-// Handle Google Drive upload
-async function handleGoogleDriveUpload(file: Buffer | Blob, fileName: string, folder?: string): Promise<UploadResult> {
-    try {
-        // First upload the file.
-        // Tipe diambil dari nama file dulu — dulu Buffer selalu dikirim sebagai
-        // application/octet-stream, dan karena nilai itu truthy, fallback
-        // getMimeType(fileName) di uploadToGoogleDrive tidak pernah jalan. Hasilnya
-        // PDF tersimpan di Drive sebagai berkas biner generik.
-        const byName = getMimeTypeFromFileName(fileName);
-        const mimeType = byName !== DEFAULT_MIME
-            ? byName
-            : (!Buffer.isBuffer(file) && file.type ? file.type : DEFAULT_MIME);
-        const result = await uploadToGoogleDrive(file, fileName, mimeType, folder);
-
-        if (!result) {
-            return { ok: false, error: 'Gagal upload ke Google Drive' };
-        }
-
-        // Make file publicly accessible
-        const fileId = result.file_id;
-        await makeGoogleDriveFilePublic(fileId);
-
-        return {
-            ok: true,
-            file_url: result.file_url,
-            file_path: fileId,
-            file_name: result.file_name
-        };
-    } catch (error: any) {
-        console.error('handleGoogleDriveUpload error:', error);
-        return { ok: false, error: error.message || 'Gagal upload ke Google Drive' };
-    }
-}
-
-// Handle Google Drive delete
-async function handleGoogleDriveDelete(fileId: string): Promise<DeleteResult> {
-    try {
-        const success = await deleteFromGoogleDrive(fileId);
-        return { ok: success, error: success ? undefined : 'Gagal hapus dari Google Drive' };
-    } catch (error: any) {
-        console.error('handleGoogleDriveDelete error:', error);
-        return { ok: false, error: error.message || 'Gagal hapus dari Google Drive' };
-    }
-}
 
 // Handle Cloudflare R2 upload
 async function handleCloudflareUpload(file: Buffer | Blob, fileName: string, folder?: string): Promise<UploadResult> {
@@ -269,34 +215,6 @@ async function handleCloudflareDelete(fileUrl: string): Promise<DeleteResult> {
     }
 }
 
-// Extract file ID from Google Drive URL
-function extractGoogleDriveFileId(url: string): string | null {
-    // Patterns:
-    // https://drive.google.com/file/d/FILE_ID/view
-    // https://drive.google.com/open?id=FILE_ID
-    // https://drive.google.com/uc?id=FILE_ID&export=download
-
-    const patterns = [
-        /\/file\/d\/([a-zA-Z0-9_-]+)/,
-        /\/open\?id=([a-zA-Z0-9_-]+)/,
-        /\/uc\?id=([a-zA-Z0-9_-]+)/,
-    ];
-
-    for (const pattern of patterns) {
-        const match = url.match(pattern);
-        if (match) {
-            return match[1];
-        }
-    }
-
-    return null;
-}
-
-// Check if a URL is a Google Drive URL
-export function isGoogleDriveUrl(url: string): boolean {
-    return url.includes('drive.google.com') || url.includes('docs.google.com');
-}
-
 // Check if a URL is a Supabase Storage URL
 export function isSupabaseStorageUrl(url: string): boolean {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
@@ -307,7 +225,6 @@ export function isSupabaseStorageUrl(url: string): boolean {
 export function getStorageTypeName(type: string): string {
     const names: Record<string, string> = {
         'supabase': 'Supabase Storage',
-        'google_drive': 'Google Drive',
         'cloudflare': 'Cloudflare R2',
     };
     return names[type] || type;

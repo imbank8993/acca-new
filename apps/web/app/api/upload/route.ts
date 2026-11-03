@@ -44,7 +44,6 @@ async function getStorageConfigForFile(fileUrl: string) {
     const matches = body.data.filter((config: any) => {
         if (config.storage_type === 'cloudflare') return matchesBase(config.cloudflare_public_url) || matchesBase(config.cloudflare_cdn_domain);
         if (config.storage_type === 'hosting') return matchesBase(config.hosting_url);
-        if (config.storage_type === 'google_drive') return target.hostname === 'drive.google.com';
         if (config.storage_type === 'supabase') return matchesBase(supabaseUrl) && target.pathname.includes(`/public/${config.supabase_bucket}/`);
         return false;
     });
@@ -189,108 +188,7 @@ async function uploadToHosting(formData: FormData, hostingUrl: string, phpUpload
 // 2. (Supabase Storage Upload Handler dihapus — unggahan baru hanya ke R2.
 //     Klien Supabase masih dibuat di jalur DELETE untuk berkas lama.)
 
-// 3. Google Drive Upload Handler
-async function uploadToGoogleDrive(formData: FormData, folderId: string | null) {
-    const serviceAccountEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
-    const serviceAccountKey = process.env.GOOGLE_SERVICE_ACCOUNT_KEY;
-
-    if (!serviceAccountEmail || !serviceAccountKey) {
-        return NextResponse.json({
-            ok: false,
-            error: 'Google Drive not configured. Set GOOGLE_SERVICE_ACCOUNT_EMAIL and GOOGLE_SERVICE_ACCOUNT_KEY in .env.local'
-        }, { status: 500 });
-    }
-
-    if (!folderId) {
-        return NextResponse.json({
-            ok: false,
-            error: 'Google Drive folder ID not configured. Set in Master Data → Penyimpanan File'
-        }, { status: 500 });
-    }
-
-    const file = formData.get('file') as File;
-    if (!file) {
-        return NextResponse.json({ ok: false, error: 'No file provided' }, { status: 400 });
-    }
-
-    try {
-        // Parse service account key
-        let keyData: any;
-        try {
-            keyData = JSON.parse(serviceAccountKey);
-        } catch {
-            return NextResponse.json({ ok: false, error: 'Invalid GOOGLE_SERVICE_ACCOUNT_KEY JSON' }, { status: 500 });
-        }
-
-        // Get access token using JWT
-        const accessToken = await getGoogleAccessToken(serviceAccountEmail, keyData);
-        if (!accessToken) {
-            return NextResponse.json({ ok: false, error: 'Failed to authenticate with Google Drive' }, { status: 500 });
-        }
-
-        const arrayBuffer = await file.arrayBuffer();
-        const buffer = Buffer.from(arrayBuffer);
-
-        // Generate unique filename
-        const timestamp = Date.now();
-        const random = crypto.randomBytes(4).toString('hex');
-        const sanitizedName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_').replace(/\s+/g, '_');
-        const uniqueFileName = `${timestamp}_${random}_${sanitizedName}`;
-
-        // Create multipart upload request
-        const boundary = 'boundary_' + crypto.randomBytes(16).toString('hex');
-        const metadata = JSON.stringify({
-            name: uniqueFileName,
-            parents: [folderId]
-        });
-
-        const body = Buffer.concat([
-            Buffer.from(`--${boundary}\r\n`),
-            Buffer.from('Content-Type: application/json; charset=UTF-8\r\n\r\n'),
-            Buffer.from(metadata + '\r\n'),
-            Buffer.from(`--${boundary}\r\n`),
-            Buffer.from(`Content-Type: ${file.type || 'application/octet-stream'}\r\n\r\n`),
-            buffer,
-            Buffer.from(`\r\n--${boundary}--\r\n`)
-        ]);
-
-        // Upload to Google Drive API
-        const response = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${accessToken}`,
-                'Content-Type': `multipart/related; boundary=${boundary}`,
-                'Content-Length': body.length.toString()
-            },
-            body
-        });
-
-        if (!response.ok) {
-            const error = await response.text();
-            console.error('Google Drive API error:', error);
-            return NextResponse.json({ ok: false, error: 'Failed to upload to Google Drive: ' + error }, { status: 500 });
-        }
-
-        const result = await response.json();
-
-        // Make file public
-        await makeFilePublic(result.id, accessToken);
-
-        return NextResponse.json({
-            ok: true,
-            publicUrl: `https://drive.google.com/file/d/${result.id}/view`,
-            fileName: uniqueFileName,
-            fileId: result.id,
-            fileSize: file.size
-        });
-
-    } catch (e: any) {
-        console.error('Google Drive upload error:', e);
-        return NextResponse.json({ ok: false, error: e.message }, { status: 500 });
-    }
-}
-
-// 4. Cloudflare R2 Upload Handler
+// 3. Cloudflare R2 Upload Handler
 async function uploadToCloudflareR2(
     formData: FormData,
     config: {
@@ -365,75 +263,6 @@ async function uploadToCloudflareR2(
     } catch (e: any) {
         console.error('Cloudflare R2 upload error:', e);
         return NextResponse.json({ ok: false, error: e.message }, { status: 500 });
-    }
-}
-
-// Get Google OAuth access token using JWT
-async function getGoogleAccessToken(serviceAccountEmail: string, keyData: any): Promise<string | null> {
-    try {
-        const now = Math.floor(Date.now() / 1000);
-
-        const header = { alg: 'RS256', typ: 'JWT' };
-        const claimSet = {
-            iss: serviceAccountEmail,
-            scope: 'https://www.googleapis.com/auth/drive.file',
-            aud: 'https://oauth2.googleapis.com/token',
-            exp: now + 3600,
-            iat: now
-        };
-
-        const encodedHeader = Buffer.from(JSON.stringify(header)).toString('base64url');
-        const encodedClaimSet = Buffer.from(JSON.stringify(claimSet)).toString('base64url');
-        const signatureInput = `${encodedHeader}.${encodedClaimSet}`;
-
-        // Sign with RSA-SHA256
-        const crypto = require('crypto');
-        const sign = crypto.createSign('RSA-SHA256');
-        sign.update(signatureInput);
-        const signature = sign.sign(keyData.private_key, 'base64url');
-        const jwt = `${signatureInput}.${signature}`;
-
-        // Exchange JWT for access token
-        const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: new URLSearchParams({
-                grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
-                assertion: jwt
-            })
-        });
-
-        if (!tokenResponse.ok) {
-            const error = await tokenResponse.text();
-            console.error('Token exchange error:', error);
-            return null;
-        }
-
-        const tokenData = await tokenResponse.json();
-        return tokenData.access_token;
-    } catch (error) {
-        console.error('getGoogleAccessToken error:', error);
-        return null;
-    }
-}
-
-// Make Google Drive file public
-async function makeFilePublic(fileId: string, accessToken: string): Promise<boolean> {
-    try {
-        const response = await fetch(
-            `https://www.googleapis.com/drive/v3/files/${fileId}/permissions`,
-            {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${accessToken}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ role: 'reader', type: 'anyone' })
-            }
-        );
-        return response.ok;
-    } catch {
-        return false;
     }
 }
 
@@ -559,7 +388,7 @@ export async function POST(req: NextRequest) {
                 }, { status: 400 });
 
             /**
-             * Supabase, Google Drive, dan Server Hosting sudah tidak dipakai oleh aplikasi
+             * Supabase dan Server Hosting sudah tidak dipakai oleh aplikasi
              * untuk unggahan baru: satu-satunya storage aktif adalah Cloudflare R2.
              */
             case 'supabase':
@@ -567,13 +396,6 @@ export async function POST(req: NextRequest) {
                     ok: false,
                     error: 'Penyimpanan Supabase sudah tidak dipakai untuk unggahan baru. '
                         + 'Aktifkan Cloudflare R2 di Pengaturan → Penyimpanan File.'
-                }, { status: 400 });
-
-            case 'google_drive':
-                return NextResponse.json({
-                    ok: false,
-                    error: 'Penyimpanan Google Drive sudah tidak digunakan lagi untuk unggahan baru. '
-                        + 'Gunakan Cloudflare R2 di Pengaturan → Penyimpanan File.'
                 }, { status: 400 });
 
             case 'cloudflare':
@@ -654,7 +476,7 @@ export async function DELETE(req: NextRequest) {
 
         switch (config.storage_type) {
             /**
-             * Berkas lama di Server Hosting, Supabase Storage, dan Google Drive TIDAK dihapus oleh aplikasi.
+             * Berkas lama di Server Hosting dan Supabase Storage TIDAK dihapus oleh aplikasi.
              *
              * Catatannya tetap dicabut dari registry supaya perhitungan kapasitas
              * dan alur hapus di halaman pemanggil berjalan lancar tanpa error network.
@@ -679,17 +501,6 @@ export async function DELETE(req: NextRequest) {
                     manualCleanup: true,
                     message: 'Catatan berkas dihapus. Berkas fisiknya masih ada di Supabase Storage '
                         + 'dan perlu dihapus manual dari dashboard Supabase.',
-                });
-            }
-
-            case 'google_drive': {
-                console.warn(`[Delete File] Google Drive: berkas fisik TIDAK dihapus (dilewati, manual cleanup jika diperlukan) → ${fileUrl}`);
-                await unregisterUpload(fileUrl);
-                return NextResponse.json({
-                    ok: true,
-                    manualCleanup: true,
-                    message: 'Catatan berkas dihapus. Berkas fisik di Google Drive dilewati '
-                        + 'dan dapat dibersihkan secara manual jika diperlukan.',
                 });
             }
 

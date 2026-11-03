@@ -320,7 +320,7 @@ export class SiteSettingsService {
   }
 
   async updateFileStorageConfig(id: string, data: any) {
-    const allowed = ['hosting_url','php_upload_path','php_delete_path','supabase_bucket','google_drive_folder_id','cloudflare_account_id','cloudflare_access_key_id','cloudflare_secret_access_key','cloudflare_bucket_name','cloudflare_public_url','cloudflare_cdn_domain','max_file_size_mb','allowed_extensions'];
+    const allowed = ['hosting_url','php_upload_path','php_delete_path','supabase_bucket','cloudflare_account_id','cloudflare_access_key_id','cloudflare_secret_access_key','cloudflare_bucket_name','cloudflare_public_url','cloudflare_cdn_domain','max_file_size_mb','allowed_extensions'];
     const patch: any = Object.fromEntries(allowed.filter(k => data[k] !== undefined).map(k => [k,data[k]]));
     for (const key of ['cloudflare_access_key_id','cloudflare_secret_access_key']) if (!patch[key]) delete patch[key];
     const result = await this.prisma.file_storage_config.update({ where: { id }, data: { ...patch, updated_at: new Date() } });

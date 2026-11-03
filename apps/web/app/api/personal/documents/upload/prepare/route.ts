@@ -30,7 +30,6 @@ export async function GET(request: NextRequest) {
             ok: true,
             storageType: uploadConfig.storageType,
             bucketName: uploadConfig.bucketName,
-            googleDriveFolderId: uploadConfig.googleDriveFolderId,
             cloudflareConfig: uploadConfig.cloudflareConfig,
             storagePath: storagePath
         });

@@ -1,12 +1,12 @@
 /**
  * File Storage Configuration Utility
  * Gets the current file storage configuration from database via NestJS
- * Supports: Supabase Storage, Google Drive, Cloudflare R2
+ * Penyimpanan aktif: Cloudflare R2 (Supabase hanya dikenali untuk berkas lama)
  */
 
 const NEST_API_URL = process.env.NEXT_PUBLIC_NEST_API_URL || 'http://localhost:3007/api';
 
-export type StorageType = 'supabase' | 'google_drive' | 'cloudflare';
+export type StorageType = 'supabase' | 'cloudflare';
 
 export interface FileStorageConfig {
     id: string;
@@ -15,7 +15,6 @@ export interface FileStorageConfig {
     php_upload_path: string | null;
     php_delete_path: string | null;
     supabase_bucket: string | null;
-    google_drive_folder_id: string | null;
     cloudflare_account_id: string | null;
     cloudflare_access_key_id: string | null;
     cloudflare_secret_access_key: string | null;
@@ -29,8 +28,6 @@ export interface UploadConfig {
     storageType: StorageType | null;
     // Supabase
     bucketName: string | null;
-    // Google Drive
-    googleDriveFolderId: string | null;
     // Cloudflare
     cloudflareConfig: {
         accountId: string | null;
@@ -79,7 +76,6 @@ export async function getFileStorageConfig(): Promise<FileStorageConfig | null> 
             php_upload_path: null,
             php_delete_path: null,
             supabase_bucket: null,
-            google_drive_folder_id: null,
             cloudflare_account_id: envCf?.accountId || null,
             cloudflare_access_key_id: envCf?.accessKeyId || null,
             cloudflare_secret_access_key: envCf?.secretAccessKey || null,
@@ -125,12 +121,6 @@ export async function getSupabaseBucket(): Promise<string | null> {
     return config?.supabase_bucket || null;
 }
 
-// Get Google Drive folder ID
-export async function getGoogleDriveFolderId(): Promise<string | null> {
-    const config = await getFileStorageConfig();
-    return config?.google_drive_folder_id || null;
-}
-
 // Get the upload/hosting URL from active storage config
 export async function getUploadUrl(): Promise<string | null> {
     const config = await getFileStorageConfig();
@@ -146,7 +136,6 @@ export async function getUploadConfig(): Promise<UploadConfig> {
         return {
             storageType: 'cloudflare',
             bucketName: null,
-            googleDriveFolderId: null,
             cloudflareConfig: envCf ? {
                 accountId: envCf.accountId,
                 bucketName: envCf.bucketName,
@@ -159,7 +148,6 @@ export async function getUploadConfig(): Promise<UploadConfig> {
     return {
         storageType: config.storage_type,
         bucketName: config.supabase_bucket,
-        googleDriveFolderId: config.google_drive_folder_id,
         cloudflareConfig: config.storage_type === 'cloudflare' ? {
             accountId: config.cloudflare_account_id,
             bucketName: config.cloudflare_bucket_name,
@@ -173,11 +161,6 @@ export async function getUploadConfig(): Promise<UploadConfig> {
 export async function isSupabaseStorage(): Promise<boolean> {
     const config = await getFileStorageConfig();
     return config?.storage_type === 'supabase';
-}
-
-export async function isGoogleDriveStorage(): Promise<boolean> {
-    const config = await getFileStorageConfig();
-    return config?.storage_type === 'google_drive';
 }
 
 export async function isCloudflareStorage(): Promise<boolean> {
