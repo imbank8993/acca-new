@@ -5,6 +5,7 @@ import { authFetch } from '@/lib/auth-fetch';
 import { Modal, ModalBody, ModalFooter, ModalField, ModalFileInput } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { InlineSelect } from '@/components/ui/InlineSelect';
+import DatePicker from '@/components/ui/DatePicker';
 import { ActionButton, ActionGroup } from '@/components/ui/ActionButtons';
 import { DesktopFab } from '@/components/ui/DesktopFab';
 import { DetailHeader } from '@/components/ui/DetailHeader';
@@ -205,9 +206,9 @@ export default function CommitteeTab() {
             <ActionGroup>
                 {canEdit && (!hasPayments || canPay) && <ActionButton action="edit" tooltip="Edit item" onClick={() => start('single-item', item)} />}
                 {canEdit && !hasPayments && <ActionButton action="delete" tooltip="Hapus item" onClick={() => start('delete-item', item)} />}
-                {canRecordAdvance && recipientRemaining(item) > 0 && <Button size="sm" variant="outline" onClick={() => pay('PJ_ADVANCE')}>Catat Bayar PJ</Button>}
-                {canPay && recipientRemaining(item) > 0 && <Button size="sm" variant="primary" onClick={() => pay('DIRECT')}>Bayar Langsung</Button>}
-                {canPay && outstandingAdvance(item) > 0 && <Button size="sm" variant="primary" onClick={() => pay('REIMBURSEMENT')}>Ganti Dana PJ</Button>}
+                {canRecordAdvance && recipientRemaining(item) > 0 && <ActionButton action="approve" icon={<i className="bi bi-person-check" />} tooltip="Catat pembayaran PJ ke penerima" onClick={() => pay('PJ_ADVANCE')} />}
+                {canPay && recipientRemaining(item) > 0 && <ActionButton action="approve" icon={<i className="bi bi-cash-coin" />} tooltip="Bayar langsung ke penerima" onClick={() => pay('DIRECT')} />}
+                {canPay && outstandingAdvance(item) > 0 && <ActionButton action="approve" icon={<i className="bi bi-arrow-repeat" />} tooltip="Ganti dana PJ" onClick={() => pay('REIMBURSEMENT')} />}
             </ActionGroup>
         );
     };
@@ -340,17 +341,17 @@ export default function CommitteeTab() {
                         })}
                     </div>
                 ) : (
-                    <div className="pay-table-wrap"><table className="pay-table" aria-label="Item pengajuan komite">
-                        <thead><tr><th>Periode</th><th>Item / Penerima</th><th>Jumlah</th><th className="pay-num">Harga Satuan</th><th className="pay-num">Total</th><th>Lampiran Item</th><th className="pay-num">Dibayar PJ</th><th className="pay-num">Diganti ke PJ</th><th className="pay-num">Dibayar Bendahara</th><th>Status Bendahara</th><th>Aksi</th></tr></thead>
+                    <div className="pay-table-wrap"><table className="pay-table pay-committee-items-table" aria-label="Item pengajuan komite">
+                        <thead><tr><th>Item</th><th>Anggaran</th><th>Pembayaran PJ</th><th>Dibayar Bendahara</th><th>Status</th><th>Aksi</th></tr></thead>
                         <tbody>{items.map(item => {
                             const st = statusOf(item.amount, item.paid);
                             return <tr key={item.id}>
-                                <td>{BULAN[item.month - 1]} {item.year}</td>
-                                <td><div className="pay-cell-stack"><strong>{item.description}</strong><span className="pay-cell-muted">{item.recipient || '—'}</span></div></td>
-                                <td>{Number(item.quantity)} {item.unit}</td><td className="pay-num">{fmtRupiah(item.unit_price)}</td><td className="pay-num">{fmtRupiah(item.amount)}</td>
-                                <td><div className="pay-cell-stack">{fileLinks(item.attachments || [])}</div></td>
-                                <td className="pay-num">{fmtRupiah(item.advanced || 0)}</td><td className="pay-num">{fmtRupiah(item.reimbursed || 0)}</td><td className="pay-num">{fmtRupiah(item.paid)}</td>
-                                <td><StatusBadge tone={Number(item.amount) === 0 ? 'unpaid' : toneOf(st)}>{Number(item.amount) === 0 ? 'Perlu Harga' : st}</StatusBadge></td><td>{itemActions(item)}</td>
+                                <td><div className="pay-cell-stack"><strong className="pay-cell-strong">{item.description}</strong><span className="pay-cell-muted">{BULAN[item.month - 1]} {item.year} · {item.recipient || 'Tanpa penerima'}</span><span className="pay-cell-muted">{Number(item.quantity)} {item.unit} × {fmtRupiah(item.unit_price)}</span>{(item.attachments || []).length > 0 && <span className="pay-committee-items-table__files">{fileLinks(item.attachments)}</span>}</div></td>
+                                <td className="pay-amount">{fmtRupiah(item.amount)}</td>
+                                <td><div className="pay-cell-stack"><span>Bayar: {fmtRupiah(item.advanced || 0)}</span><span className="pay-cell-muted">Diganti: {fmtRupiah(item.reimbursed || 0)}</span></div></td>
+                                <td>{fmtRupiah(item.paid)}</td>
+                                <td><StatusBadge tone={Number(item.amount) === 0 ? 'unpaid' : toneOf(st)}>{Number(item.amount) === 0 ? 'Perlu Harga' : st}</StatusBadge></td>
+                                <td className="pay-col-action">{itemActions(item)}</td>
                             </tr>;
                         })}</tbody>
                     </table></div>
@@ -444,10 +445,10 @@ export default function CommitteeTab() {
                         </ModalField>
                         <div className="pay-form-row">
                             <ModalField label="Tanggal mulai" required>
-                                <input required type="date" value={form.start_date} onChange={e => change('start_date', e.target.value)} />
+                                <DatePicker required value={form.start_date} max={form.end_date || undefined} onChange={value => change('start_date', value)} />
                             </ModalField>
                             <ModalField label="Tanggal selesai" required>
-                                <input required type="date" value={form.end_date} onChange={e => change('end_date', e.target.value)} />
+                                <DatePicker required value={form.end_date} min={form.start_date || undefined} onChange={value => change('end_date', value)} />
                             </ModalField>
                         </div>
                         <ModalField label="Keterangan">

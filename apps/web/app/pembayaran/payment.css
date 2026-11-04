@@ -1043,6 +1043,20 @@ th.pay-col-action { text-align: right !important; }
     border-bottom: 1px solid var(--n-border);
 }
 
+.pay-committee-items-table { table-layout: fixed; }
+.pay-committee-items-table th:nth-child(1) { width: 29%; }
+.pay-committee-items-table th:nth-child(2) { width: 13%; }
+.pay-committee-items-table th:nth-child(3) { width: 18%; }
+.pay-committee-items-table th:nth-child(4) { width: 15%; }
+.pay-committee-items-table th:nth-child(5) { width: 13%; }
+.pay-committee-items-table th:nth-child(6) { width: 12%; }
+.pay-committee-items-table th, .pay-committee-items-table td { padding: 10px 8px; overflow-wrap: anywhere; }
+.pay-committee-items-table th { white-space: normal; }
+.pay-committee-items-table td.pay-col-action { white-space: normal; }
+.pay-committee-items-table td.pay-col-action .ab-actions-row { flex-wrap: wrap; gap: 4px; min-width: 0; width: 100%; }
+.pay-committee-items-table__files { display: flex; flex-wrap: wrap; gap: 4px; }
+.pay-committee-items-table__files .pay-file { max-width: 100%; white-space: normal; }
+
 .pay-card .mui-list {
     margin: 0 12px 12px;
 }
