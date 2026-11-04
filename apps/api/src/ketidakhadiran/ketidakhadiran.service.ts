@@ -1937,7 +1937,17 @@ export class KetidakhadiranService {
       }
     }
     if (!body.nisn || !body.keluhan?.trim()) throw new BadRequestException('Siswa dan keluhan wajib diisi');
-    validatePeriod({ ...body, tanggal: body.tanggal || await this.getSchoolToday() });
+    const medicalDate = body.tanggal || await this.getSchoolToday();
+    const syncRequested = Boolean(body.auto_sync || body.auto_sync_ketidakhadiran || body.sync_ketidakhadiran);
+    const useUksEndTime = syncRequested && String(body.tindak_lanjut || '').toLowerCase().includes('istirahat di uks');
+    const medicalPeriod = {
+      ...body,
+      tanggal: medicalDate,
+      waktu_selesai_uks: useUksEndTime ? body.waktu_selesai_uks : undefined,
+      waktu_selesai: useUksEndTime ? body.waktu_selesai : undefined,
+      is_kontinu: useUksEndTime && String(body.tgl_selesai_sakit || body.tgl_selesai || medicalDate) > String(medicalDate),
+    };
+    validatePeriod(medicalPeriod);
     const siswa = await this.prisma.master_siswa.findFirst({ where: { nisn: String(body.nisn) } });
     if (!siswa) throw new BadRequestException('Siswa tidak ditemukan pada master');
     const resolved = await this.resolveSiswaKelasReguler(String(body.nisn));
@@ -1998,7 +2008,7 @@ export class KetidakhadiranService {
       const tglSelesai = tglSelesaiRaw ? new Date(tglSelesaiRaw) : created.tanggal;
 
       const waktuMulai = created.waktu;
-      const waktuSelesaiRaw = body.waktu_selesai_uks || body.waktu_selesai;
+      const waktuSelesaiRaw = useUksEndTime ? body.waktu_selesai_uks || body.waktu_selesai : undefined;
       const waktuSelesai = waktuSelesaiRaw ? new Date(`1970-01-01T${waktuSelesaiRaw}Z`) : null;
 
       const resolvedKelas = await this.resolveSiswaKelasReguler(created.nisn, created.kelas);
@@ -2014,6 +2024,7 @@ export class KetidakhadiranService {
           tgl_selesai: tglSelesai,
           waktu_mulai_real: waktuMulai,
           waktu_selesai_real: waktuSelesai,
+          is_kontinu: medicalPeriod.is_kontinu,
           status,
           keterangan: created.keluhan || 'Pemeriksaan UKS',
           tindakan: Array.isArray(created.tindakan) ? created.tindakan.join(', ') : (created.tindakan || null),

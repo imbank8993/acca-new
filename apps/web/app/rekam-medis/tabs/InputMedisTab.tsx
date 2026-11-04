@@ -272,7 +272,7 @@ export default function InputMedisTab({
 
     const [autoSyncKetidakhadiran, setAutoSyncKetidakhadiran] = useState(true);
     const [tglSelesaiSakit, setTglSelesaiSakit] = useState(getCurrentDate());
-    const [waktuSelesaiUks, setWaktuSelesaiUks] = useState('12:00');
+    const [waktuSelesaiUks, setWaktuSelesaiUks] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     const searchRef = useRef<HTMLDivElement>(null);
@@ -391,7 +391,7 @@ export default function InputMedisTab({
         setTindakanText('');
         setTindakLanjutText('Kembali ke Kelas');
         setTglSelesaiSakit(getCurrentDate());
-        setWaktuSelesaiUks('12:00');
+        setWaktuSelesaiUks('');
     };
 
     const currentMappedStatus = useMemo(() => {
@@ -399,6 +399,8 @@ export default function InputMedisTab({
         const found = tindakLanjutMapping.find(m => m.name.toLowerCase() === tindakLanjutText.trim().toLowerCase());
         return found ? found.status : 'Ringan';
     }, [tindakLanjutText, tindakLanjutMapping]);
+
+    const isIstirahatDiUks = tindakLanjutText.toLowerCase().includes('istirahat di uks');
 
     const calculateTotalDays = (startDateStr: string, endDateStr: string) => {
         if (!startDateStr || !endDateStr) return 1;
@@ -431,6 +433,16 @@ export default function InputMedisTab({
             Swal.fire({ icon: 'warning', title: 'Keluhan Wajib Diisi', text: 'Silakan ketik atau pilih keluhan sakit siswa.' });
             return;
         }
+        if (autoSyncKetidakhadiran && currentMappedStatus !== 'NONE' && isIstirahatDiUks) {
+            if (!waktuSelesaiUks) {
+                Swal.fire({ icon: 'warning', title: 'Jam Selesai UKS Wajib Diisi', text: 'Isi jam selesai istirahat siswa di UKS.' });
+                return;
+            }
+            if (tanggal === tglSelesaiSakit && waktuSelesaiUks <= waktu) {
+                Swal.fire({ icon: 'warning', title: 'Jam Selesai UKS Tidak Valid', text: 'Jam selesai harus setelah jam pemeriksaan pada tanggal yang sama.' });
+                return;
+            }
+        }
 
         setIsSubmitting(true);
         try {
@@ -457,7 +469,7 @@ export default function InputMedisTab({
                 auto_sync_ketidakhadiran: autoSyncKetidakhadiran && currentMappedStatus !== 'NONE',
                 mapped_status: currentMappedStatus,
                 tgl_selesai_sakit: tglSelesaiSakit,
-                waktu_selesai_uks: waktuSelesaiUks
+                waktu_selesai_uks: autoSyncKetidakhadiran && currentMappedStatus !== 'NONE' && isIstirahatDiUks ? waktuSelesaiUks : undefined
             };
 
             const res = await fetch('/api/ketidakhadiran/rekam-medis-siswa', {
@@ -954,7 +966,7 @@ export default function InputMedisTab({
                                                 />
                                             </div>
 
-                                            {tindakLanjutText.toLowerCase().includes('istirahat di uks') && (
+                                            {isIstirahatDiUks && (
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: '1 1 160px' }}>
                                                     <label style={{ fontSize: '0.75rem', color: 'var(--kh-text-secondary)', whiteSpace: 'nowrap', fontWeight: 400 }}>Jam Selesai UKS:</label>
                                                     <input
