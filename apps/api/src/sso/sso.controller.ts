@@ -1,6 +1,7 @@
 import { Controller, Get, Req, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { PageAccessGuard, RequiresPage } from '../auth/page-access.guard';
 import { SsoService } from './sso.service';
 
 @ApiTags('Single Sign-On (SSO)')
@@ -11,6 +12,8 @@ export class SsoController {
   constructor(private readonly ssoService: SsoService) {}
 
   @Get('wordpress')
+  @UseGuards(PageAccessGuard)
+  @RequiresPage('wordpress-app')
   @ApiOperation({
     summary: 'Dapatkan link Single Sign-On (SSO) sekali pakai ke WordPress MAN IC Gowa',
     description:

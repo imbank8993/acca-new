@@ -280,19 +280,9 @@ export default function Sidebar({
   useEffect(() => {
     setSsoMenuOpen(false)
   }, [isCollapsed, currentPage])
-  const userRolesList = useMemo(() => [
-    ...(Array.isArray(user?.roles) ? user.roles : []),
-    ...(typeof user?.role === 'string' ? user.role.split(/[,|]/) : [])
-  ].map(r => String(r).trim().toUpperCase()), [user])
-
   const hasCbtAccess = user.pagesArray?.includes('cbt-app') || user.roles?.includes('ADMIN')
   const hasToolsAccess = user.pagesArray?.includes('tools-app') || user.roles?.includes('ADMIN')
-  const hasWpAccess = useMemo(() => {
-    if (userRolesList.includes('SISWA')) return false
-    if (user.roles?.includes('ADMIN') || user.pagesArray?.includes('wordpress-app')) return true
-    const allowed = ['ADMIN', 'SUPERADMIN', 'HUMAS', 'EDITOR', 'GURU', 'PEMBINA', 'STAF', 'STAFF', 'ADMINISTRATOR']
-    return userRolesList.some(r => allowed.includes(r))
-  }, [userRolesList, user.pagesArray, user.roles])
+  const hasWpAccess = user.pagesArray?.includes('wordpress-app') || user.roles?.some(role => ['ADMIN', 'ADMINISTRATOR'].includes(role.toUpperCase()))
 
   // ── Load persisted UI state ──
   useEffect(() => {
