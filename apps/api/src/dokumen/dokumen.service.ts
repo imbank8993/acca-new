@@ -1,6 +1,13 @@
-import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
+import { Injectable, HttpException, HttpStatus, ForbiddenException, NotFoundException, BadRequestException } from '@nestjs/common';
+import { randomBytes } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { StorageService } from '../common/storage.service';
+import { FeatureAccessGuard, aksesDiizinkan } from '../auth/feature-access.guard';
+
+/** Kunci site_settings untuk hak kelola Pusat Dokumen. */
+export const DOKUMEN_KELOLA_KEY = 'dokumen_access_config';
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export interface UploadResult {
     fileName: string;
@@ -16,6 +23,7 @@ export class DokumenService {
     constructor(
         private readonly prisma: PrismaService,
         private readonly storage: StorageService,
+        private readonly featureAccess: FeatureAccessGuard,
     ) {}
 
     private extractIdentifier(fileName: string): { id: string; type: 'NIP' | 'NISN' } | null {
@@ -323,5 +331,84 @@ export class DokumenService {
             }));
         }
         return [];
+    }
+
+    /* ----------------------- Link publik per berkas ----------------------- */
+
+    /**
+     * Pemilik berkas (NIP/NISN/akun pengunggah) atau pengelola Pusat Dokumen.
+     * Link publik membuka berkas untuk siapa pun yang memegang tokennya, jadi
+     * hak membuat/melihat token tidak boleh lebih longgar dari ini.
+     */
+    private async aksesBerbagi(id: string, user: any) {
+        if (!UUID_RE.test(id || '')) throw new BadRequestException('ID dokumen tidak valid');
+        const doc = await this.prisma.uploaded_documents.findUnique({
+            where: { id },
+            include: { upload_categories: { select: { audience: true } } },
+        });
+        if (!doc) throw new NotFoundException('Dokumen tidak ditemukan');
+
+        const ids = [user?.nip, user?.nisn, user?.username].filter(Boolean).map(String);
+        const pemilik = (!!doc.uploader_id && doc.uploader_id === user?.auth_id)
+            || (!!doc.uploader_nip && ids.includes(doc.uploader_nip))
+            || (!!doc.uploader_nisn && ids.includes(doc.uploader_nisn));
+        const pengelola = !pemilik && aksesDiizinkan(user, await this.featureAccess.bacaKonfigurasi(DOKUMEN_KELOLA_KEY));
+        if (!pemilik && !pengelola) {
+            throw new ForbiddenException('Hanya pengunggah berkas atau pengelola dokumen yang dapat membagikan berkas ini.');
+        }
+        return doc;
+    }
+
+    async listShareLinks(id: string, user: any) {
+        await this.aksesBerbagi(id, user);
+        const data = await this.prisma.uploaded_document_share_links.findMany({
+            where: { document_id: id },
+            orderBy: { created_at: 'desc' },
+        });
+        return { ok: true, data };
+    }
+
+    async createShareLink(id: string, user: any) {
+        const doc = await this.aksesBerbagi(id, user);
+        // Folder ber-audience "none" (mis. bank soal) memang tidak untuk dibaca
+        // orang lain; link publik akan membocorkannya ke luar madrasah.
+        const audience = String(doc.audience || doc.upload_categories?.audience || 'umum').toLowerCase();
+        if (audience === 'none') {
+            throw new ForbiddenException('Berkas di folder privat tidak dapat dibagikan sebagai link publik.');
+        }
+        const authId = String(user?.auth_id || '');
+        const data = await this.prisma.uploaded_document_share_links.create({
+            data: {
+                // Token adalah satu-satunya pelindung berkas: harus acak kriptografis.
+                token: randomBytes(12).toString('base64url'),
+                document_id: id,
+                created_by: UUID_RE.test(authId) ? authId : null,
+                created_by_name: user?.nama_lengkap || user?.nama || user?.username || null,
+            },
+        });
+        return { ok: true, data };
+    }
+
+    private async linkMilik(linkId: string, user: any) {
+        if (!UUID_RE.test(linkId || '')) throw new BadRequestException('ID link tidak valid');
+        const link = await this.prisma.uploaded_document_share_links.findUnique({ where: { id: linkId } });
+        if (!link) throw new NotFoundException('Link publik tidak ditemukan');
+        await this.aksesBerbagi(link.document_id, user);
+        return link;
+    }
+
+    async toggleShareLink(linkId: string, revoked: unknown, user: any) {
+        const link = await this.linkMilik(linkId, user);
+        const data = await this.prisma.uploaded_document_share_links.update({
+            where: { id: link.id },
+            data: { revoked: typeof revoked === 'boolean' ? revoked : !link.revoked },
+        });
+        return { ok: true, data };
+    }
+
+    async deleteShareLink(linkId: string, user: any) {
+        const link = await this.linkMilik(linkId, user);
+        await this.prisma.uploaded_document_share_links.delete({ where: { id: link.id } });
+        return { ok: true };
     }
 }

@@ -198,6 +198,11 @@ export async function middleware(request: NextRequest) {
         // Berkas untuk halaman di atas. Bukan proxy terbuka: URL sumbernya
         // diambil dari dokumen yang tercakup token, bukan dari pemanggil.
         '/api/informasi-akademik/share/file',
+        // Link publik satu berkas Dokumen Sekolah — pola yang sama dengan
+        // /info-link: token acak, halaman di-noindex, dan proxy berkasnya hanya
+        // melayani dokumen yang tercakup token.
+        '/dokumen-link',
+        '/api/dokumen-share/file',
         '/api/qrcode', // QR code generation for public access
         '/redirect', // Public card reader redirect route
         '/api/config', // Public system config read endpoint

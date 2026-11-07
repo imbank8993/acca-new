@@ -4463,6 +4463,22 @@ model upload_categories {
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+/// Link publik satu berkas Dokumen Sekolah (halaman /dokumen-link/<token>).
+model uploaded_document_share_links {
+  id              String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  token           String             @unique
+  document_id     String             @db.Uuid
+  created_by      String?            @db.Uuid
+  created_by_name String?
+  revoked         Boolean            @default(false)
+  view_count      Int                @default(0)
+  created_at      DateTime           @default(now()) @db.Timestamptz(6)
+  document        uploaded_documents @relation(fields: [document_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([document_id], map: "idx_uploaded_document_share_links_document")
+  @@schema("public")
+}
+
 model uploaded_documents {
   id                String             @id @default(dbgenerated("extensions.uuid_generate_v4()")) @db.Uuid
   category_id       String?            @db.Uuid
@@ -4482,6 +4498,7 @@ model uploaded_documents {
   target_nisn       String?
   audience          String?            @default("umum")
   upload_categories upload_categories? @relation(fields: [category_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  share_links       uploaded_document_share_links[]
 
   @@index([target_nip], map: "idx_uploaded_documents_target_nip")
   @@index([target_nisn], map: "idx_uploaded_documents_target_nisn")

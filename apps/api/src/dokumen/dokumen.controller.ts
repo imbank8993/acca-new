@@ -1,12 +1,9 @@
-import { Controller, Post, UseInterceptors, UploadedFiles, Body, Req, Delete, Get, Put, Param, Query, UseGuards } from '@nestjs/common';
+import { Controller, Post, UseInterceptors, UploadedFiles, Body, Req, Delete, Get, Put, Patch, Param, Query, UseGuards } from '@nestjs/common';
 import { AnyFilesInterceptor } from '@nestjs/platform-express';
-import { DokumenService } from './dokumen.service';
+import { DokumenService, DOKUMEN_KELOLA_KEY } from './dokumen.service';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { FeatureAccess, FeatureAccessGuard } from '../auth/feature-access.guard';
-
-/** Kunci site_settings untuk hak kelola Pusat Dokumen (kartu yang sudah ada). */
-const DOKUMEN_KELOLA_KEY = 'dokumen_access_config';
 
 /**
  * Controller ini sebelumnya TIDAK punya guard sama sekali: daftar kategori dan
@@ -60,6 +57,30 @@ export class DokumenController {
   async deleteUploadedDocument(@Param('id') id: string) {
     await this.dokumenService.deleteUploadedDocument(id);
     return { ok: true, message: 'Dokumen berhasil dihapus' };
+  }
+
+  /**
+   * Link publik per berkas. Tanpa @FeatureAccess: pengunggah boleh membagikan
+   * berkasnya sendiri; service yang memeriksa pemilik atau pengelola.
+   */
+  @Get('uploaded-documents/:id/share')
+  async listShareLinks(@Req() req: any, @Param('id') id: string) {
+    return this.dokumenService.listShareLinks(id, req.user);
+  }
+
+  @Post('uploaded-documents/:id/share')
+  async createShareLink(@Req() req: any, @Param('id') id: string) {
+    return this.dokumenService.createShareLink(id, req.user);
+  }
+
+  @Patch('share-links/:linkId')
+  async toggleShareLink(@Req() req: any, @Param('linkId') linkId: string, @Body() body: any) {
+    return this.dokumenService.toggleShareLink(linkId, body?.revoked, req.user);
+  }
+
+  @Delete('share-links/:linkId')
+  async deleteShareLink(@Req() req: any, @Param('linkId') linkId: string) {
+    return this.dokumenService.deleteShareLink(linkId, req.user);
   }
 
   @Get('categories')

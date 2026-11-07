@@ -5,6 +5,7 @@ import { Modal, ModalBody, ModalFooter } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { useAlert } from '@/components/ui/AlertProvider';
 import '../informasi.css';
+import '@/components/ui/share-links.css';
 
 export interface ShareTarget {
     scope: 'folder' | 'file';

@@ -48,19 +48,30 @@ function formatFileSize(bytes: number): string {
  * route-nya hanya mau melayani dokumen yang tercakup token.
  * Segmen nama berkas ada supaya deteksi jenis berkas lewat ekstensi tetap jalan.
  */
-function proxyUrl(token: string, doc: InformasiDoc): string {
+function proxyUrl(fileBase: string, token: string, doc: InformasiDoc): string {
     const name = doc.file_name || `${doc.title}.pdf`;
-    return `/api/informasi-akademik/share/file/${encodeURIComponent(token)}/${encodeURIComponent(doc.id)}/${encodeURIComponent(name)}`;
+    return `${fileBase}/${encodeURIComponent(token)}/${encodeURIComponent(doc.id)}/${encodeURIComponent(name)}`;
 }
 
+/**
+ * Dipakai juga oleh /dokumen-link (berkas Dokumen Sekolah): `fileBase` menunjuk
+ * route proxy milik jenis link masing-masing, karena tiap route hanya mau
+ * melayani berkas yang tercakup token jenisnya sendiri.
+ */
 export default function ShareLinkClient({
     share,
     token,
     schoolName,
+    fileBase = '/api/informasi-akademik/share/file',
+    eyebrow = 'Informasi dibagikan',
+    note,
 }: {
     share: ResolvedShare;
     token: string;
     schoolName?: string;
+    fileBase?: string;
+    eyebrow?: string;
+    note?: string;
 }) {
     const [selected, setSelected] = useState<InformasiDoc | null>(null);
 
@@ -79,7 +90,7 @@ export default function ShareLinkClient({
                     <i className={`bi ${share.scope === 'file' ? 'bi-file-earmark-text' : 'bi-folder2-open'}`} />
                 </div>
                 <div className="ifl-hero__text">
-                    <span className="ifl-hero__eyebrow">Informasi dibagikan</span>
+                    <span className="ifl-hero__eyebrow">{eyebrow}</span>
                     <h1>{share.label}</h1>
                     <p>
                         {share.division ? `${share.division} • ` : ''}
@@ -123,13 +134,17 @@ export default function ShareLinkClient({
             </div>
 
             <p className="ifl-note">
-                Tautan ini hanya menampilkan {share.scope === 'file' ? 'dokumen di atas' : 'isi folder di atas'}.
-                Untuk melihat seluruh informasi, masuk ke aplikasi menggunakan akun Anda.
+                {note || (
+                    <>
+                        Tautan ini hanya menampilkan {share.scope === 'file' ? 'dokumen di atas' : 'isi folder di atas'}.
+                        Untuk melihat seluruh informasi, masuk ke aplikasi menggunakan akun Anda.
+                    </>
+                )}
             </p>
 
             {selected && (
                 <PDFViewer
-                    url={proxyUrl(token, selected)}
+                    url={proxyUrl(fileBase, token, selected)}
                     title={selected.title}
                     onClose={() => setSelected(null)}
                 />

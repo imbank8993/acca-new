@@ -7,6 +7,7 @@ import { Modal, ModalBody } from '@/components/ui/Modal'
 import Swal from 'sweetalert2'
 import { FilterToolbar, FilterSelect } from '@/components/ui/FilterToolbar'
 import ActionButton, { ActionGroup } from '@/components/ui/ActionButtons'
+import ShareDokumenModal from '../components/ShareDokumenModal'
 
 const PDFViewer = dynamic(() => import('@/components/ui/PDFViewerWrapper'), { ssr: false });
 
@@ -28,6 +29,7 @@ export default function UnggahDokumenTab({
     const [recentUploads, setRecentUploads] = useState<any[]>([])
     const [dragOver, setDragOver] = useState(false)
     const [viewerFile, setViewerFile] = useState<{ url: string; name: string } | null>(null)
+    const [shareDoc, setShareDoc] = useState<{ id: string; file_name: string; category_name?: string | null } | null>(null)
 
     // User info auto-detected
     const userInfo = useMemo(() => {
@@ -342,6 +344,12 @@ export default function UnggahDokumenTab({
                                         title="Lihat File"
                                     />
                                     <ActionButton
+                                        action="copy"
+                                        icon={<i className="bi bi-share" />}
+                                        tooltip="Bagikan link publik"
+                                        onClick={() => setShareDoc(upload)}
+                                    />
+                                    <ActionButton
                                         action="download"
                                         onClick={() => {
                                             const link = document.createElement('a')
@@ -360,6 +368,8 @@ export default function UnggahDokumenTab({
                     </div>
                 )}
             </div>
+
+            {shareDoc && <ShareDokumenModal doc={shareDoc} onClose={() => setShareDoc(null)} />}
 
             {/* Modal Unggah Dokumen */}
             {isUploadModalOpen && (
