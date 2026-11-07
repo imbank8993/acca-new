@@ -99,6 +99,12 @@ export default function UnggahDokumenTab({
                 params.set('uploaderNisn', userInfo.nisn)
             } else if (userInfo.nip) {
                 params.set('uploaderNip', userInfo.nip)
+            } else {
+                // Tanpa NIP/NISN tidak ada yang bisa dicocokkan sebagai "unggahan saya".
+                // Tanpa penjaga ini permintaannya berangkat TANPA filter dan daftar
+                // ini menampilkan unggahan seluruh warga madrasah.
+                setRecentUploads([])
+                return
             }
             const res = await fetch('/api/uploaded-documents?' + params.toString())
             const data = await res.json()
@@ -218,11 +224,14 @@ export default function UnggahDokumenTab({
                 storage_type: uploadResult.storageType || 'cloudflare'
             }
 
-            // Add NIP for Guru or NISN for Siswa
-            if (userInfo.isGuru && userInfo.nip) {
-                insertData.uploader_nip = userInfo.nip
-            } else if (userInfo.isSiswa && userInfo.nisn) {
+            // Identitas pengunggah: NISN untuk siswa, NIP untuk semua pengguna lain
+            // yang punya NIP (guru, staf/TU, pimpinan, dst.). Dulu hanya role GURU
+            // yang dicatat NIP-nya, sehingga unggahan staf tidak muncul di daftar
+            // "Dokumen Sekolah" miliknya dan tidak bisa ia bagikan sebagai link publik.
+            if (userInfo.isSiswa && userInfo.nisn) {
                 insertData.uploader_nisn = userInfo.nisn
+            } else if (userInfo.nip) {
+                insertData.uploader_nip = userInfo.nip
             }
 
             const res = await fetch('/api/uploaded-documents', {
