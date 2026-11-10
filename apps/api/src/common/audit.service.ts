@@ -17,6 +17,12 @@ export class AuditService {
 
   constructor(private readonly prisma: PrismaService) {}
 
+  /** Kosongkan hanya tabel log audit; pencatatan baru tetap berjalan setelahnya. */
+  async clearAllLogs() {
+    await this.prisma.$executeRaw`TRUNCATE TABLE public.audit_logs RESTART IDENTITY`;
+    return { ok: true };
+  }
+
   private extractIp(req?: any): string | null {
     if (!req) return null;
     const xForwardedFor = req.headers?.['x-forwarded-for'];

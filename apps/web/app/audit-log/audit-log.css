@@ -7,6 +7,10 @@
 
 .audit-panel { background: var(--n-card, #fff); border: 1px solid var(--n-border, #e2e8f0); border-radius: 16px; padding: 20px; min-width: 0; margin-top: 12px; box-shadow: 0 3px 14px #14355b05; }
 .audit-filters { margin-bottom: 16px; }
+.audit-confirm-label { display: block; margin: 16px 0 8px; font-size: 12px; }
+.audit-confirm-input { width: 100%; height: 40px; padding: 8px 12px; border: 1px solid var(--n-border, #cbd5e1); border-radius: 8px; font: inherit; }
+.audit-confirm-input:focus { outline: 2px solid #3083ff; outline-offset: 1px; }
+.audit-clear-error { color: #b91c1c; font-size: 12px; }
 
 .audit-notice { display: flex; align-items: flex-start; gap: 9px; background: #eff6ff; color: #235ca0; border: 1px solid #dbeafe; border-radius: 10px; padding: 11px 14px; line-height: 1.7; font-size: 12px; margin: 0 0 16px; }
 .audit-notice.is-warning { background: #fffbeb; color: #8f6317; border-color: #fde68a; }

@@ -61,6 +61,8 @@ function History() {
     const [refresh, setRefresh] = useState(0), [page, setPage] = useState(1), [limit, setLimit] = useState(20);
     const [draft, setDraft] = useState(''), [search, setSearch] = useState(''), [entityDraft, setEntityDraft] = useState(''), [entity, setEntity] = useState('');
     const [action, setAction] = useState('Semua'), [selected, setSelected] = useState<Log | null>(null);
+    const [confirmClear, setConfirmClear] = useState(false), [confirmation, setConfirmation] = useState('');
+    const [clearing, setClearing] = useState(false), [clearError, setClearError] = useState('');
     // Apply shared mobile filters, including their reset/clear controls.
     useEffect(() => {
         const timeout = setTimeout(() => { setSearch(draft.trim()); setEntity(entityDraft.trim()); setPage(1); }, 300);
@@ -71,6 +73,22 @@ function History() {
     const coverage = useRemote<{ active: boolean; covered: number; total: number }>('/api/audit-logs/status', refresh);
     const retry = () => setRefresh(value => value + 1);
     const applySearch = () => { setSearch(draft.trim()); setEntity(entityDraft.trim()); setPage(1); };
+    const closeClear = () => { if (!clearing) { setConfirmClear(false); setConfirmation(''); setClearError(''); } };
+    const clearLogs = async () => {
+        if (confirmation !== 'HAPUS LOG' || clearing) return;
+        setClearing(true); setClearError('');
+        try {
+            const response = await fetch('/api/audit-logs/clear', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ confirmation }),
+            });
+            const body = await response.json();
+            if (!response.ok || !body.ok) throw new Error(typeof body.error === 'string' ? body.error : 'Log gagal dihapus.');
+            setConfirmClear(false); setConfirmation(''); setSelected(null); setPage(1); retry();
+        } catch (error) {
+            setClearError(error instanceof Error ? error.message : 'Log gagal dihapus.');
+        } finally { setClearing(false); }
+    };
     return <>
         <div className={`audit-notice ${coverage.data?.active ? '' : 'is-warning'}`}>
             <i className={`bi bi-${coverage.data?.active ? 'shield-check' : 'info-circle'}`} />
@@ -84,8 +102,7 @@ function History() {
                 { value: 'UPDATE', label: 'Edit' }, { value: 'DELETE', label: 'Hapus' },
             ]} />
             <FilterActions>
-                <Button type="button" size="sm" variant="primary" icon="search" onClick={applySearch}>Cari</Button>
-                <Button type="button" size="sm" variant="secondary" icon="refresh" onClick={retry}>Segarkan</Button>
+                <Button type="button" size="sm" variant="danger" icon="delete" onClick={() => setConfirmClear(true)}>Hapus Log</Button>
             </FilterActions>
         </FilterToolbar>
         {result.loading ? <Loading /> : result.error ? <Failure message={result.error} retry={retry} /> : <>
@@ -103,6 +120,15 @@ function History() {
             {selected.details?.values_hidden ? <p className="audit-notice">Isi tabel autentikasi disembunyikan. Nama kolom yang berubah tetap tercatat.</p> : null}
             {selected.details?.source === 'database' ? <div className="audit-diff"><section><h3>Sebelum</h3><pre>{pretty(selected.details.before)}</pre></section><section><h3>Sesudah</h3><pre>{pretty(selected.details.after)}</pre></section></div> : <pre className="audit-json">{pretty(selected.details || {})}</pre>}
         </ModalBody><ModalFooter><Button variant="cancel" onClick={() => setSelected(null)}>Tutup</Button></ModalFooter></Modal>}
+        {confirmClear && <Modal title="Hapus seluruh log audit?" icon="trash" variant="delete" onClose={closeClear} closeOnOverlayClick={false}>
+            <ModalBody>
+                <p>Semua baris di tabel log audit sistem akan dihapus permanen, termasuk yang tidak tampil karena filter atau halaman. Pencatatan log baru tetap berjalan.</p>
+                <label className="audit-confirm-label" htmlFor="audit-clear-confirmation">Ketik <strong>HAPUS LOG</strong> untuk melanjutkan</label>
+                <input id="audit-clear-confirmation" className="audit-confirm-input" value={confirmation} onChange={event => setConfirmation(event.target.value)} disabled={clearing} autoComplete="off" />
+                {clearError && <p className="audit-clear-error" role="alert">{clearError}</p>}
+            </ModalBody>
+            <ModalFooter><Button type="button" variant="cancel" onClick={closeClear} disabled={clearing}>Batal</Button><Button type="button" variant="danger" icon="delete" onClick={clearLogs} disabled={confirmation !== 'HAPUS LOG' || clearing} isLoading={clearing}>Hapus Semua Log</Button></ModalFooter>
+        </Modal>}
     </>;
 }
 

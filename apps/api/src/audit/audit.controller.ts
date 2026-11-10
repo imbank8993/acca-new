@@ -1,4 +1,4 @@
-import { Controller, Get, Query, Req, UseGuards, ForbiddenException, BadRequestException } from '@nestjs/common';
+import { Body, Controller, Get, Post, Query, Req, UseGuards, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { AuditService } from '../common/audit.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { rolesUser, ROLE_ADMIN } from '../auth/feature-access.guard';
@@ -24,6 +24,13 @@ export class AuditController {
 
   @Get('status')
   status(@Req() req: any) { this.assertAdmin(req); return this.explorer.status(); }
+
+  @Post('clear')
+  async clear(@Req() req: any, @Body('confirmation') confirmation?: string) {
+    this.assertAdmin(req);
+    if (confirmation !== 'HAPUS LOG') throw new BadRequestException('Konfirmasi penghapusan log tidak valid.');
+    return this.auditService.clearAllLogs();
+  }
 
   @Get('tables')
   tables(@Req() req: any) { this.assertAdmin(req); return this.explorer.tables(); }
