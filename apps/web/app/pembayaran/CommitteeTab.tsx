@@ -5,6 +5,7 @@ import { authFetch } from '@/lib/auth-fetch';
 import { Modal, ModalBody, ModalFooter, ModalField, ModalFileInput } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { InlineSelect } from '@/components/ui/InlineSelect';
+import SearchableSelect from '@/components/ui/SearchableSelect';
 import DatePicker from '@/components/ui/DatePicker';
 import { ActionButton, ActionGroup } from '@/components/ui/ActionButtons';
 import { DesktopFab } from '@/components/ui/DesktopFab';
@@ -19,7 +20,7 @@ const day = (v: any) => v ? String(v).slice(0, 10) : '';
 const localDay = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Makassar', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
 const statusOf = (total: any, paid: any) => Number(paid) <= 0 ? 'Belum Dibayar' : Number(paid) >= Number(total) ? 'Lunas' : 'Dibayar Sebagian';
 const toneOf = (status: string): BadgeTone => status === 'Lunas' ? 'paid' : status === 'Dibayar Sebagian' ? 'partial' : 'unpaid';
-const flowLabel = (flow: string) => flow === 'PJ_ADVANCE' ? 'PJ → Penerima' : flow === 'REIMBURSEMENT' ? 'Bendahara → PJ (penggantian)' : 'Bendahara → Penerima';
+const flowLabel = (flow: string) => flow === 'PJ_ADVANCE' ? 'Transfer PJ (riwayat lama)' : flow === 'REIMBURSEMENT' ? 'Penggantian PJ (riwayat lama)' : 'Pembayaran Bendahara';
 const outstandingAdvance = (item: any) => Number(item.advanced || 0) - Number(item.reimbursed || 0);
 const recipientRemaining = (item: any) => Number(item.amount) - Number(item.paid) - outstandingAdvance(item);
 const itemStatus = (item: any) => Number(item.amount) === 0 ? 'Perlu Harga' : outstandingAdvance(item) > 0 ? Number(item.reimbursed || 0) > 0 ? 'Penggantian PJ Sebagian' : 'Menunggu Penggantian PJ' : statusOf(item.amount, item.paid);
@@ -59,6 +60,10 @@ export default function CommitteeTab() {
     const [preview, setPreview] = useState<{ url: string; title: string } | null>(null);
     const [canRecordAdvance, setCanRecordAdvance] = useState(false);
     const [ownerId, setOwnerId] = useState('');
+    const [masterPeople, setMasterPeople] = useState<{ name: string; kind: string }[]>([]);
+    const [masterLoading, setMasterLoading] = useState(false);
+    const [masterError, setMasterError] = useState('');
+    const [masterRefresh, setMasterRefresh] = useState(0);
     const saving = useRef(false);
 
     const loadList = useCallback(async () => {
@@ -81,6 +86,26 @@ export default function CommitteeTab() {
     }, []);
 
     useEffect(() => { void loadList(); }, [loadList]);
+
+    useEffect(() => {
+        if (form?.kind !== 'single-item') return;
+        let active = true;
+        setMasterLoading(true);
+        setMasterError('');
+        void authFetch('/api/master/guru?limit=1000').then(res => res.json()).then(result => {
+            if (!result.ok || !Array.isArray(result.data)) throw new Error('Daftar guru/staf belum dapat dimuat.');
+            if (active) {
+                const people = new Map<string, { name: string; kind: string }>();
+                for (const person of result.data) {
+                    const name = String(person.nama_lengkap || '').trim();
+                    if (name && !people.has(name)) people.set(name, { name, kind: String(person.jenis_pegawai || 'GURU').toUpperCase() });
+                }
+                setMasterPeople([...people.values()]);
+            }
+        }).catch(() => { if (active) setMasterError('Daftar guru/staf belum dapat dimuat. Nama tetap bisa diketik manual.'); })
+            .finally(() => { if (active) setMasterLoading(false); });
+        return () => { active = false; };
+    }, [form?.kind, masterRefresh]);
 
     // Pesan sukses hilang sendiri supaya tidak menumpuk di atas konten.
     useEffect(() => {
@@ -114,15 +139,18 @@ export default function CommitteeTab() {
         setForm({
             kind, title: '', description: '', recipient: '', quantity: 1, unit: 'paket', unit_price: '', month, year,
             proposed_total: '', proposal_url: '', proposal_name: '', proposal_files: [],
-            attachments: [], files: [], reason: '', note: '', paid_on: today, amount: '', remaining: old.amount,
-            ampra_title: 'Ampra', ampra_files: [], pj_advance_enabled: false, pj_advance_amount: '',
-            pj_advance_paid_on: today, pj_advance_account: '', pj_proof_title: 'Bukti transfer PJ', pj_proof_files: [], pj_proof_uploaded: null,
+            attachments: [], files: [], replacement_files: {}, reason: '', note: '', paid_on: today, amount: '', remaining: old.amount, partial_payment: false,
+            ampra_files: [], new_attachment_titles: [],
             requestId: crypto.randomUUID(), ...old,
             start_date: day(old.start_date) || today, end_date: day(old.end_date) || today,
         });
     };
 
     const change = (key: string, value: any) => setForm((old: any) => ({ ...old, [key]: value }));
+    const pickItemFiles = (files: File[]) => setForm((old: any) => {
+        const titles = new Map<File, string>((old.ampra_files || []).map((file: File, i: number) => [file, old.new_attachment_titles?.[i] || '']));
+        return { ...old, ampra_files: files, new_attachment_titles: files.map(file => titles.get(file) ?? file.name.replace(/\.[^.]+$/, '')) };
+    });
 
     const upload = async (file: File) => {
         if (file.size > 15 * 1024 * 1024) throw new Error('Maksimal 15 MB per lampiran.');
@@ -158,45 +186,37 @@ export default function CommitteeTab() {
             }
             if (form.kind === 'single-item') {
                 const attachments: Attachment[] = [...(form.attachments || [])];
-                const ampraFile = form.ampra_files?.[0] as File | undefined;
-                if (ampraFile) {
-                    const title = String(form.ampra_title || '').trim();
-                    if (!title) throw new Error('Isi judul dokumen ampra.');
-                    const uploaded = await upload(ampraFile);
+                const newFiles: File[] = form.ampra_files || [];
+                if (attachments.length + newFiles.length > 10) throw new Error('Maksimal 10 lampiran item.');
+                if (attachments.some(a => !a.name.trim())) throw new Error('Isi judul setiap dokumen yang tersimpan.');
+                for (let i = 0; i < newFiles.length; i++) {
+                    const title = String(form.new_attachment_titles?.[i] || '').trim();
+                    if (!title) throw new Error(`Isi judul dokumen baru ${i + 1}.`);
+                    const uploaded = await upload(newFiles[i]);
                     attachments.push({ name: title, url: uploaded.url });
-                    setForm((old: any) => ({ ...old, attachments, ampra_files: [] }));
                 }
-                if (attachments.length > 10) throw new Error('Maksimal 10 lampiran item.');
+                if (newFiles.length) setForm((old: any) => ({ ...old, attachments, ampra_files: [], new_attachment_titles: [] }));
                 body.attachments = attachments;
-                if (form.pj_advance_enabled) {
-                    if (form.id) throw new Error('Pembayaran PJ untuk item lama dicatat lewat aksi pembayaran PJ.');
-                    const title = String(form.pj_proof_title || '').trim();
-                    if (!title || (!form.pj_proof_files?.length && !form.pj_proof_uploaded)) throw new Error('Isi judul dan unggah bukti transfer PJ.');
-                    const newProof = form.pj_proof_files?.[0] as File | undefined;
-                    if (newProof && !/\.(pdf|jpe?g|png|webp)$/i.test(newProof.name)) throw new Error('Bukti transfer PJ harus berupa PDF atau gambar.');
-                    const proof = newProof ? await upload(newProof) : form.pj_proof_uploaded;
-                    if (newProof) setForm((old: any) => ({ ...old, pj_proof_uploaded: proof, pj_proof_files: [] }));
-                    body.pj_advance = {
-                        amount: Number(form.pj_advance_amount), paid_on: form.pj_advance_paid_on,
-                        destination_account: form.pj_advance_account, request_id: form.requestId,
-                        attachments: [{ name: title, url: proof.url }],
-                    };
-                }
             }
             if (form.kind === 'payment' || form.kind === 'edit-proof') {
-                const attachments: Attachment[] = [...(form.attachments || [])];
-                if (attachments.length + (form.files?.length || 0) > 10) throw new Error('Maksimal 10 lampiran.');
+                const attachments: Attachment[] = [];
+                if ((form.attachments?.length || 0) + (form.files?.length || 0) > 10) throw new Error('Maksimal 10 lampiran.');
+                for (const old of form.attachments || []) {
+                    if (!String(old.name || '').trim()) throw new Error('Isi judul setiap bukti pembayaran.');
+                    const replacement = form.kind === 'edit-proof' ? form.replacement_files?.[old.url]?.[0] as File | undefined : undefined;
+                    attachments.push(replacement ? { name: old.name, url: (await upload(replacement)).url } : old);
+                }
                 for (const f of form.files || []) attachments.push(await upload(f));
                 body.attachments = attachments;
-                setForm((old: any) => ({ ...old, attachments, files: [] }));
+                if ((form.files?.length || 0) || Object.keys(form.replacement_files || {}).length) setForm((old: any) => ({ ...old, attachments, files: [], replacement_files: {} }));
             }
             if (['payment', 'edit-proof'].includes(form.kind) && !body.attachments.length) throw new Error('Lampirkan bukti transfer terlebih dahulu.');
             delete body.files;
+            delete body.replacement_files;
+            delete body.item_total;
             delete body.proposal_files;
             delete body.ampra_files;
-            delete body.pj_proof_files;
-            delete body.pj_proof_uploaded;
-            for (const key of ['ampra_title', 'pj_advance_enabled', 'pj_advance_amount', 'pj_advance_paid_on', 'pj_advance_account', 'pj_proof_title']) delete body[key];
+            for (const key of ['new_attachment_titles', 'partial_payment']) delete body[key];
             const r = await api('/api/payments/committee', body);
             const activityId = form.kind === 'activity' ? (form.id || r.id) : selected;
             await loadList();
@@ -215,6 +235,7 @@ export default function CommitteeTab() {
 
     const activity = data?.activity;
     const items: any[] = data?.items || [];
+    const hasLegacyAdvances = items.some(item => Number(item.advanced || 0) > 0);
     const total = items.reduce((sum: number, item: any) => sum + Number(item.amount), 0);
     const paid = (data?.payments || []).filter((p: any) => !p.voided_at && p.flow !== 'PJ_ADVANCE').reduce((sum: number, p: any) => sum + Number(p.amount), 0);
     const itemPayments: any[] = data?.payments || [];
@@ -248,7 +269,8 @@ export default function CommitteeTab() {
 
     const itemActions = (item: any) => {
         const hasPayments = Number(item.paid) + Number(item.advanced || 0) > 0;
-        const pay = (flow: string) => {
+        const pay = () => {
+            const flow = outstandingAdvance(item) > 0 ? 'REIMBURSEMENT' : 'DIRECT';
             const remaining = flow === 'REIMBURSEMENT' ? outstandingAdvance(item) : recipientRemaining(item);
             start('payment', { ...item, flow, amount: remaining, remaining, attachments: [], destination_account: '' });
         };
@@ -256,9 +278,7 @@ export default function CommitteeTab() {
             <ActionGroup>
                 {canEdit && <ActionButton action="edit" tooltip={hasPayments && !canPay ? 'Edit dokumen item' : 'Edit item'} onClick={() => start('single-item', item)} />}
                 {canEdit && !hasPayments && <ActionButton action="delete" tooltip="Hapus item" onClick={() => start('delete-item', item)} />}
-                {canRecordAdvance && recipientRemaining(item) > 0 && <ActionButton action="approve" icon={<i className="bi bi-person-check" />} tooltip="Catat pembayaran PJ ke penerima" onClick={() => pay('PJ_ADVANCE')} />}
-                {canPay && recipientRemaining(item) > 0 && <ActionButton action="approve" icon={<i className="bi bi-cash-coin" />} tooltip="Bayar langsung ke penerima" onClick={() => pay('DIRECT')} />}
-                {canPay && outstandingAdvance(item) > 0 && <ActionButton action="approve" icon={<i className="bi bi-arrow-repeat" />} tooltip="Ganti dana PJ" onClick={() => pay('REIMBURSEMENT')} />}
+                {canPay && (recipientRemaining(item) > 0 || outstandingAdvance(item) > 0) && <Button type="button" size="sm" variant="primary" leftIcon={<i className="bi bi-check2-circle" />} onClick={pay}>Tandai Dibayar</Button>}
             </ActionGroup>
         );
     };
@@ -388,8 +408,8 @@ export default function CommitteeTab() {
                             const st = itemStatus(item);
                             return <article className="pay-mobile-card" key={item.id}>
                                 <div className="pay-mobile-card__top"><strong>{item.description}</strong><StatusBadge tone={outstandingAdvance(item) > 0 ? 'partial' : toneOf(st)}>{st}</StatusBadge></div>
-                                <div className="pay-mobile-card__meta"><span>{BULAN[item.month - 1]} {item.year}</span><span>{item.recipient || 'Tanpa penerima'}</span></div>
-                                <dl className="pay-mobile-card__facts"><div><dt>Jumlah</dt><dd>{Number(item.quantity)} {item.unit}</dd></div><div><dt>Harga Satuan</dt><dd>{fmtRupiah(item.unit_price)}</dd></div><div><dt>Total Item</dt><dd>{fmtRupiah(item.amount)}</dd></div><div><dt>Dibayar PJ</dt><dd>{fmtRupiah(item.advanced || 0)}</dd></div><div><dt>Diganti ke PJ</dt><dd>{fmtRupiah(item.reimbursed || 0)}</dd></div><div><dt>Dibayar Bendahara</dt><dd>{fmtRupiah(item.paid)}</dd></div></dl>
+                                <div className="pay-mobile-card__meta"><span>{BULAN[item.month - 1]} {item.year}</span><span>Ditransfer kepada: {item.recipient || 'Belum dicatat'}</span></div>
+                                <dl className="pay-mobile-card__facts"><div><dt>Jumlah</dt><dd>{Number(item.quantity)} {item.unit}</dd></div><div><dt>Harga Satuan</dt><dd>{fmtRupiah(item.unit_price)}</dd></div><div><dt>Total Item</dt><dd>{fmtRupiah(item.amount)}</dd></div>{Number(item.advanced || 0) > 0 && <><div><dt>Transfer PJ terdahulu</dt><dd>{fmtRupiah(item.advanced)}</dd></div><div><dt>Diganti ke PJ</dt><dd>{fmtRupiah(item.reimbursed || 0)}</dd></div></>}<div><dt>Dibayar Bendahara</dt><dd>{fmtRupiah(item.paid)}</dd></div></dl>
                                 {(item.attachments || []).length > 0 && <div className="pay-mobile-card__files"><span>Lampiran item</span>{fileLinks(item.attachments)}</div>}
                                 {pjProofs(item.id).length > 0 && <div className="pay-mobile-card__files"><span>Bukti transfer PJ</span>{fileLinks(pjProofs(item.id))}</div>}
                                 <div className="pay-mobile-card__actions">{itemActions(item)}</div>
@@ -397,14 +417,14 @@ export default function CommitteeTab() {
                         })}
                     </div>
                 ) : (
-                    <div className="pay-table-wrap"><table className="pay-table pay-committee-items-table" aria-label="Item pengajuan komite">
-                        <thead><tr><th>Item</th><th>Anggaran</th><th>Pembayaran PJ</th><th>Dibayar Bendahara</th><th>Status</th><th>Aksi</th></tr></thead>
+                    <div className="pay-table-wrap"><table className={`pay-table pay-committee-items-table ${hasLegacyAdvances ? '' : 'pay-committee-items-table--simple'}`} aria-label="Item pengajuan komite">
+                        <thead><tr><th>Item</th><th>Anggaran</th>{hasLegacyAdvances && <th>Transfer PJ terdahulu</th>}<th>Dibayar Bendahara</th><th>Status</th><th>Aksi</th></tr></thead>
                         <tbody>{items.map(item => {
                             const st = itemStatus(item);
                             return <tr key={item.id}>
-                                <td><div className="pay-cell-stack"><strong className="pay-cell-strong">{item.description}</strong><span className="pay-cell-muted">{BULAN[item.month - 1]} {item.year} · {item.recipient || 'Tanpa penerima'}</span><span className="pay-cell-muted">{Number(item.quantity)} {item.unit} × {fmtRupiah(item.unit_price)}</span>{(item.attachments || []).length > 0 && <span className="pay-committee-items-table__files">{fileLinks(item.attachments)}</span>}{pjProofs(item.id).length > 0 && <span className="pay-committee-items-table__files">{fileLinks(pjProofs(item.id))}</span>}</div></td>
+                                <td><div className="pay-cell-stack"><strong className="pay-cell-strong">{item.description}</strong><span className="pay-cell-muted">{BULAN[item.month - 1]} {item.year} · Ditransfer kepada: {item.recipient || 'Belum dicatat'}</span><span className="pay-cell-muted">{Number(item.quantity)} {item.unit} × {fmtRupiah(item.unit_price)}</span>{(item.attachments || []).length > 0 && <span className="pay-committee-items-table__files">{fileLinks(item.attachments)}</span>}{pjProofs(item.id).length > 0 && <span className="pay-committee-items-table__files">{fileLinks(pjProofs(item.id))}</span>}</div></td>
                                 <td className="pay-amount">{fmtRupiah(item.amount)}</td>
-                                <td><div className="pay-cell-stack"><span>Bayar: {fmtRupiah(item.advanced || 0)}</span><span className="pay-cell-muted">Diganti: {fmtRupiah(item.reimbursed || 0)}</span></div></td>
+                                {hasLegacyAdvances && <td><div className="pay-cell-stack"><span>Bayar: {fmtRupiah(item.advanced || 0)}</span><span className="pay-cell-muted">Diganti: {fmtRupiah(item.reimbursed || 0)}</span></div></td>}
                                 <td>{fmtRupiah(item.paid)}</td>
                                 <td><StatusBadge tone={outstandingAdvance(item) > 0 ? 'partial' : toneOf(st)}>{st}</StatusBadge></td>
                                 <td className="pay-col-action">{itemActions(item)}</td>
@@ -413,17 +433,17 @@ export default function CommitteeTab() {
                     </table></div>
                 )}
                 <div className="pay-section-head"><div><h4>Riwayat Pembayaran</h4><span className="pay-cell-muted">{itemPayments.length} catatan pembayaran</span></div></div>
-                {itemPayments.length === 0 ? <EmptyState icon="receipt" title="Belum ada pembayaran">Pembayaran PJ dan bendahara akan muncul di sini.</EmptyState> : isMobile ? (
+                {itemPayments.length === 0 ? <EmptyState icon="receipt" title="Belum ada pembayaran">Pembayaran Bendahara akan muncul di sini.</EmptyState> : isMobile ? (
                     <div className="pay-mobile-cards pay-mobile-cards--in-card" aria-label="Riwayat pembayaran item">
                         {itemPayments.map((payment: any) => {
                             const item = items.find((i: any) => i.id === payment.item_id);
                             return <article className="pay-mobile-card" key={payment.id}>
                                 <div className="pay-mobile-card__top"><strong>{item?.description || 'Item'}</strong><StatusBadge tone={payment.voided_at ? 'void' : 'paid'}>{payment.voided_at ? 'Dibatalkan' : 'Tercatat'}</StatusBadge></div>
                                 <div className="pay-mobile-card__meta"><span>{fmtTanggal(day(payment.paid_on))}</span><span>{flowLabel(payment.flow)}</span></div>
-                                <dl className="pay-mobile-card__facts"><div><dt>Nominal</dt><dd>{fmtRupiah(payment.amount)}</dd></div><div><dt>Rekening Tujuan</dt><dd>{payment.destination_account || '—'}</dd></div><div><dt>Pencatat</dt><dd>{payment.actor_name}</dd></div>{payment.note && <div><dt>Catatan</dt><dd>{payment.note}</dd></div>}{payment.void_reason && <div><dt>Alasan Pembatalan</dt><dd>{payment.void_reason}</dd></div>}</dl>
+                                <dl className="pay-mobile-card__facts"><div><dt>Nominal</dt><dd>{fmtRupiah(payment.amount)}</dd></div>{payment.destination_account && <div><dt>Rekening Tujuan (riwayat)</dt><dd>{payment.destination_account}</dd></div>}<div><dt>Pencatat</dt><dd>{payment.actor_name}</dd></div>{payment.note && <div><dt>Catatan</dt><dd>{payment.note}</dd></div>}{payment.void_reason && <div><dt>Alasan Pembatalan</dt><dd>{payment.void_reason}</dd></div>}</dl>
                                 <div className="pay-mobile-card__files"><span>Bukti Transfer</span>{fileLinks(payment.attachments?.length ? payment.attachments : [{ name: 'Bukti transfer', url: payment.proof_url }])}</div>
                                 {!payment.voided_at && (canPay || (canRecordAdvance && payment.flow === 'PJ_ADVANCE' && payment.actor_id === ownerId)) && <div className="pay-mobile-card__actions"><ActionGroup>
-                                    <ActionButton action="edit" tooltip="Edit bukti pembayaran" onClick={() => start('edit-proof', { ...payment, term_id: item?.term_id, itemId: payment.item_id, revision: item?.revision, attachments: payment.attachments?.length ? payment.attachments : [{ name: 'Bukti transfer', url: payment.proof_url }] })} />
+                                    <Button type="button" size="sm" variant="edit" icon="edit" onClick={() => start('edit-proof', { ...payment, term_id: item?.term_id, itemId: payment.item_id, revision: item?.revision, attachments: payment.attachments?.length ? payment.attachments : [{ name: 'Bukti transfer', url: payment.proof_url }] })}>Edit Bukti</Button>
                                     <ActionButton action="reject" tooltip="Batalkan pembayaran" onClick={() => start('cancel-payment', { ...payment, term_id: item?.term_id, itemId: payment.item_id, revision: item?.revision })} />
                                 </ActionGroup></div>}
                             </article>;
@@ -431,18 +451,18 @@ export default function CommitteeTab() {
                     </div>
                 ) : (
                     <div className="pay-table-wrap"><table className="pay-table" aria-label="Riwayat pembayaran item">
-                        <thead><tr><th>Tanggal</th><th>Item</th><th>Alur / Rekening Tujuan</th><th className="pay-num">Nominal</th><th>Lampiran</th><th>Catatan / Pencatat</th><th>Status</th><th>Aksi</th></tr></thead>
+                        <thead><tr><th>Tanggal</th><th>Item</th><th>Keterangan Pembayaran</th><th className="pay-num">Nominal</th><th>Lampiran</th><th>Catatan / Pencatat</th><th>Status</th><th>Aksi</th></tr></thead>
                         <tbody>{itemPayments.map((payment: any) => {
                             const item = items.find((i: any) => i.id === payment.item_id);
                             return <tr key={payment.id}>
                                 <td>{fmtTanggal(day(payment.paid_on))}</td><td>{item?.description}</td>
-                                <td><div className="pay-cell-stack"><strong>{flowLabel(payment.flow)}</strong><span>{payment.destination_account || '—'}</span></div></td>
+                                <td><div className="pay-cell-stack"><strong>{flowLabel(payment.flow)}</strong>{payment.destination_account && <span>{payment.destination_account}</span>}</div></td>
                                 <td className="pay-num">{fmtRupiah(payment.amount)}</td>
                                 <td><div className="pay-cell-stack">{fileLinks(payment.attachments?.length ? payment.attachments : [{ name: 'Bukti transfer', url: payment.proof_url }])}</div></td>
                                 <td><div className="pay-cell-stack"><span>{payment.note}</span><span className="pay-cell-muted">{payment.actor_name}</span>{payment.void_reason && <span>Alasan pembatalan: {payment.void_reason}</span>}</div></td>
                                 <td><StatusBadge tone={payment.voided_at ? 'void' : 'paid'}>{payment.voided_at ? 'Dibatalkan' : 'Tercatat'}</StatusBadge></td>
                                 <td>{!payment.voided_at && (canPay || (canRecordAdvance && payment.flow === 'PJ_ADVANCE' && payment.actor_id === ownerId)) && <ActionGroup>
-                                    <ActionButton action="edit" tooltip="Edit bukti pembayaran" onClick={() => start('edit-proof', { ...payment, term_id: item?.term_id, itemId: payment.item_id, revision: item?.revision, attachments: payment.attachments?.length ? payment.attachments : [{ name: 'Bukti transfer', url: payment.proof_url }] })} />
+                                    <Button type="button" size="sm" variant="edit" icon="edit" onClick={() => start('edit-proof', { ...payment, term_id: item?.term_id, itemId: payment.item_id, revision: item?.revision, attachments: payment.attachments?.length ? payment.attachments : [{ name: 'Bukti transfer', url: payment.proof_url }] })}>Edit Bukti</Button>
                                     <ActionButton action="reject" tooltip="Batalkan pembayaran" onClick={() => start('cancel-payment', { ...payment, term_id: item?.term_id, itemId: payment.item_id, revision: item?.revision })} />
                                 </ActionGroup>}</td>
                             </tr>;
@@ -527,13 +547,17 @@ export default function CommitteeTab() {
                 );
             case 'single-item':
                 return <>
-                    {itemLockedForPj && <p className="pay-desc">Item sudah memiliki pembayaran. PJ dapat memperbarui dokumen; perubahan harga dan penerima dilakukan oleh bendahara.</p>}
+                    {itemLockedForPj && <p className="pay-desc">Item sudah memiliki pembayaran. PJ dapat memperbarui dokumen dan catatan transfer; perubahan harga dilakukan oleh bendahara.</p>}
                     <ModalField label="Nama item" required><input required disabled={itemLockedForPj} maxLength={300} value={form.description} onChange={e => change('description', e.target.value)} placeholder="Contoh: Honor tentor" /></ModalField>
                     <div className="pay-form-row">
                         <ModalField label="Bulan" required><InlineSelect title="Bulan item" value={String(form.month)} onChange={v => change('month', Number(v))} disabled={itemLockedForPj} options={BULAN.map((label, i) => ({ value: String(i + 1), label }))} /></ModalField>
                         <ModalField label="Tahun" required><input required disabled={itemLockedForPj} type="number" min={2000} max={2200} value={form.year} onChange={e => change('year', Number(e.target.value))} /></ModalField>
                     </div>
-                    <ModalField label="Nama penerima / penyedia"><input disabled={itemLockedForPj} maxLength={200} value={form.recipient} onChange={e => change('recipient', e.target.value)} /></ModalField>
+                    <ModalField label="Ditransfer kepada (catatan)" hint="Pilih guru/staf dari data master atau ketik nama secara manual.">
+                        <SearchableSelect creatable value={form.recipient || ''} onChange={value => change('recipient', String(value).slice(0, 200))} options={masterPeople.map(person => ({ value: person.name, label: person.name, subLabel: person.kind === 'TENDIK' ? 'Staf' : 'Guru' }))} placeholder="Cari guru/staf atau ketik nama..." />
+                        {masterLoading && <small className="pay-cell-muted">Memuat daftar guru/staf...</small>}
+                        {masterError && <span className="pay-master-error">{masterError}<Button type="button" size="sm" variant="ghost" onClick={() => setMasterRefresh(value => value + 1)}>Coba lagi</Button></span>}
+                    </ModalField>
                     <div className="pay-form-row pay-form-row--3">
                         <ModalField label="Jumlah" required><input required disabled={itemLockedForPj} type="number" step="0.01" min="0.01" value={form.quantity} onChange={e => change('quantity', e.target.value)} /></ModalField>
                         <ModalField label="Satuan" required><input required disabled={itemLockedForPj} maxLength={40} value={form.unit} onChange={e => change('unit', e.target.value)} /></ModalField>
@@ -542,52 +566,42 @@ export default function CommitteeTab() {
                     <div className="pay-subtotal"><span>Total item</span><strong>{fmtRupiah(Math.round(Math.round(Number(form.quantity) * 100) * Number(form.unit_price) / 100))}</strong></div>
                     <div className="pay-evidence-section">
                         <strong>1. Dokumen pengajuan item</strong>
-                        <span>Unggah ampra atau dokumen pendukung dan beri judul yang mudah dikenali bendahara.</span>
-                        <ModalField label="Judul dokumen"><input maxLength={200} value={form.ampra_title || ''} onChange={e => change('ampra_title', e.target.value)} placeholder="Contoh: Ampra honor tentor November" /></ModalField>
-                        <ModalField label="Berkas ampra / pendukung" hint="PDF, gambar, atau Excel. Maksimal 15 MB per berkas."><ModalFileInput files={form.ampra_files || []} onPick={files => change('ampra_files', files)} accept=".pdf,.jpg,.jpeg,.png,.webp,.xls,.xlsx" disabled={busy} /></ModalField>
-                        {(form.attachments || []).length > 0 && <ul className="pay-attach">{form.attachments.map((a: Attachment, i: number) => <li key={i}><input aria-label={`Judul dokumen ${i + 1}`} maxLength={200} value={a.name} onChange={e => change('attachments', form.attachments.map((old: Attachment, j: number) => j === i ? { ...old, name: e.target.value } : old))} /><button type="button" aria-label={`Lepas ${a.name}`} onClick={() => change('attachments', form.attachments.filter((_: any, j: number) => j !== i))}><i className="bi bi-x-lg" /></button></li>)}</ul>}
-                    </div>
-                    {!form.id && <div className="pay-evidence-section">
-                        <label className="pay-evidence-toggle"><input type="checkbox" checked={!!form.pj_advance_enabled} onChange={e => setForm((old: any) => ({ ...old, pj_advance_enabled: e.target.checked, pj_advance_amount: e.target.checked && !old.pj_advance_amount ? Math.round(Math.round(Number(old.quantity) * 100) * Number(old.unit_price) / 100) || '' : old.pj_advance_amount }))} /><span>2. Saya sudah transfer langsung ke penerima</span></label>
-                        <span>Jika dipilih, transfer PJ langsung tercatat dan bendahara dapat mengganti dana PJ dengan bukti transfer bendahara.</span>
-                        {form.pj_advance_enabled && <>
-                            <div className="pay-form-row">
-                                <ModalField label="Nominal dibayar PJ (Rp)" required><input required type="number" min="1" max={Math.round(Math.round(Number(form.quantity) * 100) * Number(form.unit_price) / 100) || undefined} step="1" value={form.pj_advance_amount} onChange={e => change('pj_advance_amount', e.target.value)} /></ModalField>
-                                <ModalField label="Tanggal transfer PJ" required><DatePicker required value={form.pj_advance_paid_on} onChange={value => change('pj_advance_paid_on', value)} /></ModalField>
-                            </div>
-                            <ModalField label="Rekening penerima transfer PJ" required hint="Nama bank, nomor rekening, dan nama pemilik rekening."><input required maxLength={300} value={form.pj_advance_account} onChange={e => change('pj_advance_account', e.target.value)} /></ModalField>
-                            <ModalField label="Judul bukti transfer PJ" required><input required maxLength={200} value={form.pj_proof_title} onChange={e => change('pj_proof_title', e.target.value)} placeholder="Contoh: Transfer PJ ke tentor" /></ModalField>
-                            <ModalField label="Bukti transfer PJ" required hint="PDF atau gambar, maksimal 15 MB."><ModalFileInput files={form.pj_proof_files || []} onPick={files => change('pj_proof_files', files)} accept=".pdf,.jpg,.jpeg,.png,.webp" disabled={busy} /></ModalField>
+                        <span>Ubah judul dokumen tersimpan, lepas dokumen yang tidak diperlukan, atau unggah berkas baru.</span>
+                        {(form.attachments || []).length > 0 && <>
+                            <span className="pay-evidence-caption">Dokumen tersimpan</span>
+                            <ul className="pay-item-documents">{form.attachments.map((a: Attachment, i: number) => <li key={`${a.url}-${i}`}>
+                                <input aria-label={`Ubah judul dokumen ${i + 1}`} maxLength={200} value={a.name} onChange={e => change('attachments', form.attachments.map((old: Attachment, j: number) => j === i ? { ...old, name: e.target.value } : old))} />
+                                {fileLinks([a])}
+                                <button type="button" aria-label={`Lepas ${a.name}`} onClick={() => change('attachments', form.attachments.filter((_: any, j: number) => j !== i))}><i className="bi bi-x-lg" /></button>
+                            </li>)}</ul>
                         </>}
-                    </div>}
-                    {canPay && (Number(form.paid) + Number(form.advanced || 0)) > 0 && <ModalField label="Alasan koreksi" required><input required value={form.reason} onChange={e => change('reason', e.target.value)} /></ModalField>}
+                        <ModalField label="Tambah dokumen" hint="PDF, gambar, atau Excel. Maksimal 10 berkas, 15 MB per berkas."><ModalFileInput multiple files={form.ampra_files || []} onPick={pickItemFiles} accept=".pdf,.jpg,.jpeg,.png,.webp,.xls,.xlsx" disabled={busy} /></ModalField>
+                        {(form.ampra_files || []).map((file: File, i: number) => <ModalField key={`${file.name}-${i}`} label={`Judul berkas baru ${i + 1}`} required>
+                            <input required maxLength={200} value={form.new_attachment_titles?.[i] || ''} onChange={e => change('new_attachment_titles', form.new_attachment_titles.map((title: string, j: number) => j === i ? e.target.value : title))} placeholder="Contoh: Ampra honor tentor November" />
+                        </ModalField>)}
+                    </div>
+                    {canPay && (Number(form.paid) + Number(form.advanced || 0)) > 0 && <ModalField label="Alasan koreksi" hint="Wajib hanya jika mengubah harga, jumlah, atau periode item yang sudah dibayar."><input value={form.reason} onChange={e => change('reason', e.target.value)} /></ModalField>}
                 </>;
             case 'payment':
                 return (
                     <>
-                        <p className="pay-desc"><strong>{flowLabel(form.flow)}</strong>{form.flow === 'REIMBURSEMENT' && ` · Penggantian dana kepada ${activity?.owner_name}`}</p>
-                        <ModalField label={form.flow === 'REIMBURSEMENT' ? 'Rekening PJ penerima penggantian' : 'Rekening penerima'} required hint="Nama bank, nomor rekening, dan nama pemilik rekening.">
-                            <input required maxLength={300} value={form.destination_account || ''} onChange={e => change('destination_account', e.target.value)} />
-                        </ModalField>
+                        {form.flow === 'REIMBURSEMENT' && <p className="pay-desc">Item ini memiliki transfer PJ dari riwayat lama. Pembayaran berikutnya dicatat sebagai penggantian dana PJ.</p>}
                         <div className="pay-summary">
                             <div className="pay-summary__who">
                                 <span className="pay-summary__label">Item</span>
                                 <strong>{form.description}</strong>
-                                <span className="pay-summary__detail">{form.recipient || 'Tanpa penerima'}</span>
+                                <span className="pay-summary__detail">Catatan transfer kepada: {form.recipient || 'Belum dicatat'}</span>
                             </div>
                             <div className="pay-summary__amount">
                                 <span className="pay-summary__label">Sisa tagihan</span>
                                 <strong>{fmtRupiah(Number(form.remaining))}</strong>
                             </div>
                         </div>
-                        <div className="pay-form-row">
-                            <ModalField label="Nominal pembayaran (Rp)" required>
-                                <input required type="number" min="1" max={form.remaining} step="1" value={form.amount} onChange={e => change('amount', e.target.value)} />
-                            </ModalField>
-                            <ModalField label="Tanggal pembayaran" required>
-                                <input required type="date" value={form.paid_on} onChange={e => change('paid_on', e.target.value)} />
-                            </ModalField>
-                        </div>
+                        <label className="pay-evidence-toggle"><input type="checkbox" checked={!!form.partial_payment} onChange={e => setForm((old: any) => ({ ...old, partial_payment: e.target.checked, amount: e.target.checked ? old.amount : old.remaining }))} /><span>Bayar sebagian</span></label>
+                        {form.partial_payment && <ModalField label="Nominal pembayaran (Rp)" required>
+                            <input required type="number" min="1" max={form.remaining} step="1" value={form.amount} onChange={e => change('amount', e.target.value)} />
+                        </ModalField>}
+                        <ModalField label="Tanggal pembayaran" required><DatePicker required value={form.paid_on} onChange={value => change('paid_on', value)} /></ModalField>
                         <ModalField label="Bukti transfer" required hint="Bisa melampirkan beberapa file. Maksimal 10 berkas, 15 MB per berkas.">
                             <ModalFileInput multiple files={form.files || []} onPick={files => change('files', files)} accept=".pdf,.jpg,.jpeg,.png,.webp,.xls,.xlsx" disabled={busy} />
                             {form.attachments?.length > 0 && <div className="pay-cell-stack">{fileLinks(form.attachments)}</div>}
@@ -599,11 +613,13 @@ export default function CommitteeTab() {
                 );
             case 'edit-proof':
                 return <>
-                    <p>Tambah, lepas, atau ganti lampiran pembayaran {fmtRupiah(form.amount)}. Minimal satu bukti harus tersimpan.</p>
-                    <ul className="pay-attach">{(form.attachments || []).map((a: Attachment, i: number) => <li key={i}>
-                        <input aria-label={`Judul bukti pembayaran ${i + 1}`} maxLength={200} value={a.name} onChange={e => change('attachments', form.attachments.map((old: Attachment, j: number) => j === i ? { ...old, name: e.target.value } : old))} /><button type="button" aria-label={`Lepas ${a.name}`} onClick={() => change('attachments', form.attachments.filter((_: any, j: number) => j !== i))}><i className="bi bi-x-lg" /></button>
+                    <p>Perbaiki bukti transfer untuk pembayaran {fmtRupiah(form.amount)}. Nominal dan tanggal pembayaran tetap.</p>
+                    <ul className="pay-proof-documents">{(form.attachments || []).map((a: Attachment, i: number) => <li key={`${a.url}-${i}`}>
+                        <ModalField label={`Judul bukti ${i + 1}`}><input maxLength={200} value={a.name} onChange={e => change('attachments', form.attachments.map((old: Attachment, j: number) => j === i ? { ...old, name: e.target.value } : old))} /></ModalField>
+                        <div className="pay-proof-documents__actions">{fileLinks([a])}<Button type="button" variant="danger" size="sm" icon="delete" onClick={() => change('attachments', form.attachments.filter((_: any, j: number) => j !== i))}>Lepas</Button></div>
+                        <ModalField label="Ganti berkas ini"><ModalFileInput files={form.replacement_files?.[a.url] || []} onPick={files => change('replacement_files', { ...form.replacement_files, [a.url]: files })} accept=".pdf,.jpg,.jpeg,.png,.webp,.xls,.xlsx" disabled={busy} placeholder="Pilih berkas pengganti" /></ModalField>
                     </li>)}</ul>
-                    <ModalField label="Lampiran pengganti / tambahan" hint="Maksimal 10 berkas, 15 MB per berkas.">
+                    <ModalField label="Tambah bukti lain" hint="Minimal satu bukti tersimpan. Maksimal 10 berkas, 15 MB per berkas.">
                         <ModalFileInput multiple files={form.files || []} onPick={files => change('files', files)} accept=".pdf,.jpg,.jpeg,.png,.webp,.xls,.xlsx" disabled={busy} />
                     </ModalField>
                 </>;

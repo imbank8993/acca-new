@@ -997,6 +997,16 @@ th.pay-col-action { text-align: right !important; }
 .pay-evidence-section .pay-attach { margin: 0; }
 .pay-evidence-section .pay-attach li { gap: 8px; }
 .pay-attach input { flex: 1; min-width: 0; }
+.pay-item-documents { list-style: none; display: grid; gap: 8px; margin: 0; padding: 0; }
+.pay-item-documents li { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; min-width: 0; }
+.pay-item-documents input { flex: 1 1 180px; min-width: 0; }
+.pay-item-documents .pay-file { flex: none; }
+.pay-item-documents li > button:last-child { flex: none; border: 0; background: #fee2e2; color: #b91c1c; border-radius: 8px; min-width: 34px; min-height: 34px; cursor: pointer; }
+.pay-evidence-section > .pay-evidence-caption { color: var(--n-ink); font-weight: 600; }
+.pay-proof-documents { display: grid; gap: 12px; list-style: none; margin: 0 0 14px; padding: 0; }
+.pay-proof-documents li { min-width: 0; padding: 12px; border: 1px solid var(--n-border); border-radius: 10px; }
+.pay-proof-documents__actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin: 8px 0 12px; }
+.pay-master-error { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin-top: 6px; color: #b45309; font-size: 0.72rem; }
 .pay-evidence-toggle { display: flex; align-items: center; gap: 9px; color: var(--n-ink); font-weight: 700; cursor: pointer; }
 .pay-evidence-toggle input { width: 17px; height: 17px; flex: none; accent-color: var(--n-primary); }
 
@@ -1081,6 +1091,11 @@ th.pay-col-action { text-align: right !important; }
 .pay-committee-items-table th:nth-child(4) { width: 15%; }
 .pay-committee-items-table th:nth-child(5) { width: 13%; }
 .pay-committee-items-table th:nth-child(6) { width: 12%; }
+.pay-committee-items-table--simple th:nth-child(1) { width: 36%; }
+.pay-committee-items-table--simple th:nth-child(2) { width: 16%; }
+.pay-committee-items-table--simple th:nth-child(3) { width: 20%; }
+.pay-committee-items-table--simple th:nth-child(4) { width: 14%; }
+.pay-committee-items-table--simple th:nth-child(5) { width: 14%; }
 .pay-committee-items-table th, .pay-committee-items-table td { padding: 10px 8px; overflow-wrap: anywhere; }
 .pay-committee-items-table th { white-space: normal; }
 .pay-committee-items-table td.pay-col-action { white-space: normal; }

@@ -75,57 +75,27 @@ test('manual payment snapshots use authoritative amounts, reject changed totals 
  db.tarif_honor.findMany=async()=>[{modul:'GURU_ASUH',nominal:0}];assert.equal(JSON.parse(await paymentSnapshot(db,'GURU_ASUH','id','{}')).nominal,0);
 });
 
-test('PJ advances and treasury reimbursements keep separate balances, proofs and access checks',async()=>{
- const {db,service:s,sql}=await fixture();
- try {
+test('new PJ transfers are rejected while historical advances remain repayable',async()=>{
+ const {db,service:s}=await fixture();try{
   const {randomUUID}=require('node:crypto');
   const {id:activityId}=await s.save(pj,{kind:'activity',title:'Honor tentor',description:'',start_date:'2026-11-01',end_date:'2026-11-30'});
-  const {id:termId}=await s.save(pj,{kind:'term',activityId,title:'Honor',month:11,year:2026,attachments:[]});
-  await s.save(pj,{kind:'term',activityId,title:'Konsumsi',month:11,year:2026,attachments:[]});
-  const {id:itemId}=await s.save(pj,{kind:'item',activityId,termId,description:'Honor tentor',recipient:'Tentor',quantity:1,unit_price:100000});
-  const current=async()=>(await s.detail(pj,activityId)).data.items[0];
-  const files=[{name:'Transfer.pdf',url:'https://file.icgowa.sch.id/transfer.pdf'},{name:'Kuitansi.png',url:'https://file.icgowa.sch.id/kuitansi.png'}];
-  const payload=async(flow,amount)=>({kind:'payment',activityId,termId,id:itemId,revision:(await current()).revision,flow,amount,paid_on:'2026-11-03',attachments:files,destination_account:'Bank Contoh 123456 a.n. Penerima',requestId:randomUUID()});
-  await assert.rejects(s.save(admin,await payload('REIMBURSEMENT',1)));
-  const advance=await payload('PJ_ADVANCE',60000);
-  await assert.rejects(s.save(other,advance));await assert.rejects(s.save(admin,advance));
-  await assert.rejects(s.save(pj,{...advance,destination_account:''}));
-  await assert.rejects(s.save(pj,{...advance,attachments:[]}));
-  await assert.rejects(s.save(pj,{...advance,attachments:Array(11).fill(files[0])}));
-  await assert.rejects(s.save(pj,{...advance,attachments:[{name:'bad',url:'javascript:alert(1)'}]}));
-  const recorded=await s.save(pj,advance);await s.save(pj,advance);
-  assert.equal(Number((await current()).advanced),60000);assert.equal(Number((await current()).paid),0);
-  assert.equal(Number((await s.list(pj)).data[0].paid),0);
-  await assert.rejects(s.save(pj,{...advance,attachments:[files[0]]}));
-  await assert.rejects(s.save(admin,await payload('DIRECT',40001)));
-  await assert.rejects(s.save(pj,await payload('PJ_ADVANCE',40001)));
-  await assert.rejects(s.save(pj,await payload('REIMBURSEMENT',10000)));
-  await assert.rejects(s.save(admin,await payload('REIMBURSEMENT',60001)));
-  await assert.rejects(s.save(pj,{kind:'item',activityId,termId,id:itemId,revision:(await current()).revision,description:'Edit',quantity:1,unit_price:100000}));
-  await assert.rejects(s.save(admin,{kind:'item',activityId,termId,id:itemId,revision:(await current()).revision,description:'Edit',quantity:1,unit_price:50000,reason:'Too low'}));
-  const reimb=await payload('REIMBURSEMENT',30000);reimb.destination_account='Bank PJ 654321 a.n. PJ';
-  const reimbursement=await s.save(admin,reimb);await s.save(admin,reimb);
-  assert.equal(Number((await current()).reimbursed),30000);assert.equal(Number((await current()).paid),30000);
-  const cancel=async(id)=>({kind:'cancel-payment',activityId,termId,itemId,id,revision:(await current()).revision,reason:'Koreksi pencatatan'});
-  await assert.rejects(s.save(pj,await cancel(recorded.id)));
-  await assert.rejects(s.save(pj,await cancel(reimbursement.id)));
-  await assert.rejects(s.save(other,await cancel(recorded.id)));
-  await s.save(admin,await payload('DIRECT',40000));
-  await s.save(admin,await payload('REIMBURSEMENT',30000));
-  assert.equal(Number((await current()).paid),100000);assert.equal(Number((await s.list(pj)).data[0].paid),100000);
-  await assert.rejects(s.save(admin,await payload('DIRECT',1)));
-  await assert.rejects(s.save(pj,await payload('PJ_ADVANCE',1)));
-  await assert.rejects(s.save(admin,await payload('REIMBURSEMENT',1)));
-  let d=(await s.detail(pj,activityId)).data;
-  assert.equal(d.payments.length,4);assert.equal(d.payments.find(p=>p.id===recorded.id).attachments.length,2);
-  assert.equal(d.payments.find(p=>p.id===reimbursement.id).destination_account,reimb.destination_account);
-  assert(d.history.some(h=>h.snapshot.payment?.flow==='PJ_ADVANCE'&&h.snapshot.payment.attachments.length===2));
-  await db.exec(sql);assert.equal(Number((await current()).paid),100000);
-  for(const p of d.payments.filter(p=>p.flow==='REIMBURSEMENT'))await s.save(admin,await cancel(p.id));
-  await s.save(pj,await cancel(recorded.id));await s.save(pj,await cancel(recorded.id));
-  assert.equal(Number((await current()).advanced),0);assert.equal(Number((await current()).paid),40000);
-  assert.equal((await s.detail(pj,activityId)).canRecordAdvance,true);
-  assert.equal((await s.detail(admin,activityId)).canRecordAdvance,false);
+  const itemInput={kind:'single-item',activityId,description:'Honor tentor',recipient:'Tentor',month:11,year:2026,quantity:1,unit:'orang',unit_price:100000,attachments:[]};
+  await assert.rejects(s.save(pj,{...itemInput,pj_advance:{amount:60000}}));
+  const {id:itemId}=await s.save(pj,itemInput);
+  let item=(await s.detail(pj,activityId)).data.items[0];
+  const payment=(flow,amount)=>({kind:'payment',activityId,termId:item.term_id,id:itemId,revision:item.revision,flow,amount,paid_on:'2026-11-03',attachments:[{name:'Transfer',url:'https://example.com/proof.pdf'}],requestId:randomUUID()});
+  await assert.rejects(s.save(pj,payment('DIRECT',100000)));
+  await assert.rejects(s.save(admin,payment('PJ_ADVANCE',60000)));
+  await assert.rejects(s.save(admin,payment('REIMBURSEMENT',60000)));
+  const legacyId=randomUUID();
+  await db.query('INSERT INTO committee_payments(id,item_id,amount,paid_on,proof_url,actor_id,actor_name,request_id,flow,attachments) VALUES ($1,$2,60000,$3,$4,$5,$6,$7,$8,$9)',[legacyId,itemId,'2026-11-02','https://example.com/old.pdf',pj.authId,'PJ',randomUUID(),'PJ_ADVANCE',JSON.stringify([{name:'Transfer PJ lama',url:'https://example.com/old.pdf'}])]);
+  item=(await s.detail(pj,activityId)).data.items[0];
+  await assert.rejects(s.save(admin,payment('DIRECT',40000)));
+  await s.save(admin,payment('REIMBURSEMENT',60000));
+  item=(await s.detail(pj,activityId)).data.items[0];
+  assert.equal(Number(item.reimbursed),60000);assert.equal(Number(item.paid),60000);
+  await s.save(admin,payment('DIRECT',40000));
+  item=(await s.detail(pj,activityId)).data.items[0];assert.equal(Number(item.paid),100000);
  }finally{await db.close()}
 });
 
@@ -135,11 +105,11 @@ test('committee proof replacement preserves accounting and audits old attachment
  const {id:activityId}=await s.save(pj,{kind:'activity',title:'Honor',description:'',start_date:'2026-11-01',end_date:'2026-11-30'});
  const {id:termId}=await s.save(pj,{kind:'term',activityId,title:'Honor',month:11,year:2026,attachments:[]});
  const {id:itemId}=await s.save(pj,{kind:'item',activityId,termId,description:'Honor',quantity:1,unit_price:100000});
- const pay=await s.save(pj,{kind:'payment',activityId,termId,id:itemId,revision:1,flow:'PJ_ADVANCE',amount:100000,paid_on:'2026-11-03',proof_url:'https://example.com/old.pdf',destination_account:'Bank 123 Tentor',requestId:randomUUID()});
+ const pay=await s.save(admin,{kind:'payment',activityId,termId,id:itemId,revision:1,flow:'DIRECT',amount:100000,paid_on:'2026-11-03',proof_url:'https://example.com/old.pdf',requestId:randomUUID()});
  const edit={kind:'edit-proof',activityId,termId,id:pay.id,itemId,revision:2,attachments:[{name:'Pengganti.pdf',url:'https://example.com/new.pdf'}]};
- await assert.rejects(s.save(other,edit));await assert.rejects(s.save(pj,{...edit,attachments:[]}));await s.save(pj,edit);await assert.rejects(s.save(pj,edit));
- const d=(await s.detail(pj,activityId)).data;assert.equal(d.payments[0].proof_url,'https://example.com/new.pdf');assert.equal(Number(d.payments[0].amount),100000);assert.equal(Number(d.items[0].advanced),100000);assert(d.history.some(h=>h.action==='Bukti pembayaran diperbarui'&&h.snapshot.before.proof_url==='https://example.com/old.pdf'));
- await s.save(pj,{kind:'cancel-payment',activityId,termId,id:pay.id,itemId,revision:3,reason:'Salah catat'});await assert.rejects(s.save(pj,{...edit,revision:4}));
+ await assert.rejects(s.save(other,edit));await assert.rejects(s.save(pj,edit));await assert.rejects(s.save(admin,{...edit,attachments:[]}));await s.save(admin,edit);await assert.rejects(s.save(admin,edit));
+ const d=(await s.detail(pj,activityId)).data;assert.equal(d.payments[0].proof_url,'https://example.com/new.pdf');assert.equal(Number(d.payments[0].amount),100000);assert.equal(Number(d.items[0].paid),100000);assert(d.history.some(h=>h.action==='Bukti pembayaran diperbarui'&&h.snapshot.before.proof_url==='https://example.com/old.pdf'));
+ await s.save(admin,{kind:'cancel-payment',activityId,termId,id:pay.id,itemId,revision:3,reason:'Salah catat'});await assert.rejects(s.save(admin,{...edit,revision:4}));
  }finally{await db.close()}
 });
 
@@ -191,29 +161,27 @@ test('legacy empty item stays visible as a draft until its price is entered',asy
  }finally{await db.close()}
 });
 
-test('PJ submits item and transfer evidence together; treasurer reimburses without duplicate PJ payment',async()=>{
+test('PJ records transfer recipient as a note; treasurer marks payment and can replace proof',async()=>{
  const {db,service:s}=await fixture();try{
   const {randomUUID}=require('node:crypto');
   const {id:activityId}=await s.save(pj,{kind:'activity',title:'Honor tentor',description:'',start_date:'2026-11-01',end_date:'2026-11-30'});
-  const input={kind:'single-item',activityId,description:'Honor tentor',recipient:'Tentor A',month:11,year:2026,quantity:1,unit:'orang',unit_price:100000,attachments:[{name:'Ampra honor tentor',url:'https://example.com/ampra.pdf'}],pj_advance:{amount:60000,paid_on:'2026-11-05',destination_account:'Bank Penjual 123',request_id:randomUUID(),attachments:[{name:'Transfer PJ ke tentor',url:'https://example.com/pj.pdf'}]}};
-  await assert.rejects(s.save(pj,{...input,pj_advance:{...input.pj_advance,amount:100001}}));
-  await assert.rejects(s.save(pj,{...input,pj_advance:{...input.pj_advance,attachments:[]}}));
+  const input={kind:'single-item',activityId,description:'Honor tentor',recipient:'Tentor A',month:11,year:2026,quantity:1,unit:'orang',unit_price:100000,attachments:[{name:'Ampra honor tentor',url:'https://example.com/ampra.pdf'}]};
   const {id:itemId}=await s.save(pj,input);
   let d=(await s.detail(pj,activityId)).data,item=d.items.find(i=>i.id===itemId);
   assert.equal(d.items.length,1);assert.equal(item.attachments[0].name,'Ampra honor tentor');
-  assert.equal(Number(item.advanced),60000);assert.equal(Number(item.paid),0);
-  assert.equal(d.payments.length,1);assert.equal(d.payments[0].flow,'PJ_ADVANCE');
-  assert.equal(d.payments[0].attachments[0].name,'Transfer PJ ke tentor');
-  await assert.rejects(s.save(pj,input));
-  d=(await s.detail(pj,activityId)).data;assert.equal(d.items.length,1);assert.equal(d.payments.length,1);
+  assert.equal(Number(item.advanced),0);assert.equal(Number(item.paid),0);assert.equal(d.payments.length,0);
+  await s.save(admin,{kind:'payment',activityId,termId:item.term_id,id:itemId,revision:item.revision,flow:'DIRECT',amount:100000,paid_on:'2026-11-06',requestId:randomUUID(),attachments:[{name:'Bukti pembayaran',url:'https://example.com/direct.pdf'}]});
+  d=(await s.detail(pj,activityId)).data;assert.equal(Number(d.items[0].paid),100000);assert.equal(d.payments.length,1);
   item=d.items[0];
-  await assert.rejects(s.save(pj,{...input,id:itemId,revision:item.revision,pj_advance:undefined,unit_price:90000}));
-  await s.save(pj,{...input,id:itemId,revision:item.revision,pj_advance:undefined,attachments:[{name:'Ampra revisi',url:'https://example.com/ampra-revisi.pdf'}]});
-  d=(await s.detail(pj,activityId)).data;item=d.items[0];assert.equal(item.attachments[0].name,'Ampra revisi');
-  await s.save(admin,{kind:'payment',activityId,termId:item.term_id,id:itemId,revision:item.revision,flow:'REIMBURSEMENT',amount:60000,paid_on:'2026-11-06',destination_account:'Bank PJ 456',requestId:randomUUID(),attachments:[{name:'Transfer bendahara ke PJ',url:'https://example.com/bendahara.pdf'}]});
+  await assert.rejects(s.save(pj,{...input,id:itemId,revision:item.revision,unit_price:90000}));
+  await s.save(pj,{...input,id:itemId,revision:item.revision,recipient:'Staf A',attachments:[{name:'Ampra November',url:'https://example.com/ampra-revisi.pdf'},{name:'Invoice tentor',url:'https://example.com/invoice.pdf'}]});
   d=(await s.detail(pj,activityId)).data;item=d.items[0];
-  assert.equal(Number(item.reimbursed),60000);assert.equal(Number(item.paid),60000);
-  await s.save(admin,{kind:'payment',activityId,termId:item.term_id,id:itemId,revision:item.revision,flow:'DIRECT',amount:40000,paid_on:'2026-11-06',destination_account:'Bank Penjual 123',requestId:randomUUID(),attachments:[{name:'Transfer bendahara ke penjual',url:'https://example.com/direct.pdf'}]});
-  d=(await s.detail(pj,activityId)).data;assert.equal(Number(d.items[0].paid),100000);assert.equal(d.payments.length,3);
+  assert.equal(item.recipient,'Staf A');assert.equal(item.attachments.map(a=>a.name).join('|'),'Ampra November|Invoice tentor');
+  const direct=d.payments.find(p=>p.flow==='DIRECT');
+  await s.save(admin,{kind:'edit-proof',activityId,termId:item.term_id,itemId,id:direct.id,revision:item.revision,attachments:[{name:'Bukti transfer yang benar',url:'https://example.com/direct-correct.pdf'}]});
+  d=(await s.detail(pj,activityId)).data;
+  assert.equal(d.payments.find(p=>p.id===direct.id).attachments[0].url,'https://example.com/direct-correct.pdf');
+  assert.equal(Number(d.payments.find(p=>p.id===direct.id).amount),100000);
+  assert.equal(new Date(d.payments.find(p=>p.id===direct.id).paid_on).toISOString().slice(0,10),'2026-11-06');
  }finally{await db.close()}
 });
