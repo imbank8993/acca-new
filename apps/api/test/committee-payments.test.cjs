@@ -33,6 +33,28 @@ test('PJ creates a four-month activity without approval; partial payments, corre
  await assert.rejects(s.save(admin,{...payment,revision:currentItem.revision,amount:80000,requestId:'66666666-6666-4666-8666-666666666666'}));
  }finally{await db.close()}});
 test('migration is repeatable and preserves access changes after initial installation',async()=>{const {db,sql}=await fixture();try{assert.equal((await db.query("SELECT * FROM role_pages WHERE role='GURU' AND page_id='pengajuan-komite'")).rows.length,1);await db.exec("DELETE FROM role_pages WHERE role='GURU'");await db.exec(sql);assert.equal((await db.query("SELECT * FROM role_pages WHERE role='GURU'")).rows.length,0)}finally{await db.close()}});
+test('activity stores proposal file and requested amount separately from priced items',async()=>{
+ const {db,sql,service:s}=await fixture();try{
+  const proposal={kind:'activity',title:'Pelatihan Siswa',description:'',start_date:'2026-11-01',end_date:'2026-11-30',proposed_total:350000,proposal_url:'https://example.com/proposal.pdf',proposal_name:'Proposal Pelatihan.pdf'};
+  await assert.rejects(s.save(pj,{...proposal,proposed_total:-1}));
+  await assert.rejects(s.save(pj,{...proposal,proposal_url:'javascript:alert(1)'}));
+  const {id:activityId}=await s.save(pj,proposal);
+  let detail=(await s.detail(pj,activityId)).data;
+  assert.equal(Number(detail.activity.proposed_total),350000);
+  assert.equal(detail.activity.proposal_name,proposal.proposal_name);
+  assert.equal(Number((await s.list(pj)).data[0].total),0);
+  await s.save(pj,{kind:'activity',id:activityId,revision:detail.activity.revision,title:proposal.title,description:'',start_date:proposal.start_date,end_date:proposal.end_date});
+  detail=(await s.detail(pj,activityId)).data;
+  assert.equal(Number(detail.activity.proposed_total),350000);
+  assert.equal(detail.activity.proposal_url,proposal.proposal_url);
+  await s.save(pj,{...proposal,id:activityId,revision:detail.activity.revision,proposed_total:420000,proposal_url:'https://example.com/revisi.pdf',proposal_name:'Revisi.pdf'});
+  await db.exec(sql);
+  detail=(await s.detail(pj,activityId)).data;
+  assert.equal(Number(detail.activity.proposed_total),420000);
+  assert.equal(detail.activity.proposal_name,'Revisi.pdf');
+  assert(detail.history.some(h=>h.action==='Kegiatan diperbarui'&&h.snapshot.after.proposed_total===420000));
+ }finally{await db.close()}
+});
 test('monthly report excludes committee data, never reads current tariffs, and marks missing historical snapshots',async()=>{
  let manualProof=null;
  const db={role_pages:{findFirst:async()=>null},$transaction:async fn=>fn({
@@ -166,5 +188,32 @@ test('legacy empty item stays visible as a draft until its price is entered',asy
   await db.exec(sql);detail=(await s.detail(pj,activityId)).data;assert.equal(detail.items.length,1);
   await s.save(pj,{kind:'single-item',activityId,id:draft.id,revision:draft.revision,description:'Honor tentor',recipient:'Tentor',month:11,year:2026,quantity:1,unit:'orang',unit_price:75000,attachments:draft.attachments});
   assert.equal(Number((await s.detail(pj,activityId)).data.items[0].amount),75000);
+ }finally{await db.close()}
+});
+
+test('PJ submits item and transfer evidence together; treasurer reimburses without duplicate PJ payment',async()=>{
+ const {db,service:s}=await fixture();try{
+  const {randomUUID}=require('node:crypto');
+  const {id:activityId}=await s.save(pj,{kind:'activity',title:'Honor tentor',description:'',start_date:'2026-11-01',end_date:'2026-11-30'});
+  const input={kind:'single-item',activityId,description:'Honor tentor',recipient:'Tentor A',month:11,year:2026,quantity:1,unit:'orang',unit_price:100000,attachments:[{name:'Ampra honor tentor',url:'https://example.com/ampra.pdf'}],pj_advance:{amount:60000,paid_on:'2026-11-05',destination_account:'Bank Penjual 123',request_id:randomUUID(),attachments:[{name:'Transfer PJ ke tentor',url:'https://example.com/pj.pdf'}]}};
+  await assert.rejects(s.save(pj,{...input,pj_advance:{...input.pj_advance,amount:100001}}));
+  await assert.rejects(s.save(pj,{...input,pj_advance:{...input.pj_advance,attachments:[]}}));
+  const {id:itemId}=await s.save(pj,input);
+  let d=(await s.detail(pj,activityId)).data,item=d.items.find(i=>i.id===itemId);
+  assert.equal(d.items.length,1);assert.equal(item.attachments[0].name,'Ampra honor tentor');
+  assert.equal(Number(item.advanced),60000);assert.equal(Number(item.paid),0);
+  assert.equal(d.payments.length,1);assert.equal(d.payments[0].flow,'PJ_ADVANCE');
+  assert.equal(d.payments[0].attachments[0].name,'Transfer PJ ke tentor');
+  await assert.rejects(s.save(pj,input));
+  d=(await s.detail(pj,activityId)).data;assert.equal(d.items.length,1);assert.equal(d.payments.length,1);
+  item=d.items[0];
+  await assert.rejects(s.save(pj,{...input,id:itemId,revision:item.revision,pj_advance:undefined,unit_price:90000}));
+  await s.save(pj,{...input,id:itemId,revision:item.revision,pj_advance:undefined,attachments:[{name:'Ampra revisi',url:'https://example.com/ampra-revisi.pdf'}]});
+  d=(await s.detail(pj,activityId)).data;item=d.items[0];assert.equal(item.attachments[0].name,'Ampra revisi');
+  await s.save(admin,{kind:'payment',activityId,termId:item.term_id,id:itemId,revision:item.revision,flow:'REIMBURSEMENT',amount:60000,paid_on:'2026-11-06',destination_account:'Bank PJ 456',requestId:randomUUID(),attachments:[{name:'Transfer bendahara ke PJ',url:'https://example.com/bendahara.pdf'}]});
+  d=(await s.detail(pj,activityId)).data;item=d.items[0];
+  assert.equal(Number(item.reimbursed),60000);assert.equal(Number(item.paid),60000);
+  await s.save(admin,{kind:'payment',activityId,termId:item.term_id,id:itemId,revision:item.revision,flow:'DIRECT',amount:40000,paid_on:'2026-11-06',destination_account:'Bank Penjual 123',requestId:randomUUID(),attachments:[{name:'Transfer bendahara ke penjual',url:'https://example.com/direct.pdf'}]});
+  d=(await s.detail(pj,activityId)).data;assert.equal(Number(d.items[0].paid),100000);assert.equal(d.payments.length,3);
  }finally{await db.close()}
 });

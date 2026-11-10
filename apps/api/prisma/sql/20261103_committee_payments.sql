@@ -4,6 +4,7 @@ BEGIN
 CREATE TABLE IF NOT EXISTS public.committee_activities (
  id uuid PRIMARY KEY, owner_id uuid NOT NULL, owner_name text NOT NULL,
  title text NOT NULL, description text NOT NULL DEFAULT '', start_date date NOT NULL, end_date date NOT NULL,
+ proposed_total numeric(16,0), proposal_url text, proposal_name text,
  revision integer NOT NULL DEFAULT 1, created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(), CHECK(end_date >= start_date)
 );
 CREATE TABLE IF NOT EXISTS public.committee_terms (
@@ -29,6 +30,9 @@ CREATE TABLE IF NOT EXISTS public.committee_history (
  id uuid PRIMARY KEY, activity_id uuid NOT NULL REFERENCES public.committee_activities(id), actor_id uuid NOT NULL, actor_name text NOT NULL,
  action text NOT NULL, reason text NOT NULL DEFAULT '', snapshot jsonb NOT NULL, created_at timestamptz NOT NULL DEFAULT now()
 );
+ALTER TABLE public.committee_activities ADD COLUMN IF NOT EXISTS proposed_total numeric(16,0);
+ALTER TABLE public.committee_activities ADD COLUMN IF NOT EXISTS proposal_url text;
+ALTER TABLE public.committee_activities ADD COLUMN IF NOT EXISTS proposal_name text;
 ALTER TABLE public.committee_payments ADD COLUMN IF NOT EXISTS voided_at timestamptz;
 ALTER TABLE public.committee_payments ADD COLUMN IF NOT EXISTS voided_by uuid;
 ALTER TABLE public.committee_payments ADD COLUMN IF NOT EXISTS void_reason text;

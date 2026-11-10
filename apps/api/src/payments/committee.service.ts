@@ -62,10 +62,17 @@ export class CommitteeService {
         if (kind === 'activity') {
           const title=text(body.title,'Nama kegiatan'), description=text(body.description || '','Keterangan',2000,true), start=date(body.start_date), end=date(body.end_date);
           if (end<start) throw new BadRequestException('Tanggal selesai harus setelah tanggal mulai.');
+          const proposedTotal = body.proposed_total == null || body.proposed_total === '' ? null : Number(body.proposed_total);
+          if (proposedTotal !== null && (!Number.isSafeInteger(proposedTotal) || proposedTotal <= 0 || proposedTotal > 1000000000000000)) throw new BadRequestException('Total yang diajukan dalam proposal tidak valid.');
+          const proposalUrl = body.proposal_url ? committeeFileUrl(body.proposal_url) : null;
+          const proposalName = proposalUrl ? text(body.proposal_name,'Nama berkas proposal',200) : null;
           const name=user.nama_lengkap || user.nama || user.username || 'Pengaju';
           const activityId = body.id?id(body.id):randomUUID();
           if(body.id){
             const before=await this.activity(tx,user,activityId,true);
+            const nextProposedTotal = body.proposed_total === undefined ? before.proposed_total : proposedTotal;
+            const nextProposalUrl = body.proposal_url === undefined ? before.proposal_url : proposalUrl;
+            const nextProposalName = body.proposal_url === undefined ? before.proposal_name : proposalName;
             await tx.$queryRaw`SELECT id FROM committee_activities WHERE id=${activityId}::uuid FOR UPDATE`;
             if(before.revision!==body.revision)throw new ConflictException('Kegiatan berubah. Muat ulang data.');
             const existing:any[]=await tx.$queryRaw`SELECT month,year FROM committee_terms WHERE activity_id=${activityId}::uuid`;
@@ -73,11 +80,11 @@ export class CommitteeService {
             const paid:any[]=await tx.$queryRaw`SELECT coalesce(sum(p.amount),0)::text AS paid FROM committee_payments p JOIN committee_items i ON i.id=p.item_id JOIN committee_terms t ON t.id=i.term_id WHERE t.activity_id=${activityId}::uuid AND p.voided_at IS NULL`;
             const reason=typeof body.reason==='string'?body.reason.trim().slice(0,1000):'';
             if(Number(paid[0].paid)>0&&(!isTreasurer(user)||!reason))throw new ConflictException('Kegiatan yang sudah dibayar hanya dapat dikoreksi bendahara dengan alasan perubahan.');
-            await tx.$executeRaw`UPDATE committee_activities SET title=${title},description=${description},start_date=${start}::date,end_date=${end}::date,revision=revision+1,updated_at=now() WHERE id=${activityId}::uuid`;
-            await this.audit(tx,user,activityId,'Kegiatan diperbarui',{before,after:{title,description,start_date:start,end_date:end}},reason);
+            await tx.$executeRaw`UPDATE committee_activities SET title=${title},description=${description},start_date=${start}::date,end_date=${end}::date,proposed_total=${nextProposedTotal},proposal_url=${nextProposalUrl},proposal_name=${nextProposalName},revision=revision+1,updated_at=now() WHERE id=${activityId}::uuid`;
+            await this.audit(tx,user,activityId,'Kegiatan diperbarui',{before,after:{title,description,start_date:start,end_date:end,proposed_total:nextProposedTotal,proposal_url:nextProposalUrl,proposal_name:nextProposalName}},reason);
           }else{
-            await tx.$executeRaw`INSERT INTO committee_activities(id,owner_id,owner_name,title,description,start_date,end_date) VALUES (${activityId}::uuid,${owner}::uuid,${name},${title},${description},${start}::date,${end}::date)`;
-            await this.audit(tx,user,activityId,'Kegiatan dibuat',{title,description,start,end});
+            await tx.$executeRaw`INSERT INTO committee_activities(id,owner_id,owner_name,title,description,start_date,end_date,proposed_total,proposal_url,proposal_name) VALUES (${activityId}::uuid,${owner}::uuid,${name},${title},${description},${start}::date,${end}::date,${proposedTotal},${proposalUrl},${proposalName})`;
+            await this.audit(tx,user,activityId,'Kegiatan dibuat',{title,description,start,end,proposed_total:proposedTotal,proposal_url:proposalUrl,proposal_name:proposalName});
           }
           return {ok:true,id:activityId};
         }
@@ -94,12 +101,23 @@ export class CommitteeService {
           if(typeof qty!=='number'||!Number.isFinite(qty)||qty<=0||qty>1000000||Math.abs(qty*100-Math.round(qty*100))>0.00001||!Number.isSafeInteger(price)||price<=0||price>1000000000000||!Number.isSafeInteger(Math.round(qty*price))||qty*price>1000000000000) throw new BadRequestException('Jumlah/harga tidak valid.');
           if(!Array.isArray(body.attachments)||body.attachments.length>10) throw new BadRequestException('Maksimal 10 lampiran item.');
           const attachments=body.attachments.map((a:any)=>({name:text(a.name,'Nama lampiran',200),url:committeeFileUrl(a.url)}));
+          const itemAmount=Math.round(Math.round(qty*100)*price/100);
+          const advance=body.pj_advance;
+          if(advance && body.id) throw new BadRequestException('Pembayaran PJ pada item lama dicatat melalui aksi pembayaran PJ.');
+          if(advance && activity.owner_id!==owner) throw new ForbiddenException('Hanya PJ kegiatan yang dapat mencatat transfer PJ.');
+          const advanceFiles=advance ? paymentAttachments(advance) : [];
+          const advanceAmount=advance?.amount;
+          const advanceDate=advance ? date(advance.paid_on) : '';
+          const advanceAccount=advance ? text(advance.destination_account,'Rekening penerima transfer PJ',300) : '';
+          const advanceRequestId=advance ? id(advance.request_id) : '';
+          if(advance && (!Number.isSafeInteger(advanceAmount)||advanceAmount<=0||advanceAmount>itemAmount)) throw new BadRequestException('Nominal transfer PJ tidak valid atau melebihi total item.');
           const itemId=body.id?id(body.id):randomUUID();
           const old:any[]=body.id?await tx.$queryRaw`SELECT i.*,i.amount::text AS amount,t.activity_id,t.month,t.year,coalesce((SELECT sum(p.amount) FROM committee_payments p WHERE p.item_id=i.id AND p.voided_at IS NULL AND p.flow<>'PJ_ADVANCE'),0)::text AS paid,coalesce((SELECT sum(p.amount) FROM committee_payments p WHERE p.item_id=i.id AND p.voided_at IS NULL AND p.flow='PJ_ADVANCE'),0)::text AS advanced,coalesce((SELECT sum(p.amount) FROM committee_payments p WHERE p.item_id=i.id AND p.voided_at IS NULL AND p.flow='REIMBURSEMENT'),0)::text AS reimbursed FROM committee_items i JOIN committee_terms t ON t.id=i.term_id WHERE i.id=${itemId}::uuid AND t.activity_id=${activityId}::uuid FOR UPDATE`:[];
           if(body.id){
             if(!old.length||old[0].revision!==body.revision) throw new ConflictException('Item berubah. Muat ulang data.');
             const active=Number(old[0].paid)+Number(old[0].advanced)-Number(old[0].reimbursed);
-            if(active&&(!isTreasurer(user)||!reason)) throw new ConflictException('Item yang sudah dibayar hanya dapat dikoreksi bendahara dengan alasan perubahan.');
+            const documentsOnly=description===old[0].description&&recipient===old[0].recipient&&Number(qty)===Number(old[0].quantity)&&unit===old[0].unit&&price===Number(old[0].unit_price)&&month===old[0].month&&year===old[0].year;
+            if(active&&!documentsOnly&&(!isTreasurer(user)||!reason)) throw new ConflictException('Item yang sudah dibayar hanya dapat dikoreksi bendahara dengan alasan perubahan.');
             if(Math.round(Math.round(qty*100)*price/100)<active) throw new ConflictException('Nominal item tidak boleh di bawah pembayaran aktif.');
             if(old[0].month!==month||old[0].year!==year){
               const siblings:any[]=await tx.$queryRaw`SELECT count(*)::int AS count FROM committee_items WHERE term_id=${old[0].term_id}::uuid`;
@@ -111,6 +129,12 @@ export class CommitteeService {
             const termId=randomUUID();
             await tx.$executeRaw`INSERT INTO committee_terms(id,activity_id,title,month,year,attachments) VALUES (${termId}::uuid,${activityId}::uuid,${description},${month},${year},'[]'::jsonb)`;
             await tx.$executeRaw`INSERT INTO committee_items(id,term_id,description,recipient,quantity,unit,unit_price,attachments,attachments_migrated) VALUES (${itemId}::uuid,${termId}::uuid,${description},${recipient},${qty},${unit},${price},${JSON.stringify(attachments)}::jsonb,true)`;
+            if(advance){
+              const paymentId=randomUUID(),proof=advanceFiles[0].url,name=user.nama_lengkap||user.nama||user.username||'PJ Kegiatan';
+              await tx.$executeRaw`INSERT INTO committee_payments(id,item_id,amount,paid_on,proof_url,note,actor_id,actor_name,request_id,flow,attachments,destination_account) VALUES (${paymentId}::uuid,${itemId}::uuid,${advanceAmount},${advanceDate}::date,${proof},'Transfer PJ saat item dibuat',${owner}::uuid,${name},${advanceRequestId}::uuid,'PJ_ADVANCE',${JSON.stringify(advanceFiles)}::jsonb,${advanceAccount})`;
+              await tx.$executeRaw`UPDATE committee_items SET revision=revision+1,updated_at=now() WHERE id=${itemId}::uuid`;
+              await this.audit(tx,user,activityId,'Pembayaran PJ dicatat bersama item',{item_id:itemId,payment:{id:paymentId,amount:advanceAmount,paid_on:advanceDate,flow:'PJ_ADVANCE',attachments:advanceFiles,destination_account:advanceAccount}});
+            }
           }
           await this.audit(tx,user,activityId,body.id?'Item diperbarui':'Item dibuat',{before:old[0]||null,after:{id:itemId,description,recipient,quantity:qty,unit,unit_price:price,month,year,attachments}},reason);
           return {ok:true,id:itemId};
