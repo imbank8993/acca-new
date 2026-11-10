@@ -91,6 +91,9 @@ export class CommitteeService {
         const activityId=id(body.activityId), activity=await this.activity(tx,user,activityId,true);
         // One activity lock orders term edits, item corrections, and partial payments.
         await tx.$queryRaw`SELECT id FROM committee_activities WHERE id=${activityId}::uuid FOR UPDATE`;
+        if (['single-item','term','item','delete-item'].includes(kind) && activity.owner_id !== owner) {
+          throw new ForbiddenException('Hanya PJ pemilik kegiatan yang dapat menambah, mengedit, atau menghapus item.');
+        }
         const reason=typeof body.reason==='string'?body.reason.trim().slice(0,1000):'';
         if (kind==='single-item') {
           const description=text(body.description,'Nama item'), recipient=text(body.recipient||'','Catatan penerima transfer',200,true);
@@ -108,7 +111,7 @@ export class CommitteeService {
             if(!old.length||old[0].revision!==body.revision) throw new ConflictException('Item berubah. Muat ulang data.');
             const active=Number(old[0].paid)+Number(old[0].advanced)-Number(old[0].reimbursed);
             const nonFinancialOnly=description===old[0].description&&Number(qty)===Number(old[0].quantity)&&unit===old[0].unit&&price===Number(old[0].unit_price)&&month===old[0].month&&year===old[0].year;
-            if(active&&!nonFinancialOnly&&(!isTreasurer(user)||!reason)) throw new ConflictException('Item yang sudah dibayar hanya dapat dikoreksi bendahara dengan alasan perubahan.');
+            if(active&&!nonFinancialOnly&&!reason) throw new ConflictException('Isi alasan jika mengubah rincian item yang sudah dibayar.');
             if(Math.round(Math.round(qty*100)*price/100)<active) throw new ConflictException('Nominal item tidak boleh di bawah pembayaran aktif.');
             if(old[0].month!==month||old[0].year!==year){
               const siblings:any[]=await tx.$queryRaw`SELECT count(*)::int AS count FROM committee_items WHERE term_id=${old[0].term_id}::uuid`;
@@ -136,7 +139,7 @@ export class CommitteeService {
           if (body.id) {
             if (!old.length||old[0].revision!==body.revision) throw new ConflictException('Item berubah. Muat ulang data.');
             const paid:any[]=await tx.$queryRaw`SELECT coalesce(sum(p.amount),0)::text AS paid FROM committee_payments p JOIN committee_items i ON i.id=p.item_id WHERE i.term_id=${termId}::uuid AND p.voided_at IS NULL`;
-            if (Number(paid[0].paid)>0 && (!isTreasurer(user)||!reason)) throw new ConflictException('Item yang sudah dibayar hanya dapat dikoreksi bendahara dengan alasan perubahan.');
+            if (Number(paid[0].paid)>0 && !reason) throw new ConflictException('Isi alasan jika mengubah item yang sudah dibayar.');
             await tx.$executeRaw`UPDATE committee_terms SET title=${title},month=${month},year=${year},attachments=${JSON.stringify(attachments)}::jsonb,revision=revision+1,updated_at=now() WHERE id=${termId}::uuid`;
           } else {
             await tx.$executeRaw`INSERT INTO committee_terms(id,activity_id,title,month,year,attachments) VALUES (${termId}::uuid,${activityId}::uuid,${title},${month},${year},${JSON.stringify(attachments)}::jsonb)`;
@@ -214,7 +217,7 @@ export class CommitteeService {
         const description=text(body.description,'Uraian biaya'),recipient=text(body.recipient||'','Penerima',200,true),unit=text(body.unit||'paket','Satuan',40),qty=body.quantity,price=body.unit_price;
         if (typeof qty!=='number'||!Number.isFinite(qty)||qty<=0||qty>1000000||Math.abs(qty*100-Math.round(qty*100))>0.00001||!Number.isSafeInteger(price)||price<=0||price>1000000000000||!Number.isSafeInteger(Math.round(qty*price))||qty*price>1000000000000) throw new BadRequestException('Jumlah/harga harus positif, maksimal dua desimal untuk jumlah, dan subtotal maksimal Rp1 triliun.');
         const paid=Number(old[0]?.paid||0)+Number(old[0]?.advanced||0)-Number(old[0]?.reimbursed||0);
-        if (paid && (!isTreasurer(user)||!reason)) throw new ConflictException('Item yang sudah dibayar hanya dapat dikoreksi bendahara dengan alasan perubahan.');
+        if (paid && !reason) throw new ConflictException('Isi alasan jika mengubah item yang sudah dibayar.');
         if (Math.round(Math.round(qty*100)*price/100)<paid) throw new ConflictException('Nominal item tidak boleh di bawah pembayaran yang sudah tercatat.');
         if (body.id) await tx.$executeRaw`UPDATE committee_items SET description=${description},recipient=${recipient},quantity=${qty},unit=${unit},unit_price=${price},revision=revision+1,updated_at=now() WHERE id=${itemId}::uuid`;
         else await tx.$executeRaw`INSERT INTO committee_items(id,term_id,description,recipient,quantity,unit,unit_price) VALUES (${itemId}::uuid,${termId}::uuid,${description},${recipient},${qty},${unit},${price})`;

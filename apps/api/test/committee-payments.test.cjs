@@ -15,8 +15,8 @@ test('PJ creates a four-month activity without approval; partial payments, corre
  d=(await s.detail(pj,aid)).data;assert.equal(d.payments.length,1);assert.equal(Number(d.items[0].paid),40000);
  await assert.rejects(s.save(admin,{...payment,amount:50000}));await assert.rejects(s.save(admin,{...payment,requestId:'55555555-5555-4555-8555-555555555555',amount:60001,revision:d.items[0].revision}));
  const edit={kind:'item',activityId:aid,termId:first.id,id:item.id,revision:d.items[0].revision,description:'Honor penyusunan modul revisi',recipient:'Tim Kurikulum',quantity:2,unit:'orang',unit_price:60000};
- await assert.rejects(s.save(pj,edit));await assert.rejects(s.save(admin,edit));await s.save(admin,{...edit,reason:'Tambahan ruang lingkup pekerjaan'});
- await assert.rejects(s.save(admin,{...edit,reason:'Stale revision'}));
+ await assert.rejects(s.save(pj,edit));await assert.rejects(s.save(admin,{...edit,reason:'Bukan pemilik'}));await s.save(pj,{...edit,reason:'Tambahan ruang lingkup pekerjaan'});
+ await assert.rejects(s.save(pj,{...edit,reason:'Stale revision'}));
  const second=await s.save(pj,{kind:'term',activityId:aid,title:'Ampra Desember',month:12,year:2026,attachments:[],copyFrom:first.id});
  for(const [month,year]of[[1,2027],[2,2027]])await s.save(pj,{kind:'term',activityId:aid,title:'Termin '+month,month,year,attachments:[]});
  d=(await s.detail(pj,aid)).data;assert.equal(d.terms.length,4);const copied=d.items.find(i=>i.term_id===second.id);assert.equal(Number(copied.amount),120000);assert.equal(Number(copied.paid),0);assert(d.history.some(h=>h.reason==='Tambahan ruang lingkup pekerjaan'&&h.snapshot.before&&h.snapshot.after));
@@ -24,7 +24,7 @@ test('PJ creates a four-month activity without approval; partial payments, corre
  const current=d.items.find(i=>i.id===item.id);await s.save(admin,{...payment,revision:current.revision,amount:80000,requestId:'66666666-6666-4666-8666-666666666666'});
  d=(await s.detail(pj,aid)).data;assert.equal(Number(d.items.find(i=>i.id===item.id).paid),120000);
  await assert.rejects(s.save(pj,{kind:'delete-item',activityId:aid,termId:first.id,id:item.id,revision:d.items.find(i=>i.id===item.id).revision}));
- await assert.rejects(s.save(admin,{...edit,revision:d.items.find(i=>i.id===item.id).revision,unit_price:10000,reason:'Below paid amount'}));
+ await assert.rejects(s.save(pj,{...edit,revision:d.items.find(i=>i.id===item.id).revision,unit_price:10000,reason:'Below paid amount'}));
  const list=await s.list(pj);assert.equal(Number(list.data[0].total),240000);assert.equal(Number(list.data[0].paid),120000);assert.equal((await s.list(other)).data.length,0);assert.equal((await s.list(admin)).data.length,1);
  const secondPayment=d.payments.find(p=>Number(p.amount)===80000),currentItem=d.items.find(i=>i.id===item.id);
  const cancel={kind:'cancel-payment',activityId:aid,termId:first.id,id:secondPayment.id,itemId:item.id,revision:currentItem.revision,reason:'Salah rekening, akan ditransfer ulang'};
@@ -33,6 +33,22 @@ test('PJ creates a four-month activity without approval; partial payments, corre
  await assert.rejects(s.save(admin,{...payment,revision:currentItem.revision,amount:80000,requestId:'66666666-6666-4666-8666-666666666666'}));
  }finally{await db.close()}});
 test('migration is repeatable and preserves access changes after initial installation',async()=>{const {db,sql}=await fixture();try{assert.equal((await db.query("SELECT * FROM role_pages WHERE role='GURU' AND page_id='pengajuan-komite'")).rows.length,1);await db.exec("DELETE FROM role_pages WHERE role='GURU'");await db.exec(sql);assert.equal((await db.query("SELECT * FROM role_pages WHERE role='GURU'")).rows.length,0)}finally{await db.close()}});
+test('only the activity owner may add, edit, and delete items; treasurer may view',async()=>{
+ const {db,service:s}=await fixture();try{
+  const {id:activityId}=await s.save(pj,{kind:'activity',title:'Pelatihan',description:'',start_date:'2026-11-01',end_date:'2026-11-30'});
+  const input={kind:'single-item',activityId,description:'Honor tentor',recipient:'Tentor',month:11,year:2026,quantity:1,unit:'orang',unit_price:100000,attachments:[]};
+  await assert.rejects(s.save(admin,input));
+  const {id:itemId}=await s.save(pj,input);
+  const detail=await s.detail(admin,activityId),item=detail.data.items[0];
+  assert.equal(item.description,'Honor tentor');
+  await assert.rejects(s.save(admin,{...input,id:itemId,revision:item.revision,description:'Diubah orang lain'}));
+  await assert.rejects(s.save(admin,{kind:'delete-item',activityId,termId:item.term_id,id:itemId,revision:item.revision}));
+  await s.save(pj,{...input,id:itemId,revision:item.revision,description:'Honor tentor revisi'});
+  const revised=(await s.detail(admin,activityId)).data.items[0];assert.equal(revised.description,'Honor tentor revisi');
+  await s.save(pj,{kind:'delete-item',activityId,termId:revised.term_id,id:itemId,revision:revised.revision});
+  assert.equal((await s.detail(admin,activityId)).data.items.length,0);
+ }finally{await db.close()}
+});
 test('activity stores proposal file and requested amount separately from priced items',async()=>{
  const {db,sql,service:s}=await fixture();try{
   const proposal={kind:'activity',title:'Pelatihan Siswa',description:'',start_date:'2026-11-01',end_date:'2026-11-30',proposed_total:350000,proposal_url:'https://example.com/proposal.pdf',proposal_name:'Proposal Pelatihan.pdf'};

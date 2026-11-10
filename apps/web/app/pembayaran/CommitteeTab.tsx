@@ -58,6 +58,7 @@ export default function CommitteeTab() {
     const [form, setForm] = useState<any>(null);
     const [formError, setFormError] = useState('');
     const [preview, setPreview] = useState<{ url: string; title: string } | null>(null);
+    const [viewItem, setViewItem] = useState<any>(null);
     const [canRecordAdvance, setCanRecordAdvance] = useState(false);
     const [ownerId, setOwnerId] = useState('');
     const [masterPeople, setMasterPeople] = useState<{ name: string; kind: string }[]>([]);
@@ -128,6 +129,7 @@ export default function CommitteeTab() {
     const back = () => {
         setSelected('');
         setData(null);
+        setViewItem(null);
         setNotice('');
         setError('');
     };
@@ -234,6 +236,7 @@ export default function CommitteeTab() {
     /* ------------------------------ Turunan ------------------------------- */
 
     const activity = data?.activity;
+    const canManageItems = Boolean(activity?.owner_id && activity.owner_id === ownerId);
     const items: any[] = data?.items || [];
     const hasLegacyAdvances = items.some(item => Number(item.advanced || 0) > 0);
     const total = items.reduce((sum: number, item: any) => sum + Number(item.amount), 0);
@@ -268,7 +271,7 @@ export default function CommitteeTab() {
     const variantOf = (kind: FormKind) => kind === 'delete-item' || kind === 'cancel-payment' ? 'delete' : form?.id ? 'edit' : kind === 'history' ? 'default' : 'add';
 
     const itemActions = (item: any) => {
-        const hasPayments = Number(item.paid) + Number(item.advanced || 0) > 0;
+        const hasPayments = itemPayments.some(payment => payment.item_id === item.id);
         const pay = () => {
             const flow = outstandingAdvance(item) > 0 ? 'REIMBURSEMENT' : 'DIRECT';
             const remaining = flow === 'REIMBURSEMENT' ? outstandingAdvance(item) : recipientRemaining(item);
@@ -276,9 +279,10 @@ export default function CommitteeTab() {
         };
         return (
             <ActionGroup>
-                {canEdit && <ActionButton action="edit" tooltip={hasPayments && !canPay ? 'Edit dokumen item' : 'Edit item'} onClick={() => start('single-item', item)} />}
-                {canEdit && !hasPayments && <ActionButton action="delete" tooltip="Hapus item" onClick={() => start('delete-item', item)} />}
-                {canPay && (recipientRemaining(item) > 0 || outstandingAdvance(item) > 0) && <Button type="button" size="sm" variant="primary" leftIcon={<i className="bi bi-check2-circle" />} onClick={pay}>Tandai Dibayar</Button>}
+                <ActionButton action="view" tooltip="Lihat item" onClick={() => setViewItem(item)} />
+                {canManageItems && <ActionButton action="edit" tooltip="Edit item" onClick={() => start('single-item', item)} />}
+                {canManageItems && !hasPayments && <ActionButton action="delete" tooltip="Hapus item" onClick={() => start('delete-item', item)} />}
+                {canPay && (recipientRemaining(item) > 0 || outstandingAdvance(item) > 0) && <ActionButton action="approve" icon={<i className="bi bi-check2-circle" />} tooltip="Tandai Dibayar" onClick={pay} />}
             </ActionGroup>
         );
     };
@@ -286,6 +290,11 @@ export default function CommitteeTab() {
     const fileLinks = (attachments: Attachment[]) => attachments.map((a, i) => isViewable(a.url) ? (
         <button key={i} type="button" className="pay-file" onClick={() => setPreview({ url: a.url, title: a.name })}>{a.name}</button>
     ) : <a key={i} className="pay-file" href={a.url} target="_blank" rel="noopener noreferrer">{a.name}</a>);
+    const proofIcons = (attachments: Attachment[]) => <ActionGroup className="pay-history-proofs">{attachments.map((attachment, index) =>
+        <ActionButton key={`${attachment.url}-${index}`} action="file" tooltip={`Lihat lampiran: ${attachment.name}`} onClick={() => isViewable(attachment.url)
+            ? setPreview({ url: attachment.url, title: attachment.name })
+            : window.open(attachment.url, '_blank', 'noopener,noreferrer')} />
+    )}</ActionGroup>;
 
     const alerts = (
         <>
@@ -400,7 +409,7 @@ export default function CommitteeTab() {
             <div className="pay-card">
                 <div className="pay-section-head">
                     <div><h4>Item</h4><span className="pay-cell-muted">{items.length} item · {fmtRupiah(total)} · dibayar bendahara {fmtRupiah(paid)}</span></div>
-                    {canEdit && <Button size="sm" variant="primary" icon="add" onClick={() => start('single-item')}>Tambah Item</Button>}
+                    {canManageItems && <Button size="sm" variant="primary" icon="add" onClick={() => start('single-item')}>Tambah Item</Button>}
                 </div>
                 {items.length === 0 ? <EmptyState icon="list-check" title="Belum ada item">Tambahkan item beserta harganya.</EmptyState> : isMobile ? (
                     <div className="pay-mobile-cards pay-mobile-cards--in-card" aria-label="Item pengajuan komite">
@@ -441,28 +450,27 @@ export default function CommitteeTab() {
                                 <div className="pay-mobile-card__top"><strong>{item?.description || 'Item'}</strong><StatusBadge tone={payment.voided_at ? 'void' : 'paid'}>{payment.voided_at ? 'Dibatalkan' : 'Tercatat'}</StatusBadge></div>
                                 <div className="pay-mobile-card__meta"><span>{fmtTanggal(day(payment.paid_on))}</span><span>{flowLabel(payment.flow)}</span></div>
                                 <dl className="pay-mobile-card__facts"><div><dt>Nominal</dt><dd>{fmtRupiah(payment.amount)}</dd></div>{payment.destination_account && <div><dt>Rekening Tujuan (riwayat)</dt><dd>{payment.destination_account}</dd></div>}<div><dt>Pencatat</dt><dd>{payment.actor_name}</dd></div>{payment.note && <div><dt>Catatan</dt><dd>{payment.note}</dd></div>}{payment.void_reason && <div><dt>Alasan Pembatalan</dt><dd>{payment.void_reason}</dd></div>}</dl>
-                                <div className="pay-mobile-card__files"><span>Bukti Transfer</span>{fileLinks(payment.attachments?.length ? payment.attachments : [{ name: 'Bukti transfer', url: payment.proof_url }])}</div>
+                                <div className="pay-mobile-card__files"><span>Bukti Transfer</span>{proofIcons(payment.attachments?.length ? payment.attachments : [{ name: 'Bukti transfer', url: payment.proof_url }])}</div>
                                 {!payment.voided_at && (canPay || (canRecordAdvance && payment.flow === 'PJ_ADVANCE' && payment.actor_id === ownerId)) && <div className="pay-mobile-card__actions"><ActionGroup>
-                                    <Button type="button" size="sm" variant="edit" icon="edit" onClick={() => start('edit-proof', { ...payment, term_id: item?.term_id, itemId: payment.item_id, revision: item?.revision, attachments: payment.attachments?.length ? payment.attachments : [{ name: 'Bukti transfer', url: payment.proof_url }] })}>Edit Bukti</Button>
+                                    <ActionButton action="edit" tooltip="Edit bukti pembayaran" onClick={() => start('edit-proof', { ...payment, term_id: item?.term_id, itemId: payment.item_id, revision: item?.revision, attachments: payment.attachments?.length ? payment.attachments : [{ name: 'Bukti transfer', url: payment.proof_url }] })} />
                                     <ActionButton action="reject" tooltip="Batalkan pembayaran" onClick={() => start('cancel-payment', { ...payment, term_id: item?.term_id, itemId: payment.item_id, revision: item?.revision })} />
                                 </ActionGroup></div>}
                             </article>;
                         })}
                     </div>
                 ) : (
-                    <div className="pay-table-wrap"><table className="pay-table" aria-label="Riwayat pembayaran item">
-                        <thead><tr><th>Tanggal</th><th>Item</th><th>Keterangan Pembayaran</th><th className="pay-num">Nominal</th><th>Lampiran</th><th>Catatan / Pencatat</th><th>Status</th><th>Aksi</th></tr></thead>
+                    <div className="pay-table-wrap"><table className="pay-table pay-committee-history-table" aria-label="Riwayat pembayaran item">
+                        <thead><tr><th>Tanggal / Pencatat</th><th>Item / Keterangan</th><th className="pay-num">Nominal</th><th>Lampiran</th><th>Status</th><th>Aksi</th></tr></thead>
                         <tbody>{itemPayments.map((payment: any) => {
                             const item = items.find((i: any) => i.id === payment.item_id);
                             return <tr key={payment.id}>
-                                <td>{fmtTanggal(day(payment.paid_on))}</td><td>{item?.description}</td>
-                                <td><div className="pay-cell-stack"><strong>{flowLabel(payment.flow)}</strong>{payment.destination_account && <span>{payment.destination_account}</span>}</div></td>
+                                <td><div className="pay-cell-stack"><span>{fmtTanggal(day(payment.paid_on))}</span><small className="pay-history-detail">{payment.actor_name}</small></div></td>
+                                <td><div className="pay-cell-stack"><strong>{item?.description || 'Item'}</strong><small className="pay-history-detail">{flowLabel(payment.flow)}</small>{payment.destination_account && <small className="pay-history-detail">Rekening: {payment.destination_account}</small>}{payment.note && <small className="pay-history-detail">{payment.note}</small>}{payment.void_reason && <small className="pay-history-detail">Alasan pembatalan: {payment.void_reason}</small>}</div></td>
                                 <td className="pay-num">{fmtRupiah(payment.amount)}</td>
-                                <td><div className="pay-cell-stack">{fileLinks(payment.attachments?.length ? payment.attachments : [{ name: 'Bukti transfer', url: payment.proof_url }])}</div></td>
-                                <td><div className="pay-cell-stack"><span>{payment.note}</span><span className="pay-cell-muted">{payment.actor_name}</span>{payment.void_reason && <span>Alasan pembatalan: {payment.void_reason}</span>}</div></td>
+                                <td>{proofIcons(payment.attachments?.length ? payment.attachments : [{ name: 'Bukti transfer', url: payment.proof_url }])}</td>
                                 <td><StatusBadge tone={payment.voided_at ? 'void' : 'paid'}>{payment.voided_at ? 'Dibatalkan' : 'Tercatat'}</StatusBadge></td>
                                 <td>{!payment.voided_at && (canPay || (canRecordAdvance && payment.flow === 'PJ_ADVANCE' && payment.actor_id === ownerId)) && <ActionGroup>
-                                    <Button type="button" size="sm" variant="edit" icon="edit" onClick={() => start('edit-proof', { ...payment, term_id: item?.term_id, itemId: payment.item_id, revision: item?.revision, attachments: payment.attachments?.length ? payment.attachments : [{ name: 'Bukti transfer', url: payment.proof_url }] })}>Edit Bukti</Button>
+                                    <ActionButton action="edit" tooltip="Edit bukti pembayaran" onClick={() => start('edit-proof', { ...payment, term_id: item?.term_id, itemId: payment.item_id, revision: item?.revision, attachments: payment.attachments?.length ? payment.attachments : [{ name: 'Bukti transfer', url: payment.proof_url }] })} />
                                     <ActionButton action="reject" tooltip="Batalkan pembayaran" onClick={() => start('cancel-payment', { ...payment, term_id: item?.term_id, itemId: payment.item_id, revision: item?.revision })} />
                                 </ActionGroup>}</td>
                             </tr>;
@@ -506,13 +514,29 @@ export default function CommitteeTab() {
                         </form>
                     </Modal>
                 )}
+                {viewItem && <Modal size="md" title="Detail Item" icon="list-check" onClose={() => setViewItem(null)}>
+                    <ModalBody>
+                        <div className="pay-summary">
+                            <div className="pay-summary__who"><span className="pay-summary__label">Item</span><strong>{viewItem.description}</strong><span className="pay-summary__detail">{BULAN[viewItem.month - 1]} {viewItem.year}</span></div>
+                            <div className="pay-summary__amount"><span className="pay-summary__label">Anggaran</span><strong>{fmtRupiah(viewItem.amount)}</strong></div>
+                        </div>
+                        <dl className="pay-item-view-facts">
+                            <div><dt>Ditransfer kepada</dt><dd>{viewItem.recipient || 'Belum dicatat'}</dd></div>
+                            <div><dt>Jumlah</dt><dd>{Number(viewItem.quantity)} {viewItem.unit}</dd></div>
+                            <div><dt>Harga satuan</dt><dd>{fmtRupiah(viewItem.unit_price)}</dd></div>
+                            <div><dt>Dibayar Bendahara</dt><dd>{fmtRupiah(viewItem.paid)}</dd></div>
+                            <div><dt>Status</dt><dd>{itemStatus(viewItem)}</dd></div>
+                        </dl>
+                        <div className="pay-item-view-documents"><strong>Dokumen item</strong>{viewItem.attachments?.length ? <div className="pay-cell-stack">{fileLinks(viewItem.attachments)}</div> : <span>Belum ada dokumen.</span>}</div>
+                    </ModalBody>
+                    <ModalFooter><Button type="button" variant="secondary" onClick={() => setViewItem(null)}>Tutup</Button></ModalFooter>
+                </Modal>}
                 {preview && <DocViewerModal fileUrl={preview.url} title={preview.title} onClose={() => setPreview(null)} />}
             </>
         );
     }
 
     function formBody() {
-        const itemLockedForPj = form.kind === 'single-item' && !!form.id && Number(form.paid || 0) + Number(form.advanced || 0) > 0 && !canPay;
         switch (form.kind as FormKind) {
             case 'activity':
                 return (
@@ -547,11 +571,10 @@ export default function CommitteeTab() {
                 );
             case 'single-item':
                 return <>
-                    {itemLockedForPj && <p className="pay-desc">Item sudah memiliki pembayaran. PJ dapat memperbarui dokumen dan catatan transfer; perubahan harga dilakukan oleh bendahara.</p>}
-                    <ModalField label="Nama item" required><input required disabled={itemLockedForPj} maxLength={300} value={form.description} onChange={e => change('description', e.target.value)} placeholder="Contoh: Honor tentor" /></ModalField>
+                    <ModalField label="Nama item" required><input required maxLength={300} value={form.description} onChange={e => change('description', e.target.value)} placeholder="Contoh: Honor tentor" /></ModalField>
                     <div className="pay-form-row">
-                        <ModalField label="Bulan" required><InlineSelect title="Bulan item" value={String(form.month)} onChange={v => change('month', Number(v))} disabled={itemLockedForPj} options={BULAN.map((label, i) => ({ value: String(i + 1), label }))} /></ModalField>
-                        <ModalField label="Tahun" required><input required disabled={itemLockedForPj} type="number" min={2000} max={2200} value={form.year} onChange={e => change('year', Number(e.target.value))} /></ModalField>
+                        <ModalField label="Bulan" required><InlineSelect title="Bulan item" value={String(form.month)} onChange={v => change('month', Number(v))} options={BULAN.map((label, i) => ({ value: String(i + 1), label }))} /></ModalField>
+                        <ModalField label="Tahun" required><input required type="number" min={2000} max={2200} value={form.year} onChange={e => change('year', Number(e.target.value))} /></ModalField>
                     </div>
                     <ModalField label="Ditransfer kepada (catatan)" hint="Pilih guru/staf dari data master atau ketik nama secara manual.">
                         <SearchableSelect creatable value={form.recipient || ''} onChange={value => change('recipient', String(value).slice(0, 200))} options={masterPeople.map(person => ({ value: person.name, label: person.name, subLabel: person.kind === 'TENDIK' ? 'Staf' : 'Guru' }))} placeholder="Cari guru/staf atau ketik nama..." />
@@ -559,9 +582,9 @@ export default function CommitteeTab() {
                         {masterError && <span className="pay-master-error">{masterError}<Button type="button" size="sm" variant="ghost" onClick={() => setMasterRefresh(value => value + 1)}>Coba lagi</Button></span>}
                     </ModalField>
                     <div className="pay-form-row pay-form-row--3">
-                        <ModalField label="Jumlah" required><input required disabled={itemLockedForPj} type="number" step="0.01" min="0.01" value={form.quantity} onChange={e => change('quantity', e.target.value)} /></ModalField>
-                        <ModalField label="Satuan" required><input required disabled={itemLockedForPj} maxLength={40} value={form.unit} onChange={e => change('unit', e.target.value)} /></ModalField>
-                        <ModalField label="Harga satuan (Rp)" required><input required disabled={itemLockedForPj} type="number" step="1" min="1" value={form.unit_price} onChange={e => change('unit_price', e.target.value)} /></ModalField>
+                        <ModalField label="Jumlah" required><input required type="number" step="0.01" min="0.01" value={form.quantity} onChange={e => change('quantity', e.target.value)} /></ModalField>
+                        <ModalField label="Satuan" required><input required maxLength={40} value={form.unit} onChange={e => change('unit', e.target.value)} /></ModalField>
+                        <ModalField label="Harga satuan (Rp)" required><input required type="number" step="1" min="1" value={form.unit_price} onChange={e => change('unit_price', e.target.value)} /></ModalField>
                     </div>
                     <div className="pay-subtotal"><span>Total item</span><strong>{fmtRupiah(Math.round(Math.round(Number(form.quantity) * 100) * Number(form.unit_price) / 100))}</strong></div>
                     <div className="pay-evidence-section">
@@ -570,9 +593,14 @@ export default function CommitteeTab() {
                         {(form.attachments || []).length > 0 && <>
                             <span className="pay-evidence-caption">Dokumen tersimpan</span>
                             <ul className="pay-item-documents">{form.attachments.map((a: Attachment, i: number) => <li key={`${a.url}-${i}`}>
-                                <input aria-label={`Ubah judul dokumen ${i + 1}`} maxLength={200} value={a.name} onChange={e => change('attachments', form.attachments.map((old: Attachment, j: number) => j === i ? { ...old, name: e.target.value } : old))} />
-                                {fileLinks([a])}
-                                <button type="button" aria-label={`Lepas ${a.name}`} onClick={() => change('attachments', form.attachments.filter((_: any, j: number) => j !== i))}><i className="bi bi-x-lg" /></button>
+                                <div className="pay-item-documents__editor">
+                                    <label htmlFor={`item-document-title-${i}`}>Judul dokumen {i + 1}</label>
+                                    <input id={`item-document-title-${i}`} maxLength={200} value={a.name} onChange={e => change('attachments', form.attachments.map((old: Attachment, j: number) => j === i ? { ...old, name: e.target.value } : old))} />
+                                </div>
+                                <div className="pay-item-documents__actions">
+                                    {fileLinks([a])}
+                                    <ActionButton action="delete" tooltip={`Lepas dokumen ${a.name}`} onClick={() => change('attachments', form.attachments.filter((_: any, j: number) => j !== i))} />
+                                </div>
                             </li>)}</ul>
                         </>}
                         <ModalField label="Tambah dokumen" hint="PDF, gambar, atau Excel. Maksimal 10 berkas, 15 MB per berkas."><ModalFileInput multiple files={form.ampra_files || []} onPick={pickItemFiles} accept=".pdf,.jpg,.jpeg,.png,.webp,.xls,.xlsx" disabled={busy} /></ModalField>
@@ -580,7 +608,7 @@ export default function CommitteeTab() {
                             <input required maxLength={200} value={form.new_attachment_titles?.[i] || ''} onChange={e => change('new_attachment_titles', form.new_attachment_titles.map((title: string, j: number) => j === i ? e.target.value : title))} placeholder="Contoh: Ampra honor tentor November" />
                         </ModalField>)}
                     </div>
-                    {canPay && (Number(form.paid) + Number(form.advanced || 0)) > 0 && <ModalField label="Alasan koreksi" hint="Wajib hanya jika mengubah harga, jumlah, atau periode item yang sudah dibayar."><input value={form.reason} onChange={e => change('reason', e.target.value)} /></ModalField>}
+                    {(Number(form.paid) + Number(form.advanced || 0)) > 0 && <ModalField label="Alasan koreksi" hint="Wajib jika mengubah nama, harga, jumlah, atau periode item yang sudah dibayar."><input value={form.reason} onChange={e => change('reason', e.target.value)} /></ModalField>}
                 </>;
             case 'payment':
                 return (
