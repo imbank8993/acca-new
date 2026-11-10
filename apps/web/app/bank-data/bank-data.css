@@ -25,6 +25,10 @@
 .bd-data-table td { padding: 12px 16px; color: var(--text-primary, #334155); border-bottom: 1px solid var(--border-color, #e2e8f0); min-width: 120px; max-width: 320px; overflow-wrap: anywhere; }
 .bd-data-table th:first-child, .bd-data-table td:first-child { min-width: 50px; width: 50px; text-align: center; }
 .bd-data-table tbody tr:hover { background: var(--bg-secondary, #f8fafc); }
+.bd-phone-link { display: inline-flex; align-items: center; gap: 7px; color: #087f5b; font-weight: 650; text-decoration: underline; text-underline-offset: 3px; }
+.bd-phone-link:hover, .bd-phone-link:focus-visible { color: #056746; }
+.bd-phone-link:focus-visible { outline: 2px solid currentColor; outline-offset: 3px; border-radius: 2px; }
+.bd-phone-link i { font-size: 14px; text-decoration: none; }
 .bd-data-empty { text-align: center; padding: 40px 16px !important; }
 .bd-data-note { font-size: 12px; padding: 12px 20px; margin: 0; background: #fffbeb; color: #854d0e; }
 .bd-data-error { display: flex; flex-wrap: wrap; gap: 12px; padding: 16px 20px; color: #b91c1c; font-size: 13px; }

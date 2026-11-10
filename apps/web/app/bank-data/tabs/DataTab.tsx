@@ -9,6 +9,7 @@ import { Spinner } from '@/components/ui/Spinner';
 import { getAllAcademicYears } from '@/lib/settings-client';
 import type { DatasetKatalog } from '../types';
 import RekeningCell from '../components/RekeningCell';
+import PhoneCell from '../components/PhoneCell';
 
 interface HasilData {
   total: number;
@@ -152,7 +153,7 @@ function DatasetTable({ dataset, datasets, onDataset }: { dataset: DatasetKatalo
       {loading ? <div className="bd-loading"><Spinner variant="buble" label="Memuat data..." /></div> : result && <>
         <div className="bd-data-scroll" tabIndex={0} role="region" aria-label={`Tabel ${dataset.label}, geser untuk melihat semua kolom`}>
           <table className="bd-data-table"><caption className="bd-sr-only">{dataset.label}: hanya kolom yang diizinkan. Ekspor mencakup seluruh halaman sesuai filter.</caption><thead><tr><th scope="col">No.</th>{result.kolom.map(col => <th scope="col" key={col.key}>{col.label}</th>)}</tr></thead><tbody>
-            {result.data.length ? result.data.map((row, index) => <tr key={`${page}-${index}`}><td>{(page - 1) * limit + index + 1}</td>{result.kolom.map(col => <td key={col.key} className={col.key === 'data_rekening' ? 'bd-data-rekening' : undefined}>{col.key === 'data_rekening' ? <RekeningCell value={row[col.key]} /> : nilai(row[col.key])}</td>)}</tr>) : <tr><td colSpan={result.kolom.length + 1} className="bd-data-empty">Tidak ada data yang sesuai dengan filter.</td></tr>}
+            {result.data.length ? result.data.map((row, index) => <tr key={`${page}-${index}`}><td>{(page - 1) * limit + index + 1}</td>{result.kolom.map(col => <td key={col.key} className={col.key === 'data_rekening' ? 'bd-data-rekening' : undefined}>{col.key === 'data_rekening' ? <RekeningCell value={row[col.key]} /> : col.key === 'nomor_hp' || col.key === 'no_hp' ? <PhoneCell value={row[col.key]} /> : nilai(row[col.key])}</td>)}</tr>) : <tr><td colSpan={result.kolom.length + 1} className="bd-data-empty">Tidak ada data yang sesuai dengan filter.</td></tr>}
           </tbody></table>
         </div>
         <Pagination currentPage={page} totalPages={Math.ceil(result.totalTersedia / limit)} totalItems={result.totalTersedia} limit={limit} onPageChange={setPage} onLimitChange={value => { setLimit(value); setPage(1); }} />
