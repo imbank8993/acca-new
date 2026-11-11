@@ -314,6 +314,18 @@
 
 /* ------------------------------- Modal Helpers ----------------------------- */
 
+.mdl-field__label {
+  font-size: 0.74rem !important;
+  font-weight: 500 !important;
+  color: var(--n-muted, #64748b) !important;
+  letter-spacing: 0.01em;
+}
+
+.mdl-field__req {
+  color: #dc2626;
+  font-weight: 500;
+}
+
 .inv-form-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);

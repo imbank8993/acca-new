@@ -801,13 +801,13 @@ export default function InventoryView({ user }: { user: { roles?: string[]; role
         <form onSubmit={saveItem}>
           <ModalBody>
             <div className="inv-form-grid">
-              <ModalField label="Kode Barang" required hint="Contoh: ELK-01, LAB-05">
+              <ModalField label="Kode Barang" required>
                 <input
                   required
                   maxLength={60}
                   value={itemForm.code}
                   onChange={(e) => setItemForm({ ...itemForm, code: e.target.value })}
-                  placeholder="Masukkan kode unik..."
+                  placeholder="Contoh: ELK-01, LAB-05"
                 />
               </ModalField>
               <ModalField label="Nama Barang" required>
@@ -819,25 +819,26 @@ export default function InventoryView({ user }: { user: { roles?: string[]; role
                   placeholder="Contoh: Proyektor Epson EB-X400..."
                 />
               </ModalField>
-              <ModalField label="Kategori" required hint="Contoh: Elektronik, Olahraga, Sarana">
+              <ModalField label="Kategori" required>
                 <input
                   required
                   maxLength={80}
                   value={itemForm.category}
                   onChange={(e) => setItemForm({ ...itemForm, category: e.target.value })}
-                  placeholder="Kategori barang..."
+                  placeholder="Contoh: Elektronik, Olahraga, Sarana..."
                 />
               </ModalField>
-              <ModalField label="Jumlah Unit" required hint="Total unit tercatat di madrasah">
+              <ModalField label="Jumlah Unit" required>
                 <input
                   required
                   type="number"
                   min="1"
                   value={itemForm.quantity}
                   onChange={(e) => setItemForm({ ...itemForm, quantity: Number(e.target.value) })}
+                  placeholder="Jumlah unit (misal: 10)"
                 />
               </ModalField>
-              <ModalField label="Lokasi Penyimpanan" hint="Tempat atau ruangan barang disimpan">
+              <ModalField label="Lokasi Penyimpanan">
                 <input
                   maxLength={120}
                   value={itemForm.location || ''}
@@ -856,7 +857,7 @@ export default function InventoryView({ user }: { user: { roles?: string[]; role
                 </select>
               </ModalField>
               <div className="inv-form-grid--full">
-                <ModalField label="Deskripsi Barang" hint="Spesifikasi atau informasi penting lainnya">
+                <ModalField label="Deskripsi Barang">
                   <textarea
                     rows={3}
                     maxLength={1000}
@@ -870,13 +871,12 @@ export default function InventoryView({ user }: { user: { roles?: string[]; role
                 <ModalField
                   label="Foto Barang"
                   required={!itemForm.photo_url}
-                  hint="Format JPG, PNG, atau WebP (maksimal 5 MB)"
                 >
                   <ModalFileInput
                     files={photo ? [photo] : []}
                     onPick={(picked) => setPhoto(picked[0] || null)}
                     accept="image/jpeg,image/png,image/webp"
-                    placeholder="Pilih berkas foto atau jatuhkan di sini"
+                    placeholder="Pilih berkas atau seret ke sini"
                     disabled={busy}
                   />
                   {itemForm.photo_url && !photo && (
@@ -961,7 +961,6 @@ export default function InventoryView({ user }: { user: { roles?: string[]; role
               <ModalField
                 label="Jumlah Unit Dipinjam"
                 required
-                hint={`Maksimal ${available(selectedItem)} unit`}
               >
                 <input
                   required
@@ -970,6 +969,7 @@ export default function InventoryView({ user }: { user: { roles?: string[]; role
                   max={available(selectedItem)}
                   value={loanForm.quantity}
                   onChange={(e) => setLoanForm({ ...loanForm, quantity: Number(e.target.value) })}
+                  placeholder={`Jumlah unit (maks. ${available(selectedItem)})`}
                 />
               </ModalField>
 
@@ -995,7 +995,6 @@ export default function InventoryView({ user }: { user: { roles?: string[]; role
               <ModalField
                 label="Keperluan / Alasan Pinjam"
                 required
-                hint="Jelaskan tujuan pemakaian barang secara jelas"
               >
                 <textarea
                   required

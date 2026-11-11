@@ -340,7 +340,7 @@ export function ModalFileInput({
     onPick,
     accept,
     multiple = false,
-    placeholder = 'Pilih berkas atau jatuhkan di sini',
+    placeholder = 'Pilih berkas atau seret ke sini',
     disabled = false,
 }: {
     files: File[];
