@@ -1,6 +1,5 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { AuditService } from '../common/audit.service';
 import {
   FeatureAccessGuard,
   PENGUMUMAN_KELOLA_KEY,
@@ -13,7 +12,6 @@ export class PengumumanService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly featureAccess?: FeatureAccessGuard,
-    private readonly audit?: AuditService,
   ) {}
 
   private sanitize(html: string): string {
@@ -74,7 +72,7 @@ export class PengumumanService {
         return p.target_roles.some((r: string) => upperFilters.includes(r.toUpperCase()));
       });
     }
-    
+
     data = data.map(p => ({ ...p, content: this.sanitize(p.content || '') }));
 
     data.sort((a: any, b: any) => {
@@ -132,7 +130,7 @@ export class PengumumanService {
       pinned: pinned || false,
       updated_at: new Date()
     };
-    
+
     if (target_roles !== undefined) {
       updateData.target_roles = Array.isArray(target_roles)
         ? target_roles.map((r: any) => String(r).trim().toUpperCase()).filter(Boolean)
@@ -157,23 +155,7 @@ export class PengumumanService {
       where: { id }
     });
 
-    if (existing && this.audit) {
-      await this.audit.record({
-        user,
-        req,
-        action: 'DELETE_PENGUMUMAN',
-        entity: 'pengumuman',
-        entityId: idStr,
-        details: {
-          title: existing.title,
-          category: existing.category,
-          pinned: existing.pinned,
-          target_roles: existing.target_roles,
-          created_by: existing.created_by,
-          created_by_nip: existing.created_by_nip,
-        },
-      });
-    }
+
 
     return { ok: true, message: 'Announcement deleted successfully' };
   }

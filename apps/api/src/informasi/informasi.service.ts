@@ -2,7 +2,6 @@ import { Injectable, BadRequestException, ForbiddenException, NotFoundException,
 import { randomBytes } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { StorageService } from '../common/storage.service';
-import { AuditService } from '../common/audit.service';
 import {
   FeatureAccessGuard,
   INFORMASI_KELOLA_KEY,
@@ -33,16 +32,7 @@ export class InformasiService {
     private readonly prisma: PrismaService,
     private readonly storage: StorageService,
     private readonly featureAccess: FeatureAccessGuard,
-    private readonly audit?: AuditService,
   ) {}
-
-  /** Mengambil riwayat aktivitas audit */
-  async getAuditLogs(limit = 50, offset = 0, entity?: string) {
-    if (!this.audit) {
-      return { ok: true, total: 0, data: [] };
-    }
-    return this.audit.getRecentLogs(limit, offset, entity);
-  }
 
   /** Ekstrak nama divisi dari string kategori, e.g. "[Akademik] Kurikulum" -> "Akademik" */
   parseDivision(rawCategory?: string): string {
@@ -422,22 +412,7 @@ export class InformasiService {
         }),
       ]);
 
-      if (this.audit) {
-        await this.audit.record({
-          user,
-          action: 'RENAME_INFORMASI_FOLDER',
-          entity: 'informasi_akademik',
-          entityId: baru,
-          details: {
-            old_category: category,
-            new_category: baru,
-            old_folder: lamaPolos,
-            new_folder: baruPolos,
-            old_division: oldDiv,
-            new_division: newDiv,
-          },
-        });
-      }
+
 
       return { ok: true };
     }
@@ -453,7 +428,7 @@ export class InformasiService {
       const updateObj: any = {};
       if (audience !== undefined) updateObj.audience = audience;
       if (Object.keys(updateObj).length === 0) throw new BadRequestException('No valid fields to update');
-      
+
       await this.prisma.uploaded_documents.update({
         where: { id: realId },
         data: updateObj
@@ -491,7 +466,7 @@ export class InformasiService {
       where: { id },
       data: updateData
     });
-    
+
     return { ok: true, data: JSON.parse(JSON.stringify(data, (_, v) => typeof v === 'bigint' ? v.toString() : v)) };
   }
 
@@ -524,22 +499,7 @@ export class InformasiService {
         where: { scope: 'file', doc_id: id }
       }).catch(() => null);
 
-      if (this.audit) {
-        await this.audit.record({
-          user,
-          req,
-          action: 'DELETE_INFORMASI_DOC',
-          entity: 'uploaded_documents',
-          entityId: realId,
-          details: {
-            title: upload.file_name,
-            file_name: upload.file_name,
-            file_url: upload.file_url,
-            category: upload.category_name,
-            division: 'Dokumen Unggahan',
-          },
-        });
-      }
+
 
       return { ok: true };
     }
@@ -585,22 +545,7 @@ export class InformasiService {
       where: { scope: 'file', doc_id: id }
     }).catch(() => null);
 
-    if (this.audit) {
-      await this.audit.record({
-        user,
-        req,
-        action: 'DELETE_INFORMASI_DOC',
-        entity: 'informasi_akademik',
-        entityId: id,
-        details: {
-          title: record.title,
-          file_name: record.file_name,
-          file_url: record.file_url,
-          category: record.category,
-          division: div,
-        },
-      });
-    }
+
 
     // Jika file yang dihapus adalah file terakhir dalam folder ini, buat placeholder agar folder tidak hilang
     if (shouldKeepFolder && remainingCount === 0) {
@@ -668,20 +613,7 @@ export class InformasiService {
       where: { scope: 'folder', folder: folderPolos, division: div }
     }).catch(() => null);
 
-    if (this.audit) {
-      await this.audit.record({
-        user,
-        req,
-        action: 'DELETE_INFORMASI_FOLDER',
-        entity: 'informasi_akademik',
-        entityId: category,
-        details: {
-          category,
-          division: div,
-          deleted_doc_count: records.length,
-        },
-      });
-    }
+
 
     return { ok: true };
   }
@@ -790,23 +722,7 @@ export class InformasiService {
       },
     });
 
-    if (this.audit) {
-      await this.audit.record({
-        user,
-        req,
-        action: 'CREATE_SHARE_LINK',
-        entity: 'informasi_share_links',
-        entityId: data.id,
-        details: {
-          token: data.token,
-          scope: data.scope,
-          division: data.division,
-          folder: data.folder,
-          doc_id: data.doc_id,
-          label: data.label,
-        },
-      });
-    }
+
 
     return { ok: true, data };
   }
@@ -839,22 +755,7 @@ export class InformasiService {
       data: { revoked: newRevoked },
     });
 
-    if (this.audit) {
-      await this.audit.record({
-        user,
-        req,
-        action: newRevoked ? 'REVOKE_SHARE_LINK' : 'RESTORE_SHARE_LINK',
-        entity: 'informasi_share_links',
-        entityId: id,
-        details: {
-          token: existing.token,
-          division: existing.division,
-          folder: existing.folder,
-          doc_id: existing.doc_id,
-          revoked: newRevoked,
-        },
-      });
-    }
+
 
     return { ok: true, data };
   }
@@ -881,22 +782,7 @@ export class InformasiService {
       where: { id },
     }).catch(() => null);
 
-    if (existing && this.audit) {
-      await this.audit.record({
-        user,
-        req,
-        action: 'DELETE_SHARE_LINK',
-        entity: 'informasi_share_links',
-        entityId: id,
-        details: {
-          token: existing.token,
-          division: existing.division,
-          folder: existing.folder,
-          doc_id: existing.doc_id,
-          label: existing.label,
-        },
-      });
-    }
+
 
     return { ok: true };
   }

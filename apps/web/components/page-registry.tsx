@@ -63,13 +63,14 @@ const PengaturanUmumPage = lazy(() => import('@/app/pengaturan-umum/view'))
 const ESupervisiPage = lazy(() => import('@/app/e-supervisi/view'))
 const KokurikulerPage = lazy(() => import('@/app/kokurikuler/view'))
 const PrestasiPage = lazy(() => import('@/app/prestasi/view'))
+const InventoryPage = lazy(() => import('@/app/inventaris/view'))
 const ObservasiKelasPage = lazy(() => import('@/app/observasi-kelas/view'))
 const BimbinganKonselingPage = lazy(() => import('@/app/bimbingan-konseling/view'))
 const SanggarKurikulumPage = lazy(() => import('@/app/sanggar-kurikulum/view'))
 const FormDashboardPage = lazy(() => import('@/app/form/view'))
 const FormBuilderPage = lazy(() => import('@/app/form/builder/view'))
 const FormResponsesPage = lazy(() => import('@/app/form/responses/view'))
-const AuditLogPage = lazy(() => import('@/app/audit-log/view'))
+const DataSystemPage = lazy(() => import('@/app/data-sistem/view'))
 const CatatanSayaPage = lazy(() => import('@/app/catatan-saya/view'))
 
 /**
@@ -85,7 +86,6 @@ export const SPECIAL_PAGES = [
     'jurnal-banding', 'surat', 'surat-daftar', 'permintaan-surat',
     'profile', 'ProfileSaya', 'dashboard', 'jadwal',
     'sanggar-kurikulum', 'form/builder', 'form/responses', 'informasi/kelola',
-    'audit-log',
 ]
 
 export const PAGE_COMPONENTS: Record<string, (user: User, onRefreshUser: () => Promise<void>, targetTab?: string) => React.ReactNode> = {
@@ -106,6 +106,7 @@ export const PAGE_COMPONENTS: Record<string, (user: User, onRefreshUser: () => P
     'wali-kelas': (user) => <WaliKelasPage user={user} />,
     'ekstrakurikuler': (user) => <EkskulPembinaPage user={user} />,
     'prestasi': (user) => <PrestasiPage user={user} />,
+    'inventaris': (user) => <InventoryPage user={user} />,
 
     'kokurikuler': (user) => <KokurikulerPage user={user} />,
 
@@ -119,7 +120,7 @@ export const PAGE_COMPONENTS: Record<string, (user: User, onRefreshUser: () => P
     'pengaturan-data': (user) => <DataSettingsPage user={user} />,
     'pengaturan-tugas': (user) => <TaskSettingsPage user={user} />,
     'pengaturan-users': (user) => <UserSettingsPage user={user} />,
-    'audit-log': (user) => <AuditLogPage user={user} />,
+    'data-sistem': (user) => <DataSystemPage user={user} />,
     'profile': (user, onRefreshUser) => <ProfilePage user={user} onRefreshUser={onRefreshUser} />,
     'ProfileSaya': (user, onRefreshUser) => <ProfilePage user={user} onRefreshUser={onRefreshUser} />,
 

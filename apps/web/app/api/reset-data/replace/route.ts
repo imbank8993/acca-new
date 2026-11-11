@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
     if (!(await bolehAksesFitur(user, PENGATURAN_DATA_ACCESS_KEYS.ganti_massal))) throw new BulkDataError('Anda tidak berwenang memakai Ganti Data Massal.', 403)
     let body
     try { body = await request.json() } catch { throw new BulkDataError('Permintaan tidak valid.') }
-    return NextResponse.json(await replaceBulkData(body?.rows, user.isAdmin, undefined, user), { headers })
+    return NextResponse.json(await replaceBulkData(body?.rows, user.isAdmin), { headers })
   } catch (error) {
     const failure = bulkFailure(error)
     return NextResponse.json({ ok: false, error: failure.message }, { status: failure.status, headers })

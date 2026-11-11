@@ -65,6 +65,7 @@ export default function Page() {
   { path: 'nilai-siswa', importPath: '@/app/nilai-siswa/view' },
   { path: 'catatan-keuangan', importPath: '@/app/catatan-keuangan/view' },
   { path: 'layanan-ptsp', importPath: '@/app/layanan-ptsp/view' },
+  { path: 'inventaris', importPath: '@/app/inventaris/view' },
   { path: 'klinik', importPath: '@/app/klinik/view' },
   { path: 'bank-data', importPath: '@/app/bank-data/view' },
   { path: 'keuangan', importPath: '@/app/keuangan/view' },

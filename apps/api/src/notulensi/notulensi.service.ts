@@ -1,6 +1,5 @@
 import { Injectable, BadRequestException, NotFoundException, ForbiddenException, ConflictException, InternalServerErrorException, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { AuditService } from '../common/audit.service';
 import { notulensiDirectory, NotulensiDirectory } from './notulensi-access';
 import { NOTULENSI_LIST_SQL } from './notulensi-list';
 import {
@@ -104,7 +103,6 @@ export class NotulensiService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly featureAccess: FeatureAccessGuard,
-    private readonly audit?: AuditService,
   ) {}
 
   private async directory() {
@@ -334,16 +332,7 @@ export class NotulensiService {
 
     const result = this.projectRow(inserted[0], user, directory);
 
-    if (this.audit) {
-      await this.audit.record({
-        user,
-        req,
-        action: 'CREATE_NOTULENSI_RAPAT',
-        entity: 'notulensi_rapat',
-        entityId: result.id,
-        details: { agenda: result.agenda, tanggal, status: result.status, jumlah_poin: poinPoin.length },
-      });
-    }
+
 
     return { success: true, data: result };
   }
@@ -424,16 +413,7 @@ export class NotulensiService {
 
     const result = this.projectRow(updated[0], user, directory);
 
-    if (this.audit) {
-      await this.audit.record({
-        user,
-        req,
-        action: 'UPDATE_NOTULENSI_RAPAT',
-        entity: 'notulensi_rapat',
-        entityId: result.id,
-        details: { agenda: result.agenda, tanggal, status: result.status },
-      });
-    }
+
 
     return { success: true, data: result };
   }
@@ -501,16 +481,7 @@ export class NotulensiService {
 
     });
 
-    if (this.audit) {
-      await this.audit.record({
-        user,
-        req,
-        action: 'UPDATE_STATUS_NOTULENSI',
-        entity: 'notulensi_rapat',
-        entityId: result.id,
-        details: { status: result.status, poin_id: body.poin_id, poin_status: body.poin_status },
-      });
-    }
+
 
     return { success: true, data: result };
   }
@@ -527,16 +498,7 @@ export class NotulensiService {
     );
     if (!deleted) throw new ConflictException('Notulen sudah berubah. Muat ulang sebelum menghapus.');
 
-    if (this.audit) {
-      await this.audit.record({
-        user,
-        req,
-        action: 'DELETE_NOTULENSI_RAPAT',
-        entity: 'notulensi_rapat',
-        entityId: cleanId,
-        details: { agenda: existing.agenda },
-      });
-    }
+
 
     return { success: true };
   }
@@ -588,16 +550,7 @@ export class NotulensiService {
       },
     });
 
-    if (this.audit) {
-      await this.audit.record({
-        user,
-        req,
-        action: 'UPDATE_PENGATURAN_NOTULENSI',
-        entity: 'site_settings',
-        entityId: NOTULENSI_KELOLA_KEY,
-        details: payloadValue,
-      });
-    }
+
 
     return {
       success: true,

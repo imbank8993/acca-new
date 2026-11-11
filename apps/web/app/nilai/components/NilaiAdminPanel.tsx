@@ -434,7 +434,7 @@ export default function NilaiAdminPanel({ user, onClose }: NilaiAdminPanelProps)
                         <li><strong>Guru Pengganti:</strong> <span style="color: #2563eb; font-weight: bold;">${toName} (${toNip})</span></li>
                     </ul>
                     <p style="color: #ef4444; font-size: 0.8rem; margin-top: 8px;">
-                        * Seluruh data nilai siswa, tagihan tugas, bobot penilaian, dan sesi apresiasi akan dialihkan ke guru baru. Tindakan ini dicatat ke log audit sistem.
+                        * Seluruh data nilai siswa, tagihan tugas, bobot penilaian, dan sesi apresiasi akan dialihkan ke guru baru.
                     </p>
                 </div>
             `,

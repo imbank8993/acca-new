@@ -8,7 +8,6 @@ import helmet from 'helmet';
 import { AppModule } from './app.module';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
-import { AuditContextInterceptor } from './common/interceptors/audit-context.interceptor';
 
 import { Prisma } from '@prisma/client';
 
@@ -65,7 +64,7 @@ async function bootstrap() {
 
   // Global Exception Filter & Logging Interceptor
   app.useGlobalFilters(new AllExceptionsFilter());
-  app.useGlobalInterceptors(new AuditContextInterceptor(), new LoggingInterceptor());
+  app.useGlobalInterceptors(new LoggingInterceptor());
 
   /**
    * Swagger Documentation Setup.

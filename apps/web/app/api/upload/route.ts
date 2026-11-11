@@ -347,6 +347,16 @@ export async function POST(req: NextRequest) {
         const folder = rawFolder.replace(/\/+/g, '/').replace(/^\/|\/$/g, '') || 'general';
         formData.set('folder', folder);
 
+        if (folder === 'inventaris') {
+            const roles = user.roles.map(r => r.toUpperCase());
+            if (!roles.some((r: string) => ['ADMIN', 'ADMINISTRATOR', 'OP_INVENTARIS', 'KTU', 'WKM_SARPRAS'].includes(r))) {
+                return NextResponse.json({ ok: false, error: 'Hanya petugas inventaris yang dapat mengunggah foto barang' }, { status: 403 });
+            }
+            if (file.size > 5 * 1024 * 1024 || !['jpg', 'jpeg', 'png', 'webp'].includes(ext) || !file.type.startsWith('image/')) {
+                return NextResponse.json({ ok: false, error: 'Foto harus JPG, PNG, atau WebP maksimal 5 MB' }, { status: 400 });
+            }
+        }
+
         if (folder === 'tugas-siswa') {
             const permission = await nestFetchAsUser('/tugas-siswa/upload-access', token);
             if (permission.status !== 200 || !permission.body?.ok) return NextResponse.json({ ok: false, error: 'Anda tidak memiliki izin mengunggah lampiran tugas' }, { status: permission.status === 401 ? 401 : 403 });
@@ -415,7 +425,7 @@ export async function POST(req: NextRequest) {
                 }, { status: 400 });
         }
 
-        const requiresRegistry = folder === 'laporan_keuangan' || folder === 'bukti_keuangan' || folder === 'prestasi' || folder === 'tugas-siswa';
+        const requiresRegistry = folder === 'laporan_keuangan' || folder === 'bukti_keuangan' || folder === 'prestasi' || folder === 'tugas-siswa' || folder === 'inventaris';
         // Unggahan yang memerlukan verifikasi pemilik wajib tercatat.
         try {
             const uploadedFile = formData.get('file');

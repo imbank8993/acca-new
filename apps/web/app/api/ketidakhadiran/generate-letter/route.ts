@@ -396,7 +396,6 @@ export async function POST(request: NextRequest) {
       });
 
       await tx.system_config.create({ data: { key: `acca-snapshot-${created.id}`, value: letterHtml, description: 'Arsip HTML surat ACCA', updated_by: actor.id } });
-      await tx.audit_logs.create({ data: { user_id: actor.id, user_nip: actor.nip, user_name: actor.nama.slice(0,100), user_role: actor.roles.join(',').slice(0,100), action: forceReprint ? 'REPRINT' : 'CREATE_LETTER', entity: 'acca_letters', entity_id: created.id } });
       return NextResponse.json({
         ok: true,
         data: {

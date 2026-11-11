@@ -168,7 +168,7 @@ async function cascadeIdentity(db: Database, columns: Column[], row: BulkRow, va
   return changed
 }
 
-export async function replaceBulkData(input: unknown, admin: boolean, db = prisma, actor?: { authId: string; nip: string; nama: string; roles: string[] }) {
+export async function replaceBulkData(input: unknown, admin: boolean, db = prisma) {
   const rows = validateRows(input)
   const cascades = new Map<string, string>()
   for (const row of rows) if ((row.table === 'master_siswa' && row.column === 'nisn') || (row.table === 'master_guru' && row.column === 'nip')) {
@@ -216,11 +216,6 @@ export async function replaceBulkData(input: unknown, admin: boolean, db = prism
       if (affected !== 1) throw new BulkDataError('Jumlah baris berubah tidak sesuai. Seluruh perubahan dibatalkan.', 409)
       related += await cascadeIdentity(tx, columns, row, row.newValue!)
     }
-    if (actor) await tx.audit_logs.create({ data: {
-      user_id: actor.authId.slice(0,100), user_nip: actor.nip.slice(0,50), user_name: actor.nama.slice(0,100), user_role: actor.roles.join(',').slice(0,100),
-      action: 'BULK_REPLACE', entity: 'pengaturan-data',
-      details: { cells: rows.map(r => ({ table: r.table, column: r.column, key: r.rowId })), relatedUpdated: related },
-    } })
     return { ok: true, updated: locked.size, failed: 0, relatedUpdated: related,
       results: rows.map(r => ({ id: r.id, table: r.table, column: r.column, rowId: r.rowId, status: 'ok' })),
       message: `Berhasil memperbarui ${locked.size} sel dan ${related} baris terkait.` }

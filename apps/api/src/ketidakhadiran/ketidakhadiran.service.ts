@@ -86,14 +86,6 @@ export class KetidakhadiranService {
       const service = new KetidakhadiranService(tx as unknown as PrismaService);
       service.inTransaction = true;
       const result = await work(service);
-      await tx.audit_logs.create({ data: {
-        user_id: String(user?.authId || user?.id || ''), user_nip: user?.nip || null,
-        user_name: String(user?.nama_lengkap || user?.nama || '').slice(0, 100),
-        user_role: (user?.roles || []).join(',').slice(0, 100), action,
-        entity: action.includes('MEDICAL') ? 'rekam_medis_siswa' : action.includes('LETTER') ? 'acca_letters' : 'ketidakhadiran',
-        entity_id: entityId || (result as any)?.data?.id || null,
-        details: { outcome: (result as any)?.ok === false ? 'rejected' : 'success' },
-      } });
       return result;
     }, { timeout: 20000, maxWait: 10000 });
   }

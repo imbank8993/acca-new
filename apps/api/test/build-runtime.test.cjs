@@ -37,8 +37,7 @@ test('compiled backend initializes all Nest modules without TypeScript loaders',
     const { ConfigService } = require('@nestjs/config');
     const { AppModule } = require('../dist/src/app.module.js');
     const { PrismaService } = require('../dist/src/prisma/prisma.service.js');
-    // Replace the database before instantiation: this smoke check must never
-    // connect to or install audit triggers on a real database.
+    // Replace the database before instantiation: this smoke check must never access the live database.
     const module = await Test.createTestingModule({ imports: [AppModule] })
         .overrideProvider(PrismaService).useValue({ $queryRawUnsafe: async () => [] })
         .overrideProvider(ConfigService).useValue(new ConfigService({ JWT_SECRET: 'build-smoke-test-only' }))

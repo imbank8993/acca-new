@@ -50,18 +50,6 @@ export class InformasiController {
     return this.informasiService.updateInformasi(body, req.user);
   }
 
-  @Get('audit-logs')
-  @FeatureAccess(ALL_INFORMASI_KEYS, ...WKM_INFORMASI)
-  async getAuditLogs(
-    @Query('limit') limit?: string,
-    @Query('offset') offset?: string,
-    @Query('entity') entity?: string,
-  ) {
-    const limitNum = limit ? parseInt(limit, 10) : 50;
-    const offsetNum = offset ? parseInt(offset, 10) : 0;
-    return this.informasiService.getAuditLogs(limitNum, offsetNum, entity);
-  }
-
   @Delete()
   @FeatureAccess(ALL_INFORMASI_KEYS, ...WKM_INFORMASI)
   async deleteInformasi(

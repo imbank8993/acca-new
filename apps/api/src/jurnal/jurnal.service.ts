@@ -706,9 +706,6 @@ export class JurnalService {
     const start = new Date(startDate);
     const end = new Date(endDate);
     
-    // Log audit actor for generation
-    console.log(`[AUDIT] User ${apiUser?.username || apiUser?.nip || 'Unknown'} generating journals from ${startDate} to ${endDate}`);
-
     const results = {
       generated: 0,
       dilewati_sudah_ada: 0,

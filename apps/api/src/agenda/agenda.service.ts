@@ -3,7 +3,6 @@ import { randomBytes } from 'crypto';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { StorageService } from '../common/storage.service';
-import { AuditService } from '../common/audit.service';
 import {
   AGENDA_KELOLA_KEY,
   LIBUR_ACCESS_KEY,
@@ -84,7 +83,6 @@ export class AgendaService {
     private readonly prisma: PrismaService,
     private readonly storage: StorageService,
     private readonly featureAccess: FeatureAccessGuard,
-    private readonly audit?: AuditService,
   ) {}
 
   /**
@@ -240,22 +238,7 @@ export class AgendaService {
       },
     });
 
-    if (this.audit) {
-      await this.audit.record({
-        user,
-        req,
-        action: 'CREATE_AGENDA',
-        entity: 'agenda_akademik',
-        entityId: data.id.toString(),
-        details: {
-          judul: data.judul,
-          kategori: data.kategori,
-          tanggal_mulai: toLocalISODate(data.tanggal_mulai),
-          tanggal_selesai: toLocalISODate(data.tanggal_selesai),
-          is_publik: data.is_publik,
-        },
-      });
-    }
+
 
     return formatAgenda(data);
   }
@@ -296,22 +279,7 @@ export class AgendaService {
       },
     });
 
-    if (this.audit) {
-      await this.audit.record({
-        user,
-        req,
-        action: 'UPDATE_AGENDA',
-        entity: 'agenda_akademik',
-        entityId: data.id.toString(),
-        details: {
-          judul: data.judul,
-          kategori: data.kategori,
-          tanggal_mulai: toLocalISODate(data.tanggal_mulai),
-          tanggal_selesai: toLocalISODate(data.tanggal_selesai),
-          is_publik: data.is_publik,
-        },
-      });
-    }
+
 
     return formatAgenda(data);
   }
@@ -324,23 +292,11 @@ export class AgendaService {
       select: { id: true, judul: true, kategori: true, foto: true }
     });
     if (!agenda) throw new NotFoundException('Agenda tidak ditemukan');
-    
+
     const deleted = await this.prisma.agenda_akademik.delete({ where: { id: idBigInt } });
     await this.cleanupFoto(this.parseFoto(deleted.foto).map(f => f.url));
 
-    if (this.audit) {
-      await this.audit.record({
-        user,
-        req,
-        action: 'DELETE_AGENDA',
-        entity: 'agenda_akademik',
-        entityId: idBigInt.toString(),
-        details: {
-          judul: agenda.judul,
-          kategori: agenda.kategori,
-        },
-      });
-    }
+
 
     return { success: true };
   }
@@ -370,16 +326,7 @@ export class AgendaService {
       },
     });
 
-    if (this.audit) {
-      await this.audit.record({
-        user,
-        req,
-        action: 'CREATE_AGENDA_KATEGORI',
-        entity: 'master_agenda_kategori',
-        entityId: data.id.toString(),
-        details: { nama: data.nama, color: data.color, icon: data.icon },
-      });
-    }
+
 
     return {
       ...data,
@@ -420,16 +367,7 @@ export class AgendaService {
       });
     }
 
-    if (this.audit) {
-      await this.audit.record({
-        user,
-        req,
-        action: 'UPDATE_AGENDA_KATEGORI',
-        entity: 'master_agenda_kategori',
-        entityId: data.id.toString(),
-        details: { nama: data.nama, color: data.color, icon: data.icon },
-      });
-    }
+
 
     return {
       ...data,
@@ -449,16 +387,7 @@ export class AgendaService {
       where: { id: idBigInt },
     });
 
-    if (this.audit) {
-      await this.audit.record({
-        user,
-        req,
-        action: 'DELETE_AGENDA_KATEGORI',
-        entity: 'master_agenda_kategori',
-        entityId: idBigInt.toString(),
-        details: { nama: existing.nama },
-      });
-    }
+
 
     return { success: true };
   }
@@ -568,20 +497,7 @@ export class AgendaService {
     }
     for (const foto of uploaded) await this.registerUpload(foto.uploadEntry);
 
-    if (this.audit) {
-      await this.audit.record({
-        user,
-        req,
-        action: 'UPLOAD_AGENDA_FOTO',
-        entity: 'agenda_akademik',
-        entityId: agendaIdBigInt.toString(),
-        details: {
-          judul: existingAgenda.judul,
-          jumlah_foto: files.length,
-          files: uploaded.map(u => ({ url: u.url, caption: u.caption })),
-        },
-      });
-    }
+
 
     return newFoto;
   }
@@ -601,19 +517,7 @@ export class AgendaService {
       return [...desired, ...current.filter(f => !submitted.has(f.url))];
     });
 
-    if (this.audit) {
-      await this.audit.record({
-        user,
-        req,
-        action: 'UPDATE_AGENDA_FOTO_ORDER',
-        entity: 'agenda_akademik',
-        entityId: agendaIdBigInt.toString(),
-        details: {
-          judul: existingAgenda.judul,
-          total_foto: newFoto.length,
-        },
-      });
-    }
+
 
     return newFoto;
   }
@@ -627,19 +531,7 @@ export class AgendaService {
     });
     await this.cleanupFoto([url]);
 
-    if (this.audit) {
-      await this.audit.record({
-        user,
-        req,
-        action: 'DELETE_AGENDA_FOTO',
-        entity: 'agenda_akademik',
-        entityId: agendaIdBigInt.toString(),
-        details: {
-          judul: existingAgenda.judul,
-          url,
-        },
-      });
-    }
+
 
     return newFoto;
   }

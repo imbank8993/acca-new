@@ -358,7 +358,7 @@ export class AccessService {
     if (roles.includes('OP_FORM')) pages.add('form');
     const upperRoles = roles.map((r) => r.toUpperCase());
     if (upperRoles.includes('ADMIN') || upperRoles.includes('ADMINISTRATOR')) {
-      pages.add('audit-log');
+      pages.add('data-sistem');
       pages.add('e-sertifikat');
       pages.add('monitoring');
       pages.add('notulensi-rapat');
@@ -473,7 +473,7 @@ export class AccessService {
       if (roles.includes('OP_FORM')) pages.add('form');
       const upperUserRoles = roles.map((r) => r.toUpperCase());
       if (upperUserRoles.includes('ADMIN') || upperUserRoles.includes('ADMINISTRATOR')) {
-        pages.add('audit-log');
+        pages.add('data-sistem');
         pages.add('monitoring');
         pages.add('notulensi-rapat');
       }

@@ -24,6 +24,7 @@ const ICON_MAP: Record<string, string> = {
   'pengaturan-data': 'bi-gear',
   'pengaturan-tugas': 'bi-person-check',
   'pengaturan-users': 'bi-people',
+  'data-sistem': 'bi-database-check',
   'monitoring': 'bi-eye',
   'tugas-tambahan': 'bi-star',
   'kinerja-guru': 'bi-graph-up-arrow',
@@ -42,7 +43,6 @@ const ICON_MAP: Record<string, string> = {
   'ekskul': 'bi-person-plus',
   'kelulusan': 'bi-mortarboard',
   'agenda-madrasah': 'bi-calendar-event',
-  'audit-log': 'bi-shield-check',
 };
 
 const COLORS = [

@@ -3,17 +3,16 @@ const source=fs.readFileSync('apps/web/lib/bulk-data.ts','utf8');
 const loaded={exports:{}};vm.runInNewContext(ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,{module:loaded,exports:loaded.exports,require:()=>({}),Date});
 const {searchBulkData,replaceBulkData}=loaded.exports;
 const col=(table,column,type='text',extra={})=>({table,column,type,primary:['id'],generated:false,primaryColumn:false,...extra});
-const defaultColumns=[col('new_business_table','id','int8',{primaryColumn:true}),col('new_business_table','alamat'),col('new_business_table','jumlah','numeric'),col('new_business_table','config','jsonb'),col('new_business_table','status','bool'),col('users','password_hash'),col('users','role'),col('new_business_table','computed','text',{generated:true}),col('audit_logs','details','jsonb')];
+const defaultColumns=[col('new_business_table','id','int8',{primaryColumn:true}),col('new_business_table','alamat'),col('new_business_table','jumlah','numeric'),col('new_business_table','config','jsonb'),col('new_business_table','status','bool'),col('users','password_hash'),col('users','role'),col('new_business_table','computed','text',{generated:true})];
 const item=(column='alamat',oldJson='"Lama"',newValue='Baru',table='new_business_table',rowId='{"id":9007199254740993123}')=>({table,column,oldJson,newValue,rowId,tableKey:'__primary_key__'});
 function fixture(columns=defaultColumns,{failureAt=0,oldJson='"Lama"'}={}){
- let writes=[],committed=[],queries=[],audits=[];
+ let writes=[],committed=[],queries=[];
  const tx={
   async $queryRawUnsafe(sql,...params){queries.push({sql,params});if(sql.includes('FROM pg_class'))return columns;if(sql.includes('CROSS JOIN LATERAL'))return [{column:'alamat',oldValue:'Lama',oldJson:'"Lama"',rowId:'{"id":9007199254740993123}',rowLabel:'Data contoh'}];return [{oldJson}];},
   async $executeRawUnsafe(sql,...params){if(sql.startsWith('SET LOCAL'))return 0;writes.push({sql,params});if(failureAt&&writes.length===failureAt)throw Error('Injected update failure');return 1;},
-  audit_logs:{async create(data){audits.push(data);}},
  };
  const db={...tx,async $transaction(work){writes=[];try{const result=await work(tx);committed=[...writes];return result;}catch(error){writes=[];throw error;}}};
- return{db,queries,audits,get writes(){return writes},get committed(){return committed}};
+ return{db,queries,get writes(){return writes},get committed(){return committed}};
 }
 
 test('Schema discovery includes unlisted business tables and all supported column types',async()=>{
@@ -24,8 +23,8 @@ test('Schema discovery includes unlisted business tables and all supported colum
  for(const key of ['password_hash','computed'])assert(!sql.includes(key));
  assert(result.results[0].id.includes('alamat'));
 });
-test('Passwords, generated fields, primary keys and access/audit configuration cannot be changed',async()=>{
- for(const row of [item('password_hash','"Lama"','new','users'),item('computed'),item('id'),item('details','{}','{}','audit_logs')]){
+test('Passwords, generated fields and primary keys cannot be changed',async()=>{
+ for(const row of [item('password_hash','"Lama"','new','users'),item('computed'),item('id')]){
   const f=fixture();await assert.rejects(replaceBulkData([row],true,f.db),e=>e.status===403);assert.equal(f.committed.length,0);
  }
 });
@@ -73,10 +72,6 @@ test('NISN changes discover reference columns and update linked user identity',a
  await replaceBulkData([item('nisn','"00123"','00456','master_siswa','{"id":1}')],true,f.db);
  assert(f.writes.some(w=>w.sql.includes('UPDATE "public"."new_student_relation"')));
  assert(f.writes.some(w=>w.sql.includes('UPDATE public.users')&&w.params[0]==='00456'&&w.params[1]==='00123'));
-});
-test('Changes are audited without storing replacement values',async()=>{
- const f=fixture();await replaceBulkData([item()],true,f.db,{authId:'1',nip:'admin',nama:'Admin',roles:['ADMIN']});
- assert.equal(f.audits[0].data.action,'BULK_REPLACE');assert(!JSON.stringify(f.audits).includes('Baru'));
 });
 test('Large numbers inside JSON remain exact in the database parameter',async()=>{
  const f=fixture();await replaceBulkData([item('config','"Lama"','{"number":9007199254740993123}')],true,f.db);

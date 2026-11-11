@@ -23,6 +23,7 @@ export interface PageRequirement {
 }
 
 export const PAGE_ROLE_REQUIREMENTS: Record<string, PageRequirement> = {
+    'inventaris': { allowedRoles: ['ADMIN', 'ADMINISTRATOR', 'GURU', 'SISWA', 'STAF', 'TENDIK', 'KTU', 'WKM_SARPRAS', 'OP_INVENTARIS'], defaultAction: 'view', roleActions: { 'ADMIN': 'manage', 'ADMINISTRATOR': 'manage', 'OP_INVENTARIS': 'manage', 'KTU': 'manage', 'WKM_SARPRAS': 'manage' }, description: 'Daftar barang dan peminjaman inventaris' },
     'e-sertifikat': { allowedRoles: ['ADMIN', 'ADMINISTRATOR', 'GURU', 'STAF', 'TENDIK', 'KAMAD', 'KTU'], defaultAction: 'manage', description: 'Kelola dan terbitkan e-sertifikat kegiatan' },
     // === DASHBOARD & INFO ===
     'dashboard': { allowedRoles: ['ADMIN', 'GURU', 'WALI_KELAS', 'SISWA'], defaultAction: 'view', description: 'Dashboard utama' },
@@ -113,13 +114,7 @@ export const PAGE_ROLE_REQUIREMENTS: Record<string, PageRequirement> = {
     'pengaturan_tugas:jadwal_piket': { allowedRoles: ['ADMIN'], defaultAction: 'manage', description: 'Tab Jadwal Piket' },
     'pengaturan_tugas:tugas_tambahan': { allowedRoles: ['ADMIN'], defaultAction: 'manage', description: 'Tab Plotting Tugas Tambahan' },
 
-    // === AUDIT LOG ===
-    'audit-log': {
-        allowedRoles: ['ADMIN', 'KAMAD', 'KTU', 'OP_PENGUMUMAN', 'WKM_AKADEMIK', 'WKM_KESISWAAN', 'WKM_HUMAS', 'WKM_SARPRAS'],
-        defaultAction: 'view',
-        roleActions: { 'ADMIN': 'manage' },
-        description: 'Jejak Audit Sistem'
-    },
+    'data-sistem': { allowedRoles: ['ADMIN', 'ADMINISTRATOR'], defaultAction: 'view', description: 'Tabel dan Dokumen Sistem' },
 
     // === LAIN-LAIN ===
     'monitoring': {

@@ -41,10 +41,10 @@ export interface RoleUsageAnalysis {
  */
 const ROLE_FUNCTION_DESCRIPTIONS: Record<string, Record<string, { action?: ActionLevel; desc: string }>> = {
   ADMIN: {
-    '*': { action: 'manage', desc: 'Hak akses penuh (Superuser): Kelola seluruh data, konfigurasi modul, approval, import/export, dan audit log.' }
+    '*': { action: 'manage', desc: 'Hak akses penuh (Superuser): Kelola seluruh data, konfigurasi modul, approval, dan import/export.' }
   },
   ADMINISTRATOR: {
-    '*': { action: 'manage', desc: 'Hak akses penuh (Superuser): Kelola seluruh data, konfigurasi modul, approval, import/export, dan audit log.' }
+    '*': { action: 'manage', desc: 'Hak akses penuh (Superuser): Kelola seluruh data, konfigurasi modul, approval, dan import/export.' }
   },
   GURU: {
     'dashboard': { action: 'view', desc: 'Melihat ringkasan jadwal mengajar, pengumuman, dan statistik aktivitas harian.' },

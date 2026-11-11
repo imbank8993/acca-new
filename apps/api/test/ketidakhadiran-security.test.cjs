@@ -45,7 +45,7 @@ function matches(row, where = {}) {
   return true;
 }
 function fixture(seed = {}, fail = () => false) {
-  let state = { ketidakhadiran: [], rekam_medis_siswa: [], audit_logs: [], acca_letters: [], acca_letter_sequence: [], system_config: [], file_uploads: [], orangtua_siswa: [], guru_asuh: [], wali_kelas: [], jadwal_guru: [], public_users: [], master_waktu: [], site_settings: [{ key: 'timezone', value: 'Asia/Makassar' }], master_siswa: [{ nisn: 'student', nama_lengkap: 'Canonical Student', gender: 'P', alamat: 'Canonical address' }], master_kelas: [{ nama: 'X', program: 'Reguler', aktif: true }], siswa_kelas: [{ nisn: 'student', kelas: 'X', aktif: true }], ...structuredClone(seed) };
+  let state = { ketidakhadiran: [], rekam_medis_siswa: [], acca_letters: [], acca_letter_sequence: [], system_config: [], file_uploads: [], orangtua_siswa: [], guru_asuh: [], wali_kelas: [], jadwal_guru: [], public_users: [], master_waktu: [], site_settings: [{ key: 'timezone', value: 'Asia/Makassar' }], master_siswa: [{ nisn: 'student', nama_lengkap: 'Canonical Student', gender: 'P', alamat: 'Canonical address' }], master_kelas: [{ nama: 'X', program: 'Reguler', aktif: true }], siswa_kelas: [{ nisn: 'student', kelas: 'X', aktif: true }], ...structuredClone(seed) };
   let serial = Promise.resolve(); let sequence = 0; let locks = 0;
   function adapter(getState) {
     const db = {};
@@ -133,12 +133,12 @@ test('Tanggal terbalik, waktu tidak valid dan status lain ditolak', async () => 
 test('Pagination dan mode log salah menghasilkan penolakan terkontrol', async () => {
   for(const q of [{mode:'unexpected'},{page:'abc'},{limit:'0'},{tanggal:'2026-02-30'}]) await assert.rejects(fixture().service.getLog(q,admin));
 });
-test('Input medis mengambil biodata resmi dan audit aktor sesi', async () => {
+test('Input medis mengambil biodata resmi', async () => {
   const f=fixture();const result=await f.service.createRekamMedisSiswa({nisn:'student',nama_siswa:'Forged',alamat:'Forged',keluhan:'Demam',tanggal:'2026-10-12',waktu:'08:00',tindak_lanjut:'Istirahat di UKS'},uks);
-  assert.equal(result.data.nama_siswa,'Canonical Student');assert.equal(result.data.alamat,'Canonical address');assert.equal(f.state.audit_logs[0].user_nip,'uks');
+  assert.equal(result.data.nama_siswa,'Canonical Student');assert.equal(result.data.alamat,'Canonical address');
 });
-test('Kegagalan sinkron atau audit membatalkan seluruh input medis', async () => {
-  for(const target of ['ketidakhadiran','audit_logs']) {
+test('Kegagalan sinkron membatalkan seluruh input medis', async () => {
+  for(const target of ['ketidakhadiran']) {
     const f=fixture({},(table,op)=>table===target && op==='create');
     await assert.rejects(f.service.createRekamMedisSiswa({nisn:'student',keluhan:'Demam',tanggal:'2026-10-12',waktu:'08:00',auto_sync:true,mappedStatus:'Ringan'},uks),/Injected/);
     assert.equal(f.state.rekam_medis_siswa.length,0);assert.equal(f.state.ketidakhadiran.length,0);
@@ -223,11 +223,11 @@ test('Route surat menolak anonim dan role yang tidak berhak tanpa write', async 
   const f=fixture();assert.equal((await letterRoute(f,null)({letterType:'REKAM_MEDIK'})).status,401);
   assert.equal((await letterRoute(f,{roles:['SISWA']})({letterType:'REKAM_MEDIK'})).status,403);assert.equal(f.state.acca_letters.length,0);
 });
-test('Cetak ulang menghapus surat lama, membuat arsip baru dan audit', async () => {
+test('Cetak ulang menghapus surat lama dan membuat arsip baru', async () => {
   const f=fixture({ketidakhadiran:[absence()],acca_letters:[{id:'old',nomor_surat:'001/UKS/2026',nomor_urut:1,jenis_izin:'REKAM_MEDIK',siswa_nisn:'student'}],system_config:[{key:'acca-snapshot-old',value:'old html'}]});
   const result=await letterRoute(f)({letterType:'REKAM_MEDIK',row:{id:'a',nama:'Forged'},forceReprint:true,oldLetterId:'old'});
   assert.equal(result.body.ok,true);assert.equal(f.state.acca_letters.length,1);assert.notEqual(f.state.acca_letters[0].id,'old');assert.equal(f.state.acca_letters[0].siswa_nama,'Student');
-  assert.equal(f.state.audit_logs[0].action,'REPRINT');assert.equal(f.state.system_config.length,1);assert.ok(f.state.acca_letters[0].barcode.length>30);
+  assert.equal(f.state.system_config.length,1);assert.ok(f.state.acca_letters[0].barcode.length>30);
 });
 test('Gagal render atau simpan surat pengganti tidak menghapus arsip lama', async () => {
   for(const renderFail of [true,false]) {

@@ -52,13 +52,8 @@ const ALWAYS_ALLOWED = new Set([
 
 /** Halaman yang hanya relevan untuk role tertentu tetapi belum diseed di role_pages. */
 const ROLE_SCOPED_EXTRAS: Record<string, string[]> = {
-    ADMIN: ['audit-log', 'monitoring', 'e-sertifikat'],
-    ADMINISTRATOR: ['audit-log', 'monitoring', 'e-sertifikat'],
-    WKM_AKADEMIK: ['audit-log'],
-    WKM_KESISWAAN: ['audit-log'],
-    WKM_KEASRAMAAN: ['audit-log'],
-    WKM_HUMAS: ['audit-log'],
-    OP_PENGUMUMAN: ['audit-log'],
+    ADMIN: ['data-sistem', 'monitoring', 'e-sertifikat'],
+    ADMINISTRATOR: ['data-sistem', 'monitoring', 'e-sertifikat'],
     ORANG_TUA: ['anak'],
     OP_AGENDA: ['agenda-madrasah'],
     SISWA: ['ketidakhadiran'],
@@ -360,9 +355,8 @@ export async function middleware(request: NextRequest) {
                 url.search = ''
                 return NextResponse.redirect(url)
             }
-            const isAdmin = access ? access.roles.some(r => ['ADMIN', 'ADMINISTRATOR'].includes(r.toUpperCase())) : false
             const extras = access ? access.roles.flatMap(r => ROLE_SCOPED_EXTRAS[r.toUpperCase()] || []) : []
-            const allowed = !!access?.found && (access.pages.has(pageId) || extras.includes(pageId) || (isAdmin && pageId === 'audit-log'))
+            const allowed = !!access?.found && (access.pages.has(pageId) || extras.includes(pageId))
 
             if (!allowed) {
                 url.pathname = '/dashboard'

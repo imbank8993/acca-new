@@ -6,9 +6,9 @@ const path = require('node:path');
 
 assert.ok(fs.existsSync(path.join(__dirname, '../dist/src/main.js')), 'Missing backend entry point: dist/src/main.js');
 assert.ok(require.resolve('@acca/shared').endsWith('.js'), 'Shared package must resolve to compiled JavaScript');
-const { withAuditContext, redactAuditValue } = require('@acca/shared');
-assert.equal(typeof withAuditContext, 'function');
-assert.deepEqual(redactAuditValue({ password: 'example' }), { password: '[Disamarkan]' });
+const { formLabelKey } = require('@acca/shared');
+assert.equal(typeof formLabelKey, 'function');
+assert.equal(formLabelKey([{ id: 'name', label: 'Nama' }], { id: 'name', label: 'Nama' }), 'Nama');
 const { PrismaService } = require('../dist/src/prisma/prisma.service.js');
 assert.equal(typeof PrismaService, 'function');
 const { AppModule } = require('../dist/src/app.module.js');

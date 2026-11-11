@@ -41,6 +41,7 @@ import { KetidakhadiranModule } from './ketidakhadiran/ketidakhadiran.module';
 import { AbsensiModule } from './absensi/absensi.module';
 import { LckhModule } from './lckh/lckh.module';
 import { PrestasiModule } from './prestasi/prestasi.module';
+import { InventoryModule } from './inventory/inventory.module';
 import { ObservasiKelasModule } from './observasi-kelas/observasi-kelas.module';
 import { SanggarModule } from './sanggar/sanggar.module';
 import { NilaiModule } from './nilai/nilai.module';
@@ -56,7 +57,7 @@ import { PaymentsModule } from './payments/payments.module';
 
 import { NotificationsModule } from './notifications/notifications.module';
 import { BankDataModule } from './bank-data/bank-data.module';
-import { AuditModule } from './audit/audit.module';
+import { DataSystemModule } from './data-system/data-system.module';
 import { SsoModule } from './sso/sso.module';
 import { CatatanPribadiModule } from './catatan-pribadi/catatan-pribadi.module';
 
@@ -105,6 +106,7 @@ import { CatatanPribadiModule } from './catatan-pribadi/catatan-pribadi.module';
     AbsensiModule,
     LckhModule,
     PrestasiModule,
+    InventoryModule,
     ObservasiKelasModule,
     SanggarModule,
     NilaiModule,
@@ -117,7 +119,7 @@ import { CatatanPribadiModule } from './catatan-pribadi/catatan-pribadi.module';
     KinerjaGuruModule,
     NotificationsModule,
     BankDataModule,
-    AuditModule,
+    DataSystemModule,
     SsoModule,
     CatatanPribadiModule,
     ThrottlerModule.forRoot([{

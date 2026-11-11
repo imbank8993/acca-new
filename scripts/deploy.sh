@@ -25,8 +25,6 @@ echo "🐳 [3/4] Melakukan build image dan menjalankan container..."
 docker compose build
 echo "🗄️ Menyiapkan kolom sasaran agenda..."
 docker compose run --rm --no-deps acca-api node node_modules/prisma/build/index.js db execute --schema apps/api/prisma/schema.prisma --file apps/api/prisma/sql/20261013_agenda_sasaran.sql
-echo "🗄️ Mengaktifkan audit perubahan database..."
-docker compose run --rm --no-deps acca-api node node_modules/prisma/build/index.js db execute --schema apps/api/prisma/schema.prisma --file apps/api/prisma/sql/20261022_system_audit.sql
 echo "Menyiapkan pemberitahuan surat masuk PTSP..."
 docker compose run --rm --no-deps acca-api node node_modules/prisma/build/index.js db execute --schema apps/api/prisma/schema.prisma --file apps/api/prisma/sql/20261102_ptsp_disposisi.sql
 docker compose run --rm --no-deps acca-api node node_modules/prisma/build/index.js db execute --schema apps/api/prisma/schema.prisma --file apps/api/prisma/sql/20261102_ptsp_surat_masuk.sql
@@ -35,9 +33,11 @@ docker compose run --rm --no-deps acca-api node node_modules/prisma/build/index.
 docker compose run --rm --no-deps acca-api node node_modules/prisma/build/index.js db execute --schema apps/api/prisma/schema.prisma --file apps/api/prisma/sql/20261103_payment_report_verifications.sql
 docker compose run --rm --no-deps acca-api node node_modules/prisma/build/index.js db execute --schema apps/api/prisma/schema.prisma --file apps/api/prisma/sql/20261103_klinik_payment_note.sql
 docker compose run --rm --no-deps acca-api node node_modules/prisma/build/index.js db execute --schema apps/api/prisma/schema.prisma --file apps/api/prisma/sql/20261107_uploaded_document_share_links.sql
+docker compose run --rm --no-deps acca-api node node_modules/prisma/build/index.js db execute --schema apps/api/prisma/schema.prisma --file apps/api/prisma/sql/20261111_inventory.sql
 docker compose run --rm --no-deps acca-api node apps/api/prisma/verify-ptsp-db.cjs --letters
 
 docker compose up -d --remove-orphans
+docker compose run --rm --no-deps acca-api node node_modules/prisma/build/index.js db execute --schema apps/api/prisma/schema.prisma --file apps/api/prisma/sql/20261111_remove_system_audit.sql
 sh scripts/check-deployment-health.sh
 
 # 4. Bersihkan cache/image lama
