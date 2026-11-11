@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { Spinner } from '@/components/ui/Spinner';
+import FilterToolbar, { FilterSearch, FilterSelect } from '@/components/ui/FilterToolbar';
 import './committee-monitoring.css';
 
 type CommitteeRow = {
@@ -57,13 +58,12 @@ export default function CommitteeMonitoring() {
             <div><span>Sudah dibayar</span><strong>{money(totalPaid)}</strong></div>
         </div>
 
-        <div className="mon-komite-filter">
-            <label className="mon-komite-search"><i className="bi bi-search" aria-hidden="true" /><input value={query} onChange={event => setQuery(event.target.value)} placeholder="Cari kegiatan atau PJ..." aria-label="Cari kegiatan atau PJ" /></label>
-            <select value={year} onChange={event => setYear(event.target.value)} aria-label="Filter tahun">
-                <option value="ALL">Semua tahun</option>
-                {years.map(value => <option value={value} key={value}>{value}</option>)}
-            </select>
-        </div>
+        <FilterToolbar>
+            <FilterSearch value={query} onChange={setQuery} placeholder="Cari kegiatan atau PJ..." grow={2} />
+            <FilterSelect label="Tahun" icon="calendar3" value={year} onChange={setYear}
+                options={[{ value: 'ALL', label: 'Semua tahun' }, ...years.map(value => ({ value, label: value }))]}
+                width={150} />
+        </FilterToolbar>
 
         {loading ? <div className="mon-komite-state"><Spinner size={32} /> Memuat pengajuan komite...</div>
             : error ? <div className="mon-komite-state" role="alert">{error}</div>

@@ -1,15 +1,9 @@
 .mon-komite { display: grid; gap: 18px; }
 .mon-komite-summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
-.mon-komite-summary > div, .mon-komite-card, .mon-komite-filter, .mon-komite-state { background: var(--n-card, #fff); border: 1px solid var(--n-border, #e2e8f0); border-radius: 16px; }
+.mon-komite-summary > div, .mon-komite-card, .mon-komite-state { background: var(--n-card, #fff); border: 1px solid var(--n-border, #e2e8f0); border-radius: 16px; }
 .mon-komite-summary > div { padding: 16px 18px; display: grid; gap: 6px; min-width: 0; }
 .mon-komite-summary span, .mon-komite-card-data span { color: var(--n-muted, #64748b); font-size: .76rem; font-weight: 600; }
 .mon-komite-summary strong { color: var(--n-ink, #0f172a); font-size: 1.25rem; overflow-wrap: anywhere; }
-.mon-komite-filter { display: flex; gap: 12px; padding: 12px; }
-.mon-komite-search { position: relative; flex: 1; display: flex; align-items: center; }
-.mon-komite-search i { position: absolute; left: 13px; color: var(--n-muted, #64748b); }
-.mon-komite-filter input, .mon-komite-filter select { height: 42px; border: 1px solid var(--n-border, #cbd5e1); border-radius: 11px; background: var(--n-card, #fff); color: var(--n-ink, #0f172a); font: inherit; }
-.mon-komite-filter input { width: 100%; padding: 0 12px 0 38px; }
-.mon-komite-filter select { min-width: 145px; padding: 0 12px; }
 .mon-komite-list { display: grid; gap: 12px; }
 .mon-komite-card { padding: 18px 20px; }
 .mon-komite-card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
@@ -22,7 +16,7 @@
 .mon-komite-card-data > div { display: grid; align-content: start; gap: 5px; min-width: 0; }
 .mon-komite-card-data strong { color: var(--n-ink, #0f172a); font-size: .93rem; overflow-wrap: anywhere; }
 .mon-komite-state { display: flex; align-items: center; justify-content: center; gap: 12px; min-height: 130px; padding: 20px; color: var(--n-muted, #64748b); }
-.dark .mon-komite-summary > div, .dark .mon-komite-card, .dark .mon-komite-filter, .dark .mon-komite-state { background: #0b1329; border-color: rgba(26,115,232,.3); }
+.dark .mon-komite-summary > div, .dark .mon-komite-card, .dark .mon-komite-state { background: #0b1329; border-color: rgba(26,115,232,.3); }
 .dark .mon-komite-status { background: #513b15; color: #ffd28b; }
 .dark .mon-komite-status.is-partial { background: #153564; color: #b9d7ff; }
 .dark .mon-komite-status.is-paid { background: #12412d; color: #a8f0c7; }
@@ -33,8 +27,6 @@
     .mon-komite-card { padding: 16px; }
 }
 @media (max-width: 430px) {
-    .mon-komite-filter { flex-direction: column; }
-    .mon-komite-filter select { width: 100%; }
     .mon-komite-summary > div { padding: 13px; }
     .mon-komite-summary strong { font-size: 1rem; }
 }
