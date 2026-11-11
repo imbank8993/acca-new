@@ -6,51 +6,11 @@
 .inv-page {
   max-width: 1440px;
   margin: 0 auto;
-  padding: 24px 20px 80px;
+  padding: 16px 20px 80px;
   color: var(--n-ink, #0f172a);
   display: flex;
   flex-direction: column;
   gap: 16px;
-}
-
-/* --------------------------------- Heading --------------------------------- */
-
-.inv-heading {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 20px;
-  margin-bottom: 4px;
-}
-
-.inv-heading__text {
-  min-width: 0;
-}
-
-.inv-eyebrow {
-  display: block;
-  font-size: 0.69rem;
-  letter-spacing: 0.12em;
-  font-weight: 800;
-  text-transform: uppercase;
-  color: var(--n-primary, #3083ff);
-  margin-bottom: 4px;
-}
-
-.inv-heading h1 {
-  font-size: 2rem;
-  line-height: 1.15;
-  margin: 0 0 6px;
-  font-weight: 800;
-  color: var(--n-ink, #0f172a);
-  letter-spacing: -0.02em;
-}
-
-.inv-heading p {
-  margin: 0;
-  color: var(--n-muted, #64748b);
-  font-size: 0.92rem;
-  line-height: 1.5;
 }
 
 /* ---------------------------------- Stats ---------------------------------- */
@@ -489,17 +449,7 @@
 
 @media (max-width: 680px) {
   .inv-page {
-    padding: 16px 12px 72px;
-  }
-
-  .inv-heading {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 14px;
-  }
-
-  .inv-heading h1 {
-    font-size: 1.6rem;
+    padding: 12px 12px 72px;
   }
 
   .inv-form-grid {

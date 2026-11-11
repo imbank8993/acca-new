@@ -23,6 +23,8 @@ import {
 } from '@/components/ui/FilterToolbar';
 import { InlineSelect } from '@/components/ui/InlineSelect';
 import { Spinner } from '@/components/ui/Spinner';
+import { MobileFab } from '@/components/mobile';
+import { DesktopFab } from '@/components/ui/DesktopFab';
 import './inventaris.css';
 
 type Item = {
@@ -412,19 +414,13 @@ export default function InventoryView({ user }: { user: { roles?: string[]; role
 
   return (
     <div className="inv-page">
-      {/* --------------------------- Page Header --------------------------- */}
-      <div className="inv-heading">
-        <div className="inv-heading__text">
-          <span className="inv-eyebrow">ACCA • PENGELOLAAN SARANA</span>
-          <h1>Inventaris</h1>
-          <p>Kelola barang, ajukan peminjaman, dan simpan bukti persetujuan dalam satu tempat.</p>
-        </div>
-        {isManager && (
-          <Button variant="primary" icon="add" onClick={() => openItem()}>
-            Tambah Barang
-          </Button>
-        )}
-      </div>
+      {/* -------------------- Floating Action Button (FAB) ----------------- */}
+      {isManager && (
+        <>
+          <DesktopFab label="Tambah Barang" icon="plus-lg" onClick={() => openItem()} />
+          <MobileFab label="Tambah Barang" icon="plus-lg" onClick={() => openItem()} />
+        </>
+      )}
 
       {/* ---------------- 1. TAB BAR AT TOP (Ikuti Gambar ke-2) ------------- */}
       <Tab<'barang' | 'pinjaman'>
