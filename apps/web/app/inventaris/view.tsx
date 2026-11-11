@@ -111,21 +111,20 @@ export default function InventoryView({ user }: { user: { roles?: string[]; role
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
 
-  // Tabs & Views
+  // Primary Tab
   const [tab, setTab] = useState<'barang' | 'pinjaman'>('barang');
-  const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
-  const [loanViewMode, setLoanViewMode] = useState<'cards' | 'table'>('cards');
-  const [sortBy, setSortBy] = useState('name_asc');
 
   // Filters for Items
-  const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
   const [conditionFilter, setConditionFilter] = useState('');
   const [availabilityFilter, setAvailabilityFilter] = useState('');
+  const [search, setSearch] = useState('');
+  const [sortBy, setSortBy] = useState('name_asc');
 
   // Filters for Loans
-  const [loanSearch, setLoanSearch] = useState('');
   const [loanStatusFilter, setLoanStatusFilter] = useState('');
+  const [loanSearch, setLoanSearch] = useState('');
+  const [loanSortBy, setLoanSortBy] = useState('date_desc');
 
   // Forms & Modals
   const [itemForm, setItemForm] = useState<ItemForm>(emptyItem);
@@ -179,9 +178,6 @@ export default function InventoryView({ user }: { user: { roles?: string[]; role
     return items
       .filter((item) => {
         const query = search.toLowerCase();
-        const matchSearch =
-          !query ||
-          `${item.code} ${item.name} ${item.category} ${item.location || ''}`.toLowerCase().includes(query);
         const matchCategory = !categoryFilter || item.category === categoryFilter;
         const matchCondition = !conditionFilter || item.condition === conditionFilter;
         const matchAvailability = !availabilityFilter
@@ -191,7 +187,10 @@ export default function InventoryView({ user }: { user: { roles?: string[]; role
             : availabilityFilter === 'unavailable'
               ? item.active && item.available_now <= 0
               : !item.active;
-        return matchSearch && matchCategory && matchCondition && matchAvailability;
+        const matchSearch =
+          !query ||
+          `${item.code} ${item.name} ${item.category} ${item.location || ''}`.toLowerCase().includes(query);
+        return matchCategory && matchCondition && matchAvailability && matchSearch;
       })
       .sort((a, b) => {
         if (sortBy === 'name_asc') return a.name.localeCompare(b.name, 'id');
@@ -200,19 +199,25 @@ export default function InventoryView({ user }: { user: { roles?: string[]; role
         if (sortBy === 'qty_asc') return a.quantity - b.quantity;
         return 0;
       });
-  }, [items, search, categoryFilter, conditionFilter, availabilityFilter, sortBy]);
+  }, [items, categoryFilter, conditionFilter, availabilityFilter, search, sortBy]);
 
   // Filtered Loans
   const filteredLoans = useMemo(() => {
-    return loans.filter((loan) => {
-      const query = loanSearch.toLowerCase();
-      const matchSearch =
-        !query ||
-        `${loan.item.name} ${loan.item.code} ${loan.borrower_name} ${loan.purpose}`.toLowerCase().includes(query);
-      const matchStatus = !loanStatusFilter || loan.status === loanStatusFilter;
-      return matchSearch && matchStatus;
-    });
-  }, [loans, loanSearch, loanStatusFilter]);
+    return loans
+      .filter((loan) => {
+        const query = loanSearch.toLowerCase();
+        const matchStatus = !loanStatusFilter || loan.status === loanStatusFilter;
+        const matchSearch =
+          !query ||
+          `${loan.item.name} ${loan.item.code} ${loan.borrower_name} ${loan.purpose}`.toLowerCase().includes(query);
+        return matchStatus && matchSearch;
+      })
+      .sort((a, b) => {
+        if (loanSortBy === 'date_desc') return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        if (loanSortBy === 'date_asc') return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+        return 0;
+      });
+  }, [loans, loanStatusFilter, loanSearch, loanSortBy]);
 
   const activeLoans = useMemo(
     () => loans.filter((loan) => ['Disetujui', 'Dipinjam'].includes(loan.status)).length,
@@ -421,7 +426,16 @@ export default function InventoryView({ user }: { user: { roles?: string[]; role
         )}
       </div>
 
-      {/* --------------------------- Stats Cards --------------------------- */}
+      {/* ---------------- 1. TAB BAR AT TOP (Ikuti Gambar ke-2) ------------- */}
+      <Tab<'barang' | 'pinjaman'>
+        tabs={tabsConfig}
+        activeTab={tab}
+        onChange={setTab}
+        ariaLabel="Navigasi Inventaris"
+        variant="slider"
+      />
+
+      {/* ---------------- 2. STATS CARDS (Ikuti Gambar ke-2) --------------- */}
       <div className="inv-stats">
         <div className="inv-stat-card">
           <div className="inv-stat-icon inv-stat-icon--blue">
@@ -473,171 +487,153 @@ export default function InventoryView({ user }: { user: { roles?: string[]; role
         </div>
       )}
 
-      {/* -------------------------- Main Panel ----------------------------- */}
-      <div className="inv-panel">
-        {/* Navigation Tabs */}
-        <div className="inv-panel-nav">
-          <Tab<'barang' | 'pinjaman'>
-            tabs={tabsConfig}
-            activeTab={tab}
-            onChange={setTab}
-            ariaLabel="Navigasi Inventaris"
-            variant="slider"
+      {/* ---------------- 3. FILTER TOOLBAR: Kategori, Kondisi, Status + Search ----- */}
+      {tab === 'barang' ? (
+        <FilterToolbar>
+          <FilterSelect
+            label="Kategori"
+            icon="tag"
+            value={categoryFilter}
+            onChange={setCategoryFilter}
+            options={categoryOptions}
           />
-        </div>
+          <FilterSelect
+            label="Kondisi"
+            icon="heart-pulse"
+            value={conditionFilter}
+            onChange={setConditionFilter}
+            options={[
+              { value: '', label: 'Semua Kondisi' },
+              { value: 'Baik', label: 'Baik' },
+              { value: 'Perlu perbaikan', label: 'Perlu Perbaikan' },
+              { value: 'Rusak', label: 'Rusak' },
+            ]}
+          />
+          <FilterSelect
+            label="Status"
+            icon="funnel"
+            value={availabilityFilter}
+            onChange={setAvailabilityFilter}
+            options={[
+              { value: '', label: 'Semua Status' },
+              { value: 'available', label: 'Tersedia' },
+              { value: 'unavailable', label: 'Habis / Dipinjam' },
+              { value: 'inactive', label: 'Nonaktif' },
+            ]}
+          />
+          <FilterSearch
+            label="Pencarian"
+            value={search}
+            onChange={setSearch}
+            placeholder="Cari nama, kode, lokasi..."
+          />
+          <FilterActions>
+            <InlineSelect
+              title="Urutkan"
+              value={sortBy}
+              onChange={setSortBy}
+              options={[
+                { value: 'name_asc', label: 'Nama (A-Z)' },
+                { value: 'name_desc', label: 'Nama (Z-A)' },
+                { value: 'qty_desc', label: 'Unit Terbanyak' },
+                { value: 'qty_asc', label: 'Unit Tersedikit' },
+              ]}
+            />
+          </FilterActions>
+        </FilterToolbar>
+      ) : (
+        <FilterToolbar>
+          <FilterSelect
+            label="Status"
+            icon="funnel"
+            value={loanStatusFilter}
+            onChange={setLoanStatusFilter}
+            options={[
+              { value: '', label: 'Semua Status' },
+              { value: 'Menunggu', label: 'Menunggu' },
+              { value: 'Disetujui', label: 'Disetujui' },
+              { value: 'Dipinjam', label: 'Dipinjam' },
+              { value: 'Dikembalikan', label: 'Dikembalikan' },
+              { value: 'Ditolak', label: 'Ditolak' },
+              { value: 'Dibatalkan', label: 'Dibatalkan' },
+            ]}
+          />
+          <FilterSearch
+            label="Pencarian"
+            value={loanSearch}
+            onChange={setLoanSearch}
+            placeholder="Cari peminjam, kode, barang, keperluan..."
+          />
+          <FilterActions>
+            <InlineSelect
+              title="Urutkan"
+              value={loanSortBy}
+              onChange={setLoanSortBy}
+              options={[
+                { value: 'date_desc', label: 'Terbaru' },
+                { value: 'date_asc', label: 'Terlama' },
+              ]}
+            />
+          </FilterActions>
+        </FilterToolbar>
+      )}
 
-        {/* Filter Toolbar */}
-        <div className="inv-panel-toolbar">
-          {tab === 'barang' ? (
-            <FilterToolbar>
-              <FilterSearch
-                label="Cari barang"
-                value={search}
-                onChange={setSearch}
-                placeholder="Cari nama, kode, kategori, lokasi..."
-              />
-              <FilterSelect
-                label="Kategori"
-                icon="tag"
-                value={categoryFilter}
-                onChange={setCategoryFilter}
-                options={categoryOptions}
-              />
-              <FilterSelect
-                label="Kondisi"
-                icon="heart-pulse"
-                value={conditionFilter}
-                onChange={setConditionFilter}
-                options={[
-                  { value: '', label: 'Semua Kondisi' },
-                  { value: 'Baik', label: 'Baik' },
-                  { value: 'Perlu perbaikan', label: 'Perlu Perbaikan' },
-                  { value: 'Rusak', label: 'Rusak' },
-                ]}
-              />
-              <FilterSelect
-                label="Ketersediaan"
-                icon="check2-circle"
-                value={availabilityFilter}
-                onChange={setAvailabilityFilter}
-                options={[
-                  { value: '', label: 'Semua Status' },
-                  { value: 'available', label: 'Tersedia' },
-                  { value: 'unavailable', label: 'Habis / Dipinjam' },
-                  { value: 'inactive', label: 'Nonaktif' },
-                ]}
-              />
-              <FilterActions>
-                <InlineSelect
-                  title="Pilih mode tampilan"
-                  value={viewMode}
-                  onChange={(v) => setViewMode(v as 'grid' | 'table')}
-                  options={[
-                    { value: 'grid', label: 'Grid' },
-                    { value: 'table', label: 'Tabel' },
-                  ]}
-                />
-                <InlineSelect
-                  title="Urutkan daftar"
-                  value={sortBy}
-                  onChange={setSortBy}
-                  options={[
-                    { value: 'name_asc', label: 'Nama (A-Z)' },
-                    { value: 'name_desc', label: 'Nama (Z-A)' },
-                    { value: 'qty_desc', label: 'Unit Terbanyak' },
-                    { value: 'qty_asc', label: 'Unit Tersedikit' },
-                  ]}
-                />
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="secondary"
-                  icon="refresh"
-                  onClick={refresh}
-                  isLoading={loading}
-                >
-                  Segarkan
-                </Button>
-              </FilterActions>
-            </FilterToolbar>
-          ) : (
-            <FilterToolbar>
-              <FilterSearch
-                label="Cari peminjaman"
-                value={loanSearch}
-                onChange={setLoanSearch}
-                placeholder="Cari peminjam, kode, barang, keperluan..."
-              />
-              <FilterSelect
-                label="Status"
-                icon="funnel"
-                value={loanStatusFilter}
-                onChange={setLoanStatusFilter}
-                options={[
-                  { value: '', label: 'Semua Status' },
-                  { value: 'Menunggu', label: 'Menunggu' },
-                  { value: 'Disetujui', label: 'Disetujui' },
-                  { value: 'Dipinjam', label: 'Dipinjam' },
-                  { value: 'Dikembalikan', label: 'Dikembalikan' },
-                  { value: 'Ditolak', label: 'Ditolak' },
-                  { value: 'Dibatalkan', label: 'Dibatalkan' },
-                ]}
-              />
-              <FilterActions>
-                <InlineSelect
-                  title="Pilih mode tampilan"
-                  value={loanViewMode}
-                  onChange={(v) => setLoanViewMode(v as 'cards' | 'table')}
-                  options={[
-                    { value: 'cards', label: 'Kartu' },
-                    { value: 'table', label: 'Tabel' },
-                  ]}
-                />
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="secondary"
-                  icon="refresh"
-                  onClick={refresh}
-                  isLoading={loading}
-                >
-                  Segarkan
-                </Button>
-              </FilterActions>
-            </FilterToolbar>
-          )}
-        </div>
-
-        {/* ------------------------- Content Area -------------------------- */}
+      {/* ---------------- 4. TABLE VIEW ONLY (Hanya Tabel) ---------------- */}
+      <div className="inv-card">
         {loading ? (
-          <div className="inv-empty">
-            <Spinner variant="buble" size={32} />
-            <p>Memuat data inventaris...</p>
+          <div className="inv-loading">
+            <Spinner variant="buble" size={28} />
           </div>
         ) : tab === 'barang' ? (
-          viewMode === 'grid' ? (
-            /* Grid View */
-            <div className="inv-grid">
-              {filtered.map((item) => (
-                <article className="inv-card" key={item.id}>
-                  <div className="inv-photo">
-                    {item.photo_url ? (
-                      <Image
-                        src={item.photo_url}
-                        alt={item.name}
-                        width={500}
-                        height={300}
-                        unoptimized
-                      />
-                    ) : (
-                      <div className="inv-photo-placeholder">
-                        <i className="bi bi-box-seam" />
+          <div className="inv-table-wrap">
+            <table className="inv-table">
+              <thead>
+                <tr>
+                  <th style={{ width: '45px', textAlign: 'center' }}>No</th>
+                  <th style={{ width: '56px' }}>Foto</th>
+                  <th>Kode & Nama Barang</th>
+                  <th>Kategori</th>
+                  <th>Lokasi</th>
+                  <th>Kondisi</th>
+                  <th>Ketersediaan</th>
+                  <th>Status</th>
+                  <th style={{ textAlign: 'center', width: '120px' }}>Aksi</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map((item, index) => (
+                  <tr key={item.id}>
+                    <td style={{ textAlign: 'center', color: 'var(--n-muted)' }}>{index + 1}</td>
+                    <td>
+                      <div className="inv-table-thumb">
+                        {item.photo_url ? (
+                          <Image
+                            src={item.photo_url}
+                            alt={item.name}
+                            width={40}
+                            height={40}
+                            unoptimized
+                          />
+                        ) : (
+                          <i className="bi bi-box-seam" />
+                        )}
                       </div>
-                    )}
-                  </div>
-                  <div className="inv-card-body">
-                    <div className="inv-card-top">
-                      <span className="inv-category-pill">{item.category}</span>
+                    </td>
+                    <td>
+                      <div className="inv-table-title">{item.name}</div>
+                      <div className="inv-table-sub font-mono">{item.code}</div>
+                    </td>
+                    <td>
+                      <span className="inv-category-tag">{item.category}</span>
+                    </td>
+                    <td>{item.location || '—'}</td>
+                    <td>
+                      <span className="inv-badge">{item.condition}</span>
+                    </td>
+                    <td>
+                      <strong>{available(item)}</strong> / {item.quantity} unit
+                    </td>
+                    <td>
                       <span
                         className={`inv-badge ${
                           !item.active
@@ -647,379 +643,152 @@ export default function InventoryView({ user }: { user: { roles?: string[]; role
                               : 'inv-badge--unavailable'
                         }`}
                       >
-                        {!item.active
-                          ? 'Nonaktif'
-                          : available(item) > 0
-                            ? `${available(item)} tersedia`
-                            : 'Tidak tersedia'}
+                        {!item.active ? 'Nonaktif' : available(item) > 0 ? 'Tersedia' : 'Habis'}
                       </span>
-                    </div>
-                    <h3 className="inv-card-title">{item.name}</h3>
-                    <span className="inv-code-badge">{item.code}</span>
-                    <p className="inv-card-desc">{item.description || 'Belum ada deskripsi.'}</p>
-                    <div className="inv-meta">
-                      <span>
-                        <i className="bi bi-geo-alt" /> {item.location || 'Lokasi belum diisi'}
-                      </span>
-                      <span>
-                        <i className="bi bi-heart-pulse" /> {item.condition}
-                      </span>
-                      <span>
-                        <i className="bi bi-layers" /> Total {item.quantity} unit
-                      </span>
-                    </div>
-                  </div>
-                  <div className="inv-card-actions">
-                    <Button
-                      variant="primary"
-                      size="sm"
-                      icon="ajukan"
-                      onClick={() => openLoan(item)}
-                      disabled={!item.active || available(item) <= 0}
-                    >
-                      Ajukan Pinjam
-                    </Button>
-                    {isManager && (
-                      <ActionGroup>
+                    </td>
+                    <td>
+                      <ActionGroup align="center">
                         <ActionButton
-                          action="edit"
-                          tooltip="Edit Barang"
-                          onClick={() => openItem(item)}
+                          action="fill"
+                          tooltip="Ajukan Pinjam"
+                          onClick={() => openLoan(item)}
+                          disabled={!item.active || available(item) <= 0}
                         />
+                        {isManager && (
+                          <ActionButton
+                            action="edit"
+                            tooltip="Edit Barang"
+                            onClick={() => openItem(item)}
+                          />
+                        )}
                       </ActionGroup>
-                    )}
-                  </div>
-                </article>
-              ))}
-              {!filtered.length && (
-                <div className="inv-empty">
-                  <i className="bi bi-inbox" />
-                  <h4>Barang tidak ditemukan</h4>
-                  <p>Tidak ada data inventaris yang sesuai dengan filter pencarian.</p>
-                </div>
-              )}
-            </div>
-          ) : (
-            /* Table View */
-            <div className="inv-table-wrap">
-              <table className="inv-table">
-                <thead>
-                  <tr>
-                    <th style={{ width: '60px' }}>Foto</th>
-                    <th>Kode & Nama Barang</th>
-                    <th>Kategori</th>
-                    <th>Lokasi</th>
-                    <th>Kondisi</th>
-                    <th>Ketersediaan</th>
-                    <th>Status</th>
-                    <th style={{ textAlign: 'center', width: '130px' }}>Aksi</th>
+                    </td>
                   </tr>
-                </thead>
-                <tbody>
-                  {filtered.map((item) => (
-                    <tr key={item.id}>
-                      <td>
-                        <div className="inv-table-thumb">
-                          {item.photo_url ? (
-                            <Image
-                              src={item.photo_url}
-                              alt={item.name}
-                              width={44}
-                              height={44}
-                              unoptimized
-                            />
-                          ) : (
-                            <i className="bi bi-box-seam" />
-                          )}
-                        </div>
-                      </td>
-                      <td>
-                        <div className="inv-table-title">{item.name}</div>
-                        <div className="inv-table-sub font-mono">{item.code}</div>
-                      </td>
-                      <td>{item.category}</td>
-                      <td>{item.location || '—'}</td>
-                      <td>
-                        <span className="inv-badge">{item.condition}</span>
-                      </td>
-                      <td>
-                        <strong>{available(item)}</strong> / {item.quantity} unit
-                      </td>
-                      <td>
-                        <span
-                          className={`inv-badge ${
-                            !item.active
-                              ? 'inv-badge--inactive'
-                              : available(item) > 0
-                                ? 'inv-badge--available'
-                                : 'inv-badge--unavailable'
-                          }`}
-                        >
-                          {!item.active ? 'Nonaktif' : 'Aktif'}
-                        </span>
-                      </td>
-                      <td>
-                        <ActionGroup align="center">
-                          <ActionButton
-                            action="fill"
-                            tooltip="Ajukan Pinjam"
-                            onClick={() => openLoan(item)}
-                            disabled={!item.active || available(item) <= 0}
-                          />
-                          {isManager && (
-                            <ActionButton
-                              action="edit"
-                              tooltip="Edit Barang"
-                              onClick={() => openItem(item)}
-                            />
-                          )}
-                        </ActionGroup>
-                      </td>
-                    </tr>
-                  ))}
-                  {!filtered.length && (
-                    <tr>
-                      <td colSpan={8}>
-                        <div className="inv-empty">
-                          <i className="bi bi-inbox" />
-                          <h4>Barang tidak ditemukan</h4>
-                          <p>Tidak ada data inventaris yang sesuai dengan filter pencarian.</p>
-                        </div>
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          )
-        ) : (
-          /* Loans Tab */
-          loanViewMode === 'cards' ? (
-            /* Loan Cards */
-            <div className="inv-loans">
-              {filteredLoans.map((loan) => (
-                <article className="inv-loan" key={loan.id}>
-                  <div className="inv-loan-main">
-                    <div className="inv-loan-header-left">
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <span className={`inv-badge inv-badge--${loan.status.toLowerCase()}`}>
-                          {loan.status}
-                        </span>
-                        <small className="inv-text-muted">Diajukan: {date(loan.created_at)}</small>
+                ))}
+                {!filtered.length && (
+                  <tr>
+                    <td colSpan={9}>
+                      <div className="inv-empty">
+                        <i className="bi bi-inbox" />
+                        <h4>Barang tidak ditemukan</h4>
+                        <p>Tidak ada data inventaris yang sesuai dengan filter pencarian.</p>
                       </div>
-                      <h3>{loan.item.name}</h3>
-                      <p className="inv-loan-meta">
-                        Kode: <strong>{loan.item.code}</strong> · Jumlah: <strong>{loan.quantity} unit</strong> · Peminjam: <strong>{loan.borrower_name}</strong>
-                      </p>
-                    </div>
-                    <div className="inv-period">
-                      <span>
-                        <strong>Mulai:</strong> {date(loan.start_at)}
-                      </span>
-                      <span>
-                        <strong>Kembali:</strong> {date(loan.end_at)}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="inv-loan-purpose-box">
-                    <strong>Keperluan:</strong> {loan.purpose}
-                  </div>
-                  <div className="inv-loan-actions">
-                    <ActionGroup>
-                      <ActionButton
-                        action="view"
-                        label="Bukti"
-                        iconOnly={false}
-                        tooltip="Lihat Bukti Peminjaman"
-                        onClick={() => {
-                          setSelectedLoan(loan);
-                          setModal('proof');
-                        }}
-                      />
-                      {loan.status === 'Menunggu' && isManager && (
-                        <>
-                          <ActionButton
-                            action="approve"
-                            label="Setujui"
-                            iconOnly={false}
-                            tooltip="Setujui Pengajuan"
-                            onClick={() => transition(loan, 'Disetujui')}
-                            disabled={busy}
-                          />
-                          <ActionButton
-                            action="reject"
-                            label="Tolak"
-                            iconOnly={false}
-                            tooltip="Tolak Pengajuan"
-                            onClick={() => transition(loan, 'Ditolak')}
-                            disabled={busy}
-                          />
-                        </>
-                      )}
-                      {loan.status === 'Menunggu' && !isManager && (
-                        <ActionButton
-                          action="delete"
-                          label="Batalkan"
-                          iconOnly={false}
-                          tooltip="Batalkan Pengajuan"
-                          onClick={() => transition(loan, 'Dibatalkan')}
-                          disabled={busy}
-                        />
-                      )}
-                      {loan.status === 'Disetujui' && isManager && (
-                        <ActionButton
-                          action="move"
-                          label="Serahkan"
-                          iconOnly={false}
-                          tooltip="Serahkan Barang ke Peminjam"
-                          onClick={() => transition(loan, 'Dipinjam')}
-                          disabled={busy}
-                        />
-                      )}
-                      {loan.status === 'Dipinjam' && isManager && (
-                        <ActionButton
-                          action="toggle"
-                          label="Catat Kembali"
-                          iconOnly={false}
-                          tooltip="Catat Pengembalian Barang"
-                          onClick={() => transition(loan, 'Dikembalikan')}
-                          disabled={busy}
-                        />
-                      )}
-                    </ActionGroup>
-                  </div>
-                </article>
-              ))}
-              {!filteredLoans.length && (
-                <div className="inv-empty">
-                  <i className="bi bi-clock-history" />
-                  <h4>Belum ada pengajuan</h4>
-                  <p>Tidak ada riwayat pengajuan peminjaman yang sesuai dengan filter.</p>
-                </div>
-              )}
-            </div>
-          ) : (
-            /* Loan Table */
-            <div className="inv-table-wrap">
-              <table className="inv-table">
-                <thead>
-                  <tr>
-                    <th>ID / Waktu Pengajuan</th>
-                    <th>Barang</th>
-                    <th>Peminjam</th>
-                    <th>Jumlah</th>
-                    <th>Jadwal Peminjaman</th>
-                    <th>Status</th>
-                    <th>Keperluan</th>
-                    <th style={{ textAlign: 'center', minWidth: '150px' }}>Aksi</th>
+                    </td>
                   </tr>
-                </thead>
-                <tbody>
-                  {filteredLoans.map((loan) => (
-                    <tr key={loan.id}>
-                      <td>
-                        <div className="inv-table-title font-mono">{loan.id.slice(0, 8)}...</div>
-                        <div className="inv-table-sub">{date(loan.created_at)}</div>
-                      </td>
-                      <td>
-                        <div className="inv-table-title">{loan.item.name}</div>
-                        <div className="inv-table-sub font-mono">{loan.item.code}</div>
-                      </td>
-                      <td>
-                        <strong>{loan.borrower_name}</strong>
-                      </td>
-                      <td>{loan.quantity} unit</td>
-                      <td>
-                        <div style={{ fontSize: '0.76rem' }}>{date(loan.start_at)}</div>
-                        <div style={{ fontSize: '0.76rem', color: 'var(--n-muted)' }}>s/d {date(loan.end_at)}</div>
-                      </td>
-                      <td>
-                        <span className={`inv-badge inv-badge--${loan.status.toLowerCase()}`}>
-                          {loan.status}
-                        </span>
-                      </td>
-                      <td>
-                        <div
-                          style={{
-                            maxWidth: '220px',
-                            whiteSpace: 'nowrap',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
+                )}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="inv-table-wrap">
+            <table className="inv-table">
+              <thead>
+                <tr>
+                  <th style={{ width: '45px', textAlign: 'center' }}>No</th>
+                  <th>Barang</th>
+                  <th>Peminjam</th>
+                  <th>Jumlah</th>
+                  <th>Jadwal Peminjaman</th>
+                  <th>Status</th>
+                  <th>Keperluan</th>
+                  <th style={{ textAlign: 'center', width: '130px' }}>Aksi</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredLoans.map((loan, index) => (
+                  <tr key={loan.id}>
+                    <td style={{ textAlign: 'center', color: 'var(--n-muted)' }}>{index + 1}</td>
+                    <td>
+                      <div className="inv-table-title">{loan.item.name}</div>
+                      <div className="inv-table-sub font-mono">{loan.item.code}</div>
+                    </td>
+                    <td>
+                      <strong>{loan.borrower_name}</strong>
+                      <div className="inv-table-sub">{date(loan.created_at)}</div>
+                    </td>
+                    <td>{loan.quantity} unit</td>
+                    <td>
+                      <div style={{ fontSize: '0.78rem' }}>{date(loan.start_at)}</div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--n-muted)' }}>s/d {date(loan.end_at)}</div>
+                    </td>
+                    <td>
+                      <span className={`inv-badge inv-badge--${loan.status.toLowerCase()}`}>
+                        {loan.status}
+                      </span>
+                    </td>
+                    <td>
+                      <div className="inv-table-purpose" title={loan.purpose}>
+                        {loan.purpose}
+                      </div>
+                    </td>
+                    <td>
+                      <ActionGroup align="center">
+                        <ActionButton
+                          action="view"
+                          tooltip="Lihat Bukti Peminjaman"
+                          onClick={() => {
+                            setSelectedLoan(loan);
+                            setModal('proof');
                           }}
-                          title={loan.purpose}
-                        >
-                          {loan.purpose}
-                        </div>
-                      </td>
-                      <td>
-                        <ActionGroup align="center">
+                        />
+                        {loan.status === 'Menunggu' && isManager && (
+                          <>
+                            <ActionButton
+                              action="approve"
+                              tooltip="Setujui Pengajuan"
+                              onClick={() => transition(loan, 'Disetujui')}
+                              disabled={busy}
+                            />
+                            <ActionButton
+                              action="reject"
+                              tooltip="Tolak Pengajuan"
+                              onClick={() => transition(loan, 'Ditolak')}
+                              disabled={busy}
+                            />
+                          </>
+                        )}
+                        {loan.status === 'Menunggu' && !isManager && (
                           <ActionButton
-                            action="view"
-                            tooltip="Lihat Bukti Peminjaman"
-                            onClick={() => {
-                              setSelectedLoan(loan);
-                              setModal('proof');
-                            }}
+                            action="delete"
+                            tooltip="Batalkan Pengajuan"
+                            onClick={() => transition(loan, 'Dibatalkan')}
+                            disabled={busy}
                           />
-                          {loan.status === 'Menunggu' && isManager && (
-                            <>
-                              <ActionButton
-                                action="approve"
-                                tooltip="Setujui Pengajuan"
-                                onClick={() => transition(loan, 'Disetujui')}
-                                disabled={busy}
-                              />
-                              <ActionButton
-                                action="reject"
-                                tooltip="Tolak Pengajuan"
-                                onClick={() => transition(loan, 'Ditolak')}
-                                disabled={busy}
-                              />
-                            </>
-                          )}
-                          {loan.status === 'Menunggu' && !isManager && (
-                            <ActionButton
-                              action="delete"
-                              tooltip="Batalkan Pengajuan"
-                              onClick={() => transition(loan, 'Dibatalkan')}
-                              disabled={busy}
-                            />
-                          )}
-                          {loan.status === 'Disetujui' && isManager && (
-                            <ActionButton
-                              action="move"
-                              tooltip="Serahkan Barang"
-                              onClick={() => transition(loan, 'Dipinjam')}
-                              disabled={busy}
-                            />
-                          )}
-                          {loan.status === 'Dipinjam' && isManager && (
-                            <ActionButton
-                              action="toggle"
-                              tooltip="Catat Pengembalian"
-                              onClick={() => transition(loan, 'Dikembalikan')}
-                              disabled={busy}
-                            />
-                          )}
-                        </ActionGroup>
-                      </td>
-                    </tr>
-                  ))}
-                  {!filteredLoans.length && (
-                    <tr>
-                      <td colSpan={8}>
-                        <div className="inv-empty">
-                          <i className="bi bi-clock-history" />
-                          <h4>Belum ada pengajuan</h4>
-                          <p>Tidak ada riwayat pengajuan peminjaman yang sesuai dengan filter.</p>
-                        </div>
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          )
+                        )}
+                        {loan.status === 'Disetujui' && isManager && (
+                          <ActionButton
+                            action="move"
+                            tooltip="Serahkan Barang"
+                            onClick={() => transition(loan, 'Dipinjam')}
+                            disabled={busy}
+                          />
+                        )}
+                        {loan.status === 'Dipinjam' && isManager && (
+                          <ActionButton
+                            action="toggle"
+                            tooltip="Catat Pengembalian"
+                            onClick={() => transition(loan, 'Dikembalikan')}
+                            disabled={busy}
+                          />
+                        )}
+                      </ActionGroup>
+                    </td>
+                  </tr>
+                ))}
+                {!filteredLoans.length && (
+                  <tr>
+                    <td colSpan={8}>
+                      <div className="inv-empty">
+                        <i className="bi bi-clock-history" />
+                        <h4>Belum ada pengajuan</h4>
+                        <p>Tidak ada riwayat pengajuan peminjaman yang sesuai dengan filter.</p>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
 
