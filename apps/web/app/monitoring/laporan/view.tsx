@@ -14,6 +14,7 @@ import Swal from 'sweetalert2';
 import { swalError, swalSuccess } from '@/lib/swal-premium';
 import { getProxiedImageUrl } from '@/lib/image-utils';
 import { reportPeriod, sortReports } from './report-order';
+import CommitteeMonitoring from './CommitteeMonitoring';
 import './monitoring-laporan.css';
 
 const BULAN = [
@@ -48,7 +49,7 @@ export default function MonitoringLaporanView() {
     const currentYear = new Date().getFullYear();
     const currentMonth = new Date().getMonth() + 1;
 
-    const [activeTab, setActiveTab] = useState<'GURU_ASUH' | 'KLINIK' | 'EKSKUL'>('GURU_ASUH');
+    const [activeTab, setActiveTab] = useState<'GURU_ASUH' | 'KLINIK' | 'EKSKUL' | 'KOMITE'>('GURU_ASUH');
     const [selectedBulan, setSelectedBulan] = useState<string>('ALL');
     const [selectedTahun, setSelectedTahun] = useState<string>('ALL');
     const [searchQuery, setSearchQuery] = useState<string>('');
@@ -106,11 +107,12 @@ export default function MonitoringLaporanView() {
         }
     };
 
-    // Tabs matching pembayaran (minus Rekapan & Nominal)
+    // Public monitoring modules.
     const TABS = useMemo(() => [
         { key: 'GURU_ASUH' as const, label: 'Guru Asuh', shortLabel: 'Guru Asuh', icon: 'bi-person-heart' },
         { key: 'KLINIK' as const, label: 'Klinik Pembelajaran', shortLabel: 'Klinik', icon: 'bi-heart-pulse' },
         { key: 'EKSKUL' as const, label: 'Ekstrakurikuler', shortLabel: 'Ekskul', icon: 'bi-person-plus' },
+        { key: 'KOMITE' as const, label: 'Pengajuan Komite', shortLabel: 'Komite', icon: 'bi-clipboard-data' },
     ], []);
 
     // Year options generator with 'Semua Tahun' option
@@ -124,6 +126,7 @@ export default function MonitoringLaporanView() {
 
     // Fetch data based on active tab & filters
     const fetchData = useCallback(async () => {
+        if (activeTab === 'KOMITE') return;
         setLoading(true);
         try {
             let endpoint = '/api/monitoring/laporan/guru-asuh';
@@ -166,7 +169,7 @@ export default function MonitoringLaporanView() {
     }, [fetchData]);
 
     // Newest month first, with each teacher's reports kept together A–Z.
-    const sortedDataList = useMemo(() => sortReports(dataList, activeTab), [dataList, activeTab]);
+    const sortedDataList = useMemo(() => activeTab === 'KOMITE' ? [] : sortReports(dataList, activeTab), [dataList, activeTab]);
 
     const pageCount = Math.ceil(sortedDataList.length / PAGE_SIZE);
     const pageStart = (currentPage - 1) * PAGE_SIZE;
@@ -350,11 +353,11 @@ export default function MonitoringLaporanView() {
     };
 
     const periodLabel = (row: any) => {
-        const { year, month } = reportPeriod(row, activeTab);
+        const { year, month } = reportPeriod(row, activeTab === 'KOMITE' ? 'GURU_ASUH' : activeTab);
         return month ? `${NAMA_BULAN[month - 1]} ${year}` : 'Periode tidak diketahui';
     };
     // Repeat the month heading on a new page so the period is always visible.
-    const startsPeriod = (idx: number) => idx === 0 || reportPeriod(paginatedDataList[idx], activeTab).key !== reportPeriod(paginatedDataList[idx - 1], activeTab).key;
+    const startsPeriod = (idx: number) => idx === 0 || reportPeriod(paginatedDataList[idx], activeTab === 'KOMITE' ? 'GURU_ASUH' : activeTab).key !== reportPeriod(paginatedDataList[idx - 1], activeTab === 'KOMITE' ? 'GURU_ASUH' : activeTab).key;
     const renderPeriodHeading = (row: any, idx: number) => startsPeriod(idx) ? (
         <tr className="mon-period-row">
             <th colSpan={6} scope="rowgroup">{periodLabel(row)} <span>· Nama A–Z</span></th>
@@ -403,13 +406,13 @@ export default function MonitoringLaporanView() {
 
             {/* Main Content Body */}
             <main className="mon-lap-main">
-                {/* Tabs — Same as Pembayaran minus Rekapan & Nominal */}
+                {/* Public monitoring tabs */}
                 <div className="mon-tab-container">
                     <Tab
                         tabs={TABS}
                         activeTab={activeTab}
                         onChange={(k) => {
-                            setActiveTab(k as any);
+                            setActiveTab(k);
                             setSelectedDetail(null);
                         }}
                         variant="slider"
@@ -417,6 +420,7 @@ export default function MonitoringLaporanView() {
                     />
                 </div>
 
+                {activeTab === 'KOMITE' ? <CommitteeMonitoring /> : <>
                 {/* Stats Summary Cards */}
                 <div className="gap-stats">
                     <div className="gap-stat-item">
@@ -746,6 +750,7 @@ export default function MonitoringLaporanView() {
                         </>
                     )}
                 </div>
+                </>}
             </main>
 
             {/* Modal Detail Lengkap (menggunakan modal.tsx) saat item diklik di mobile */}
