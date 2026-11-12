@@ -13,6 +13,7 @@ import { getProxiedImageUrl } from '@/lib/image-utils';
 import { useFileViewer } from '@/components/useFileViewer';
 
 const BULAN = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+const LIST_PAGE_SIZE = 6;
 
 interface Submission {
     id: string; nip: string; nama_guru_snap: string | null; bulan: number; tahun: number;
@@ -71,6 +72,7 @@ export default function GuruAsuhTabApproval({ user }: { user?: any }) {
     const [filterMonth, setFilterMonth] = useState('ALL');
     const [filterYear, setFilterYear] = useState('ALL');
     const [searchQuery, setSearchQuery] = useState('');
+    const [listPage, setListPage] = useState(1);
 
     const { registerModal } = useModalBlur();
     useEffect(() => {
@@ -133,6 +135,11 @@ export default function GuruAsuhTabApproval({ user }: { user?: any }) {
             return (b.submitted_at || '').localeCompare(a.submitted_at || '');
         });
     }, [submissions, searchQuery]);
+    const totalListPages = Math.max(1, Math.ceil(filteredSubmissions.length / LIST_PAGE_SIZE));
+    const currentListPage = Math.min(listPage, totalListPages);
+    const visibleSubmissions = filteredSubmissions.slice((currentListPage - 1) * LIST_PAGE_SIZE, currentListPage * LIST_PAGE_SIZE);
+
+    useEffect(() => { setListPage(1); }, [filterStatus, filterMonth, filterYear, searchQuery]);
 
     const handleSelect = (sub: Submission) => {
         setSelected(sub);
@@ -292,7 +299,7 @@ export default function GuruAsuhTabApproval({ user }: { user?: any }) {
                         {!loading && filteredSubmissions.length === 0 && (
                             <div className="gta__empty"><i className="bi bi-inbox" /> Tidak ada laporan</div>
                         )}
-                        {filteredSubmissions.map(sub => {
+                        {visibleSubmissions.map(sub => {
                             const st = getStatusStyle(sub.status);
                             return (
                                 <div key={sub.id} className={`gta__item ${selected?.id === sub.id ? 'gta__item--active' : ''}`} onClick={() => handleSelect(sub)}>
@@ -323,6 +330,16 @@ export default function GuruAsuhTabApproval({ user }: { user?: any }) {
                             );
                         })}
                     </div>
+                    {!loading && filteredSubmissions.length > 0 && (
+                        <nav className="gta__pagination" aria-label="Halaman daftar ajuan">
+                            <span>{(currentListPage - 1) * LIST_PAGE_SIZE + 1}–{Math.min(currentListPage * LIST_PAGE_SIZE, filteredSubmissions.length)} dari {filteredSubmissions.length} ajuan</span>
+                            <div className="gta__paginationButtons">
+                                <button type="button" onClick={() => setListPage(currentListPage - 1)} disabled={currentListPage === 1} aria-label="Halaman sebelumnya" title="Sebelumnya"><i className="bi bi-chevron-left" /></button>
+                                <span>Hal. {currentListPage}/{totalListPages}</span>
+                                <button type="button" onClick={() => setListPage(currentListPage + 1)} disabled={currentListPage === totalListPages} aria-label="Halaman berikutnya" title="Berikutnya"><i className="bi bi-chevron-right" /></button>
+                            </div>
+                        </nav>
+                    )}
                 </aside>
 
                 <main className="gta__content">
@@ -628,10 +645,15 @@ export default function GuruAsuhTabApproval({ user }: { user?: any }) {
 
                 .gta__filterWrapper { width: 100%; }
 
-                .gta__grid { display: grid; grid-template-columns: 320px 1fr; gap: 14px; min-height: 60vh; max-height: 74vh; }
+                .gta__grid { display: grid; grid-template-columns: 320px minmax(0, 1fr); gap: 14px; height: 74vh; min-height: 480px; max-height: 760px; }
 
-                .gta__left { display: flex; flex-direction: column; overflow: hidden; border: 1px solid var(--n-border); border-radius: 16px; background: var(--n-card); }
-                .gta__list { flex: 1; overflow-y: auto; }
+                .gta__left { display: flex; flex-direction: column; min-height: 0; overflow: hidden; border: 1px solid var(--n-border); border-radius: 16px; background: var(--n-card); }
+                .gta__list { flex: 1; min-height: 0; overflow-y: auto; }
+                .gta__pagination { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 12px; border-top: 1px solid var(--n-border); color: var(--n-muted); font-size: 0.7rem; flex-shrink: 0; }
+                .gta__paginationButtons { display: flex; align-items: center; gap: 7px; }
+                .gta__paginationButtons button { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 8px; border: 1px solid var(--n-border); background: var(--n-card); color: var(--n-primary); cursor: pointer; }
+                .gta__paginationButtons button:hover:not(:disabled) { background: var(--n-soft); }
+                .gta__paginationButtons button:disabled { opacity: 0.4; cursor: not-allowed; }
                 .gta__empty { padding: 24px 14px; text-align: center; color: var(--n-muted); font-size: 0.82rem; }
 
                 .gta__item { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-bottom: 1px solid var(--n-border); cursor: pointer; transition: background 0.15s; }
@@ -652,7 +674,7 @@ export default function GuruAsuhTabApproval({ user }: { user?: any }) {
                 .gta__badge--approved { background: rgba(37, 99, 235, 0.1); color: #2563eb; border: 1px solid rgba(37, 99, 235, 0.25); }
                 .gta__badge--revisi { background: rgba(220, 38, 38, 0.1); color: #dc2626; border: 1px solid rgba(220, 38, 38, 0.25); }
 
-                .gta__content { display: flex; flex-direction: column; overflow: hidden; border: 1px solid var(--n-border); border-radius: 16px; background: var(--n-card); }
+                .gta__content { display: flex; flex-direction: column; min-height: 0; overflow: hidden; border: 1px solid var(--n-border); border-radius: 16px; background: var(--n-card); }
                 .gta__detailHeader { display: flex; align-items: center; gap: 12px; padding: 12px 18px; border-bottom: 1px solid var(--n-border); background: var(--n-card); flex-shrink: 0; }
                 .gta__backBtn { display: none; padding: 6px 12px; font-size: 0.78rem; font-weight: 700; }
                 .gta__detailTeacher { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; }
@@ -663,7 +685,7 @@ export default function GuruAsuhTabApproval({ user }: { user?: any }) {
                 .gta__badgeIcon { margin-right: 4px; }
                 .gta__detailHeaderBadge { flex-shrink: 0; }
 
-                .gta__body { flex: 1; overflow-y: auto; padding: 16px 18px; }
+                .gta__body { flex: 1; min-height: 0; overflow-y: auto; padding: 16px 18px; }
 
                 .gta__meta {
                     display: grid;
@@ -916,6 +938,7 @@ export default function GuruAsuhTabApproval({ user }: { user?: any }) {
                     .gta__grid {
                         display: flex;
                         flex-direction: column;
+                        height: auto;
                         min-height: auto;
                         max-height: none;
                         gap: 0;
