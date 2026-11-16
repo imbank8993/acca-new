@@ -16,6 +16,13 @@
 
 export type LiburLingkup = 'semua' | 'tingkat' | 'kelas';
 
+/**
+ * Jenis baris kalender libur. Keduanya sama-sama meniadakan PBM reguler pada
+ * jam & kelas yang dicakup (jurnal, jadwal, absensi memperlakukannya sama);
+ * bedanya hanya label dan tampilan di kalender agenda.
+ */
+export type LiburJenis = 'libur' | 'tidak_efektif';
+
 export interface LiburRow {
     id?: number;
     tanggal: string;
@@ -25,6 +32,8 @@ export interface LiburRow {
     lingkup?: string | null;
     /** Daftar tingkat ('10'/'11'/'12') atau nama kelas, tergantung `lingkup`. */
     target_kelas?: string[] | string | null;
+    /** Kolom hasil migrasi 20261116; `undefined`/NULL dibaca 'libur'. */
+    jenis?: string | null;
 }
 
 /** Konteks kelas yang sedang dinilai. `tingkat` diambil dari master_kelas.tingkat. */
@@ -40,6 +49,20 @@ export const LINGKUP_OPTIONS: { value: LiburLingkup; label: string; hint: string
     { value: 'tingkat', label: 'Tingkat tertentu', hint: 'Mis. hanya kelas XII' },
     { value: 'kelas', label: 'Kelas tertentu', hint: 'Mis. hanya XI Fisika 1 dan XI Fisika 2' },
 ];
+
+export const JENIS_OPTIONS: { value: LiburJenis; label: string; hint: string }[] = [
+    { value: 'libur', label: 'Libur', hint: 'Madrasah libur, tidak ada kegiatan belajar' },
+    { value: 'tidak_efektif', label: 'PBM Tidak Efektif', hint: 'Madrasah tetap buka, tetapi pembelajaran reguler ditiadakan' },
+];
+
+export function normalizeJenis(value: unknown): LiburJenis {
+    const raw = String(value ?? '').trim().toLowerCase().replace(/[\s-]+/g, '_');
+    return raw === 'tidak_efektif' || raw === 'pbm_tidak_efektif' ? 'tidak_efektif' : 'libur';
+}
+
+export function labelJenis(value: unknown): string {
+    return normalizeJenis(value) === 'tidak_efektif' ? 'PBM Tidak Efektif' : 'Libur';
+}
 
 /** 10 → "X", 11 → "XI", 12 → "XII". Nilai lain dikembalikan apa adanya. */
 export function labelTingkat(tingkat: number | string | null | undefined): string {

@@ -83,6 +83,14 @@ function normalisasiLingkup(body: any): { lingkup: Lingkup; target_kelas: string
   return { lingkup: 'semua', target_kelas: [] };
 }
 
+/** 'libur' (default) | 'tidak_efektif' — PBM tidak efektif. */
+type Jenis = 'libur' | 'tidak_efektif';
+
+function normalisasiJenis(value: unknown): Jenis {
+  const raw = String(value ?? '').trim().toLowerCase().replace(/[\s-]+/g, '_');
+  return raw === 'tidak_efektif' || raw === 'pbm_tidak_efektif' ? 'tidak_efektif' : 'libur';
+}
+
 /** Normalisasi `jam_ke` jadi daftar jam; kosong/'semua' → ['Semua']. */
 function parseJamKe(jamRaw: unknown): string[] {
   if (!jamRaw || String(jamRaw).toLowerCase() === 'semua') return ['Semua'];
@@ -121,6 +129,7 @@ export class LiburService {
     keterangan: string;
     lingkup?: string | null;
     target_kelas?: string[];
+    jenis?: string | null;
     created_at?: Date | null;
   }) {
     return {
@@ -132,6 +141,7 @@ export class LiburService {
       // lama ber-lingkup NULL dibaca sebagai 'semua'.
       lingkup: r.lingkup ?? null,
       target_kelas: r.target_kelas ?? [],
+      jenis: normalisasiJenis(r.jenis),
       created_at: r.created_at ? r.created_at.toISOString() : null,
     };
   }
@@ -209,6 +219,7 @@ export class LiburService {
       keterangan: string;
       lingkup: Lingkup;
       target_kelas: string[];
+      jenis: Jenis;
     };
 
     const rowsToProcess: Baris[] = [];
@@ -237,10 +248,11 @@ export class LiburService {
       }
 
       const { lingkup, target_kelas } = normalisasiLingkup(item);
+      const jenis = normalisasiJenis(item?.jenis);
 
       for (const tgl of rentangTanggal(mulai, selesai)) {
         for (const j of parseJamKe(item?.jam_ke)) {
-          rowsToProcess.push({ tanggal: tgl, jam_ke: j, keterangan, lingkup, target_kelas });
+          rowsToProcess.push({ tanggal: tgl, jam_ke: j, keterangan, lingkup, target_kelas, jenis });
         }
       }
     }
@@ -273,6 +285,7 @@ export class LiburService {
       }
       const sama =
         existing.keterangan === r.keterangan &&
+        normalisasiJenis(existing.jenis) === r.jenis &&
         (existing.lingkup ?? 'semua') === r.lingkup &&
         (existing.target_kelas ?? []).join(',') === r.target_kelas.join(',');
       if (sama) skipped++;
@@ -291,6 +304,7 @@ export class LiburService {
             keterangan: r.keterangan,
             lingkup: r.lingkup,
             target_kelas: r.target_kelas,
+            jenis: r.jenis,
           })),
         });
       }
@@ -301,6 +315,7 @@ export class LiburService {
             keterangan: row.keterangan,
             lingkup: row.lingkup,
             target_kelas: row.target_kelas,
+            jenis: row.jenis,
           },
         });
       }
@@ -336,7 +351,7 @@ export class LiburService {
       throw new NotFoundException('Data libur tidak ditemukan');
     }
 
-    const dataBersama = { keterangan, lingkup, target_kelas };
+    const dataBersama = { keterangan, lingkup, target_kelas, jenis: normalisasiJenis(body.jenis) };
 
     // Satu baris = satu (tanggal, jam). Kalau pengguna memilih beberapa jam saat
     // mengedit, jamnya harus dipecah jadi beberapa baris — sama seperti jalur
@@ -511,6 +526,7 @@ export class LiburService {
           keterangan: perTanggal.get(t)!.join(' / '),
           lingkup: 'semua',
           target_kelas: [],
+          jenis: 'libur',
         })),
       });
     }

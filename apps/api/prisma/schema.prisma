@@ -2768,6 +2768,8 @@ model libur {
   lingkup      String?
   /// Daftar tingkat ('10'/'11'/'12') atau nama kelas, tergantung `lingkup`.
   target_kelas String[]
+  /// 'libur' | 'tidak_efektif' (PBM tidak efektif). Lihat sql/20261116_libur_jenis.sql.
+  jenis        String    @default("libur")
 
   @@schema("public")
 }

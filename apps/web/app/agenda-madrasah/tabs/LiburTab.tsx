@@ -21,7 +21,11 @@ import { MultiSelectDropdown } from '@/components/ui/MultiSelectDropdown'
 import { ChevronRight } from 'lucide-react'
 import { hasPermission } from '@/lib/permissions-client'
 import {
+  JENIS_OPTIONS,
   LINGKUP_OPTIONS,
+  labelJenis,
+  normalizeJenis,
+  type LiburJenis,
   labelLingkup,
   labelTingkat,
   normalizeLingkup,
@@ -36,6 +40,18 @@ interface Libur {
   keterangan: string
   lingkup?: string | null
   target_kelas?: string[] | string | null
+  jenis?: string | null
+}
+
+/** Badge jenis: Libur (merah) / PBM Tidak Efektif (kuning). */
+const JenisBadge = ({ jenis }: { jenis?: string | null }) => {
+  const j = normalizeJenis(jenis)
+  return (
+    <span className={`lb__jenis lb__jenis--${j}`}>
+      <i className={`bi ${j === 'libur' ? 'bi-calendar-x' : 'bi-exclamation-diamond'}`} />
+      {labelJenis(j)}
+    </span>
+  )
 }
 
 interface KelasOpt {
@@ -163,6 +179,7 @@ export default function LiburTab({
   const [keterangan, setKeterangan] = useState('')
   const [lingkup, setLingkup] = useState<LiburLingkup>('semua')
   const [targetKelas, setTargetKelas] = useState<string[]>([])
+  const [jenis, setJenis] = useState<LiburJenis>('libur')
   const [editId, setEditId] = useState<number | null>(null)
   const [deleteItemId, setDeleteItemId] = useState<string | number | null>(null)
   const [deleteItemName, setDeleteItemName] = useState('')
@@ -300,6 +317,7 @@ export default function LiburTab({
         keterangan: keterangan.trim(),
         lingkup,
         target_kelas: lingkup === 'semua' ? [] : targetKelas,
+        jenis,
       }
 
       const res = await fetch('/api/settings/libur', {
@@ -319,7 +337,7 @@ export default function LiburTab({
         icon: sebagianGagal ? 'warning' : 'success',
         title: sebagianGagal ? 'Sebagian Tersimpan' : 'Tersimpan',
         html: editId
-          ? 'Data libur berhasil diperbarui.'
+          ? `Data ${labelJenis(jenis)} berhasil diperbarui.`
           : `${json.created ?? 0} baris ditambahkan, ${json.updated ?? 0} diperbarui, ${json.skipped ?? 0} dilewati (sudah sama).` +
             (sebagianGagal ? `<br/><small style="color:#dc2626">${json.errors.slice(0, 3).join('<br/>')}</small>` : '') +
             (json.warning ? `<br/><small style="color:#d97706">${json.warning}</small>` : '')
@@ -338,6 +356,7 @@ export default function LiburTab({
     setKeterangan('')
     setLingkup('semua')
     setTargetKelas([])
+    setJenis('libur')
     setEditId(null)
   }
 
@@ -350,6 +369,7 @@ export default function LiburTab({
     setKeterangan(item.keterangan)
     setLingkup(normalizeLingkup(item))
     setTargetKelas(parseTargetKelas(item.target_kelas))
+    setJenis(normalizeJenis(item.jenis))
     setShowModal(true)
   }
 
@@ -387,6 +407,7 @@ export default function LiburTab({
       No: index + 1,
       Tanggal: item.tanggal,
       'Jam Ke': item.jam_ke,
+      Jenis: labelJenis(item.jenis),
       Keterangan: item.keterangan,
       'Berlaku Untuk': labelLingkup(item)
     }))
@@ -406,6 +427,8 @@ export default function LiburTab({
     const ketRaw = getVal(['Keterangan', 'keterangan']);
     const tingkatRaw = String(getVal(['Tingkat', 'tingkat']) || '').trim();
     const kelasRaw = String(getVal(['Kelas', 'kelas']) || '').trim();
+    // Kolom Jenis opsional: "PBM Tidak Efektif" / "Tidak Efektif"; selain itu Libur.
+    const jenisRaw = String(getVal(['Jenis', 'jenis']) || '').trim();
 
     if (!dateRaw || !ketRaw) return null;
 
@@ -461,7 +484,8 @@ export default function LiburTab({
       jam_ke: 'Semua',
       keterangan: String(ketRaw),
       lingkup,
-      target_kelas
+      target_kelas,
+      jenis: /tidak\s*efektif/i.test(jenisRaw) ? 'tidak_efektif' : 'libur'
     }
   }
 
@@ -617,7 +641,7 @@ export default function LiburTab({
           Import/Export tetap di toolbar karena keduanya aksi sekunder. */}
       {canManage && primaryActionAsFab && (
         <>
-          <DesktopFab label="Tambah Hari Libur" icon="plus-lg" onClick={openAdd} />
+          <DesktopFab label="Tambah Libur / PBM Tidak Efektif" icon="plus-lg" onClick={openAdd} />
           <MobileFab label="Tambah" icon="plus-lg" onClick={openAdd} />
         </>
       )}
@@ -630,6 +654,7 @@ export default function LiburTab({
               <th className="cNo">No</th>
               <th>Tanggal</th>
               <th>Jam Ke</th>
+              <th>Jenis</th>
               <th>Keterangan</th>
               <th>Berlaku Untuk</th>
               <th>Aksi</th>
@@ -641,6 +666,7 @@ export default function LiburTab({
                 <td className="tCenter">{index + 1}</td>
                 <td className="tPlain font-medium">{item.tanggal}</td>
                 <td className="tMono">{item.jam_ke}</td>
+                <td className="tPlain"><JenisBadge jenis={item.jenis} /></td>
                 <td className="tPlain">{item.keterangan}</td>
                 <td className="tPlain">
                   <span className={`lb__scope lb__scope--${normalizeLingkup(item)}`}>
@@ -656,8 +682,8 @@ export default function LiburTab({
                 </td>
               </tr>
             ))}
-            {loading && <tr><td colSpan={6} className="lb__empty" style={{ textAlign: 'center' }}><Spinner variant="buble" /></td></tr>}
-            {!loading && list.length === 0 && <tr><td colSpan={6} className="lb__empty lb__muted">Tidak ada data.</td></tr>}
+            {loading && <tr><td colSpan={7} className="lb__empty" style={{ textAlign: 'center' }}><Spinner variant="buble" /></td></tr>}
+            {!loading && list.length === 0 && <tr><td colSpan={7} className="lb__empty lb__muted">Tidak ada data.</td></tr>}
           </tbody>
         </table>
       </div>
@@ -689,7 +715,7 @@ export default function LiburTab({
               <div className="sk__cardCompactLeft">
                 <div className="sk__cardName">{item.keterangan || '-'}</div>
                 <div className="sk__cardNip">
-                  {item.tanggal} · Jam: {item.jam_ke} · {labelLingkup(item)}
+                  {labelJenis(item.jenis)} · {item.tanggal} · Jam: {item.jam_ke} · {labelLingkup(item)}
                 </div>
               </div>
               <div className="sk__cardCompactRight">
@@ -717,16 +743,21 @@ export default function LiburTab({
           <ModalHeader
             id="libur-view-title"
             icon="calendar-x"
-            title="Detail Data Hari Libur"
+            title={`Detail ${labelJenis(selectedLibur.jenis)}`}
             onClose={() => setShowViewModal(false)}
           />
           <ModalBody>
             <div className="sk__grid2">
               <div className="sk__field sk__fieldFull">
-                <label>Keterangan Libur</label>
+                <label>Keterangan</label>
                 <div className="sk__readInput" style={{ fontWeight: 750, fontSize: '0.92rem' }}>
                   {selectedLibur.keterangan || '-'}
                 </div>
+              </div>
+
+              <div className="sk__field sk__fieldFull">
+                <label>Jenis</label>
+                <div className="sk__readInput"><JenisBadge jenis={selectedLibur.jenis} /></div>
               </div>
 
               <div className="sk__field">
@@ -768,15 +799,36 @@ export default function LiburTab({
       >
         <ModalHeader
           id="modal-libur-title"
-          title={editId ? 'Edit Data Libur' : 'Tambah Hari Libur'}
+          title={`${editId ? 'Edit' : 'Tambah'} ${jenis === 'tidak_efektif' ? 'PBM Tidak Efektif' : 'Hari Libur'}`}
           icon={editId ? 'pencil-square' : 'calendar-plus'}
           onClose={() => setShowModal(false)}
         />
         <form onSubmit={handleSubmit}>
           <ModalBody>
+            {/* ===== Jenis: Libur / PBM tidak efektif ===== */}
+            <div className="lb__field">
+              <label>Jenis</label>
+              <div className="lb__scopeTabs" role="radiogroup" aria-label="Jenis">
+                {JENIS_OPTIONS.map(opt => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    role="radio"
+                    aria-checked={jenis === opt.value}
+                    className={`lb__scopeTab lb__jenisTab--${opt.value} ${jenis === opt.value ? 'is-active' : ''}`}
+                    onClick={() => setJenis(opt.value)}
+                    title={opt.hint}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+              <p className="lb__scopeHint">{JENIS_OPTIONS.find(o => o.value === jenis)?.hint}.</p>
+            </div>
+
             <div className="lb__grid2">
               <div className="lb__field">
-                <label>Tanggal Libur <span className="required">*</span></label>
+                <label>Tanggal <span className="required">*</span></label>
                 <DatePicker
                   value={startDate}
                   valueEnd={endDate}
@@ -828,7 +880,7 @@ export default function LiburTab({
 
             <div className="lb__field">
               <label>Keterangan <span className="required">*</span></label>
-              <textarea value={keterangan} onChange={e => setKeterangan(e.target.value)} required placeholder="Contoh: Libur Nasional..." />
+              <textarea value={keterangan} onChange={e => setKeterangan(e.target.value)} required placeholder={jenis === 'tidak_efektif' ? 'Contoh: Class Meeting, Rapat Guru...' : 'Contoh: Libur Nasional...'} />
             </div>
 
             {/* ===== Lingkup: semua kelas / tingkat / kelas tertentu ===== */}
@@ -854,7 +906,7 @@ export default function LiburTab({
               </div>
 
               {lingkup === 'semua' && (
-                <p className="lb__scopeHint">Libur berlaku untuk seluruh kelas di madrasah.</p>
+                <p className="lb__scopeHint">Berlaku untuk seluruh kelas di madrasah.</p>
               )}
 
               {lingkup !== 'semua' && (
@@ -910,7 +962,7 @@ export default function LiburTab({
               isOpen={showImportModal}
               onClose={() => setShowImportModal(false)}
               onImportSuccess={fetchData}
-              templateColumns={['No', 'Tanggal', 'Keterangan', 'Tingkat', 'Kelas']}
+              templateColumns={['No', 'Tanggal', 'Jenis', 'Keterangan', 'Tingkat', 'Kelas']}
               templateName="Template_DataLibur"
               apiEndpoint="/api/settings/libur"
               mapRowData={mapImportRow}
@@ -1242,6 +1294,33 @@ export default function LiburTab({
             border-color: rgba(59, 130, 246, 0.3);
             color: #1d4ed8;
         }
+
+        /* Badge jenis */
+        .lb__jenis {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            border-radius: 999px;
+            font-size: 0.78rem;
+            font-weight: 650;
+            line-height: 1.4;
+            white-space: nowrap;
+            border: 1px solid transparent;
+        }
+        .lb__jenis i { font-size: 0.8rem; }
+        .lb__jenis--libur {
+            background: rgba(239, 68, 68, 0.1);
+            border-color: rgba(239, 68, 68, 0.3);
+            color: #b91c1c;
+        }
+        .lb__jenis--tidak_efektif {
+            background: rgba(245, 158, 11, 0.12);
+            border-color: rgba(245, 158, 11, 0.32);
+            color: #b45309;
+        }
+        .lb__scopeTab.lb__jenisTab--libur.is-active { color: #b91c1c; }
+        .lb__scopeTab.lb__jenisTab--tidak_efektif.is-active { color: #b45309; }
 
         /* Pemilih lingkup di modal */
         .lb__scopeTabs {
@@ -1844,6 +1923,8 @@ export default function LiburTab({
 :global(.dark) .lb__scope--kelas { background: rgba(59,130,246,0.16) !important; border-color: rgba(59,130,246,0.35) !important; color: #93c5fd !important; }
 :global(.dark) .lb__scopeTabs { background: rgba(26,115,232,0.08) !important; border: 1.5px solid rgba(59,130,246,0.3) !important; }
 :global(.dark) .lb__scopeTab { color: #94a3b8 !important; }
+:global(.dark) .lb__jenis--libur { background: rgba(239,68,68,0.16) !important; border-color: rgba(239,68,68,0.35) !important; color: #fca5a5 !important; }
+:global(.dark) .lb__jenis--tidak_efektif { background: rgba(245,158,11,0.14) !important; border-color: rgba(245,158,11,0.35) !important; color: #fbbf24 !important; }
 :global(.dark) .lb__scopeTab.is-active { background: #1a73e8 !important; color: #ffffff !important; box-shadow: 0 0 12px rgba(26,115,232,0.35) !important; }
 :global(.dark) .lb__scopeHint { color: #94a3b8 !important; }
 /* DELETE MODAL */

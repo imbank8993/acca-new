@@ -4,7 +4,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { Button } from '@/components/ui/Button';
 import { Spinner } from '@/components/ui/Spinner';
-import { JAM_SEMUA, isCutiBersama, labelLingkup, normalizeJamKe, normalizeLingkup } from '@/lib/libur';
+import { JAM_SEMUA, isCutiBersama, labelLingkup, normalizeJamKe, normalizeJenis, normalizeLingkup } from '@/lib/libur';
 import '../agenda.css';
 import { fetchAgendaList, formatWaktuAgenda } from '@/lib/agenda';
 import SasaranAgenda from './SasaranAgenda';
@@ -45,10 +45,12 @@ interface HolidayItem {
     jam_ke: string;
     lingkup?: string | null;
     target_kelas?: string[] | string | null;
+    jenis?: string | null;
 }
 
 /** Libur sehari penuh yang berlaku untuk seluruh madrasah (bukan sekadar PBM tidak efektif). */
 const isLiburPenuhSekolah = (h: HolidayItem) =>
+    normalizeJenis(h.jenis) === 'libur' &&
     normalizeJamKe(h.jam_ke) === JAM_SEMUA &&
     normalizeLingkup(h) === 'semua' &&
     !/tidak\s*efektif|non\s*[-_ ]?efektif|fakultatif/i.test(h.nama || '');
@@ -178,6 +180,7 @@ export default function AgendaDisplayView({ headerTabs }: { headerTabs?: React.R
                         jam_ke: h.jam_ke || 'Semua',
                         lingkup: h.lingkup,
                         target_kelas: h.target_kelas,
+                        jenis: h.jenis,
                     }));
                     setHolidays(mapped);
                 }
@@ -372,6 +375,7 @@ export default function AgendaDisplayView({ headerTabs }: { headerTabs?: React.R
                                 <div className={`ag-holiday-notice ${isCutiBersama(h.nama) ? 'is-cuti' : ''}`} key={hi}>
                                     <i className="bi bi-info-circle-fill"></i>
                                     <span>
+                                        {normalizeJenis(h.jenis) === 'tidak_efektif' && !/tidak\s*efektif/i.test(h.nama || '') ? 'PBM Tidak Efektif: ' : ''}
                                         {h.nama}
                                         {normalizeJamKe(h.jam_ke) !== JAM_SEMUA ? ` (Jam ke-${h.jam_ke})` : ''}
                                         {normalizeLingkup(h) !== 'semua' ? ` — ${labelLingkup(h)}` : ''}
