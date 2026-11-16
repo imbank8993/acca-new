@@ -219,7 +219,9 @@ export default function LiburTab({
 
   const fetchMasterWaktu = async () => {
     try {
-      const res = await fetch('/api/master/waktu')
+      // Backend membatasi 50 baris bila `limit` tidak dikirim (maks 1000);
+      // tanpa ini hanya jam awal yang muncul di pilihan "Berlaku untuk Jam".
+      const res = await fetch('/api/master/waktu?limit=1000')
       const json = await res.json()
       if (json.ok) setMasterWaktu(json.data)
     } catch (err) {
