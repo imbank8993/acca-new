@@ -11,6 +11,7 @@ import '../../surat/surat.css';
 import '../ketidakhadiran.css';
 import { createPortal } from 'react-dom';
 import { getPublicOrigin } from '@/lib/public-url';
+import { accaQrImageUrl } from '@/lib/qr/acca-qr-config';
 
 interface AccaLetter {
     id: string;
@@ -672,15 +673,10 @@ function DaftarAccaContent() {
                                         <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
                                             <div className="detail-qr-wrapper" style={{ position: 'relative', display: 'inline-block', flexShrink: 0, marginBottom: 0 }}>
                                                 <img
-                                                    src={`/api/qrcode?data=${encodeURIComponent(`${getPublicOrigin()}/ketidakhadiran/verify/${selectedLetter.barcode}`)}`}
+                                                    src={accaQrImageUrl(`${getPublicOrigin()}/ketidakhadiran/verify/${selectedLetter.barcode}`)}
                                                     alt="QR Verifikasi"
                                                     className="detail-qr-image"
                                                     style={{ width: '110px', height: '110px', padding: '0.25rem' }}
-                                                />
-                                                <img
-                                                    src="/logo-sidebar-kecil.webp"
-                                                    alt="Logo"
-                                                    style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '22px', height: '22px', borderRadius: '4px', background: 'white', padding: '2px', objectFit: 'contain' }}
                                                 />
                                             </div>
                                             <div style={{ flex: '1 1 200px', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>

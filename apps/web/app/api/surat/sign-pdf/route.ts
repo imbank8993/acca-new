@@ -3,77 +3,12 @@ import { PDFDocument, degrees } from 'pdf-lib';
 import { extractRequestToken } from '@/lib/app-jwt';
 import { nestFetchAsUser } from '@/lib/nest-api';
 import { getApiUser } from '@/lib/api-auth';
-import QRCode from 'qrcode';
+import { createAccaQrPng } from '@/lib/qr/acca-qr.server';
 import { POST as handleUpload } from '@/app/api/upload/route';
 import { getPublicOrigin } from '@/lib/public-url';
 import { suratFileName } from '@acca/shared/surat-document.cjs';
 
 export const dynamic = 'force-dynamic';
-
-// Load image from data URL to canvas Image helper
-async function loadImageFromDataUrl(dataUrl: string): Promise<any> {
-    const { loadImage } = await import('canvas');
-    return await loadImage(Buffer.from(dataUrl.split(',')[1], 'base64'));
-}
-
-// Generate QR code with logo (Reusing the validated helper logic)
-async function generateQRWithLogo(scanUrl: string, logoPath: string | Buffer): Promise<string> {
-    try {
-        const { createCanvas, loadImage } = await import('canvas');
-
-        // 2.5cm × 300dpi ÷ 2.54 = 295px (standar QR Code dokumen resmi)
-        const size = 295;
-        const canvas = createCanvas(size, size);
-        const ctx = canvas.getContext('2d');
-
-        // Step 1: Draw white background
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(0, 0, size, size);
-
-        // Step 2: Draw QR to canvas
-        await QRCode.toCanvas(canvas, scanUrl, {
-            width: size,
-            margin: 1,
-            errorCorrectionLevel: 'H', // High error correction so logo doesn't break it
-            color: {
-                dark: '#000000',
-                light: '#ffffff'
-            }
-        });
-
-        // Step 3: Try embedding logo
-        try {
-            const logo = await loadImage(logoPath);
-            const centerX = size / 2;
-            const centerY = size / 2;
-            // Draw white backing square box for logo to keep it neat
-            const logoSize = 68; 
-            const padding = 6;
-            const boxSize = logoSize + padding * 2;
-            const xOffset = centerX - boxSize / 2;
-            const yOffset = centerY - boxSize / 2;
-
-            // Fill background box
-            ctx.fillStyle = '#ffffff';
-            ctx.fillRect(xOffset, yOffset, boxSize, boxSize);
-            
-            // Draw subtle gray boundary frame
-            ctx.strokeStyle = '#d1d5db'; // Cool gray for a premium look
-            ctx.lineWidth = 1.5;
-            ctx.strokeRect(xOffset, yOffset, boxSize, boxSize);
-
-            // Draw logo image
-            ctx.drawImage(logo, centerX - logoSize / 2, centerY - logoSize / 2, logoSize, logoSize);
-        } catch (logoErr) {
-            console.warn('[Sign-PDF] Logo overlay failed, using plain QR:', logoErr);
-        }
-
-        return canvas.toDataURL('image/png');
-    } catch (error) {
-        console.error('[Sign-PDF] QR Error, falling back:', error);
-        return await QRCode.toDataURL(scanUrl, { width: 200, errorCorrectionLevel: 'M' });
-    }
-}
 
 export async function POST(req: NextRequest) {
     try {
@@ -177,14 +112,9 @@ export async function POST(req: NextRequest) {
         console.log(`[Sign-PDF] Database ID Created: ${suratId}`);
         console.log(`[Sign-PDF] Verification URL: ${verificationUrl}`);
 
-        // ─── LOGO QR CODE ───
-        // Menggunakan logo-sidebar-kecil.png yang selaras dengan logo sidebar
-        // File tersedia di public/logo-sidebar-kecil.png
-        const logoPath = process.cwd() + '/public/logo-sidebar-kecil.png';
-
-        // Hasilkan visual QR Code + logo-sidebar-kecil di tengah
-        const qrDataUrl = await generateQRWithLogo(verificationUrl, logoPath);
-        const qrBytes = Buffer.from(qrDataUrl.split(',')[1], 'base64');
+        // ─── QR CODE + LOGO ACCA ───
+        // 2.5cm × 300dpi ÷ 2.54 = 295px (standar QR Code dokumen resmi)
+        const qrBytes = await createAccaQrPng(verificationUrl, { width: 295 });
 
         // ─── STEP 3: KONVERSI WORD KE PDF JIKA PERLU ───
         let processedPdfBuffer: Uint8Array;

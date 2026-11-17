@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { letterActor, mayManageLetter, LETTER_TYPES } from '@/lib/ketidakhadiran-security';
 import { prisma } from '@/lib/prisma';
 import { NextRequest, NextResponse } from 'next/server';
-import QRCode from 'qrcode';
+import { createAccaQrDataUrl } from '@/lib/qr/acca-qr.server';
 import { getPublicOrigin } from '@/lib/public-url';
 import { isUksRecommendation, uksRecommendationSigner } from '@acca/shared/medical-letter-signer.cjs';
 
@@ -233,15 +233,7 @@ export async function POST(request: NextRequest) {
 
       let qrCodeUrl: string | undefined;
       try {
-        qrCodeUrl = await QRCode.toDataURL(scanUrl, {
-          width: 250,
-          margin: 1,
-          color: {
-            dark: '#000000',
-            light: '#ffffff',
-          },
-          errorCorrectionLevel: 'M',
-        });
+        qrCodeUrl = await createAccaQrDataUrl(scanUrl, { width: 250 });
       } catch (qrErr) {
         console.error('[generate-letter] QR Code generation error:', qrErr);
       }

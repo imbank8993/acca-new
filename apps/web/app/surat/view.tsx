@@ -16,6 +16,7 @@ import { getCurrentUser } from '@/lib/auth-client';
 import DaftarSuratPage from '@/app/surat/daftar/view';
 import Tab from '@/components/ui/Tab';
 import InlineSelect from '@/components/ui/InlineSelect';
+import { accaQrImageUrl } from '@/lib/qr/acca-qr-config';
 
 // ── Types ──────────────────────────────────────────────────────
 interface KodeItem { kode: string; nama: string; }
@@ -305,7 +306,7 @@ const SignView = ({
                             <div className="pdf-interactive-overlay" onClick={handleOverlayClick}>
                                 {placement && (
                                     <div className="qr-placeholder-box" style={{ left: placement.x, top: placement.y, width: placement.w, height: placement.h }}>
-                                        <img src={`/api/qrcode?data=ACCA_PREVIEW_FOR_POSITION`} alt="Preview QR" style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block', opacity: 0.9, pointerEvents: 'none' }} />
+                                        <img src={accaQrImageUrl('ACCA_PREVIEW_FOR_POSITION')} alt="Preview QR" style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block', opacity: 0.9, pointerEvents: 'none' }} />
                                         <div className="box-label">Verifikasi Digital</div>
                                         <div className="box-hint"><i className="bi bi-arrows-move"></i> Tekan ⬆⬇⬅➡</div>
                                         <div className="box-remove" onClick={e => { e.stopPropagation(); setPlacement(null); }}><i className="bi bi-x-circle-fill"></i></div>

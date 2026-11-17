@@ -33,8 +33,8 @@ for (const signerId of ['42', '00000000-0000-4000-8000-000000000042']) {
         const route = load('apps/web/app/api/surat/sign-pdf/route.ts', {
             'next/server': { NextRequest, NextResponse },
             'pdf-lib': { PDFDocument, degrees },
-            qrcode: require('qrcode'),
-            canvas: { createCanvas() { throw new Error('Use plain QR fallback'); } },
+            '@acca/shared/surat-document.cjs': require('@acca/shared/surat-document.cjs'),
+            '@/lib/qr/acca-qr.server': { createAccaQrPng: async data => require('qrcode').toBuffer(data, { type: 'png', errorCorrectionLevel: 'H' }) },
             '@/lib/app-jwt': { extractRequestToken: () => 'test-token' },
             '@/lib/api-auth': { getApiUser: async () => ({ authId: '00000000-0000-4000-8000-000000000001' }) },
             '@/lib/public-url': { getPublicOrigin: () => 'https://acca.icgowa.sch.id' },

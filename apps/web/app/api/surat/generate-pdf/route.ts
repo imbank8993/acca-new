@@ -7,7 +7,7 @@ import { extractRequestToken } from '@/lib/app-jwt';
 import { nestFetchAsUser } from '@/lib/nest-api';
 import { renderToBuffer, Document, Page, View, Text, Image, StyleSheet } from '@react-pdf/renderer';
 import { PDFDocument, rgb } from 'pdf-lib';
-import QRCode from 'qrcode';
+import { createAccaQrDataUrl } from '@/lib/qr/acca-qr.server';
 import React from 'react';
 import fs from 'fs/promises';
 import path from 'path';
@@ -104,62 +104,6 @@ async function fetchFileToDataUrl(url: string): Promise<string> {
         console.error(`[PDF] Error downloading file attachment: ${url}`, error);
         return url; // Fallback
     }
-}
-
-// Generate QR code with logo embedded using canvas
-async function generateQRWithLogo(logoDataUrl: string, scanUrl: string): Promise<string> {
-    try {
-        // Dynamically import canvas only when needed
-        const { createCanvas } = await import('canvas');
-
-        // Create canvas for QR code
-        const size = 200;
-        const canvas = createCanvas(size, size);
-        const ctx = canvas.getContext('2d');
-
-        // Generate QR code as raw pixel data
-        const qrData = await QRCode.toString(scanUrl, { type: 'terminal' });
-
-        // Use qrcode library to generate to canvas (if supported) or fallback
-        await QRCode.toCanvas(canvas, scanUrl, {
-            width: size,
-            margin: 1,
-            color: {
-                dark: '#000000',
-                light: '#ffffff'
-            }
-        });
-
-        // If logo exists, draw it in center
-        if (logoDataUrl && logoDataUrl.startsWith('data:image')) {
-            const logo = await loadImageFromDataUrl(logoDataUrl);
-
-            // Draw white circle background
-            const centerX = size / 2;
-            const centerY = size / 2;
-            const radius = 30;
-            ctx.fillStyle = '#ffffff';
-            ctx.beginPath();
-            ctx.arc(centerX, centerY, radius + 5, 0, Math.PI * 2);
-            ctx.fill();
-
-            // Draw logo in center
-            const logoSize = radius * 2;
-            ctx.drawImage(logo, centerX - logoSize/2, centerY - logoSize/2, logoSize, logoSize);
-        }
-
-        return canvas.toDataURL('image/png');
-    } catch (error) {
-        console.error('[PDF] Error generating QR with logo:', error);
-        // Fallback: generate QR without logo
-        return await QRCode.toDataURL(scanUrl, { width: 200 });
-    }
-}
-
-// Load image from data URL to canvas Image
-async function loadImageFromDataUrl(dataUrl: string): Promise<any> {
-    const { createCanvas, loadImage } = await import('canvas');
-    return await loadImage(Buffer.from(dataUrl.split(',')[1], 'base64'));
 }
 
 // Elegant professional styles
@@ -909,7 +853,6 @@ export async function POST(request: NextRequest) {
         const localBaseUrl = baseUrl && baseUrl.startsWith('http') ? baseUrl : serverOrigin;
         let backgroundUrl = `${localBaseUrl}/images/Surat%20ACCA%20A4.png`;
         let logoUrl = `${localBaseUrl}/logo-icon.png`;
-        let qrLogoUrl = `${localBaseUrl}/logo-sidebar-kecil.png`; // Default: logo ACCA untuk QR
         console.log('[PDF] Using localBaseUrl:', localBaseUrl, '(passed baseUrl from frontend:', baseUrl, ')');
 
         // 2. Validate session & letter data against NestJS backend
@@ -933,7 +876,6 @@ export async function POST(request: NextRequest) {
                 if (configData.background_url) backgroundUrl = configData.background_url;
                 if (configData.logo_kecil_url) logoUrl = configData.logo_kecil_url;
                 else if (configData.logo_url) logoUrl = configData.logo_url;
-                if (configData.logo_qr_url) qrLogoUrl = configData.logo_qr_url;
             }
             guruList = pdfData.guruList || [];
             siswaList = pdfData.siswaList || [];
@@ -961,21 +903,19 @@ export async function POST(request: NextRequest) {
         console.log('[PDF] Generating PDF...');
         console.log('[PDF] Scan URL:', verificationUrl);
 
-        // Download background, logo (kop), and QR logo (ACCA) as base64
-        console.log('[PDF] Downloading background, logo, and QR logo...');
-        const [bgDataUrl, logoDataUrl, qrLogoDataUrl] = await Promise.all([
+        // Download background and logo (kop) as base64
+        console.log('[PDF] Downloading background and logo...');
+        const [bgDataUrl, logoDataUrl] = await Promise.all([
             imageToDataUrl(backgroundUrl),
             imageToDataUrl(logoUrl),
-            imageToDataUrl(qrLogoUrl),
         ]);
 
         console.log('[PDF] bgDataUrl length:', bgDataUrl.length);
         console.log('[PDF] logoDataUrl (kop) length:', logoDataUrl.length);
-        console.log('[PDF] qrLogoDataUrl (ACCA) length:', qrLogoDataUrl.length);
 
-        // Generate QR code WITH logo embedded (use ACCA logo for QR)
+        // QR verifikasi dengan logo ACCA terbaru (helper bersama persuratan)
         console.log('[PDF] Generating QR with logo...');
-        const qrWithLogo = await generateQRWithLogo(qrLogoDataUrl, verificationUrl);
+        const qrWithLogo = await createAccaQrDataUrl(verificationUrl, { width: 300 });
         console.log('[PDF] QR with logo length:', qrWithLogo.length);
 
         // Use data URLs (with better fallback handling)
@@ -995,8 +935,6 @@ export async function POST(request: NextRequest) {
             logoDataUrlLength: logoDataUrl.length,
             finalLogoUrlStart: finalLogoUrl.substring(0, 50) + (finalLogoUrl.length > 50 ? '...' : ''),
             isDataUrl: finalLogoUrl.startsWith('data:'),
-            qrLogoUrl,
-            qrLogoDataUrlLength: qrLogoDataUrl.length
         });
 
         // If we got no valid images, return error

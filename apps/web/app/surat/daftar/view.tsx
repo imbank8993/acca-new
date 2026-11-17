@@ -11,7 +11,7 @@ import { createPortal } from 'react-dom';
 import Swal from 'sweetalert2';
 import '../../surat/surat.css';
 import { getPublicOrigin } from '@/lib/public-url';
-import { APP_BRAND } from '@/lib/branding';
+import { accaQrImageUrl } from '@/lib/qr/acca-qr-config';
 import { suratFileName } from '@acca/shared/surat-document.cjs';
 
 interface SuratItem {
@@ -470,13 +470,9 @@ function DaftarSuratContent({ hideHeader = false }: { hideHeader?: boolean }) {
                                 {/* Left: QR Code */}
                                 <div style={{ position: 'relative', display: 'flex', flexShrink: 0, boxShadow: '0 4px 12px rgba(0,0,0,0.06)', borderRadius: '8px', overflow: 'hidden' }}>
                                     <img
-                                        src={`/api/qrcode?data=${encodeURIComponent(`${getPublicOrigin()}/surat/scan/${selectedSurat.id}`)}`}
+                                        src={accaQrImageUrl(`${getPublicOrigin()}/surat/scan/${selectedSurat.id}`)}
                                         alt="QR Verifikasi"
                                         style={{ width: '84px', height: '84px', border: '1px solid #e2e8f0', background: 'white', display: 'block' }}
-                                    />
-                                    <img
-                                        src={APP_BRAND.logo} alt="Logo"
-                                        style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '20px', height: '20px', borderRadius: '4px', background: 'white', padding: '1.5px', boxShadow: '0 2px 6px rgba(0,0,0,0.1)', objectFit: 'contain' }}
                                     />
                                 </div>
 

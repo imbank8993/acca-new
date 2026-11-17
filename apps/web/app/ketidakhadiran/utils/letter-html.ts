@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { escapeHtml } from '@/lib/print/print-utils';
+import { accaQrImageUrl } from '@/lib/qr/acca-qr-config';
 
 export function resolveAssetDataUri(url: string): string {
   if (!url) return url;
@@ -70,9 +71,8 @@ export function buildSingleHtml(params: SingleHtmlParams): string {
     autoPrint = false,
   } = params;
 
-  const qrSrc = qrCodeUrl || `/api/qrcode?data=${encodeURIComponent(scanUrl)}`;
+  const qrSrc = qrCodeUrl || accaQrImageUrl(scanUrl);
   const safe = (value: string) => escapeHtml(value || '-');
-  const logoSrc = resolveAssetDataUri('/logo-sidebar-kecil.webp');
   const resolvedBg = resolveAssetDataUri(backgroundUrl);
   const isRekomendasi = letterType === 'REKOMENDASI_KONTROL' || letterType === 'SAKIT' ||
     (Boolean(nomorSurat) && nomorSurat.includes('/UKS/'));
@@ -249,19 +249,6 @@ export function buildSingleHtml(params: SingleHtmlParams): string {
     width: 60px;
     height: 60px;
   }
-  .qr-logo {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 18px;
-    height: 18px;
-    transform: translate(-50%, -50%);
-    border-radius: 4px;
-    background: #fff;
-    padding: 1.5px;
-    object-fit: contain;
-    box-shadow: 0 0 1px rgba(0,0,0,0.5);
-  }
   .sign-name {
     font-weight: bold;
     margin-top: 2px;
@@ -316,7 +303,6 @@ export function buildSingleHtml(params: SingleHtmlParams): string {
         <div class="qr-section-inline">
           <div class="qr-wrap">
             <img src="${safe(qrSrc)}" alt="QR Code" class="qr-img"/>
-            <img src="${safe(logoSrc)}" alt="Logo" class="qr-logo"/>
           </div>
         </div>
         <div class="sign-name">${safe(pejabatNama)}</div>
@@ -356,9 +342,8 @@ export function buildCollectiveHtml(params: CollectiveHtmlParams): string {
     autoPrint = false,
   } = params;
 
-  const qrSrc = qrCodeUrl || `/api/qrcode?data=${encodeURIComponent(scanUrl)}`;
+  const qrSrc = qrCodeUrl || accaQrImageUrl(scanUrl);
   const safe = (value: unknown) => escapeHtml(String(value || '-'));
-  const logoSrc = resolveAssetDataUri('/logo-sidebar-kecil.webp');
   const resolvedBg = resolveAssetDataUri(backgroundUrl);
   const ketList = rows.map((r) => String(r.keterangan || '').trim());
   const sharedKet = ketList.length > 0 && ketList.every((item) => item === ketList[0]) &&
@@ -557,19 +542,6 @@ ${colWidthCss}
     width: 60px;
     height: 60px;
   }
-  .qr-logo {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 18px;
-    height: 18px;
-    transform: translate(-50%, -50%);
-    border-radius: 4px;
-    background: #fff;
-    padding: 1.5px;
-    object-fit: contain;
-    box-shadow: 0 0 1px rgba(0,0,0,0.5);
-  }
   .sign-name {
     font-weight: bold;
     margin-top: 2px;
@@ -637,7 +609,6 @@ ${colWidthCss}
         <div class="qr-section-inline">
           <div class="qr-wrap">
             <img src="${safe(qrSrc)}" alt="QR Code" class="qr-img"/>
-            <img src="${safe(logoSrc)}" alt="Logo" class="qr-logo"/>
           </div>
         </div>
         <div class="sign-name">${safe(pejabatNama)}</div>
@@ -676,8 +647,7 @@ export function buildRekapanHtml(params: RekapanHtmlParams): string {
     autoPrint = false,
   } = params;
 
-  const qrSrc = qrCodeUrl || `/api/qrcode?data=${encodeURIComponent(scanUrl)}`;
-  const logoSrc = resolveAssetDataUri('/logo-sidebar-kecil.webp');
+  const qrSrc = qrCodeUrl || accaQrImageUrl(scanUrl);
   const resolvedBg = resolveAssetDataUri(backgroundUrl);
   const safe = (value: unknown) => escapeHtml(String(value || '-'));
 
@@ -764,19 +734,6 @@ export function buildRekapanHtml(params: RekapanHtmlParams): string {
     display: block;
     object-fit: contain;
   }
-  .qr-logo {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 22px;
-    height: 22px;
-    transform: translate(-50%, -50%);
-    border-radius: 4px;
-    background: #fff;
-    padding: 2px;
-    object-fit: contain;
-    box-shadow: 0 0 1px rgba(0,0,0,0.5);
-  }
   .barcode-id { font-family: 'Courier New', monospace; font-size: 7pt; color: #666; letter-spacing: 1px; margin-top: 4px; }
   @media print {
     html, body { height: 297mm; overflow: hidden; margin: 0 !important; padding: 0 !important; }
@@ -806,7 +763,6 @@ export function buildRekapanHtml(params: RekapanHtmlParams): string {
         <div class="qr-section-inline">
           <div class="qr-wrap">
             <img src="${safe(qrSrc)}" alt="QR Code" class="qr-img"/>
-            <img src="${safe(logoSrc)}" alt="Logo" class="qr-logo"/>
           </div>
           <div class="barcode-id">${barcode}</div>
         </div>

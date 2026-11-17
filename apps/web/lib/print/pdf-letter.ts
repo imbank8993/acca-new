@@ -14,6 +14,7 @@
 import { getUploadUrl } from '@/lib/file-storage';
 import { prisma } from '@/lib/prisma';
 import { getPublicOrigin } from '@/lib/public-url';
+import { accaQrImageUrl } from '@/lib/qr/acca-qr-config';
 import https from 'https';
 
 /** Result of opening a PDF-ready letter in a new window */
@@ -169,7 +170,6 @@ function buildLetterHtml(params: {
 
     const isRekom = letterType === 'REKOMENDASI_KONTROL';
     const bgUrl = suratUmumConfig?.backgroundUrl || '/images/Surat ACCA.png';
-    const qrLogoUrl = '/logo-sidebar-kecil.webp';
     const titleText = isRekom ? 'SURAT REKOMENDASI KONTROL' : 'SURAT IZIN MENINGGALKAN ASRAMA';
     const openingText = 'Yang bertanda tangan di bawah ini adalah petugas pemberi izin MAN Insan Cendekia Gowa, menyatakan bahwa siswa berikut:';
     const stateText = 'diberikan izin dengan keterangan dan keperluan sebagai berikut:';
@@ -232,11 +232,6 @@ function buildLetterHtml(params: {
   .qr-section-inline { display: flex; flex-direction: column; align-items: center; margin: 10px 0 8px 0; width: 100%; }
   .qr-wrapper { position: relative; display: inline-block; }
   .qr-img { width: 75px; height: 75px; display: block; }
-  .qr-logo {
-    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-    width: 20px; height: 20px; border-radius: 4px; object-fit: contain;
-    background: #fff; padding: 1.5px; box-shadow: 0 1px 4px rgba(0,0,0,0.2);
-  }
   .barcode-id { font-family: 'Courier New', monospace; font-size: 7pt; color: #666; letter-spacing: 1px; margin-top: 4px; }
   @media print {
     html, body { height: 296.5mm; overflow: hidden; margin: 0 !important; padding: 0 !important; }
@@ -271,8 +266,7 @@ function buildLetterHtml(params: {
         <div class="sign-jabatan">${pejabatJabatan}</div>
         <div class="qr-section-inline">
           <div class="qr-wrapper">
-            <img src="/api/qrcode?data=${encodeURIComponent(scanUrl)}" alt="QR" class="qr-img"/>
-            <img src="${qrLogoUrl}" alt="Logo" class="qr-logo"/>
+            <img src="${accaQrImageUrl(scanUrl)}" alt="QR" class="qr-img"/>
           </div>
           <div class="barcode-id">${barcode}</div>
         </div>

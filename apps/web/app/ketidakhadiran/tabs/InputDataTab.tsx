@@ -24,6 +24,7 @@ import { DesktopFab } from '@/components/ui/DesktopFab';
 import { MobileFab } from '@/components/mobile';
 import { MobileList, MobileListItem, MobileAvatar } from '@/components/mobile/MobileList';
 import { getPublicOrigin } from '@/lib/public-url';
+import { accaQrImageUrl } from '@/lib/qr/acca-qr-config';
 import { MobileSheet, MobileKV } from '@/components/mobile/MobileSheet';
 import { getProxiedImageUrl } from '@/lib/image-utils';
 
@@ -1350,7 +1351,7 @@ export function InputDataTab() {
                     const barcode = existing.barcode;
                     const scanBase = getPublicOrigin();
                     const scanUrl = `${scanBase}/ketidakhadiran/verify/${barcode}`;
-                    const qrCodeUrl = `${scanBase}/api/qrcode?data=${encodeURIComponent(scanUrl)}`;
+                    const qrCodeUrl = accaQrImageUrl(scanUrl, scanBase);
 
                     const data = {
                         ...formatDataForPrint(row),
@@ -1381,7 +1382,7 @@ export function InputDataTab() {
             const { barcode, nomor_surat } = genJson.data;
             const scanBase = getPublicOrigin();
             const scanUrl = `${scanBase}/ketidakhadiran/verify/${barcode}`;
-            const qrCodeUrl = `${scanBase}/api/qrcode?data=${encodeURIComponent(scanUrl)}`;
+            const qrCodeUrl = accaQrImageUrl(scanUrl, scanBase);
 
             const data = {
                 ...formatDataForPrint(row),
@@ -1457,7 +1458,7 @@ export function InputDataTab() {
                     const barcode = existing.barcode;
                     const scanBase = getPublicOrigin();
                     const scanUrl = `${scanBase}/ketidakhadiran/verify/${barcode}`;
-                    const qrCodeUrl = `${scanBase}/api/qrcode?data=${encodeURIComponent(scanUrl)}`;
+                    const qrCodeUrl = accaQrImageUrl(scanUrl, scanBase);
 
                     const data = {
                         ...formatDataForPrint(representative),
@@ -1489,7 +1490,7 @@ export function InputDataTab() {
             const { barcode, nomor_surat } = genJson.data;
             const scanBase = getPublicOrigin();
             const scanUrl = `${scanBase}/ketidakhadiran/verify/${barcode}`;
-            const qrCodeUrl = `${scanBase}/api/qrcode?data=${encodeURIComponent(scanUrl)}`;
+            const qrCodeUrl = accaQrImageUrl(scanUrl, scanBase);
 
             const data = {
                 ...formatDataForPrint(representative),

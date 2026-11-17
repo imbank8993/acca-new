@@ -303,7 +303,6 @@ export function buildRekapPrintHtml(params: BuildRekapHtmlParams): string {
 
       const isLast = pageIndex === pages.length - 1;
       const today = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
-      const logoSrc = resolvePrintAssetUrl('/logo-sidebar-kecil.webp', appBase);
       // Blok tanda tangan: tempat & tanggal, QR tunggal, lalu label jabatan.
       // Nama petugas tidak diulang di sini — sudah terdaftar di atas tabel.
       const signArea = isLast
@@ -313,7 +312,6 @@ export function buildRekapPrintHtml(params: BuildRekapHtmlParams): string {
               <div class="sign-qr-box">
                 <div class="sign-qr-wrap">
                   <img class="sign-qr-img" src="${escapeHtml(qrCodeUrl)}" alt="QR Code" />
-                  <img class="sign-qr-logo" src="${escapeHtml(logoSrc)}" alt="Logo" />
                 </div>
                 <div class="sign-qr-caption">Pindai untuk verifikasi</div>
               </div>
@@ -461,19 +459,6 @@ export function buildRekapPrintHtml(params: BuildRekapHtmlParams): string {
     height: 80px;
     display: block;
     border: 1px solid #333;
-  }
-  .sign-qr-logo {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 24px;
-    height: 24px;
-    transform: translate(-50%, -50%);
-    border-radius: 4px;
-    background: #ffffff;
-    padding: 2px;
-    object-fit: contain;
-    box-shadow: 0 0 1px rgba(0,0,0,0.5);
   }
   .sign-qr-caption {
     font-size: 7pt;

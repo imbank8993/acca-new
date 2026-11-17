@@ -210,7 +210,7 @@ test('Verifikasi QR medis menyembunyikan isi, NISN, dan URL arsip', async () => 
 function letterRoute(f, actor = { id:'1',nama:'UKS Operator',nip:'uks',roles:['OP_UKS'],pages:['ketidakhadiran'] }, renderFail = false) {
   const response={json:(body,options={})=>({body,status:options.status||200})};
   const { POST }=moduleOf('apps/web/app/api/ketidakhadiran/generate-letter/route.ts',{
-    '@/lib/prisma':{prisma:f.db},'next/server':{NextResponse:response},qrcode:{default:{toDataURL:async()=> 'data:image/png;base64,test'}},
+    '@/lib/prisma':{prisma:f.db},'next/server':{NextResponse:response},'@/lib/qr/acca-qr.server':{createAccaQrDataUrl:async()=> 'data:image/png;base64,test'},
     '@/lib/ketidakhadiran-security':{letterActor:async()=>actor,LETTER_TYPES:['REKAM_MEDIK','REKAPAN_SAKIT','MENINGGALKAN_ASRAMA','REKOMENDASI_KONTROL','SAKIT','UKS'],mayManageLetter:(u,type,nomor='')=>u.roles.includes('ADMIN') || u.roles.includes(type==='REKOMENDASI_KONTROL'||type==='UKS'||type==='SAKIT'||type==='REKAM_MEDIK'||type==='REKAPAN_SAKIT'||nomor.includes('/UKS/')?'OP_UKS':'OP_IZIN')},
     '@/lib/public-url':{getPublicOrigin:()=> 'https://school.example'},'@/lib/surat-config':{getTemplateBackgroundUrl:async()=> '/images/background.png'},
     '@/app/ketidakhadiran/utils/letter-html':{getMonthRoman:()=> 'X',buildSingleHtml:p=>{if(renderFail)throw Error('Render failed');return `<p>${p.siswaNama}</p><div class="sign-name">${p.pejabatNama}</div>`;},buildCollectiveHtml:()=>'<p>collective</p>'},
@@ -305,7 +305,7 @@ test('Pratinjau medis anonim ditolak; arsip snapshot tidak dihitung ulang', asyn
   let actor=null;
   class ResponseStub { constructor(body,options={}) {this.body=body;this.status=options.status||200;this.headers=options.headers;} }
   const route=moduleOf('apps/web/app/api/ketidakhadiran/pdf-preview/route.ts', {
-    '@/lib/prisma':{prisma:f.db},'next/server':{NextResponse:ResponseStub},qrcode:{default:{toDataURL:async()=> 'data:image/png;base64,test'}},
+    '@/lib/prisma':{prisma:f.db},'next/server':{NextResponse:ResponseStub},'@/lib/qr/acca-qr.server':{createAccaQrDataUrl:async()=> 'data:image/png;base64,test'},
     '@/lib/ketidakhadiran-security':{letterActor:async()=>actor,mayManageLetter:()=>true,fetchLetterArchive:async()=>null},
     '@/lib/public-url':{getPublicOrigin:()=> 'https://school.example'},'@/lib/surat-config':{getTemplateBackgroundUrl:async()=> '/images/background.png'},
     '@/lib/puppeteer-launcher':{},'@/app/ketidakhadiran/utils/letter-html':{},'@/lib/print/rekam-medis-letter':{},

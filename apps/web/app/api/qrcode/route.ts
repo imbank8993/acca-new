@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import QRCode from 'qrcode';
+import { createAccaQrPng } from '@/lib/qr/acca-qr.server';
 
 export async function GET(req: NextRequest) {
     try {
@@ -9,17 +9,10 @@ export async function GET(req: NextRequest) {
             return NextResponse.json({ ok: false, error: 'Missing data parameter' }, { status: 400 });
         }
 
-        // Generate QR code as PNG buffer with high error correction
-        const qrBuffer = await QRCode.toBuffer(url, {
-            type: 'png',
-            width: 200,
-            margin: 2,
-            color: {
-                dark: '#000000',
-                light: '#ffffff'
-            },
-            errorCorrectionLevel: 'H' // High error correction to allow logo overlay
-        });
+        // QR persuratan memakai `logo=acca` (lihat accaQrImageUrl) agar logo ACCA
+        // ditanam di server; pemakai lain (mis. kartu siswa) tetap QR polos.
+        const withLogo = req.nextUrl.searchParams.get('logo') === 'acca';
+        const qrBuffer = await createAccaQrPng(url, { width: withLogo ? 300 : 200, margin: withLogo ? 1 : 2, withLogo });
 
         return new NextResponse(qrBuffer as any, {
             status: 200,

@@ -1,7 +1,7 @@
 import { fetchLetterArchive, letterActor, mayManageLetter } from '@/lib/ketidakhadiran-security';
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import QRCode from 'qrcode';
+import { createAccaQrDataUrl } from '@/lib/qr/acca-qr.server';
 import { getPublicOrigin } from '@/lib/public-url';
 import { isUksRecommendation, uksRecommendationSigner } from '@acca/shared/medical-letter-signer.cjs';
 import { launchPuppeteerBrowser } from '@/lib/puppeteer-launcher';
@@ -83,15 +83,7 @@ export async function GET(request: NextRequest) {
 
     let qrCodeUrl: string | undefined;
     try {
-      qrCodeUrl = await QRCode.toDataURL(scanUrl, {
-        width: 250,
-        margin: 1,
-        color: {
-          dark: '#000000',
-          light: '#ffffff',
-        },
-        errorCorrectionLevel: 'H',
-      });
+      qrCodeUrl = await createAccaQrDataUrl(scanUrl, { width: 250 });
     } catch (qrErr) {
       console.error('[pdf-preview] QR Code generation error:', qrErr);
     }
