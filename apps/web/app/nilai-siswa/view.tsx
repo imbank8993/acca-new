@@ -143,6 +143,7 @@ function NilaiSiswaPage() {
     const [selectedSemester, setSelectedSemester] = useState('');
     const [selectedMapel, setSelectedMapel] = useState('');
     const [selectedSumber, setSelectedSumber] = useState('all');
+    const [gradeSearchQuery, setGradeSearchQuery] = useState('');
     const nilaiRequest = useRef(0);
     const [availableTahunAjaran, setAvailableTahunAjaran] = useState<string[]>([]);
     const [availableSemester, setAvailableSemester] = useState<string[]>([]);
@@ -255,15 +256,30 @@ function NilaiSiswaPage() {
         return currentItems.filter(i => i.mapel === selectedMapel);
     }, [currentItems, selectedMapel]);
 
+    const gradeSearch = gradeSearchQuery.trim().toLocaleLowerCase('id');
+    const searchedItems = useMemo(() => {
+        if (!gradeSearch) return displayedItems;
+        return displayedItems.filter(item => [item.mapel, item.nama_guru, item.jenis, item.tagihan, item.materi_tp, item.topik, item.catatan]
+            .some(value => String(value ?? '').toLocaleLowerCase('id').includes(gradeSearch))
+            || ((item.sumber === 'cbt') && 'nilai acca-cbt'.includes(gradeSearch)));
+    }, [displayedItems, gradeSearch]);
+
+    const searchedApresiasi = useMemo(() => {
+        if (!gradeSearch) return currentApresiasi;
+        if ('nilai apresiasi'.includes(gradeSearch)) return currentApresiasi;
+        return currentApresiasi.filter(item => [item.mapel, item.nama_guru, item.judul, item.topik, item.catatan]
+            .some(value => String(value ?? '').toLocaleLowerCase('id').includes(gradeSearch)));
+    }, [currentApresiasi, gradeSearch]);
+
     const displayedGradeGroups = useMemo(() => {
         const groups = displayedMapelList.map(mapel => ({
             key: `guru:${mapel}`, title: mapel, isCbt: false,
-            items: groupedByMapel[mapel].filter(item => item.sumber !== 'cbt'),
+            items: searchedItems.filter(item => item.mapel === mapel && item.sumber !== 'cbt'),
         })).filter(group => group.items.length > 0);
-        const cbtItems = displayedItems.filter(item => item.sumber === 'cbt');
+        const cbtItems = searchedItems.filter(item => item.sumber === 'cbt');
         if (cbtItems.length) groups.push({ key: 'cbt', title: 'Nilai ACCA-CBT', isCbt: true, items: cbtItems });
         return groups;
-    }, [displayedMapelList, groupedByMapel, displayedItems]);
+    }, [displayedMapelList, searchedItems]);
 
     const regularKelas = useMemo(() => {
         const normalizeSemester = (value: string | number | null) => {
@@ -277,17 +293,17 @@ function NilaiSiswaPage() {
     }, [data?.kelas, selectedTahunAjaran, selectedSemester]);
 
     const stats = useMemo(() => {
-        const validItems = displayedItems.filter(i => i.nilai !== null);
+        const validItems = searchedItems.filter(i => i.nilai !== null);
         const avg = validItems.length > 0
             ? validItems.reduce((sum, i) => sum + (i.nilai || 0), 0) / validItems.length
             : null;
         return {
-            total: displayedItems.length,
-            mapel: displayedMapelList.length,
+            total: searchedItems.length,
+            mapel: new Set(searchedItems.map(item => item.mapel)).size,
             avg,
             kelas: regularKelas,
         };
-    }, [displayedItems, displayedMapelList, regularKelas]);
+    }, [searchedItems, regularKelas]);
 
     // --- Callbacks ---
     const checkAuth = useCallback(async () => {
@@ -744,6 +760,8 @@ function NilaiSiswaPage() {
                     {/* Filters Toolbar */}
                     {data && (
                         <FilterToolbar className="nilai-page__filter-toolbar">
+                            <FilterSearch label="Cari Nilai" value={gradeSearchQuery} onChange={setGradeSearchQuery}
+                                placeholder="Cari mapel, guru, atau topik..." grow={2} />
                             <FilterSelect label="Sumber Nilai" icon="funnel" value={selectedSumber}
                                 onChange={setSelectedSumber} options={[
                                     { value: 'all', label: 'Semua Sumber' },
@@ -811,11 +829,11 @@ function NilaiSiswaPage() {
                     </div>
 
                     {/* Grades */}
-                    {displayedMapelList.length === 0 ? (
+                    {displayedGradeGroups.length === 0 ? (searchedApresiasi.length === 0 ? (
                         <div className="nilai-page__card nilai-page__empty-state">
-                            <h3 className="nilai-page__empty-title">Belum ada data</h3>
+                            <h3 className="nilai-page__empty-title">{gradeSearch ? 'Tidak ada nilai yang cocok' : 'Belum ada data'}</h3>
                         </div>
-                    ) : (
+                    ) : null) : (
                     <div className="nilai-page__mapel-list">
                         {displayedGradeGroups.map(({ key, title: mapel, items, isCbt }) => {
                             const itemsWithInfo = items.map(i => ({
@@ -1063,8 +1081,8 @@ function NilaiSiswaPage() {
                     Poin ini tidak boleh ikut ke rata-rata mapel: ia bukan nilai
                     capaian, dan siswa yang tidak muncul di sini bukan berarti
                     nilainya nol — ia hanya belum pernah menang rebutan. */}
-                {currentApresiasi.length > 0 && (() => {
-                    const totalApresiasiPoin = Number(currentApresiasi.reduce((sum, a) => sum + Number(a.total_poin || 0), 0).toFixed(2));
+                {searchedApresiasi.length > 0 && (() => {
+                    const totalApresiasiPoin = Number(searchedApresiasi.reduce((sum, a) => sum + Number(a.total_poin || 0), 0).toFixed(2));
                     return (
                         <div className="nilai-page__mapel-card">
                             <div className="nilai-page__mapel-header">
@@ -1101,7 +1119,7 @@ function NilaiSiswaPage() {
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {currentApresiasi.map((a, idx) => (
+                                            {searchedApresiasi.map((a, idx) => (
                                                 <tr key={a.id || idx} className="nilai-page__tr">
                                                     <td className="nilai-page__td nilai-page__td--sumatif">
                                                         {a.mapel}
@@ -1125,7 +1143,7 @@ function NilaiSiswaPage() {
 
                                 {/* Mobile Cards */}
                                 <div className="nilai-page__mobile-cards" style={{ gap: '10px' }}>
-                                    {currentApresiasi.map((a, idx) => (
+                                    {searchedApresiasi.map((a, idx) => (
                                         <div key={(a.id || idx) + '_apr_mobile'} className="nilai-page__mobile-card">
                                             <div className="nilai-page__mobile-card-header">
                                                 <span className="nilai-page__jenis-badge nilai-page__jenis-badge--kuis">
