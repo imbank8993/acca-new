@@ -11,17 +11,77 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # ── 1. Build image Docker di GitHub (bukan di VPS) ──────────────────────────
+  # Build Next.js/NestJS dulu berjalan di VPS dan membuat CPU penuh setiap push,
+  # termasuk saat ujian CBT. Sekarang image dibangun di runner GitHub lalu
+  # disimpan di GitHub Container Registry (privat); VPS hanya mengunduh.
+  build-images:
+    name: Build image ${{ matrix.service }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - service: acca-api
+            context: .
+            dockerfile: apps/api/Dockerfile
+          - service: acca-web
+            context: .
+            dockerfile: apps/web/Dockerfile
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Tentukan nama image (huruf kecil)
+        id: image
+        run: echo "prefix=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login ke GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+
+      # Dockerfile/compose ACCA tidak memakai build-arg; .env tidak masuk konteks
+      # build (.dockerignore), sama seperti build lama di VPS.
+      - name: Build & push image
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile }}
+          push: true
+          tags: |
+            ${{ steps.image.outputs.prefix }}-${{ matrix.service }}:${{ github.sha }}
+            ${{ steps.image.outputs.prefix }}-${{ matrix.service }}:latest
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+          cache-from: type=gha,scope=${{ matrix.service }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.service }}
+
+  # ── 2. Deploy ke VPS: hanya mengunduh image jadi, tanpa build ────────────────
   deploy:
     name: Deploy to VPS
+    needs: build-images
     runs-on: ubuntu-latest
     timeout-minutes: 75
     permissions:
       contents: read
+      packages: read
     steps:
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.0.3
         env:
           DEPLOY_TOKEN: ${{ github.token }}
+          DEPLOY_ACTOR: ${{ github.actor }}
           DEPLOY_REPOSITORY: ${{ github.repository }}
           DEPLOY_SHA: ${{ github.sha }}
         with:
@@ -31,7 +91,7 @@ jobs:
           port: 22
           command_timeout: 60m
           script_stop: true
-          envs: DEPLOY_TOKEN,DEPLOY_REPOSITORY,DEPLOY_SHA
+          envs: DEPLOY_TOKEN,DEPLOY_ACTOR,DEPLOY_REPOSITORY,DEPLOY_SHA
           script: |
             set -eu
             set +x
@@ -39,6 +99,7 @@ jobs:
 
             echo "📥 Pull kode terbaru..."
             : "${DEPLOY_TOKEN:?Token deployment belum tersedia}"
+            : "${DEPLOY_ACTOR:?Aktor deployment belum tersedia}"
             : "${DEPLOY_REPOSITORY:?Repository deployment belum tersedia}"
             : "${DEPLOY_SHA:?Commit deployment belum tersedia}"
             export GIT_TERMINAL_PROMPT=0
@@ -52,10 +113,29 @@ jobs:
             export GIT_CONFIG_VALUE_2="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$DEPLOY_TOKEN" | base64 | tr -d '\n')"
             git fetch --no-tags "https://github.com/${DEPLOY_REPOSITORY}.git" "$DEPLOY_SHA"
             git reset --hard "$DEPLOY_SHA"
-            unset DEPLOY_TOKEN GIT_CONFIG_COUNT GIT_CONFIG_KEY_0 GIT_CONFIG_VALUE_0 GIT_CONFIG_KEY_1 GIT_CONFIG_VALUE_1 GIT_CONFIG_KEY_2 GIT_CONFIG_VALUE_2
+            unset GIT_CONFIG_COUNT GIT_CONFIG_KEY_0 GIT_CONFIG_VALUE_0 GIT_CONFIG_KEY_1 GIT_CONFIG_VALUE_1 GIT_CONFIG_KEY_2 GIT_CONFIG_VALUE_2
 
-            echo "🐳 Build Docker..."
-            docker compose build
+            # Image sudah dibangun GitHub Actions; VPS hanya mengunduh (tanpa build).
+            # Login GHCR hanya selama pull; token job kedaluwarsa begitu job selesai.
+            PREFIX="ghcr.io/$(printf '%s' "$DEPLOY_REPOSITORY" | tr '[:upper:]' '[:lower:]')"
+            export ACCA_IMAGE_PREFIX="$PREFIX"
+            echo "📦 Unduh image versi $DEPLOY_SHA..."
+            printf '%s' "$DEPLOY_TOKEN" | docker login ghcr.io -u "$DEPLOY_ACTOR" --password-stdin
+            unset DEPLOY_TOKEN
+            pull_status=0
+            ACCA_IMAGE_TAG="$DEPLOY_SHA" docker compose pull acca-api acca-web || pull_status=$?
+            docker logout ghcr.io >/dev/null 2>&1 || true
+            if [ "$pull_status" -ne 0 ]; then
+              echo "Gagal mengunduh image; tidak ada kontainer yang diubah."
+              exit "$pull_status"
+            fi
+
+            # Tandai versi ini sebagai :latest di VPS, supaya `docker compose up -d`
+            # / `docker compose run` memakai image yang sama tanpa login/build.
+            for service in acca-api acca-web; do
+              docker tag "$PREFIX-$service:$DEPLOY_SHA" "$PREFIX-$service:latest"
+            done
+            export ACCA_IMAGE_TAG=latest
 
             echo "🔐 Periksa tabel PTSP pada database utama acca_db..."
             if ! docker compose run --rm --no-deps --entrypoint sh acca-api -c 'test -n "$DATABASE_URL"'; then
@@ -86,12 +166,22 @@ jobs:
             docker compose run --rm --no-deps acca-api node apps/api/prisma/verify-ptsp-db.cjs --letters
 
             echo "🔄 Restart aplikasi..."
-            docker compose up -d --remove-orphans
+            # Hanya kontainer yang image-nya berubah yang dibuat ulang (beberapa detik).
+            docker compose up -d --no-build --remove-orphans
             docker compose run --rm --no-deps acca-api node node_modules/prisma/build/index.js db execute --schema apps/api/prisma/schema.prisma --file apps/api/prisma/sql/20261111_remove_system_audit.sql
             sh scripts/check-deployment-health.sh
 
             echo "🧹 Bersihkan image lama..."
             docker image prune -f
+            # Image lama hasil build lokal (nama bawaan compose) tidak dipakai lagi.
+            docker image rm acca-new-acca-api acca-new-acca-web >/dev/null 2>&1 || true
+            # Simpan 3 versi terakhir per layanan untuk rollback cepat.
+            for service in acca-api acca-web; do
+              docker images "$PREFIX-$service" --format '{{.Tag}}' \
+                | grep -v -e '^latest$' -e "^$DEPLOY_SHA\$" | tail -n +3 \
+                | sed "s|^|$PREFIX-$service:|" \
+                | xargs -r docker rmi 2>/dev/null || true
+            done
 
             echo "🧹 Bersihkan Nginx Proxy Cache & reload Nginx..."
             rm -rf /www/server/nginx/proxy_cache_dir/* 2>/dev/null || true
