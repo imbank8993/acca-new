@@ -85,7 +85,7 @@ services:
 
   # Chromium untuk PDF dan gambar; tidak memiliki port publik atau kredensial aplikasi.
   acca-browser:
-    image: ghcr.io/browserless/chromium:2.26.1
+    image: ghcr.io/browserless/chromium:v2.63.1
     container_name: acca-browser
     restart: unless-stopped
     environment:
