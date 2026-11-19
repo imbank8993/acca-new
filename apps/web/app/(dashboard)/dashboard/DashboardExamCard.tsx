@@ -242,23 +242,20 @@ export default function DashboardExamCard({ user, isSiswa, isGuru, isAdmin }: Da
                                                 {isActive ? 'Aktif' : isUpcoming ? 'Akan Datang' : 'Selesai'}
                                             </span>
                                             <span className="exam-sep">•</span>
-                                            <span className="exam-duration">{exam.duration_minutes}m</span>
-                                            {exam.subject && (
-                                                <>
-                                                    <span className="exam-sep">•</span>
-                                                    <span className="exam-subject" title={exam.subject}>
-                                                        {exam.subject}
-                                                    </span>
-                                                </>
-                                            )}
+                                            <span className="exam-duration">{exam.duration_minutes} menit</span>
                                         </div>
                                     </div>
 
-                                    {/* Line 2 & 3: Judul & Jadwal Bersih */}
+                                    {/* Line 2 & 3: Judul, Mapel & Jadwal */}
                                     <div className="exam-item-body">
                                         <h4 className="exam-item-title" title={exam.title}>
                                             {exam.title}
                                         </h4>
+                                        {exam.subject && (
+                                            <p className="exam-subject" title={exam.subject}>
+                                                {exam.subject}
+                                            </p>
+                                        )}
                                         <p className="exam-item-schedule">
                                             {formatDateRange(exam.start_time, exam.end_time)}
                                         </p>
@@ -651,15 +648,16 @@ export default function DashboardExamCard({ user, isSiswa, isGuru, isAdmin }: Da
                 }
 
                 .exam-subject {
-                    color: #475569;
+                    font-size: 0.72rem;
                     font-weight: 600;
-                    overflow: hidden;
-                    text-overflow: ellipsis;
-                    max-width: 90px;
+                    color: #2563eb;
+                    margin: 0 0 3px 0;
+                    line-height: 1.3;
+                    overflow-wrap: anywhere;
                 }
 
                 :global(.dark) .exam-subject {
-                    color: #cbd5e1;
+                    color: #93c5fd;
                 }
 
                 /* Line 2 & 3: Body */
