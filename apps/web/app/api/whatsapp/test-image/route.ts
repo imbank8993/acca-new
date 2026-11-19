@@ -93,7 +93,7 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({
                 ok: false,
                 stage: 'render',
-                error: `Gagal merender gambar (Puppeteer). Di server pastikan Chromium terpasang: 'npx puppeteer browsers install chrome'. Detail: ${err?.message || err}`,
+                error: `Gagal merender gambar laporan. Periksa layanan browser worker. Detail: ${err?.message || err}`,
             }, { status: 500 })
         }
 

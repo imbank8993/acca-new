@@ -9,13 +9,7 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends \
     openssl \
     curl \
-    ca-certificates \
-    chromium \
-    fonts-freefont-ttf \
-    fonts-ipafont-gothic \
-    fonts-wqy-zenhei \
-    libxss1 \
-    && rm -rf /var/lib/apt/lists/*
+    ca-certificates && rm -rf /var/lib/apt/lists/*
 
 # ── 2. Dependencies & Build Stage ─────────────────────────────────────────────
 FROM base AS builder
@@ -67,7 +61,6 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=3006
 ENV NEXT_TELEMETRY_DISABLED=1
-ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
 
 # Create non-root system user for security
@@ -91,6 +84,6 @@ USER nextjs
 EXPOSE 3006
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
-  CMD curl -f http://localhost:3006/api/health || curl -f http://localhost:3006 || exit 0
+  CMD curl -fsS http://localhost:3006/api/health || exit 1
 
 CMD ["npm", "run", "start", "--workspace=apps/web"]

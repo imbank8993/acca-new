@@ -115,6 +115,13 @@ jobs:
             git reset --hard "$DEPLOY_SHA"
             unset GIT_CONFIG_COUNT GIT_CONFIG_KEY_0 GIT_CONFIG_VALUE_0 GIT_CONFIG_KEY_1 GIT_CONFIG_VALUE_1 GIT_CONFIG_KEY_2 GIT_CONFIG_VALUE_2
 
+            if ! grep -q '^ACCA_BROWSER_TOKEN=' .env; then
+              printf '\nACCA_BROWSER_TOKEN=%s\n' "$(openssl rand -hex 32)" >> .env
+            elif ! grep -Eq '^ACCA_BROWSER_TOKEN=.+$' .env; then
+              echo 'ACCA_BROWSER_TOKEN di .env kosong.'
+              exit 1
+            fi
+
             # Image sudah dibangun GitHub Actions; VPS hanya mengunduh (tanpa build).
             # Login GHCR hanya selama pull; token job kedaluwarsa begitu job selesai.
             PREFIX="ghcr.io/$(printf '%s' "$DEPLOY_REPOSITORY" | tr '[:upper:]' '[:lower:]')"
@@ -123,7 +130,7 @@ jobs:
             printf '%s' "$DEPLOY_TOKEN" | docker login ghcr.io -u "$DEPLOY_ACTOR" --password-stdin
             unset DEPLOY_TOKEN
             pull_status=0
-            ACCA_IMAGE_TAG="$DEPLOY_SHA" docker compose pull acca-api acca-web || pull_status=$?
+            ACCA_IMAGE_TAG="$DEPLOY_SHA" docker compose pull acca-api acca-web acca-browser || pull_status=$?
             docker logout ghcr.io >/dev/null 2>&1 || true
             if [ "$pull_status" -ne 0 ]; then
               echo "Gagal mengunduh image; tidak ada kontainer yang diubah."

@@ -42,9 +42,6 @@ const JPEG_QUALITY = 85
  * Jika tidak ada, seluruh halaman (fullPage) akan di-screenshot.
  */
 export async function renderHtmlToImage(html: string, width = 1000): Promise<Buffer> {
-    // Import dinamis agar tidak ikut ter-bundle pada runtime yang tak butuh (mis. edge).
-    const puppeteer = (await import('puppeteer')).default
-
     let browser: Browser | null = null
     try {
         const { launchPuppeteerBrowser } = await import('./puppeteer-launcher')

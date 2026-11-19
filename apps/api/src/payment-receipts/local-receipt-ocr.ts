@@ -11,6 +11,7 @@ import { ReceiptFields } from './payment-rules';
 export class LocalReceiptOcr {
   private active = 0;
   available() {
+    if (process.env.RECEIPT_OCR_WORKER_URL) return true;
     try {
       for (const code of ['eng', 'ind']) require.resolve(`@tesseract.js-data/${code}/4.0.0_best_int/${code}.traineddata.gz`);
       require.resolve('tesseract.js-core');
@@ -18,6 +19,26 @@ export class LocalReceiptOcr {
     } catch { return false; }
   }
   async extract(image: Buffer): Promise<ReceiptFields> {
+    const workerUrl = process.env.RECEIPT_OCR_WORKER_URL?.trim();
+    if (workerUrl) {
+      try {
+        const response = await fetch(`${workerUrl.replace(/\/$/, '')}/extract`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/octet-stream' },
+          body: new Uint8Array(image),
+          signal: AbortSignal.timeout(65000),
+        });
+        const result = await response.json().catch(() => null);
+        if (response.status === 400) throw new BadRequestException(result?.error || 'Gambar bukti tidak valid.');
+        if (!response.ok || !result?.fields || !['success', 'failed', 'pending', 'unknown'].includes(result.fields.status)) {
+          throw new ServiceUnavailableException(result?.error || 'Worker pembaca bukti tidak tersedia.');
+        }
+        return result.fields as ReceiptFields;
+      } catch (error) {
+        if (error instanceof BadRequestException || error instanceof ServiceUnavailableException) throw error;
+        throw new ServiceUnavailableException('Worker pembaca bukti tidak dapat dihubungi. Silakan coba kembali.');
+      }
+    }
     if (this.active >= 2) throw new ServiceUnavailableException('Pembaca bukti sedang digunakan. Silakan coba kembali sebentar lagi.');
     this.active++;
     let worker: Worker | undefined;

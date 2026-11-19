@@ -19,6 +19,12 @@ echo "🔍 [2/4] Memeriksa file konfigurasi..."
 if [ ! -f ".env" ] && [ ! -f "apps/api/.env" ]; then
     echo "⚠️ PERINGATAN: File .env belum ditemukan di root proyek!"
 fi
+if [ -f ".env" ] && ! grep -q '^ACCA_BROWSER_TOKEN=' .env; then
+    printf '\nACCA_BROWSER_TOKEN=%s\n' "$(openssl rand -hex 32)" >> .env
+elif [ -f ".env" ] && ! grep -Eq '^ACCA_BROWSER_TOKEN=.+$' .env; then
+    echo "ACCA_BROWSER_TOKEN di .env kosong."
+    exit 1
+fi
 
 # 3. Build & Jalankan Container dengan Docker Compose
 echo "🐳 [3/4] Melakukan build image dan menjalankan container..."

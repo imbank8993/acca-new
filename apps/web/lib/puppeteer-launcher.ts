@@ -37,6 +37,12 @@ export function getPuppeteerExecutablePath(): string | undefined {
 
 export async function launchPuppeteerBrowser(extraArgs: string[] = []): Promise<Browser> {
     const puppeteer = (await import('puppeteer')).default;
+    // Di Docker produksi Chromium berjalan di layanan terpisah. Semua pemanggil
+    // tetap memakai API Puppeteer yang sama; browser.close() melepas sesi remote.
+    const remoteEndpoint = process.env.PUPPETEER_BROWSER_WS_ENDPOINT?.trim();
+    if (remoteEndpoint) {
+        return puppeteer.connect({ browserWSEndpoint: remoteEndpoint, protocolTimeout: 180000 });
+    }
     const executablePath = getPuppeteerExecutablePath();
     
     const args = Array.from(new Set([

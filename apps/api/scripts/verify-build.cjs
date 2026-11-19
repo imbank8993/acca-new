@@ -5,6 +5,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 assert.ok(fs.existsSync(path.join(__dirname, '../dist/src/main.js')), 'Missing backend entry point: dist/src/main.js');
+assert.ok(fs.existsSync(path.join(__dirname, '../dist/src/payment-receipts/receipt-ocr-worker.js')), 'Missing OCR worker entry point');
 assert.ok(require.resolve('@acca/shared').endsWith('.js'), 'Shared package must resolve to compiled JavaScript');
 const { formLabelKey } = require('@acca/shared');
 assert.equal(typeof formLabelKey, 'function');

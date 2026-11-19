@@ -15,10 +15,44 @@ services:
     environment:
       - PORT=3007
       - NODE_ENV=production
+      - RECEIPT_OCR_WORKER_URL=http://acca-ocr:3010
     ports:
       - "3007:3007"
+    depends_on:
+      acca-ocr:
+        condition: service_healthy
     networks:
       - acca-network
+      - acca-ocr-network
+
+  # OCR bukti transfer memakai CPU/Tesseract di proses terpisah dari API utama.
+  acca-ocr:
+    image: ${ACCA_IMAGE_PREFIX:-ghcr.io/imbank8993/acca-new}-acca-api:${ACCA_IMAGE_TAG:-latest}
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    container_name: acca-ocr
+    restart: unless-stopped
+    command: ["node", "apps/api/dist/src/payment-receipts/receipt-ocr-worker.js"]
+    environment:
+      - PORT=3010
+      - NODE_ENV=production
+    read_only: true
+    tmpfs:
+      - /tmp:size=128m,mode=1777
+    mem_limit: 2g
+    cpus: 1.0
+    pids_limit: 128
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3010/health"]
+      interval: 30s
+      timeout: 5s
+      start_period: 20s
+      retries: 3
+    networks:
+      - acca-ocr-network
 
   # ── 2. Frontend Application (Next.js) ────────────────────────────────────────
   acca-web:
@@ -34,15 +68,43 @@ services:
       - PORT=3006
       - NODE_ENV=production
       - NEXT_PUBLIC_NEST_API_URL=http://acca-api:3007/api
+      - PUPPETEER_BROWSER_WS_ENDPOINT=ws://acca-browser:3000?token=${ACCA_BROWSER_TOKEN:?ACCA_BROWSER_TOKEN wajib diisi}
       - BAILEYS_AUTH_DIR=/app/apps/web/.baileys_auth
     volumes:
       - baileys_auth_data:/app/apps/web/.baileys_auth
     ports:
       - "3006:3006"
     depends_on:
-      - acca-api
+      acca-api:
+        condition: service_started
+      acca-browser:
+        condition: service_healthy
     networks:
       - acca-network
+      - acca-browser-network
+
+  # Chromium untuk PDF dan gambar; tidak memiliki port publik atau kredensial aplikasi.
+  acca-browser:
+    image: ghcr.io/browserless/chromium:2.26.1
+    container_name: acca-browser
+    restart: unless-stopped
+    environment:
+      - CONCURRENT=${ACCA_BROWSER_CONCURRENT:-1}
+      - QUEUED=${ACCA_BROWSER_QUEUED:-4}
+      - TIMEOUT=240000
+      - ENABLE_DEBUGGER=false
+      - TOKEN=${ACCA_BROWSER_TOKEN:?ACCA_BROWSER_TOKEN wajib diisi}
+    shm_size: 2g
+    mem_limit: 2g
+    cpus: 1.5
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3000/pressure?token='+encodeURIComponent(process.env.TOKEN||'')).then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      start_period: 30s
+      retries: 3
+    networks:
+      - acca-browser-network
 
   # ── 3. Database Opsional (Hanya jika ingin database lokal mandiri) ───────────
   postgres:
@@ -63,6 +125,10 @@ services:
       - acca-network
 
 networks:
+  acca-browser-network:
+    driver: bridge
+  acca-ocr-network:
+    internal: true
   acca-network:
     driver: bridge
 
