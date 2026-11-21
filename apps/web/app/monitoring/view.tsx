@@ -227,10 +227,21 @@ export default function MonitoringPage() {
         }
     };
 
+    // Setiap putaran membaca SELURUH tabel pengguna plus pemetaan kelas siswa.
+    // Dulu tiap 5 detik per tab Monitoring yang terbuka, termasuk tab di latar
+    // belakang. Kini 20 detik, berhenti saat tab tersembunyi, dan langsung
+    // menyegarkan begitu tab dilihat lagi.
     useEffect(() => {
         fetchData();
-        const interval = setInterval(fetchData, 5000);
-        return () => clearInterval(interval);
+        const interval = setInterval(() => {
+            if (document.visibilityState === 'visible') fetchData();
+        }, 20_000);
+        const onVisible = () => { if (document.visibilityState === 'visible') fetchData(); };
+        document.addEventListener('visibilitychange', onVisible);
+        return () => {
+            clearInterval(interval);
+            document.removeEventListener('visibilitychange', onVisible);
+        };
     }, []);
 
     return (

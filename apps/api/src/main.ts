@@ -24,6 +24,12 @@ if (Prisma?.Decimal?.prototype) {
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
   const app = await NestFactory.create(AppModule);
+  // Percayai X-Forwarded-For HANYA dari loopback dan alamat privat (Nginx di host,
+  // jaringan Docker, kontainer acca-web). Tanpa ini req.ip selalu IP kontainer
+  // acca-web/gateway Docker, sehingga pembatas laju menyatukan semua pengguna.
+  // Klien dari internet tidak dapat memalsukan IP-nya: entri XFF paling kanan yang
+  // ditambahkan proxy tepercaya yang dipakai.
+  app.getHttpAdapter().getInstance().set('trust proxy', ['loopback', 'uniquelocal']);
   // One complete school timetable is submitted atomically, rather than in batches.
   // Increase JSON payload limit globally to avoid breaking NestJS default parser registration
   app.use(json({ limit: '50mb' }));

@@ -41,6 +41,7 @@ docker compose run --rm --no-deps acca-api node node_modules/prisma/build/index.
 docker compose run --rm --no-deps acca-api node node_modules/prisma/build/index.js db execute --schema apps/api/prisma/schema.prisma --file apps/api/prisma/sql/20261107_uploaded_document_share_links.sql
 docker compose run --rm --no-deps acca-api node node_modules/prisma/build/index.js db execute --schema apps/api/prisma/schema.prisma --file apps/api/prisma/sql/20261111_inventory.sql
 docker compose run --rm --no-deps acca-api node node_modules/prisma/build/index.js db execute --schema apps/api/prisma/schema.prisma --file apps/api/prisma/sql/20261116_libur_jenis.sql
+docker compose run --rm --no-deps acca-api node node_modules/prisma/build/index.js db execute --schema apps/api/prisma/schema.prisma --file apps/api/prisma/sql/20261121_users_auth_id_index.sql
 docker compose run --rm --no-deps acca-api node apps/api/prisma/verify-ptsp-db.cjs --letters
 
 docker compose up -d --remove-orphans

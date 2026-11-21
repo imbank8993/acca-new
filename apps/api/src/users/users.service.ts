@@ -40,9 +40,20 @@ export interface UpdateUserInput {
 
 const BCRYPT_ROUNDS = 10;
 
+/**
+ * Heartbeat tiap tab dikirim setiap 15 detik. Status online sudah dipegang
+ * PresenceService di memori; `last_seen` hanya dipakai untuk teks "x menit lalu"
+ * di Monitoring. Menulis public.users setiap 15 detik per tab menumpuk baris
+ * mati pada tabel yang dibaca setiap permintaan acca-new DAN CBT. Kini ditulis
+ * paling sering sekali per menit per user, atau segera bila lokasinya berubah.
+ */
+export const LAST_SEEN_WRITE_INTERVAL_MS = 60_000;
+const MAX_LAST_SEEN_ENTRIES = 20_000;
+
 @Injectable()
 export class UsersService {
   private readonly logger = new Logger(UsersService.name);
+  private readonly lastSeenWrites = new Map<string, { at: number; location: string | null }>();
 
   constructor(
     private prisma: PrismaService,
@@ -1192,15 +1203,34 @@ export class UsersService {
       if (!connection.online) return { success: true };
     }
     const locName = (location || '').trim().substring(0, 255) || null;
-    const where = this.getUserWhereClause(user);
+    // Primary key langsung bila ada: kondisi OR auth_id/id pada getUserWhereClause
+    // tidak bisa memakai index PK saja dan memindai tabel bila auth_id tak ber-index.
+    let where: any = null;
+    if (user?.id !== undefined && user?.id !== null) {
+      try { where = { id: BigInt(user.id) }; } catch { where = null; }
+    }
+    where ||= this.getUserWhereClause(user);
     if (where) {
+      const key = String(user?.id ?? user?.auth_id ?? user?.sub ?? '');
+      const now = Date.now();
+      const previous = key ? this.lastSeenWrites.get(key) : undefined;
+      if (previous && previous.location === locName && now - previous.at < LAST_SEEN_WRITE_INTERVAL_MS) {
+        return { success: true };
+      }
       await this.prisma.public_users.updateMany({
         where,
         data: {
-          last_seen: new Date(),
+          last_seen: new Date(now),
           last_location: locName,
         },
       });
+      if (key) {
+        if (this.lastSeenWrites.size >= MAX_LAST_SEEN_ENTRIES) {
+          for (const [k, v] of this.lastSeenWrites) if (now - v.at >= LAST_SEEN_WRITE_INTERVAL_MS) this.lastSeenWrites.delete(k);
+          if (this.lastSeenWrites.size >= MAX_LAST_SEEN_ENTRIES) this.lastSeenWrites.clear();
+        }
+        this.lastSeenWrites.set(key, { at: now, location: locName });
+      }
     }
     return { success: true };
   }

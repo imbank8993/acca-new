@@ -29,6 +29,10 @@ export class AuthController {
 
   @Post('login')
   @HttpCode(HttpStatus.OK)
+  // Kuota per IP asli + akun (lihat loginTracker di user-throttler.guard.ts):
+  // percobaan beruntun ke satu akun dibatasi tanpa membuat siswa satu sekolah
+  // (satu IP NAT) saling menghabiskan kuota.
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   @ApiOperation({ summary: 'Login pengguna (Mirip Supabase Auth)' })
   @ApiResponse({ status: 200, description: 'Login berhasil, mengembalikan JWT token' })
   @ApiResponse({ status: 401, description: 'Email/Username atau password salah' })

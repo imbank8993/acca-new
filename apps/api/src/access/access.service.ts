@@ -25,6 +25,7 @@ export interface UserAccess {
 }
 
 const TTL_MS = 30_000;
+const MAX_PER_USER_ENTRIES = 5_000;
 const ALWAYS_ALLOWED_THEME_ROLES = ['ADMIN', 'ADMINISTRATOR'];
 
 /** Presedensi admin: user admin hanya memakai menu admin, bukan union semua role. */
@@ -91,11 +92,34 @@ export class AccessService {
   private roleCapsCache: { at: number; map: RoleCapabilitiesMap } | null = null;
   private themeCache: { at: number; map: RoleThemeMap } | null = null;
   private activeYearsCache: { at: number; list: string[] } | null = null;
+  /**
+   * Peran tugas per NIP dan pengecualian kapabilitas per user. Keduanya dibaca
+   * di SETIAP permintaan terautentikasi (JwtStrategy) dan di setiap navigasi
+   * halaman (middleware → /access/me), padahal jarang berubah. Pemeriksaan
+   * keamanan yang murah (akun aktif, versi sesi, wajib ganti password) tetap
+   * dibaca langsung di JwtStrategy; yang disimpan di sini hanya bagian mahal.
+   */
+  private dutyRolesCache = new Map<string, { at: number; roles: string[] }>();
+  private overridesCache = new Map<string, { at: number; value: { grants: string[]; revokes: string[] } }>();
 
   constructor(private prisma: PrismaService) {}
 
   private fresh<T>(entry: { at: number } | null): entry is { at: number } & T {
     return !!entry && Date.now() - entry.at < TTL_MS;
+  }
+
+  /** Simpan ke cache per kunci; entri basi dibuang bila ukurannya membesar. */
+  private remember<T extends { at: number }>(map: Map<string, T>, key: string, entry: T): void {
+    if (map.size >= MAX_PER_USER_ENTRIES) {
+      for (const [k, v] of map) if (!this.fresh(v)) map.delete(k);
+      if (map.size >= MAX_PER_USER_ENTRIES) map.clear();
+    }
+    map.set(key, entry);
+  }
+
+  /** Pengecualian kapabilitas berubah: buang salinan per user. */
+  private forgetCapabilityOverrides(): void {
+    this.overridesCache.clear();
   }
 
   async getRolePagesMap(fresh = false): Promise<RolePagesMap> {
@@ -163,6 +187,9 @@ export class AccessService {
     userId: bigint | number | string,
   ): Promise<{ grants: string[]; revokes: string[] }> {
     if (!userId) return { grants: [], revokes: [] };
+    const cacheKey = String(userId);
+    const cached = this.overridesCache.get(cacheKey);
+    if (cached && this.fresh(cached)) return { grants: [...cached.value.grants], revokes: [...cached.value.revokes] };
     try {
       const rows = await this.prisma.user_capabilities.findMany({
         where: { user_id: BigInt(userId) },
@@ -175,6 +202,7 @@ export class AccessService {
         if (row.mode === 'revoke') revokes.push(row.capability_key);
         else grants.push(row.capability_key);
       });
+      this.remember(this.overridesCache, cacheKey, { at: Date.now(), value: { grants: [...grants], revokes: [...revokes] } });
       return { grants, revokes };
     } catch (e) {
       this.logger.error(`getUserCapabilityOverrides: ${(e as Error).message}`);
@@ -185,8 +213,12 @@ export class AccessService {
   /**
    * Kapabilitas efektif seorang user, versi ringan dari `resolveUserAccess`
    * (tanpa halaman & tema) untuk dipasang ke `req.user.caps` pada setiap
-   * request. Peta role→kapabilitas sudah di-cache 30 detik, jadi biaya
-   * tambahannya hanya satu query override per-user.
+   * request. Peta role→kapabilitas dan override per-user di-cache 30 detik
+   * (dikosongkan seketika saat diubah lewat service ini).
+   *
+   * Dulu dipanggil dengan `getRoleCapabilitiesMap(true)` — argumen `fresh`
+   * itu MELEWATI cache, sehingga setiap permintaan API membaca seluruh tabel
+   * role_capabilities walau komentarnya menyebut di-cache.
    *
    * `null` berarti tabel role_capabilities tak terbaca — `can()` menutup
    * gerbang, bukan membukanya.
@@ -196,7 +228,7 @@ export class AccessService {
     roles: string[],
   ): Promise<string[] | null> {
     const [roleCaps, overrides] = await Promise.all([
-      this.getRoleCapabilitiesMap(true),
+      this.getRoleCapabilitiesMap(),
       this.getUserCapabilityOverrides(userId),
     ]);
     if (!roleCaps) return null;
@@ -227,6 +259,8 @@ export class AccessService {
    */
   async getDutyRoles(nip: string): Promise<string[]> {
     if (!nip) return [];
+    const cached = this.dutyRolesCache.get(nip);
+    if (cached && this.fresh(cached)) return [...cached.roles];
     try {
       const years = await this.getActiveYears();
       const yearFilter = years.length > 0 ? { tahun_ajaran: { in: years } } : {};
@@ -250,7 +284,9 @@ export class AccessService {
       });
       if (pengurus.length > 0) roles.add('PENGURUS_KELAS');
 
-      return [...roles];
+      const list = [...roles];
+      this.remember(this.dutyRolesCache, nip, { at: Date.now(), roles: [...list] });
+      return list;
     } catch (e) {
       this.logger.error(`getDutyRoles: ${(e as Error).message}`);
       return [];
@@ -336,9 +372,9 @@ export class AccessService {
     const roles = [...new Set([...identityRoles, ...dutyRoles])];
 
     const [rolePages, flatGroups, roleCaps, overrides] = await Promise.all([
-      this.getRolePagesMap(true),
+      this.getRolePagesMap(),
       this.getRoleFlatGroupsMap(),
-      this.getRoleCapabilitiesMap(true),
+      this.getRoleCapabilitiesMap(),
       this.getUserCapabilityOverrides(user.id),
     ]);
 
@@ -592,6 +628,7 @@ export class AccessService {
       await tx.site_settings.upsert({ where: { key }, create: { key, value, label: `Hak Akses ${key}`, is_active: true }, update: { value } });
     });
     this.roleCapsCache = null;
+    this.forgetCapabilityOverrides();
   }
 
   async setRolePages(role: string, pageIds: string[]): Promise<void> {
@@ -660,6 +697,7 @@ export class AccessService {
         skipDuplicates: true,
       }),
     ]);
+    this.forgetCapabilityOverrides();
   }
 
   /**
@@ -685,6 +723,7 @@ export class AccessService {
         });
       }
     });
+    this.forgetCapabilityOverrides();
   }
 
   async getCapabilityHolders(capabilityKey: string) {

@@ -1,6 +1,23 @@
 # Image acca-api/acca-web dibangun GitHub Actions dan disimpan di GHCR; VPS cukup `docker compose pull`.
 # `build:` tetap ada sebagai cadangan build darurat langsung di VPS (`docker compose build`).
 # ACCA_IMAGE_PREFIX / ACCA_IMAGE_TAG dapat diubah lewat environment (mis. untuk rollback).
+# Rotasi log untuk semua service. Tanpa ini log json-file Docker tumbuh tanpa batas
+# (API mencatat setiap permintaan) sampai disk VPS penuh dan PostgreSQL ikut berhenti.
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "${ACCA_LOG_MAX_SIZE:-20m}"
+    max-file: "${ACCA_LOG_MAX_FILE:-5}"
+
+# Batas CPU/RAM: PostgreSQL, CBT, dan acca-new berbagi satu VPS. Tanpa batas,
+# satu kontainer Node yang sibuk bisa memakan semua core sehingga database
+# tersendat dan seluruh server tampak "down". Ini plafon, bukan jatah tetap.
+#
+# ACCA_BIND_ADDR: alamat host tempat port 3006/3007 dipublikasikan. Port yang
+# dipublikasikan Docker MELEWATI UFW, jadi 0.0.0.0 berarti API bisa dijangkau
+# langsung dari internet tanpa Nginx. Set 127.0.0.1 setelah memastikan reverse
+# proxy aaPanel mengarah ke 127.0.0.1 (lihat docs/kapasitas-server.md).
+
 services:
   # ── 1. Backend REST API (NestJS) ─────────────────────────────────────────────
   acca-api:
@@ -17,7 +34,14 @@ services:
       - NODE_ENV=production
       - RECEIPT_OCR_WORKER_URL=http://acca-ocr:3010
     ports:
-      - "3007:3007"
+      - "${ACCA_BIND_ADDR:-0.0.0.0}:3007:3007"
+    # Memungkinkan DATABASE_URL memakai host.docker.internal (PostgreSQL di host),
+    # bukan IP publik VPS yang mengharuskan port 5432 terbuka ke internet.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    cpus: ${ACCA_API_CPUS:-1.5}
+    mem_limit: ${ACCA_API_MEM:-2g}
+    logging: *default-logging
     depends_on:
       acca-ocr:
         condition: service_healthy
@@ -45,6 +69,7 @@ services:
     pids_limit: 128
     cap_drop: [ALL]
     security_opt: [no-new-privileges:true]
+    logging: *default-logging
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3010/health"]
       interval: 30s
@@ -73,7 +98,12 @@ services:
     volumes:
       - baileys_auth_data:/app/apps/web/.baileys_auth
     ports:
-      - "3006:3006"
+      - "${ACCA_BIND_ADDR:-0.0.0.0}:3006:3006"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    cpus: ${ACCA_WEB_CPUS:-2.0}
+    mem_limit: ${ACCA_WEB_MEM:-2g}
+    logging: *default-logging
     depends_on:
       acca-api:
         condition: service_started
@@ -97,6 +127,7 @@ services:
     shm_size: 2g
     mem_limit: 2g
     cpus: 1.5
+    logging: *default-logging
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://localhost:3000/pressure?token='+encodeURIComponent(process.env.TOKEN||'')).then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
       interval: 30s

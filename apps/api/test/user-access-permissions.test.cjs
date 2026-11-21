@@ -47,8 +47,14 @@ test('admin write guard still rejects ordinary users and role name substrings', 
 test('unreadable overrides never restore a revoked role capability', async () => {
   const f = dbFixture(); f.state.role_capabilities.push({ role: 'GURU', capability_key: 'klinik.kelola_sesi' }); f.state.user_capabilities.push({ user_id: 1n, capability_key: 'klinik.kelola_sesi', mode: 'revoke' });
   assert(!can({ roles: ['GURU'], caps: await f.access.resolveCapabilities(1n, ['GURU']) }, 'klinik.kelola_sesi'));
+  // Override per user di-cache 30 detik: gangguan baca sesudahnya tetap memakai
+  // pencabutan yang sudah terbaca, tidak pernah memulihkan kapabilitas.
   f.failure['user_capabilities.read'] = true;
-  await assert.rejects(f.access.resolveCapabilities(1n, ['GURU']), /Pengecualian izin gagal dibaca/);
+  assert(!can({ roles: ['GURU'], caps: await f.access.resolveCapabilities(1n, ['GURU']) }, 'klinik.kelola_sesi'));
+  // Tanpa salinan tersimpan, galat baca diteruskan (bukan dianggap "tanpa pengecualian").
+  const cold = dbFixture(); cold.state.role_capabilities.push({ role: 'GURU', capability_key: 'klinik.kelola_sesi' }); cold.state.user_capabilities.push({ user_id: 1n, capability_key: 'klinik.kelola_sesi', mode: 'revoke' });
+  cold.failure['user_capabilities.read'] = true;
+  await assert.rejects(cold.access.resolveCapabilities(1n, ['GURU']), /Pengecualian izin gagal dibaca/);
 });
 test('read errors are propagated instead of empty permission maps/holders', async () => {
   for (const [table, method, args] of [['role_pages', 'getRolePagesMap', []], ['role_group_flat', 'getRoleFlatGroupsMap', []], ['role_capabilities', 'getRoleCapabilitiesMap', []], ['role_capabilities', 'getCapabilityHolders', ['klinik.kelola_sesi']], ['system_config', 'getRoleThemeMap', []]]) {

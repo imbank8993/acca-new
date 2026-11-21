@@ -46,9 +46,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ ok: false, error: 'Username dan password wajib diisi' }, { status: 400 });
     }
 
+    // Teruskan rantai X-Forwarded-For dari Nginx apa adanya. API hanya
+    // mempercayai entri yang ditambahkan proxy lokal/privat (trust proxy), jadi
+    // kuota login dihitung per IP asli pengguna, bukan per IP kontainer ini.
+    const forwardedFor = request.headers.get('x-forwarded-for');
     const nestRes = await fetch(`${NEST_API_URL}/auth/login`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...(forwardedFor ? { 'X-Forwarded-For': forwardedFor } : {}) },
       body: JSON.stringify({ usernameOrEmail: username, password }),
     });
 
