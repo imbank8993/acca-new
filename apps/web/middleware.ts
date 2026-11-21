@@ -209,7 +209,11 @@ export async function middleware(request: NextRequest) {
         '/api/surat/test-qr', // Test QR endpoint
         '/api/site-settings', // Public read access for maintenance configuration
         '/images', // Template images
-        '/f' // Public form viewer
+        '/f', // Public form viewer
+        // Pintu keluar bersama dari CBT/Tools. Harus terbuka walau sesi ACCA sudah
+        // habis: sesi Tools/WordPress/CBT di browser ini mungkin masih aktif.
+        // Halaman hanya memanggil endpoint logout; tidak menampilkan data apa pun.
+        '/logout'
     ]
 
     // ── API PENDUKUNG VIEWER FORM PUBLIK ──
